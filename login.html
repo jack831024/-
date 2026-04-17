@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>員工登入 - 每日小結確認</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(135deg,#4a90d9 0%,#357abd 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;color:#1a1a1a}
+.card{width:100%;max-width:380px;background:#fff;border-radius:16px;padding:2rem 1.75rem;box-shadow:0 10px 40px rgba(0,0,0,.2)}
+.logo{text-align:center;margin-bottom:1.5rem}
+.logo-icon{font-size:40px;display:block;margin-bottom:8px}
+h1{font-size:20px;font-weight:600;text-align:center;margin-bottom:4px}
+.subtitle{font-size:13px;color:#888;text-align:center;margin-bottom:1.75rem}
+.field{margin-bottom:14px}
+.flabel{font-size:13px;color:#555;margin-bottom:6px;display:block;font-weight:500}
+.finput{width:100%;padding:11px 12px;border:1px solid #ddd;border-radius:10px;background:#fafafa;font-size:15px;outline:none;transition:border-color .15s}
+.finput:focus{border-color:#4a90d9;background:#fff}
+.btn{width:100%;padding:12px;margin-top:8px;border:none;border-radius:10px;background:#4a90d9;color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn:hover{background:#357abd}
+.btn:active{transform:translateY(1px)}
+.err{background:#fdecea;color:#d93025;padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none;border:1px solid #f5b7b1}
+.err.on{display:block}
+.footer{text-align:center;font-size:12px;color:#aaa;margin-top:1.5rem}
+.hint{font-size:12px;color:#888;text-align:center;margin-top:12px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <span class="logo-icon">🍲</span>
+    <h1>員工登入</h1>
+    <p class="subtitle">初殿鍋物（中和店）· 每日小結確認</p>
+  </div>
+  <div class="err" id="err"></div>
+  <form id="login-form" onsubmit="return doLogin(event)">
+    <div class="field">
+      <label class="flabel" for="name">員工姓名</label>
+      <input type="text" id="name" class="finput" placeholder="請輸入姓名" autocomplete="username" required>
+    </div>
+    <div class="field">
+      <label class="flabel" for="pw">共用密碼</label>
+      <input type="password" id="pw" class="finput" placeholder="請輸入共用密碼" autocomplete="current-password" required>
+    </div>
+    <button type="submit" class="btn">登入</button>
+  </form>
+  <p class="hint">登入後至關閉分頁為止皆保持登入狀態</p>
+  <p class="footer">© 初殿鍋物 · 內部系統</p>
+</div>
+<script>
+// ===== 共用密碼設定 =====
+// 如需變更密碼，請直接修改下方這一行。
+const SHARED_PASSWORD = "chudian2026";
+// =======================
+
+function doLogin(e){
+  e.preventDefault();
+  const name = document.getElementById('name').value.trim();
+  const pw = document.getElementById('pw').value;
+  const err = document.getElementById('err');
+
+  if(!name){
+    err.textContent = '請輸入姓名';
+    err.className = 'err on';
+    return false;
+  }
+  if(pw !== SHARED_PASSWORD){
+    err.textContent = '密碼錯誤，請重新輸入';
+    err.className = 'err on';
+    document.getElementById('pw').value = '';
+    document.getElementById('pw').focus();
+    return false;
+  }
+  // 登入成功，寫入 sessionStorage
+  sessionStorage.setItem('cd_user', name);
+  sessionStorage.setItem('cd_login_at', new Date().toISOString());
+  // 導向報表頁
+  window.location.href = 'daily-summary.html';
+  return false;
+}
+
+// 若已登入，直接跳轉
+if(sessionStorage.getItem('cd_user')){
+  window.location.href = 'daily-summary.html';
+}
+</script>
+</body>
+</html>
