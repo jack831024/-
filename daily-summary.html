@@ -111,10 +111,10 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
 </head>
 <body>
 <div class="user-bar">
-  <div class="user-avatar" id="u-avatar">—</div>
-  <span>目前登入：<span class="user-name" id="u-name">—</span></span>
+  <div class="user-avatar" id="u-avatar">🏪</div>
+  <span>目前門市：<span class="user-name" id="u-name">—</span></span>
+  <a class="logout-link" onclick="switchStore()">🏪 切換門市</a>
   <a class="logout-link" onclick="openSettings()">⚙️ 設定</a>
-  <a class="logout-link" onclick="logout()">登出</a>
 </div>
 
 <div class="modal-bg" id="settings-modal" onclick="if(event.target===this)closeSettings()">
@@ -316,19 +316,27 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
 </div>
 
 <script>
-// ==== 登入驗證 ====
-(function checkLogin(){
-  var user = sessionStorage.getItem('cd_user');
-  if(!user){ window.location.href = 'login.html'; return; }
-  document.getElementById('u-name').textContent = user;
-  document.getElementById('u-avatar').textContent = user.charAt(0).toUpperCase();
+// ==== 門市驗證 ====
+var STORE_ID = sessionStorage.getItem('cd_store');
+var STORE_NAME = sessionStorage.getItem('cd_store_name');
+
+(function checkStore(){
+  if(!STORE_ID || !STORE_NAME){ window.location.href = 'index.html'; return; }
+  document.getElementById('u-name').textContent = STORE_NAME;
+  // 十城用不同 icon
+  if(STORE_ID.indexOf('shicheng') >= 0){
+    document.getElementById('u-avatar').textContent = '🏮';
+  }
+  var sub = document.querySelector('.subtitle');
+  if(sub) sub.textContent = STORE_NAME + ' · Gemini 免費版';
+  document.title = STORE_NAME + ' - 每日小結';
 })();
 
-function logout(){
-  if(confirm('確定要登出嗎？')){
-    sessionStorage.removeItem('cd_user');
-    sessionStorage.removeItem('cd_login_at');
-    window.location.href = 'login.html';
+function switchStore(){
+  if(confirm('確定要切換門市嗎？')){
+    sessionStorage.removeItem('cd_store');
+    sessionStorage.removeItem('cd_store_name');
+    window.location.href = 'index.html';
   }
 }
 
@@ -769,13 +777,15 @@ function todayStr(){
   return y + '-' + m + '-' + day;
 }
 
+function recordsKey(){ return 'cd_records_' + (STORE_ID || 'default'); }
+
 function getAllRecords(){
-  try{ return JSON.parse(localStorage.getItem('cd_records') || '{}'); }
+  try{ return JSON.parse(localStorage.getItem(recordsKey()) || '{}'); }
   catch(e){ return {}; }
 }
 
 function setAllRecords(r){
-  localStorage.setItem('cd_records', JSON.stringify(r));
+  localStorage.setItem(recordsKey(), JSON.stringify(r));
 }
 
 function collectData(){
@@ -825,11 +835,10 @@ async function saveRecord(){
   var date = document.getElementById('record-date').value;
   if(!date){ alert('請先選擇日期'); return; }
   var records = getAllRecords();
-  var user = sessionStorage.getItem('cd_user') || '';
   var rec = {
     data: collectData(),
     savedAt: new Date().toISOString(),
-    savedBy: user
+    savedBy: ''
   };
   records[date] = rec;
   setAllRecords(records);
@@ -999,7 +1008,8 @@ function setSyncBadge(text){
 async function cloudLoad(){
   var url = localStorage.getItem('cd_sync_url');
   if(!url) throw new Error('未設定同步網址');
-  var r = await fetch(url + (url.indexOf('?') >= 0 ? '&' : '?') + 'action=list&ts=' + Date.now());
+  var q = '?action=list&store=' + encodeURIComponent(STORE_ID) + '&ts=' + Date.now();
+  var r = await fetch(url + q);
   var d = await r.json();
   if(d.error) throw new Error(d.error);
   return d.records || {};
@@ -1008,11 +1018,10 @@ async function cloudLoad(){
 async function cloudSave(date, rec){
   var url = localStorage.getItem('cd_sync_url');
   if(!url) throw new Error('未設定同步網址');
-  // 用 text/plain 避免 CORS preflight
   var r = await fetch(url, {
     method: 'POST',
     headers: {'Content-Type': 'text/plain;charset=utf-8'},
-    body: JSON.stringify({action:'save', date:date, record:rec})
+    body: JSON.stringify({action:'save', store:STORE_ID, date:date, record:rec})
   });
   var d = await r.json();
   if(d.error) throw new Error(d.error);
@@ -1025,7 +1034,7 @@ async function cloudDelete(date){
   var r = await fetch(url, {
     method: 'POST',
     headers: {'Content-Type': 'text/plain;charset=utf-8'},
-    body: JSON.stringify({action:'delete', date:date})
+    body: JSON.stringify({action:'delete', store:STORE_ID, date:date})
   });
   var d = await r.json();
   if(d.error) throw new Error(d.error);
