@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>每日小結確認報表</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f5;color:#1a1a1a;padding:1rem}
+.wrap{max-width:720px;margin:0 auto;padding:1rem 0 3rem}
+h1{font-size:20px;font-weight:600;margin-bottom:4px}
+.subtitle{font-size:13px;color:#888;margin-bottom:1.5rem}
+h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
+.section{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem}
+.row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f0f0f0;gap:8px;flex-wrap:wrap}
+.row:last-child{border-bottom:none}
+.label{font-size:13px;color:#555;flex:1;min-width:80px}
+.amt{font-size:14px;font-weight:500;color:#1a1a1a;text-align:right}
+.amt.neg{color:#d93025}
+.amt-input{width:110px;text-align:right;font-size:14px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fafafa;outline:none}
+.amt-input:focus{border-color:#4a90d9;background:#fff}
+.status{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap}
+.ok{background:#e6f4ee;color:#1e8c5a}
+.err{background:#fdecea;color:#d93025}
+.neutral{background:#f0f0f0;color:#666}
+.upload-zone{border:2px dashed #ddd;border-radius:10px;padding:1rem;text-align:center;cursor:pointer;transition:border-color .2s;margin-bottom:8px;position:relative;background:#fafafa}
+.upload-zone:hover{border-color:#4a90d9;background:#f0f7ff}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.uz-icon{font-size:22px;display:block;margin-bottom:4px}
+.uz-label{font-size:13px;color:#888;pointer-events:none}
+.thumb-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;min-height:0}
+.thumb{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #ddd}
+.analyze-btn{width:100%;padding:10px;border:none;border-radius:10px;background:#4a90d9;color:#fff;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:4px}
+.analyze-btn:hover{background:#357abd}
+.analyze-btn:disabled{background:#bbb;cursor:not-allowed}
+.spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none;flex-shrink:0}
+.spinner.on{display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.item-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;gap:8px}
+.item-row:last-child{border-bottom:none}
+.del{background:none;border:none;cursor:pointer;color:#d93025;font-size:18px;padding:0 4px;line-height:1;flex-shrink:0}
+.add-manual{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.add-manual input{flex:1;min-width:80px;font-size:13px;padding:6px 8px;border:1px solid #ddd;border-radius:8px;background:#fafafa;outline:none}
+.add-manual input:focus{border-color:#4a90d9;background:#fff}
+.add-manual input.narrow{width:90px;flex:none}
+.add-manual button{font-size:13px;padding:0 14px;height:34px;border:1px solid #4a90d9;border-radius:8px;background:#fff;cursor:pointer;color:#4a90d9;white-space:nowrap;font-weight:600}
+.add-manual button:hover{background:#f0f7ff}
+.total-row{display:flex;justify-content:space-between;padding:8px 0 0;margin-top:6px;border-top:1.5px solid #e0e0e0}
+.tlabel{font-size:14px;font-weight:600;color:#1a1a1a}
+.tamt{font-size:16px;font-weight:600;color:#1a1a1a}
+.sep{margin-top:8px;border-top:1px solid #e8e8e8;padding-top:8px}
+.deposit-check{display:flex;align-items:center;gap:10px;padding:8px 0}
+.deposit-check label{font-size:13px;color:#555;cursor:pointer}
+.deposit-check input[type=checkbox]{width:16px;height:16px;accent-color:#4a90d9;cursor:pointer}
+.next-amt{font-size:20px;font-weight:700;color:#4a90d9}
+.result-box{margin-top:1rem;padding:1rem 1.25rem;border-radius:12px;border:1.5px solid}
+.result-ok{background:#e6f4ee;border-color:#a8d5be}
+.result-err{background:#fdecea;border-color:#f5b7b1}
+.rtitle{font-size:14px;font-weight:600}
+.result-ok .rtitle{color:#1e8c5a}
+.result-err .rtitle{color:#d93025}
+.result-box ul{margin-top:6px;padding-left:18px}
+.result-box li{font-size:13px;color:#555;margin-top:3px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem}
+.metric{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px}
+.mlabel{font-size:12px;color:#888;margin-bottom:4px}
+.mval{font-size:22px;font-weight:600;color:#1a1a1a}
+.ai-tag{font-size:10px;background:#e8f0fe;color:#1a6fd4;border-radius:4px;padding:1px 5px;margin-left:4px;vertical-align:middle;font-weight:400}
+.user-bar{display:flex;justify-content:flex-end;align-items:center;gap:8px;max-width:720px;margin:0 auto 8px;padding:6px 4px;font-size:12px;color:#666}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:#4a90d9;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.user-name{font-weight:500;color:#333}
+.logout-link{color:#4a90d9;cursor:pointer;text-decoration:none;font-size:12px;padding:3px 8px;border:1px solid #e0e0e0;border-radius:6px;background:#fff;transition:all .15s}
+.logout-link:hover{background:#f0f7ff;border-color:#4a90d9}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:100;padding:1rem}
+.modal-bg.on{display:flex}
+.modal{background:#fff;border-radius:14px;padding:1.5rem;max-width:440px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h2{font-size:17px;font-weight:600;margin-bottom:4px}
+.modal .mdesc{font-size:13px;color:#888;margin-bottom:1rem;line-height:1.5}
+.modal .field{margin-bottom:14px}
+.modal label{font-size:13px;color:#555;margin-bottom:6px;display:block;font-weight:500}
+.modal input[type=password],.modal input[type=text]{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;background:#fafafa;font-size:13px;outline:none;font-family:ui-monospace,Menlo,monospace}
+.modal input:focus{border-color:#4a90d9;background:#fff}
+.modal .hint{font-size:12px;color:#888;background:#f0f7ff;padding:10px 12px;border-radius:8px;line-height:1.6;margin-bottom:14px}
+.modal .hint a{color:#4a90d9;text-decoration:none}
+.modal .hint a:hover{text-decoration:underline}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.modal-btn{padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid #ddd;background:#fff}
+.modal-btn.primary{background:#4a90d9;color:#fff;border-color:#4a90d9}
+.modal-btn.primary:hover{background:#357abd}
+.modal-btn:hover{background:#f5f5f5}
+.api-status{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:600;display:inline-block}
+.api-status.set{background:#e6f4ee;color:#1e8c5a}
+.api-status.unset{background:#fdecea;color:#d93025}
+@media(max-width:480px){
+  .grid2{grid-template-columns:1fr}
+  .add-manual{flex-direction:column}
+  .add-manual input.narrow{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="user-bar">
+  <div class="user-avatar" id="u-avatar">—</div>
+  <span>目前登入：<span class="user-name" id="u-name">—</span></span>
+  <a class="logout-link" onclick="openSettings()">⚙️ 設定</a>
+  <a class="logout-link" onclick="logout()">登出</a>
+</div>
+
+<div class="modal-bg" id="settings-modal" onclick="if(event.target===this)closeSettings()">
+  <div class="modal">
+    <h2>AI 功能設定（Gemini）</h2>
+    <p class="mdesc">設定 Google Gemini API Key 以啟用 AI 自動讀取功能（完全免費）</p>
+    <div class="hint">
+      📌 如何取得 免費 API Key：<br>
+      1. 前往 <a href="https://aistudio.google.com/" target="_blank">aistudio.google.com</a> 用 Google 帳號登入<br>
+      2. 左側點 <b>Get API key</b> → <b>Create API key</b><br>
+      3. 複製 AIzaSy... 貼到下方<br>
+      4. 完全免費，無需信用卡，每天 1500 次額度<br>
+      5. API Key 只存在你的瀏覽器，不會上傳
+    </div>
+    <div class="field">
+      <label>Google Gemini API Key <span class="api-status" id="api-status">未設定</span></label>
+      <input type="password" id="api-key-input" placeholder="AIzaSy...">
+    </div>
+    <div class="field">
+      <label>使用模型 <button type="button" onclick="listModels()" style="font-size:11px;padding:2px 8px;border:1px solid #4a90d9;border-radius:6px;background:#fff;color:#4a90d9;cursor:pointer;margin-left:6px">🔄 抓取可用清單</button></label>
+      <select id="api-model-input" style="width:100%;padding:11px 12px;border:1px solid #ddd;border-radius:10px;background:#fafafa;font-size:15px;outline:none">
+        <option value="gemini-2.5-flash">gemini-2.5-flash（推薦）</option>
+        <option value="gemini-2.5-pro">gemini-2.5-pro（品質最佳）</option>
+        <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+        <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
+        <option value="gemini-flash-latest">gemini-flash-latest</option>
+      </select>
+      <p id="model-hint" style="font-size:11px;color:#888;margin-top:4px">💡 點「抓取可用清單」可查詢你的帳號目前支援哪些模型</p>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn" onclick="closeSettings()">取消</button>
+      <button class="modal-btn" onclick="clearApiKey()">清除</button>
+      <button class="modal-btn primary" onclick="saveApiKey()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <h1>每日小結確認報表</h1>
+  <p class="subtitle">初殿鍋物（中和店）· Gemini 免費版</p>
+  <div class="grid2">
+    <div class="metric"><div class="mlabel">淨銷售額</div><div class="mval" id="m-net">—</div></div>
+    <div class="metric"><div class="mlabel">現金收入</div><div class="mval" id="m-cash">—</div></div>
+  </div>
+  <div class="section">
+    <h3>小結報表截圖 <span class="ai-tag">AI 自動讀取</span></h3>
+    <div class="upload-zone" id="uz-summary">
+      <input type="file" accept="image/*" multiple onchange="handleFiles(this,'summary')">
+      <span class="uz-icon">📋</span>
+      <span class="uz-label">點擊上傳小結截圖（可多張）</span>
+    </div>
+    <div class="thumb-row" id="thumbs-summary"></div>
+    <button class="analyze-btn" id="btn-summary" onclick="analyzeSummary()" disabled>
+      <span class="spinner" id="spin-summary"></span>
+      <span id="btxt-summary">AI 自動讀取數字</span>
+    </button>
+    <div id="summary-fields">
+      <div class="row"><span class="label">淨銷售額</span><input class="amt-input" id="b-net" type="number" placeholder="—" oninput="recalc()"></div>
+      <div class="row"><span class="label">現金</span><input class="amt-input" id="b-cash" type="number" placeholder="—" oninput="recalc()"></div>
+      <div class="row"><span class="label">預期錢櫃金額</span><input class="amt-input" id="i-expected" type="number" placeholder="—" oninput="recalcNextDay()"></div>
+      <div class="row"><span class="label">小結提現</span><input class="amt-input" id="i-withdrawal" type="number" placeholder="—" oninput="recalc()"></div>
+      <div class="row"><span class="label">小結代收</span><input class="amt-input" id="i-daishuo" type="number" placeholder="—" oninput="recalc()"></div>
+      <div class="row"><span class="label">全支付（小結）</span><input class="amt-input" id="b-jkopay" type="number" placeholder="—" oninput="recalc()"></div>
+      <div class="row"><span class="label">街口（小結）</span><input class="amt-input" id="b-jko" type="number" placeholder="—" oninput="recalc()"></div>
+    </div>
+  </div>
+  <div class="section">
+    <h3>全支付 App 截圖 <span class="ai-tag">AI 自動讀取</span></h3>
+    <div class="upload-zone">
+      <input type="file" accept="image/*" onchange="handlePayFile(this,'jkopay')">
+      <span class="uz-icon">💛</span>
+      <span class="uz-label">上傳全支付截圖（自動讀取金額）</span>
+    </div>
+    <div class="thumb-row" id="thumbs-jkopay"></div>
+    <div class="row sep" style="border-bottom:none">
+      <span class="label">全支付 App 金額</span>
+      <input class="amt-input" id="i-jkopay" type="number" placeholder="—" oninput="recalc()">
+      <span class="status neutral" id="s-jkopay">—</span>
+    </div>
+  </div>
+  <div class="section">
+    <h3>街口 App 截圖 <span class="ai-tag">AI 自動讀取</span></h3>
+    <div class="upload-zone">
+      <input type="file" accept="image/*" onchange="handlePayFile(this,'jko')">
+      <span class="uz-icon">🧡</span>
+      <span class="uz-label">上傳街口截圖（自動讀取金額）</span>
+    </div>
+    <div class="thumb-row" id="thumbs-jko"></div>
+    <div class="row sep" style="border-bottom:none">
+      <span class="label">街口 App 金額</span>
+      <input class="amt-input" id="i-jko" type="number" placeholder="—" oninput="recalc()">
+      <span class="status neutral" id="s-jko">—</span>
+    </div>
+  </div>
+  <div class="section">
+    <h3>提現明細（發票 / 貨款）<span class="ai-tag">AI 自動讀取</span></h3>
+    <div class="upload-zone">
+      <input type="file" accept="image/*" multiple onchange="handleFiles(this,'w')">
+      <span class="uz-icon">🧾</span>
+      <span class="uz-label">上傳發票 / 貨款收據（可多張）</span>
+    </div>
+    <div class="thumb-row" id="thumbs-w"></div>
+    <button class="analyze-btn" id="btn-w" onclick="analyzeReceipts('w')" disabled>
+      <span class="spinner" id="spin-w"></span>
+      <span id="btxt-w">AI 自動辨識金額</span>
+    </button>
+    <div id="w-list"></div>
+    <div class="add-manual">
+      <input type="text" id="w-desc" placeholder="手動新增說明">
+      <input type="number" id="w-amt" class="narrow" placeholder="金額">
+      <button onclick="addItem('w')">＋ 新增</button>
+    </div>
+    <div class="total-row"><span class="tlabel">提現合計</span><span class="tamt" id="w-total">NT$ 0</span></div>
+    <div class="row sep" style="border-bottom:none"><span class="label">vs 小結提現</span><span class="status neutral" id="s-withdrawal">—</span></div>
+  </div>
+  <div class="section">
+    <h3>代收明細 <span class="ai-tag">AI 自動讀取</span></h3>
+    <div class="upload-zone">
+      <input type="file" accept="image/*" multiple onchange="handleFiles(this,'d')">
+      <span class="uz-icon">📝</span>
+      <span class="uz-label">上傳代收單據（可多張）</span>
+    </div>
+    <div class="thumb-row" id="thumbs-d"></div>
+    <button class="analyze-btn" id="btn-d" onclick="analyzeReceipts('d')" disabled>
+      <span class="spinner" id="spin-d"></span>
+      <span id="btxt-d">AI 自動辨識金額</span>
+    </button>
+    <div id="d-list"></div>
+    <div class="add-manual">
+      <input type="text" id="d-desc" placeholder="手動新增說明">
+      <input type="number" id="d-amt" class="narrow" placeholder="金額">
+      <button onclick="addItem('d')">＋ 新增</button>
+    </div>
+    <div class="total-row"><span class="tlabel">代收合計</span><span class="tamt" id="d-total">NT$ 0</span></div>
+    <div class="row sep" style="border-bottom:none"><span class="label">vs 小結代收</span><span class="status neutral" id="s-daishuo">—</span></div>
+  </div>
+  <div class="section">
+    <h3>存款憑證 <span class="ai-tag">AI 自動讀取</span></h3>
+    <div class="deposit-check">
+      <input type="checkbox" id="no-deposit" onchange="toggleDeposit()">
+      <label for="no-deposit">今日不存錢</label>
+    </div>
+    <div id="deposit-upload-area">
+      <div class="upload-zone">
+        <input type="file" accept="image/*" onchange="handleDepositFile(this)">
+        <span class="uz-icon">🏦</span>
+        <span class="uz-label">上傳存款收據截圖（自動讀取金額）</span>
+      </div>
+      <div class="thumb-row" id="thumbs-deposit"></div>
+      <div class="row" id="deposit-row">
+        <span class="label">今日存入金額</span>
+        <input class="amt-input" id="i-deposit" type="number" value="0" oninput="recalcNextDay()">
+      </div>
+    </div>
+    <div class="total-row" style="margin-top:12px">
+      <span class="tlabel">隔日開箱金額</span>
+      <span class="next-amt" id="next-day-amt">—</span>
+    </div>
+  </div>
+  <div id="result-area"></div>
+</div>
+
+<script>
+// ==== 登入驗證 ====
+(function checkLogin(){
+  var user = sessionStorage.getItem('cd_user');
+  if(!user){ window.location.href = 'login.html'; return; }
+  document.getElementById('u-name').textContent = user;
+  document.getElementById('u-avatar').textContent = user.charAt(0).toUpperCase();
+})();
+
+function logout(){
+  if(confirm('確定要登出嗎？')){
+    sessionStorage.removeItem('cd_user');
+    sessionStorage.removeItem('cd_login_at');
+    window.location.href = 'login.html';
+  }
+}
+
+// ==== API Key 設定 ====
+function openSettings(){
+  var key = localStorage.getItem('cd_gemini_key') || '';
+  var model = localStorage.getItem('cd_gemini_model') || 'gemini-2.5-flash';
+  document.getElementById('api-key-input').value = key;
+  document.getElementById('api-model-input').value = model;
+  updateApiStatus();
+  document.getElementById('settings-modal').className = 'modal-bg on';
+}
+function closeSettings(){
+  document.getElementById('settings-modal').className = 'modal-bg';
+}
+async function listModels(){
+  var key = document.getElementById('api-key-input').value.trim() || localStorage.getItem('cd_gemini_key');
+  var hint = document.getElementById('model-hint');
+  if(!key){ alert('請先輸入 API Key'); return; }
+  hint.textContent = '⏳ 查詢中...';
+  try{
+    var r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + encodeURIComponent(key));
+    var d = await r.json();
+    if(d.error) throw new Error(d.error.message);
+    var supported = (d.models || []).filter(function(m){
+      return m.supportedGenerationMethods && m.supportedGenerationMethods.indexOf('generateContent') >= 0;
+    });
+    if(supported.length === 0){ hint.textContent = '⚠️ 沒找到可用模型'; return; }
+    var sel = document.getElementById('api-model-input');
+    var currentVal = sel.value;
+    sel.innerHTML = '';
+    supported.forEach(function(m){
+      var name = m.name.replace('models/', '');
+      var opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name + (m.displayName ? ' · ' + m.displayName : '');
+      sel.appendChild(opt);
+    });
+    // 優先選 flash 系列
+    var preferred = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
+    for(var i = 0; i < preferred.length; i++){
+      var opts = Array.from(sel.options);
+      var found = opts.find(function(o){ return o.value === preferred[i]; });
+      if(found){ sel.value = preferred[i]; break; }
+    }
+    if(!sel.value) sel.value = supported[0].name.replace('models/', '');
+    hint.textContent = '✅ 找到 ' + supported.length + ' 個可用模型';
+  } catch(e){
+    hint.textContent = '❌ 查詢失敗：' + e.message;
+  }
+}
+
+function saveApiKey(){
+  var key = document.getElementById('api-key-input').value.trim();
+  var model = document.getElementById('api-model-input').value;
+  if(!key){ alert('請輸入 API Key'); return; }
+  if(!key.startsWith('AIza')){
+    if(!confirm('API Key 格式似乎不正確（Gemini 的 Key 通常以 AIza 開頭），確定要儲存嗎？')) return;
+  }
+  localStorage.setItem('cd_gemini_key', key);
+  localStorage.setItem('cd_gemini_model', model);
+  closeSettings();
+  alert('設定已儲存（模型：' + model + '）');
+}
+function clearApiKey(){
+  if(confirm('確定要清除 API Key 嗎？')){
+    localStorage.removeItem('cd_gemini_key');
+    document.getElementById('api-key-input').value = '';
+    updateApiStatus();
+  }
+}
+function updateApiStatus(){
+  var el = document.getElementById('api-status');
+  if(localStorage.getItem('cd_gemini_key')){
+    el.textContent = '已設定';
+    el.className = 'api-status set';
+  } else {
+    el.textContent = '未設定';
+    el.className = 'api-status unset';
+  }
+}
+function hasApiKey(){
+  var key = localStorage.getItem('cd_gemini_key');
+  if(!key){
+    if(confirm('AI 功能需要先設定 Google Gemini API Key，要前往設定嗎？')){ openSettings(); }
+    return false;
+  }
+  return true;
+}
+
+// ==== Gemini API ====
+function toB64(file){
+  return new Promise(function(res, rej){
+    var r = new FileReader();
+    r.onload = function(){ res(r.result.split(',')[1]); };
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+async function callModelOnce(model, key, parts){
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key);
+  var genConfig = {temperature: 0, maxOutputTokens: 4096};
+  if(model.indexOf('2.5') >= 0){
+    genConfig.thinkingConfig = {thinkingBudget: 0};
+  }
+  var r = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({contents: [{parts: parts}], generationConfig: genConfig})
+  });
+  var d = await r.json();
+  console.log('[' + model + '] 回應：', d);
+  if(d.error){
+    var err = new Error(d.error.message || 'API 錯誤');
+    err.code = d.error.code;
+    err.status = d.error.status;
+    throw err;
+  }
+  if(!d.candidates || d.candidates.length === 0){
+    throw new Error('沒有候選答案（可能被安全過濾器攔截）');
+  }
+  var cand = d.candidates[0];
+  if(cand.finishReason === 'MAX_TOKENS') throw new Error('回應被截斷（MAX_TOKENS）');
+  if(cand.finishReason === 'SAFETY') throw new Error('被安全過濾器擋下');
+  var text = cand.content && cand.content.parts && cand.content.parts[0] && cand.content.parts[0].text;
+  if(!text) throw new Error('空內容（finishReason: ' + (cand.finishReason || '未知') + '）');
+  return text;
+}
+
+async function geminiCall(imageFiles, promptText){
+  var key = localStorage.getItem('cd_gemini_key');
+  if(!key) throw new Error('請先在右上角「⚙️ 設定」填入 API Key');
+
+  var parts = [];
+  for(var i = 0; i < imageFiles.length; i++){
+    var f = imageFiles[i];
+    var b64 = await toB64(f);
+    parts.push({inline_data: {mime_type: f.type || 'image/jpeg', data: b64}});
+  }
+  parts.push({text: promptText});
+
+  var primary = localStorage.getItem('cd_gemini_model') || 'gemini-2.5-flash';
+  // 若主模型壅塞 / 503，依序 fallback 到其他模型
+  var fallbackChain = [primary, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-2.0-flash-lite'];
+  // 去重
+  var tried = {};
+  var models = fallbackChain.filter(function(m){ if(tried[m]) return false; tried[m] = 1; return true; });
+
+  var lastErr;
+  for(var mi = 0; mi < models.length; mi++){
+    var model = models[mi];
+    // 每個模型最多重試 3 次（壅塞錯誤才重試）
+    for(var attempt = 0; attempt < 3; attempt++){
+      try{
+        return await callModelOnce(model, key, parts);
+      } catch(e){
+        lastErr = e;
+        var msg = (e.message || '').toLowerCase();
+        var isBusy = e.code === 503 || e.code === 429 || msg.indexOf('high demand') >= 0 || msg.indexOf('overloaded') >= 0 || msg.indexOf('unavailable') >= 0 || msg.indexOf('rate') >= 0;
+        if(isBusy && attempt < 2){
+          console.warn('[' + model + '] 壅塞，' + (1 + attempt) + ' 秒後重試...');
+          await sleep((attempt + 1) * 1000);
+          continue;
+        }
+        // 非壅塞錯誤，跳去下個模型
+        console.warn('[' + model + '] 失敗：' + e.message + '，換下一個模型');
+        break;
+      }
+    }
+  }
+  throw lastErr || new Error('所有模型都無法呼叫');
+}
+
+function parseJson(raw){
+  // 移除 markdown 格式並解析 JSON
+  var clean = raw.replace(/```json|```/g, '').trim();
+  // 嘗試抓出 JSON 部分（遇到模型回多餘說明文字時）
+  var match = clean.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+  if(match) clean = match[0];
+  return JSON.parse(clean);
+}
+
+// ==== 主要邏輯 ====
+var store = {w:[], d:[]};
+var imgs = {summary:[], jkopay:[], jko:[], w:[], d:[]};
+function fmt(n){ return Math.round(n).toLocaleString(); }
+
+function handleFiles(input, key){
+  imgs[key] = Array.from(input.files);
+  var t = document.getElementById('thumbs-' + key);
+  t.innerHTML = '';
+  imgs[key].forEach(function(f){
+    var img = document.createElement('img');
+    img.src = URL.createObjectURL(f);
+    img.className = 'thumb';
+    t.appendChild(img);
+  });
+  var btn = document.getElementById('btn-' + key);
+  if(btn) btn.disabled = imgs[key].length === 0;
+}
+
+function handlePayFile(input, key){
+  var file = input.files[0];
+  if(!file) return;
+  imgs[key] = [file];
+  var t = document.getElementById('thumbs-' + key);
+  t.innerHTML = '';
+  var img = document.createElement('img');
+  img.src = URL.createObjectURL(file);
+  img.className = 'thumb';
+  t.appendChild(img);
+  analyzePayFile(key, file);
+}
+
+async function analyzeSummary(){
+  if(!hasApiKey()) return;
+  var btn = document.getElementById('btn-summary');
+  var spin = document.getElementById('spin-summary');
+  var btxt = document.getElementById('btxt-summary');
+  btn.disabled = true; spin.className = 'spinner on'; btxt.textContent = '讀取中...';
+  try{
+    var prompt = '請從這些小結截圖中讀取數字，只回傳 JSON（不要 markdown 格式、不要任何說明），找不到的欄位填 null：\n{"net":淨銷售額,"cash":現金金額,"expected":預期錢櫃金額,"withdrawal":提現合計絕對值,"daishuo":代收合計,"jkopay":全支付金額,"jko":街口金額}';
+    var raw = await geminiCall(imgs.summary, prompt);
+    console.log('Gemini 回應：', raw);
+    var p = parseJson(raw);
+    var map = {net:'b-net', cash:'b-cash', expected:'i-expected', withdrawal:'i-withdrawal', daishuo:'i-daishuo', jkopay:'b-jkopay', jko:'b-jko'};
+    Object.keys(map).forEach(function(k){
+      if(p[k] != null) document.getElementById(map[k]).value = p[k];
+    });
+    recalc(); recalcNextDay();
+    btxt.textContent = '重新讀取';
+  } catch(e){
+    console.error(e);
+    btxt.textContent = '讀取失敗';
+    alert('AI 讀取失敗：' + (e.message || '未知錯誤'));
+  }
+  spin.className = 'spinner';
+  btn.disabled = false;
+}
+
+async function analyzePayFile(key, file){
+  if(!hasApiKey()) return;
+  try{
+    var label = key === 'jkopay' ? '全支付' : '街口';
+    var prompt = '這是' + label + '截圖，請找出本日即時金額或當日交易總計，只回傳純數字（不要單位、不要逗號、不要說明）。';
+    var raw = await geminiCall([file], prompt);
+    console.log(key + ' Gemini 回應：', raw);
+    var n = parseFloat(raw.replace(/[^0-9.]/g, ''));
+    if(!isNaN(n)){ document.getElementById('i-' + key).value = n; recalc(); }
+    else alert('AI 無法辨識金額，請手動填入');
+  } catch(e){
+    console.error(e);
+    alert('AI 讀取失敗：' + (e.message || '未知錯誤'));
+  }
+}
+
+async function analyzeReceipts(key){
+  if(!hasApiKey()) return;
+  var btn = document.getElementById('btn-' + key);
+  var spin = document.getElementById('spin-' + key);
+  var btxt = document.getElementById('btxt-' + key);
+  btn.disabled = true; spin.className = 'spinner on'; btxt.textContent = '辨識中...';
+  try{
+    var prompt = '每張圖片讀取合計金額與來源名稱，只回傳 JSON 陣列（不要 markdown、不要說明）：[{"desc":"來源","amt":金額}]';
+    var raw = await geminiCall(imgs[key], prompt);
+    console.log(key + ' Gemini 回應：', raw);
+    var parsed = parseJson(raw);
+    if(!Array.isArray(parsed)) parsed = [parsed];
+    parsed.forEach(function(item){
+      if(item.amt && !isNaN(item.amt)){
+        store[key].push({desc: item.desc || '—', amt: parseFloat(item.amt), cnt: item.cnt || null});
+      }
+    });
+    renderAll(); recalc();
+    btxt.textContent = '重新辨識';
+  } catch(e){
+    console.error(e);
+    btxt.textContent = '辨識失敗';
+    alert('AI 辨識失敗：' + (e.message || '未知錯誤'));
+  }
+  spin.className = 'spinner';
+  btn.disabled = false;
+}
+
+async function handleDepositFile(input){
+  var file = input.files[0];
+  if(!file) return;
+  var t = document.getElementById('thumbs-deposit');
+  t.innerHTML = '';
+  var img = document.createElement('img');
+  img.src = URL.createObjectURL(file);
+  img.className = 'thumb';
+  t.appendChild(img);
+  if(!hasApiKey()) return;
+  try{
+    var raw = await geminiCall([file], '這是存款收據或截圖，請找出存入金額，只回傳純數字（不要單位、不要逗號、不要說明）。');
+    console.log('Deposit Gemini 回應：', raw);
+    var n = parseFloat(raw.replace(/[^0-9.]/g, ''));
+    if(!isNaN(n)){ document.getElementById('i-deposit').value = n; recalcNextDay(); }
+    else alert('AI 無法辨識金額，請手動填入');
+  } catch(e){
+    console.error(e);
+    alert('AI 讀取失敗：' + (e.message || '未知錯誤'));
+  }
+}
+
+function addItem(key){
+  var desc = document.getElementById(key + '-desc').value.trim();
+  var amt = parseFloat(document.getElementById(key + '-amt').value);
+  if(!desc || isNaN(amt)) return;
+  store[key].push({desc:desc, amt:amt});
+  document.getElementById(key + '-desc').value = '';
+  document.getElementById(key + '-amt').value = '';
+  renderAll(); recalc();
+}
+
+function removeItem(key, i){
+  store[key].splice(i, 1);
+  renderAll(); recalc();
+}
+
+function renderList(key){
+  var c = document.getElementById(key + '-list');
+  c.innerHTML = '';
+  store[key].forEach(function(item, i){
+    var d = document.createElement('div');
+    d.className = 'item-row';
+    d.innerHTML = '<span style="font-size:13px;color:#555;flex:1">' + item.desc + '</span><span class="amt">NT$ ' + fmt(item.amt) + '</span><button class="del" onclick="removeItem(\'' + key + '\',' + i + ')">×</button>';
+    c.appendChild(d);
+  });
+}
+
+function renderAll(){
+  ['w', 'd'].forEach(function(k){ renderList(k); });
+}
+
+function checkSt(calc, refId, stId){
+  var ref = parseFloat(document.getElementById(refId).value);
+  var el = document.getElementById(stId);
+  if(isNaN(ref)){ el.textContent = '—'; el.className = 'status neutral'; return null; }
+  if(Math.round(calc) === Math.round(ref)){ el.textContent = '一致'; el.className = 'status ok'; return true; }
+  el.textContent = '差 NT$ ' + fmt(Math.abs(calc - ref));
+  el.className = 'status err';
+  return false;
+}
+
+function toggleDeposit(){
+  var noD = document.getElementById('no-deposit').checked;
+  var area = document.getElementById('deposit-upload-area');
+  area.style.opacity = noD ? '0.4' : '1';
+  area.style.pointerEvents = noD ? 'none' : 'auto';
+  recalcNextDay();
+}
+
+function recalcNextDay(){
+  var noD = document.getElementById('no-deposit').checked;
+  var exp = parseFloat(document.getElementById('i-expected').value) || 0;
+  var dep = noD ? 0 : (parseFloat(document.getElementById('i-deposit').value) || 0);
+  document.getElementById('next-day-amt').textContent = exp ? ('NT$ ' + fmt(exp - dep)) : '—';
+}
+
+function recalc(){
+  var wT = store.w.reduce(function(s, x){ return s + x.amt; }, 0);
+  var dT = store.d.reduce(function(s, x){ return s + x.amt; }, 0);
+  document.getElementById('w-total').textContent = 'NT$ ' + fmt(wT);
+  document.getElementById('d-total').textContent = 'NT$ ' + fmt(dT);
+  var net = parseFloat(document.getElementById('b-net').value) || 0;
+  var cash = parseFloat(document.getElementById('b-cash').value) || 0;
+  document.getElementById('m-net').textContent = net ? ('NT$ ' + fmt(net)) : '—';
+  document.getElementById('m-cash').textContent = cash ? ('NT$ ' + fmt(cash)) : '—';
+  var wOk = checkSt(wT, 'i-withdrawal', 's-withdrawal');
+  var dOk = checkSt(dT, 'i-daishuo', 's-daishuo');
+  var jpApp = parseFloat(document.getElementById('i-jkopay').value) || 0;
+  var jkApp = parseFloat(document.getElementById('i-jko').value) || 0;
+  var jpRef = parseFloat(document.getElementById('b-jkopay').value) || 0;
+  var jkRef = parseFloat(document.getElementById('b-jko').value) || 0;
+  var sJp = document.getElementById('s-jkopay');
+  var sJk = document.getElementById('s-jko');
+  var jpOk = null, jkOk = null;
+  if(jpApp && jpRef){
+    if(jpApp === jpRef){ sJp.textContent = '一致'; sJp.className = 'status ok'; jpOk = true; }
+    else { sJp.textContent = '差 NT$ ' + fmt(Math.abs(jpApp - jpRef)); sJp.className = 'status err'; jpOk = false; }
+  } else { sJp.textContent = '—'; sJp.className = 'status neutral'; }
+  if(jkApp && jkRef){
+    if(jkApp === jkRef){ sJk.textContent = '一致'; sJk.className = 'status ok'; jkOk = true; }
+    else { sJk.textContent = '差 NT$ ' + fmt(Math.abs(jkApp - jkRef)); sJk.className = 'status err'; jkOk = false; }
+  } else { sJk.textContent = '—'; sJk.className = 'status neutral'; }
+  recalcNextDay();
+  var errors = [];
+  if(wOk === false) errors.push('提現金額不一致');
+  if(dOk === false) errors.push('代收金額不一致');
+  if(jpOk === false) errors.push('全支付金額不一致');
+  if(jkOk === false) errors.push('街口金額不一致');
+  var ra = document.getElementById('result-area');
+  var hasAny = wOk !== null || dOk !== null || jpOk !== null || jkOk !== null;
+  if(!hasAny){ ra.innerHTML = ''; return; }
+  if(errors.length === 0){
+    ra.innerHTML = '<div class="result-box result-ok"><p class="rtitle">所有項目確認無誤</p></div>';
+  } else {
+    ra.innerHTML = '<div class="result-box result-err"><p class="rtitle">發現 ' + errors.length + ' 項異常</p><ul>' + errors.map(function(e){ return '<li>' + e + '</li>'; }).join('') + '</ul></div>';
+  }
+}
+</script>
+</body>
+</html>
