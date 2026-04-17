@@ -23,14 +23,17 @@ h1{font-size:20px;font-weight:600;text-align:center;margin-bottom:4px}
 .err.on{display:block}
 .footer{text-align:center;font-size:12px;color:#aaa;margin-top:1.5rem}
 .hint{font-size:12px;color:#888;text-align:center;margin-top:12px;line-height:1.5}
+.back-link{text-align:center;margin-top:10px}
+.back-link a{font-size:12px;color:#4a90d9;cursor:pointer;text-decoration:none}
+.back-link a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
 <div class="card">
   <div class="logo">
-    <span class="logo-icon">🍲</span>
+    <span class="logo-icon" id="store-icon">🍲</span>
     <h1>員工登入</h1>
-    <p class="subtitle">初殿鍋物（中和店）· 每日小結確認</p>
+    <p class="subtitle" id="store-subtitle">每日小結確認</p>
   </div>
   <div class="err" id="err"></div>
   <form id="login-form" onsubmit="return doLogin(event)">
@@ -45,13 +48,33 @@ h1{font-size:20px;font-weight:600;text-align:center;margin-bottom:4px}
     <button type="submit" class="btn">登入</button>
   </form>
   <p class="hint">登入後至關閉分頁為止皆保持登入狀態</p>
-  <p class="footer">© 初殿鍋物 · 內部系統</p>
+  <p class="back-link"><a onclick="backToStores()">← 切換其他門市</a></p>
+  <p class="footer">© 內部系統</p>
 </div>
 <script>
 // ===== 共用密碼設定 =====
 // 如需變更密碼，請直接修改下方這一行。
 const SHARED_PASSWORD = "chudian2026";
 // =======================
+
+// 檢查是否已選擇門市
+const storeId = sessionStorage.getItem('cd_store');
+const storeName = sessionStorage.getItem('cd_store_name');
+if(!storeId || !storeName){
+  window.location.href = 'index.html';
+}else{
+  document.getElementById('store-subtitle').textContent = storeName + ' · 每日小結確認';
+  // 十城用不同 icon
+  if(storeId.indexOf('shicheng') >= 0){
+    document.getElementById('store-icon').textContent = '🏮';
+  }
+}
+
+function backToStores(){
+  sessionStorage.removeItem('cd_store');
+  sessionStorage.removeItem('cd_store_name');
+  window.location.href = 'index.html';
+}
 
 function doLogin(e){
   e.preventDefault();
@@ -71,10 +94,8 @@ function doLogin(e){
     document.getElementById('pw').focus();
     return false;
   }
-  // 登入成功，寫入 sessionStorage
   sessionStorage.setItem('cd_user', name);
   sessionStorage.setItem('cd_login_at', new Date().toISOString());
-  // 導向報表頁
   window.location.href = 'daily-summary.html';
   return false;
 }
