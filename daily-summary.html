@@ -547,7 +547,7 @@ function parseJson(raw){
 
 // ==== 主要邏輯 ====
 var store = {w:[], d:[]};
-var imgs = {summary:[], jkopay:[], jko:[], w:[], d:[]};
+var imgs = {summary:[], jkopay:[], jko:[], w:[], d:[], deposit:[]};
 function fmt(n){ return Math.round(n).toLocaleString(); }
 
 function handleFiles(input, key){
@@ -650,6 +650,7 @@ async function analyzeReceipts(key){
 async function handleDepositFile(input){
   var file = input.files[0];
   if(!file) return;
+  imgs.deposit = [file];
   var t = document.getElementById('thumbs-deposit');
   t.innerHTML = '';
   var img = document.createElement('img');
@@ -846,24 +847,29 @@ async function saveRecord(){
   document.getElementById('history-select').value = date;
   updateSavedTag(date);
 
-  // 嘗試推送到雲端
   var syncUrl = localStorage.getItem('cd_sync_url');
   if(syncUrl){
-    setSyncBadge('⏳ 同步中...');
+    setSyncBadge('⏳ 壓縮圖片中...');
+    var images = null;
+    try{ images = await collectImagesForUpload(); } catch(e){ console.warn('壓縮出錯：', e); }
+    var imgCount = 0;
+    if(images){ Object.keys(images).forEach(function(k){ imgCount += images[k].length; }); }
+    setSyncBadge('⏳ 同步中...' + (imgCount ? '（含 ' + imgCount + ' 張圖）' : ''));
     try{
-      await cloudSave(date, rec);
-      setSyncBadge('☁️ 已同步');
-      alert('已儲存 ' + date + ' 的紀錄（已同步到雲端）');
+      var res = await cloudSave(date, rec, images);
+      if(res.fileId){ rec.imageFileId = res.fileId; records[date] = rec; setAllRecords(records); }
+      setSyncBadge('☁️ 已同步' + (imgCount ? '（' + imgCount + ' 張圖）' : ''));
+      alert('已儲存 ' + date + ' 的紀錄' + (imgCount ? '（含 ' + imgCount + ' 張圖）' : '') + '\n已同步到雲端');
     } catch(e){
       setSyncBadge('⚠️ 同步失敗');
       alert('已儲存到本機，但雲端同步失敗：' + e.message);
     }
   } else {
-    alert('已儲存 ' + date + ' 的紀錄（僅本機）');
+    alert('已儲存 ' + date + ' 的紀錄（僅本機，未開啟雲端同步）');
   }
 }
 
-function loadRecord(date){
+async function loadRecord(date){
   var records = getAllRecords();
   var r = records[date];
   if(!r){ return false; }
@@ -871,24 +877,41 @@ function loadRecord(date){
   document.getElementById('record-date').value = date;
   document.getElementById('history-select').value = date;
   updateSavedTag(date);
+
+  // 如果這筆有圖片，從雲端拉下來
+  if(r.imageFileId && localStorage.getItem('cd_sync_url')){
+    setSyncBadge('⏳ 下載圖片...');
+    try{
+      var images = await cloudGetImages(r.imageFileId);
+      await applyImages(images);
+      var count = 0;
+      if(images){ Object.keys(images).forEach(function(k){ count += (images[k] || []).length; }); }
+      setSyncBadge('☁️ 已載入' + (count ? '（' + count + ' 張圖）' : ''));
+    } catch(e){
+      setSyncBadge('⚠️ 圖片載入失敗');
+      console.warn(e);
+    }
+  } else {
+    // 沒圖片或離線，清縮圖
+    await applyImages(null);
+  }
   return true;
 }
 
-function loadSelectedRecord(){
+async function loadSelectedRecord(){
   var sel = document.getElementById('history-select');
   var date = sel.value;
   if(!date) return;
-  if(!loadRecord(date)){
-    alert('找不到這筆紀錄');
-  }
+  var ok = await loadRecord(date);
+  if(!ok) alert('找不到這筆紀錄');
 }
 
-function onDateChange(){
+async function onDateChange(){
   var date = document.getElementById('record-date').value;
   var records = getAllRecords();
   if(records[date]){
     if(confirm(date + ' 已有紀錄，要讀取這天的資料嗎？')){
-      loadRecord(date);
+      await loadRecord(date);
     }
   }
   updateSavedTag(date);
@@ -999,10 +1022,124 @@ function importAll(input){
   reader.readAsText(f);
 }
 
+// ==== 圖片壓縮與處理 ====
+var IMAGE_SECTIONS = ['summary','jkopay','jko','w','d','deposit'];
+
+function compressImage(file, targetBytes){
+  if(!targetBytes) targetBytes = 300 * 1024;
+  return new Promise(function(resolve, reject){
+    var img = new Image();
+    img.onload = function(){
+      try{
+        var canvas = document.createElement('canvas');
+        var w = img.width, h = img.height;
+        var maxDim = 1600;
+        if(w > maxDim || h > maxDim){
+          var r = Math.min(maxDim/w, maxDim/h);
+          w = Math.round(w * r); h = Math.round(h * r);
+        }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        var q = 0.85;
+        var url = canvas.toDataURL('image/jpeg', q);
+        // base64 約占 1.37 倍實際位元組
+        while(url.length * 0.75 > targetBytes && q > 0.35){
+          q -= 0.1;
+          url = canvas.toDataURL('image/jpeg', q);
+        }
+        resolve(url);
+      } catch(e){ reject(e); }
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+async function collectImagesForUpload(){
+  var result = {};
+  var hasAny = false;
+  for(var i = 0; i < IMAGE_SECTIONS.length; i++){
+    var k = IMAGE_SECTIONS[i];
+    if(!imgs[k] || imgs[k].length === 0) continue;
+    var arr = [];
+    for(var j = 0; j < imgs[k].length; j++){
+      var f = imgs[k][j];
+      try{
+        // 若 f 已是 base64（從雲端載入的，保留原始）
+        if(typeof f === 'string' && f.indexOf('data:') === 0){
+          arr.push(f);
+        } else {
+          arr.push(await compressImage(f));
+        }
+      } catch(e){
+        console.warn('壓縮失敗：', e);
+      }
+    }
+    if(arr.length > 0){ result[k] = arr; hasAny = true; }
+  }
+  return hasAny ? result : null;
+}
+
+async function base64ToFile(dataUrl, name){
+  var res = await fetch(dataUrl);
+  var blob = await res.blob();
+  try{ return new File([blob], name || 'image.jpg', {type: blob.type}); }
+  catch(e){ blob.name = name || 'image.jpg'; return blob; }
+}
+
+async function applyImages(images){
+  // 清空現有縮圖
+  for(var i = 0; i < IMAGE_SECTIONS.length; i++){
+    var k = IMAGE_SECTIONS[i];
+    imgs[k] = [];
+    var tid = (k === 'deposit') ? 'thumbs-deposit' : ('thumbs-' + k);
+    var t = document.getElementById(tid);
+    if(t) t.innerHTML = '';
+    var btn = document.getElementById('btn-' + k);
+    if(btn) btn.disabled = true;
+  }
+  if(!images) return;
+  for(var i = 0; i < IMAGE_SECTIONS.length; i++){
+    var k = IMAGE_SECTIONS[i];
+    if(!images[k] || !images[k].length) continue;
+    var arr = images[k];
+    for(var j = 0; j < arr.length; j++){
+      var dataUrl = arr[j];
+      try{
+        var f = await base64ToFile(dataUrl, k + '_' + j + '.jpg');
+        imgs[k].push(f);
+        var tid = (k === 'deposit') ? 'thumbs-deposit' : ('thumbs-' + k);
+        var t = document.getElementById(tid);
+        if(t){
+          var im = document.createElement('img');
+          im.src = dataUrl;
+          im.className = 'thumb';
+          t.appendChild(im);
+        }
+      } catch(e){ console.warn('還原圖片失敗：', e); }
+    }
+    var btn = document.getElementById('btn-' + k);
+    if(btn) btn.disabled = imgs[k].length === 0;
+  }
+}
+
 // ==== 雲端同步 ====
 function setSyncBadge(text){
   var el = document.getElementById('sync-badge');
   if(el) el.textContent = text;
+}
+
+async function cloudGetImages(fileId){
+  var url = localStorage.getItem('cd_sync_url');
+  if(!url || !fileId) return null;
+  var r = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify({action:'getImages', fileId:fileId})
+  });
+  var d = await r.json();
+  if(d.error) throw new Error(d.error);
+  return d.images || {};
 }
 
 async function cloudLoad(){
@@ -1015,13 +1152,15 @@ async function cloudLoad(){
   return d.records || {};
 }
 
-async function cloudSave(date, rec){
+async function cloudSave(date, rec, images){
   var url = localStorage.getItem('cd_sync_url');
   if(!url) throw new Error('未設定同步網址');
+  var payload = {action:'save', store:STORE_ID, date:date, record:rec};
+  if(images) payload.images = images;
   var r = await fetch(url, {
     method: 'POST',
     headers: {'Content-Type': 'text/plain;charset=utf-8'},
-    body: JSON.stringify({action:'save', store:STORE_ID, date:date, record:rec})
+    body: JSON.stringify(payload)
   });
   var d = await r.json();
   if(d.error) throw new Error(d.error);
