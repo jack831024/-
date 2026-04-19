@@ -370,7 +370,7 @@ document.addEventListener('keydown', function(e){
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.04.19-11';
+var APP_VERSION = '2026.04.19-13';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -771,14 +771,36 @@ async function analyzeSummary(){
   line.style.display = 'flex'; line.className = 'ai-status-line';
   spin.className = 'spinner on'; btxt.textContent = 'AI 讀取中...';
   try{
-    var prompt = '請從這些小結截圖中讀取數字，只回傳 JSON（不要 markdown 格式、不要任何說明），找不到的欄位填 null：\n{"opening":開箱金額或開櫃金額或期初金額,"net":淨銷售額,"cash":現金金額,"expected":預期錢櫃金額或期末錢櫃金額,"withdrawal":提現合計絕對值,"daishuo":代收合計,"jkopay":全支付金額,"jko":街口金額}';
+    var prompt = '請從這些小結/結算截圖中讀取數字。' +
+      '全支付與街口都是行動支付，通常出現在「行動支付」「電子支付」「第三方支付」區塊。' +
+      '全支付別名：全盈+PAY、全盈PAY、全盈、PXPay、PX Pay+。' +
+      '街口別名：街口支付、JKOPAY、JKO Pay、街口pay。' +
+      '如果同一種支付方式出現多筆（例如多張交易），請把它們加總。' +
+      '\n只回傳 JSON（不要 markdown、不要說明），找不到填 null：' +
+      '\n{"opening":開箱或開櫃或期初金額,"net":淨銷售額,"cash":現金金額,"expected":預期錢櫃或期末錢櫃金額,"withdrawal":提現合計絕對值,"daishuo":代收合計,"jkopay":全支付金額,"jko":街口金額}';
     var raw = await geminiCall(imgs.summary, prompt);
     console.log('Gemini 回應：', raw);
     var p = parseJson(raw);
-    var map = {opening:'i-opening', net:'b-net', cash:'b-cash', expected:'i-expected', withdrawal:'i-withdrawal', daishuo:'i-daishuo', jkopay:'b-jkopay', jko:'b-jko'};
+    console.log('解析後：', p);
+    // 注意：b-cash 欄位已移除，所以 map 裡沒有 cash
+    var map = {opening:'i-opening', net:'b-net', expected:'i-expected', withdrawal:'i-withdrawal', daishuo:'i-daishuo', jkopay:'b-jkopay', jko:'b-jko'};
+    var filled = [];
+    var missing = [];
+    var skipped = [];
     Object.keys(map).forEach(function(k){
-      if(p[k] != null) document.getElementById(map[k]).value = p[k];
+      var el = document.getElementById(map[k]);
+      if(!el){
+        skipped.push(k + '(#' + map[k] + ' 不存在)');
+        return;
+      }
+      if(p[k] != null && p[k] !== '' && !isNaN(parseFloat(p[k]))) {
+        el.value = parseFloat(p[k]);
+        filled.push(k);
+      } else {
+        missing.push(k);
+      }
     });
+    console.log('[analyzeSummary] 已填入：', filled, '；AI 沒抓到：', missing, '；跳過：', skipped);
     recalc(); recalcNextDay(); onOpeningChange();
     line.className = 'ai-status-line done';
     spin.className = 'spinner';
@@ -1250,7 +1272,7 @@ function recalc(){
 }
 
 // ==== 紀錄儲存/讀取 ====
-var INPUT_IDS = ['i-shift-a','i-opening','b-net','b-cash','i-expected','i-withdrawal','i-daishuo','b-jkopay','b-jko','i-jkopay','i-jko','i-deposit'];
+var INPUT_IDS = ['i-shift-a','i-opening','b-net','i-expected','i-withdrawal','i-daishuo','b-jkopay','b-jko','i-jkopay','i-jko','i-deposit'];
 
 function todayStr(){
   var d = new Date();
