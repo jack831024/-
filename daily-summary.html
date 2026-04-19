@@ -22,6 +22,9 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
 .amt.neg{color:#d93025}
 .amt-input{width:110px;text-align:right;font-size:14px;padding:5px 8px;border:1px solid #ddd;border-radius:8px;background:#fafafa;outline:none}
 .amt-input:focus{border-color:#4a90d9;background:#fff}
+.amt-input.ai-only{background:#f0f4f8;color:#333;cursor:not-allowed;border-style:dashed;border-color:#c8d4e0}
+.amt-input.ai-only:focus{border-color:#c8d4e0;background:#f0f4f8}
+.amt-input.ai-only::placeholder{color:#a0a0a0;font-size:12px}
 .status{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap}
 .ok{background:#e6f4ee;color:#1e8c5a}
 .err{background:#fdecea;color:#d93025}
@@ -217,10 +220,10 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
     <div class="thumb-row" id="thumbs-summary"></div>
     <div class="ai-status-line" id="ai-status-summary" style="display:none"><span class="spinner" id="spin-summary"></span><span id="btxt-summary">AI 讀取中...</span></div>
     <div id="summary-fields">
-      <!-- 開箱金額（AI 會從小結圖讀取） -->
+      <!-- 開箱金額（AI 會從小結圖讀取，不開放手動輸入） -->
       <div class="row" style="background:#fff8e6;border-radius:8px;padding:8px 10px;margin-bottom:6px;border-bottom:none">
         <span class="label" style="font-weight:600;color:#b8860b">🔑 今日開箱金額</span>
-        <input class="amt-input" id="i-opening" type="number" placeholder="—" oninput="onOpeningChange()">
+        <input class="amt-input ai-only" id="i-opening" type="number" placeholder="🔒 等待 AI 讀取" readonly>
       </div>
       <div class="row sep" style="border-bottom:1px solid #eee;padding-bottom:8px;margin-bottom:8px">
         <span class="label" style="font-size:12px;color:#888">vs 前一天隔日開箱</span>
@@ -232,14 +235,14 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
           <option value="">— 請選擇 —</option>
         </select>
       </div>
-      <div class="row"><span class="label">淨銷售額</span><input class="amt-input" id="b-net" type="number" placeholder="—" oninput="recalc()"></div>
+      <div class="row"><span class="label">淨銷售額</span><input class="amt-input ai-only" id="b-net" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
       <div class="row" style="background:#f5f8ff"><span class="label" style="color:#4a90d9">本月累積營業額</span><span class="status neutral" id="m-monthly" style="font-weight:600;color:#4a90d9">—</span></div>
       <div class="row" style="background:#fff5e6"><span class="label" style="color:#e8810d">營業額獎金 <span id="m-bonus-pct" style="font-size:11px;color:#aaa">（—）</span></span><span class="status neutral" id="m-bonus" style="font-weight:600;color:#e8810d">—</span></div>
-      <div class="row"><span class="label">預期錢櫃金額</span><input class="amt-input" id="i-expected" type="number" placeholder="—" oninput="recalcNextDay()"></div>
-      <div class="row"><span class="label">小結提現</span><input class="amt-input" id="i-withdrawal" type="number" placeholder="—" oninput="recalc()"></div>
-      <div class="row"><span class="label">小結代收</span><input class="amt-input" id="i-daishuo" type="number" placeholder="—" oninput="recalc()"></div>
-      <div class="row"><span class="label">全支付（小結）</span><input class="amt-input" id="b-jkopay" type="number" placeholder="—" oninput="recalc()"></div>
-      <div class="row"><span class="label">街口（小結）</span><input class="amt-input" id="b-jko" type="number" placeholder="—" oninput="recalc()"></div>
+      <div class="row"><span class="label">預期錢櫃金額</span><input class="amt-input ai-only" id="i-expected" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
+      <div class="row"><span class="label">小結提現</span><input class="amt-input ai-only" id="i-withdrawal" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
+      <div class="row"><span class="label">小結代收</span><input class="amt-input ai-only" id="i-daishuo" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
+      <div class="row"><span class="label">全支付（小結）</span><input class="amt-input ai-only" id="b-jkopay" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
+      <div class="row"><span class="label">街口（小結）</span><input class="amt-input ai-only" id="b-jko" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
     </div>
   </div>
   <div class="section">
@@ -322,7 +325,7 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
       <div class="ai-status-line" id="ai-status-deposit" style="display:none"><span class="spinner" id="spin-deposit"></span><span id="btxt-deposit">AI 讀取中...</span></div>
       <div class="row" id="deposit-row">
         <span class="label">今日存入金額</span>
-        <input class="amt-input" id="i-deposit" type="number" value="0" oninput="recalcNextDay()">
+        <input class="amt-input ai-only" id="i-deposit" type="number" value="0" placeholder="🔒 等待 AI 讀取" readonly>
       </div>
     </div>
     <div class="total-row" style="margin-top:12px">
@@ -371,7 +374,7 @@ document.addEventListener('keydown', function(e){
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.04.19-14';
+var APP_VERSION = '2026.04.19-15';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
