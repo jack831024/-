@@ -370,7 +370,7 @@ document.addEventListener('keydown', function(e){
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.04.19-05';
+var APP_VERSION = '2026.04.19-07';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -639,8 +639,16 @@ async function callModelOnce(model, key, parts){
   console.log('[' + model + '] 代理回應：', wrap);
   // Apps Script 層錯誤
   if(wrap.error){
-    var pxErr = new Error(wrap.error.message || 'Apps Script 代理錯誤');
-    pxErr.code = wrap.error.code;
+    // wrap.error 可能是字串或 { code, message } 物件
+    var errMsg = typeof wrap.error === 'string'
+      ? wrap.error
+      : (wrap.error.message || JSON.stringify(wrap.error));
+    // 特別判斷：未部署新版本的典型錯誤
+    if(errMsg.indexOf('unknown action') >= 0){
+      errMsg = '後端尚未部署新版本（需要到 Apps Script → 部署 → 管理部署 → ✏️ → 新版本 → 部署）';
+    }
+    var pxErr = new Error(errMsg);
+    pxErr.code = (typeof wrap.error === 'object') ? wrap.error.code : undefined;
     throw pxErr;
   }
   var d = wrap.data || {};
@@ -1324,6 +1332,11 @@ async function loadRecord(date){
   updateSavedTag(date);
   // 載入完後更新開箱金額比對提示
   onOpeningChange();
+  // 🔧 載入過往紀錄後，重新計算所有衍生欄位（本月累積、獎金、員工分配、次日結轉…）
+  recalc();
+  recalcNextDay();
+  recalcMonthly();
+  recalcStaffBonus();
 
   // 如果這筆有圖片，從雲端拉下來
   if(r.imageFileId && localStorage.getItem('cd_sync_url')){
