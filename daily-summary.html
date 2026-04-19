@@ -40,6 +40,17 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
 .analyze-btn{width:100%;padding:10px;border:none;border-radius:10px;background:#4a90d9;color:#fff;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:4px}
 .analyze-btn:hover{background:#357abd}
 .analyze-btn:disabled{background:#bbb;cursor:not-allowed}
+.ai-status-line{padding:8px 12px;background:#eef5ff;color:#1a6fd4;border-radius:8px;font-size:13px;display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.ai-status-line.done{background:#e6f7e6;color:#2d7a2d}
+.ai-status-line.err{background:#fdecea;color:#d93025}
+.staff-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:8px}
+@media(max-width:380px){.staff-grid{grid-template-columns:1fr}}
+.staff-card{background:#fafafa;padding:12px 10px;border-radius:10px;border:1px solid #eee;text-align:center;transition:all .15s}
+.staff-card.top{background:#fff8e6;border-color:#f0d58c}
+.staff-card .sname{font-size:12px;color:#666;margin-bottom:4px;font-weight:500}
+.staff-card .samt{font-size:15px;color:#d93025;font-weight:700;font-family:monospace}
+.staff-card .sdays{font-size:10px;color:#999;margin-top:2px}
+.staff-card.empty .samt{color:#ccc}
 .spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none;flex-shrink:0}
 .spinner.on{display:inline-block}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -187,22 +198,10 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
       </select>
     </div>
     <div class="btn-row">
-      <button class="primary" onclick="saveRecord()">💾 儲存</button>
-      <button onclick="newRecord()">✨ 清空</button>
-      <button class="danger" onclick="deleteCurrentRecord()">🗑️ 刪除</button>
-    </div>
-    <div class="btn-row" style="margin-top:6px">
-      <button onclick="syncFromCloud()">☁️ 從雲端同步</button>
-      <button onclick="exportAll()">📤 匯出備份</button>
-      <button onclick="document.getElementById('import-file').click()">📥 匯入備份</button>
-      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importAll(this)">
+      <button class="primary" onclick="saveRecord()" style="width:100%">💾 儲存（自動同步雲端）</button>
     </div>
     <span class="saved-tag" id="saved-tag">—</span>
     <span class="saved-tag" id="sync-badge" style="margin-top:2px">—</span>
-  </div>
-  <div class="grid2">
-    <div class="metric"><div class="mlabel">淨銷售額</div><div class="mval" id="m-net">—</div></div>
-    <div class="metric"><div class="mlabel">現金收入</div><div class="mval" id="m-cash">—</div></div>
   </div>
   <div class="section">
     <h3>小結報表截圖 <span class="ai-tag">AI 自動讀取</span></h3>
@@ -212,13 +211,30 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
       <span class="uz-label">點擊上傳小結截圖（可多張）</span>
     </div>
     <div class="thumb-row" id="thumbs-summary"></div>
-    <button class="analyze-btn" id="btn-summary" onclick="analyzeSummary()" disabled>
-      <span class="spinner" id="spin-summary"></span>
-      <span id="btxt-summary">AI 自動讀取數字</span>
-    </button>
+    <div class="ai-status-line" id="ai-status-summary" style="display:none"><span class="spinner" id="spin-summary"></span><span id="btxt-summary">AI 讀取中...</span></div>
     <div id="summary-fields">
+      <!-- 開箱金額（AI 會從小結圖讀取） -->
+      <div class="row" style="background:#fff8e6;border-radius:8px;padding:8px 10px;margin-bottom:6px;border-bottom:none">
+        <span class="label" style="font-weight:600;color:#b8860b">🔑 今日開箱金額</span>
+        <input class="amt-input" id="i-opening" type="number" placeholder="—" oninput="onOpeningChange()">
+      </div>
+      <div class="row sep" style="border-bottom:1px solid #eee;padding-bottom:8px;margin-bottom:8px">
+        <span class="label" style="font-size:12px;color:#888">vs 前一天隔日開箱</span>
+        <span class="status neutral" id="s-opening" style="font-size:13px">—</span>
+      </div>
+      <div class="row" style="background:#e8f5e8;border-radius:8px;padding:8px 10px;margin-bottom:6px;border-bottom:none">
+        <span class="label" style="font-weight:600;color:#2e7d32">👤 今日 A 班 <span id="shift-a-tag" style="font-size:10px;background:#d4edda;color:#2e7d32;padding:1px 6px;border-radius:8px;margin-left:4px">系統判定</span></span>
+        <select id="i-shift-a" class="amt-input" style="text-align:left" onchange="onShiftAChange()">
+          <option value="">— 尚未判定 —</option>
+        </select>
+      </div>
+      <div class="row sep" style="border-bottom:1px solid #eee;padding-bottom:8px;margin-bottom:8px;font-size:11px;color:#888">
+        <span>排班表狀態</span>
+        <span id="shift-a-status">—</span>
+      </div>
       <div class="row"><span class="label">淨銷售額</span><input class="amt-input" id="b-net" type="number" placeholder="—" oninput="recalc()"></div>
-      <div class="row"><span class="label">現金</span><input class="amt-input" id="b-cash" type="number" placeholder="—" oninput="recalc()"></div>
+      <div class="row" style="background:#f5f8ff"><span class="label" style="color:#4a90d9">本月累積營業額</span><span class="status neutral" id="m-monthly" style="font-weight:600;color:#4a90d9">—</span></div>
+      <div class="row" style="background:#fff5e6"><span class="label" style="color:#e8810d">營業額獎金 <span id="m-bonus-pct" style="font-size:11px;color:#aaa">（—）</span></span><span class="status neutral" id="m-bonus" style="font-weight:600;color:#e8810d">—</span></div>
       <div class="row"><span class="label">預期錢櫃金額</span><input class="amt-input" id="i-expected" type="number" placeholder="—" oninput="recalcNextDay()"></div>
       <div class="row"><span class="label">小結提現</span><input class="amt-input" id="i-withdrawal" type="number" placeholder="—" oninput="recalc()"></div>
       <div class="row"><span class="label">小結代收</span><input class="amt-input" id="i-daishuo" type="number" placeholder="—" oninput="recalc()"></div>
@@ -262,10 +278,7 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
       <span class="uz-label">上傳發票 / 貨款收據（可多張）</span>
     </div>
     <div class="thumb-row" id="thumbs-w"></div>
-    <button class="analyze-btn" id="btn-w" onclick="analyzeReceipts('w')" disabled>
-      <span class="spinner" id="spin-w"></span>
-      <span id="btxt-w">AI 自動辨識金額</span>
-    </button>
+    <div class="ai-status-line" id="ai-status-w" style="display:none"><span class="spinner" id="spin-w"></span><span id="btxt-w">AI 讀取中...</span></div>
     <div id="w-list"></div>
     <div class="add-manual">
       <input type="text" id="w-desc" placeholder="手動新增說明">
@@ -283,10 +296,7 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
       <span class="uz-label">上傳代收單據（可多張）</span>
     </div>
     <div class="thumb-row" id="thumbs-d"></div>
-    <button class="analyze-btn" id="btn-d" onclick="analyzeReceipts('d')" disabled>
-      <span class="spinner" id="spin-d"></span>
-      <span id="btxt-d">AI 自動辨識金額</span>
-    </button>
+    <div class="ai-status-line" id="ai-status-d" style="display:none"><span class="spinner" id="spin-d"></span><span id="btxt-d">AI 讀取中...</span></div>
     <div id="d-list"></div>
     <div class="add-manual">
       <input type="text" id="d-desc" placeholder="手動新增說明">
@@ -319,6 +329,17 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
       <span class="next-amt" id="next-day-amt">—</span>
     </div>
   </div>
+
+  <!-- 本月 A 班獎金累計 -->
+  <div class="section">
+    <h3>🏆 本月 A 班獎金累計 <span id="bonus-month-label" style="font-size:11px;color:#aaa;font-weight:400"></span></h3>
+    <div class="staff-grid" id="staff-bonus-grid"></div>
+    <div class="row" style="margin-top:12px;border-top:2px solid #eee;padding-top:10px;border-bottom:none">
+      <span class="label" style="font-weight:600">本月獎金總額（全店）</span>
+      <span class="tamt" id="staff-bonus-total">NT$ 0</span>
+    </div>
+  </div>
+
   <div id="result-area"></div>
 </div>
 
@@ -345,9 +366,63 @@ document.addEventListener('keydown', function(e){
 </script>
 
 <script>
+// ============================================
+// ⭐ 內建金鑰（員工免設定）
+// ============================================
+// 每次開啟網頁都會自動套用這兩個設定值
+// 如需換金鑰或換後端網址，直接改下面兩行，重新上傳即可
+var BUILTIN_GEMINI_KEY = "AQ.Ab8RN6J6nPntvRsa4gzdYyG-TZji2NcBnyZMT7imlo6qDws9iA";
+var BUILTIN_SYNC_URL   = "https://script.google.com/macros/s/AKfycbzQweLpmQ_5SPxr90Iu-GnqleHUFPbJph8RZuFeasAEKIEWA3xBr_MAdenIkIdciYmQDA/exec";
+var BUILTIN_MODEL      = "gemini-2.5-flash";
+
+// 每次載入都強制覆寫 localStorage，確保用的是最新值
+(function applyBuiltinConfig(){
+  if(BUILTIN_GEMINI_KEY) localStorage.setItem('cd_gemini_key', BUILTIN_GEMINI_KEY);
+  if(BUILTIN_SYNC_URL)   localStorage.setItem('cd_sync_url',   BUILTIN_SYNC_URL);
+  if(BUILTIN_MODEL && !localStorage.getItem('cd_gemini_model')){
+    localStorage.setItem('cd_gemini_model', BUILTIN_MODEL);
+  }
+})();
+// ============================================
+
 // ==== 門市驗證 ====
 var STORE_ID = sessionStorage.getItem('cd_store');
 var STORE_NAME = sessionStorage.getItem('cd_store_name');
+
+// 各門市營業額獎金百分比
+var BONUS_RATES = {
+  'chudian-zhonghe':    0.0165, // 中和店 1.65%
+  'chudian-yongchun':   0.02,   // 永春店 2%
+  'chudian-xinzhuang':  0.0175, // 新莊店 1.75%
+  'shicheng-zhongxiao': 0.025   // 十城忠孝店 2.5%
+};
+
+// 各門市員工名單（之後請補齊真實名單）
+var STAFF_LISTS = {
+  'chudian-zhonghe':    ['員工A','員工B','員工C'],       // ← 中和店：待補
+  'chudian-yongchun':   ['77','林韋翔','洪','宸','小澤','小邱'], // 永春店
+  'chudian-xinzhuang':  ['員工A','員工B','員工C'],       // ← 新莊店：待補
+  'shicheng-zhongxiao': ['員工A','員工B','員工C']        // ← 十城忠孝店：待補
+};
+var CURRENT_STAFF_LIST = STAFF_LISTS[STORE_ID] || [];
+
+// 🗓️ 排班表快取（進頁面時抓一次就全放這）
+// 結構：{ "2026-04-19": { "77":"A", "林韋翔":"休", ... }, ... }
+var SCHEDULE_CACHE = {};
+var SCHEDULE_HEADERS = []; // 排班表欄位標頭（=員工名單，來自試算表第一列）
+var SCHEDULE_LOADED = false;
+
+// 從排班表快取查當日 A 班是誰
+function findAShiftFromCache(dateStr){
+  if(!dateStr || !SCHEDULE_CACHE[dateStr]) return null;
+  var day = SCHEDULE_CACHE[dateStr];
+  for(var name in day){
+    if(!day.hasOwnProperty(name)) continue;
+    var v = String(day[name]).trim().toUpperCase();
+    if(v === 'A' || v === 'Ａ' || v === 'A班' || v === 'Ａ班') return name;
+  }
+  return null;
+}
 
 (function checkStore(){
   if(!STORE_ID || !STORE_NAME){ window.location.href = 'index.html'; return; }
@@ -359,6 +434,15 @@ var STORE_NAME = sessionStorage.getItem('cd_store_name');
   var sub = document.querySelector('.subtitle');
   if(sub) sub.textContent = STORE_NAME + ' · Gemini 免費版';
   document.title = STORE_NAME + ' - 每日小結';
+  // 填充 A 班下拉選單（依門市員工名單）
+  var sel = document.getElementById('i-shift-a');
+  if(sel && CURRENT_STAFF_LIST.length > 0){
+    CURRENT_STAFF_LIST.forEach(function(name){
+      var opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      sel.appendChild(opt);
+    });
+  }
 })();
 
 function switchStore(){
@@ -591,6 +675,11 @@ function handleFiles(input, key){
   });
   var btn = document.getElementById('btn-' + key);
   if(btn) btn.disabled = imgs[key].length === 0;
+  // 自動觸發 AI 識別
+  if(imgs[key].length > 0 && hasApiKey()){
+    if(key === 'summary') analyzeSummary();
+    else if(key === 'w' || key === 'd') analyzeReceipts(key);
+  }
 }
 
 function handlePayFile(input, key){
@@ -608,28 +697,30 @@ function handlePayFile(input, key){
 
 async function analyzeSummary(){
   if(!hasApiKey()) return;
-  var btn = document.getElementById('btn-summary');
+  var line = document.getElementById('ai-status-summary');
   var spin = document.getElementById('spin-summary');
   var btxt = document.getElementById('btxt-summary');
-  btn.disabled = true; spin.className = 'spinner on'; btxt.textContent = '讀取中...';
+  line.style.display = 'flex'; line.className = 'ai-status-line';
+  spin.className = 'spinner on'; btxt.textContent = 'AI 讀取中...';
   try{
-    var prompt = '請從這些小結截圖中讀取數字，只回傳 JSON（不要 markdown 格式、不要任何說明），找不到的欄位填 null：\n{"net":淨銷售額,"cash":現金金額,"expected":預期錢櫃金額,"withdrawal":提現合計絕對值,"daishuo":代收合計,"jkopay":全支付金額,"jko":街口金額}';
+    var prompt = '請從這些小結截圖中讀取數字，只回傳 JSON（不要 markdown 格式、不要任何說明），找不到的欄位填 null：\n{"opening":開箱金額或開櫃金額或期初金額,"net":淨銷售額,"cash":現金金額,"expected":預期錢櫃金額或期末錢櫃金額,"withdrawal":提現合計絕對值,"daishuo":代收合計,"jkopay":全支付金額,"jko":街口金額}';
     var raw = await geminiCall(imgs.summary, prompt);
     console.log('Gemini 回應：', raw);
     var p = parseJson(raw);
-    var map = {net:'b-net', cash:'b-cash', expected:'i-expected', withdrawal:'i-withdrawal', daishuo:'i-daishuo', jkopay:'b-jkopay', jko:'b-jko'};
+    var map = {opening:'i-opening', net:'b-net', cash:'b-cash', expected:'i-expected', withdrawal:'i-withdrawal', daishuo:'i-daishuo', jkopay:'b-jkopay', jko:'b-jko'};
     Object.keys(map).forEach(function(k){
       if(p[k] != null) document.getElementById(map[k]).value = p[k];
     });
-    recalc(); recalcNextDay();
-    btxt.textContent = '重新讀取';
+    recalc(); recalcNextDay(); onOpeningChange();
+    line.className = 'ai-status-line done';
+    spin.className = 'spinner';
+    btxt.textContent = '✓ 讀取完成';
   } catch(e){
     console.error(e);
-    btxt.textContent = '讀取失敗';
-    alert('AI 讀取失敗：' + (e.message || '未知錯誤'));
+    line.className = 'ai-status-line err';
+    spin.className = 'spinner';
+    btxt.textContent = '讀取失敗：' + (e.message || '未知錯誤');
   }
-  spin.className = 'spinner';
-  btn.disabled = false;
 }
 
 async function analyzePayFile(key, file){
@@ -650,10 +741,11 @@ async function analyzePayFile(key, file){
 
 async function analyzeReceipts(key){
   if(!hasApiKey()) return;
-  var btn = document.getElementById('btn-' + key);
+  var line = document.getElementById('ai-status-' + key);
   var spin = document.getElementById('spin-' + key);
   var btxt = document.getElementById('btxt-' + key);
-  btn.disabled = true; spin.className = 'spinner on'; btxt.textContent = '辨識中...';
+  line.style.display = 'flex'; line.className = 'ai-status-line';
+  spin.className = 'spinner on'; btxt.textContent = 'AI 辨識中...';
   try{
     var prompt = '每張圖片讀取合計金額與來源名稱，只回傳 JSON 陣列（不要 markdown、不要說明）：[{"desc":"來源","amt":金額}]';
     var raw = await geminiCall(imgs[key], prompt);
@@ -666,14 +758,58 @@ async function analyzeReceipts(key){
       }
     });
     renderAll(); recalc();
-    btxt.textContent = '重新辨識';
+    line.className = 'ai-status-line done';
+    spin.className = 'spinner';
+    btxt.textContent = '✓ 辨識完成';
   } catch(e){
     console.error(e);
-    btxt.textContent = '辨識失敗';
-    alert('AI 辨識失敗：' + (e.message || '未知錯誤'));
+    line.className = 'ai-status-line err';
+    spin.className = 'spinner';
+    btxt.textContent = '辨識失敗：' + (e.message || '未知錯誤');
   }
-  spin.className = 'spinner';
-  btn.disabled = false;
+}
+
+// 開箱金額輸入變動時，自動比對前一天的隔日開箱金額
+function onOpeningChange(){
+  var today = document.getElementById('record-date').value;
+  var openingEl = document.getElementById('i-opening');
+  var statusEl = document.getElementById('s-opening');
+  if(!statusEl) return;
+  var openingVal = parseFloat(openingEl.value);
+  var prevNext = getPrevDayNextOpening(today);
+  if(prevNext == null){
+    statusEl.textContent = '（無前一天紀錄）';
+    statusEl.className = 'status neutral';
+    return;
+  }
+  var prevStr = 'NT$ ' + fmt(prevNext);
+  if(isNaN(openingVal)){
+    statusEl.textContent = prevStr + '（尚未填入）';
+    statusEl.className = 'status neutral';
+    return;
+  }
+  if(Math.round(openingVal) === Math.round(prevNext)){
+    statusEl.textContent = prevStr + ' · ✓ 一致';
+    statusEl.className = 'status ok';
+  } else {
+    var diff = Math.abs(openingVal - prevNext);
+    statusEl.textContent = prevStr + ' · 差 NT$ ' + fmt(diff);
+    statusEl.className = 'status err';
+  }
+  recalcNextDay();
+}
+
+// 取得前一天的「隔日開箱金額」= 前一天的 expected - deposit
+function getPrevDayNextOpening(date){
+  if(!date) return null;
+  var prev = getPrevDayRecord(date);
+  if(!prev) return null;
+  var d = prev.data || {};
+  var inp = d.inputs || {};
+  var prevExpected = parseFloat(inp['i-expected']) || 0;
+  var prevDeposit = (d.noDeposit ? 0 : (parseFloat(inp['i-deposit']) || 0));
+  if(!prevExpected) return null;
+  return prevExpected - prevDeposit;
 }
 
 async function handleDepositFile(input){
@@ -754,15 +890,250 @@ function recalcNextDay(){
   document.getElementById('next-day-amt').textContent = exp ? ('NT$ ' + fmt(exp - dep)) : '—';
 }
 
+// 計算本月累積營業額 + 獎金（只算當月、不跨月）
+function recalcMonthly(){
+  var monthlyEl = document.getElementById('m-monthly');
+  var bonusEl = document.getElementById('m-bonus');
+  var pctEl = document.getElementById('m-bonus-pct');
+  if(!monthlyEl || !bonusEl) return;
+
+  var rate = BONUS_RATES[STORE_ID] || 0;
+  if(pctEl) pctEl.textContent = '（' + (rate * 100).toFixed(2).replace(/\.?0+$/, '') + '%）';
+
+  var dateStr = document.getElementById('record-date').value;
+  if(!dateStr){
+    monthlyEl.textContent = '—';
+    bonusEl.textContent = '—';
+    return;
+  }
+  // 當前月份（例 2026-04）
+  var ym = dateStr.substring(0, 7);
+
+  // 累加本月所有已儲存紀錄的淨銷售額
+  var records = getAllRecords();
+  var total = 0;
+  Object.keys(records).forEach(function(d){
+    if(d.substring(0, 7) !== ym) return;
+    // 排除今天當下的數值（今天還沒存），改用畫面上目前值
+    if(d === dateStr) return;
+    var inp = (records[d].data || {}).inputs || {};
+    total += parseFloat(inp['b-net']) || 0;
+  });
+  // 加上今天畫面上正在輸入的淨銷售額
+  var todayNet = parseFloat(document.getElementById('b-net').value) || 0;
+  total += todayNet;
+
+  monthlyEl.textContent = 'NT$ ' + fmt(total);
+  var bonus = total * rate;
+  bonusEl.textContent = 'NT$ ' + fmt(bonus);
+
+  // 連動計算員工獎金分配
+  recalcStaffBonus();
+}
+
+// A 班人員變動時重新算分配
+function onShiftAChange(){
+  var sel = document.getElementById('i-shift-a');
+  var tag = document.getElementById('shift-a-tag');
+  // 如果使用者手動改過，tag 顯示「手動」
+  if(tag && sel._autoFilled && sel.value !== sel._autoFilled){
+    tag.textContent = '手動';
+    tag.style.background = '#fff3cd';
+    tag.style.color = '#856404';
+  }
+  recalcStaffBonus();
+}
+
+// 📦 整份排班表一次抓回來（進頁面時呼叫一次）
+async function loadSchedule(){
+  var statusEl = document.getElementById('shift-a-status');
+  var url = localStorage.getItem('cd_sync_url');
+  if(!url){
+    if(statusEl) statusEl.textContent = '未設定雲端';
+    return false;
+  }
+  if(statusEl) statusEl.textContent = '載入排班表中…';
+  try{
+    var res = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action: 'getSchedule', store: STORE_ID })
+    });
+    var data = await res.json();
+    SCHEDULE_CACHE   = data.schedule || {};
+    SCHEDULE_HEADERS = (data.headers || []).filter(function(h){ return h && String(h).trim(); });
+    SCHEDULE_LOADED  = true;
+    // 排班表表頭有任何員工不在 STAFF_LISTS 裡，自動合併進去
+    SCHEDULE_HEADERS.forEach(function(n){
+      if(CURRENT_STAFF_LIST.indexOf(n) < 0) CURRENT_STAFF_LIST.push(n);
+    });
+    if(statusEl) statusEl.textContent = '✓ 排班表載入完成（' + Object.keys(SCHEDULE_CACHE).length + ' 天）';
+    return true;
+  } catch(e){
+    console.warn('loadSchedule error', e);
+    SCHEDULE_LOADED = false;
+    if(statusEl) statusEl.textContent = '⚠️ 排班表讀取失敗：' + (e.message || e);
+    return false;
+  }
+}
+
+// 🎯 套用某一天的 A 班（先從快取，失敗再 fallback 打單筆 API）
+async function fetchShiftA(date){
+  var statusEl = document.getElementById('shift-a-status');
+  var tag = document.getElementById('shift-a-tag');
+  var sel = document.getElementById('i-shift-a');
+
+  // 先走快取（常態路徑，零網路請求）
+  if(SCHEDULE_LOADED){
+    var person = findAShiftFromCache(date);
+    if(person){
+      if(CURRENT_STAFF_LIST.indexOf(person) < 0){
+        CURRENT_STAFF_LIST.push(person);
+        var opt = document.createElement('option');
+        opt.value = person; opt.textContent = person;
+        sel.appendChild(opt);
+      }
+      sel.value = person;
+      sel._autoFilled = person;
+      if(tag){ tag.textContent = '✓ 系統判定'; tag.style.background = '#d4edda'; tag.style.color = '#2e7d32'; }
+      if(statusEl) statusEl.textContent = '✓ 從排班表自動帶入（快取）';
+      return person;
+    } else {
+      // 排班表有這天但沒人是 A，或這天根本沒排
+      if(statusEl) statusEl.textContent = SCHEDULE_CACHE[date]
+        ? '❓ 這天排班表裡沒人是 A，請手動選擇'
+        : '❓ 排班表找不到此日期，請手動選擇';
+      if(tag){ tag.textContent = '手動'; tag.style.background = '#fff3cd'; tag.style.color = '#856404'; }
+      return null;
+    }
+  }
+
+  // Fallback：快取沒載成功 → 走舊的 getShift API
+  var url = localStorage.getItem('cd_sync_url');
+  if(!url){
+    if(statusEl) statusEl.textContent = '未設定雲端';
+    return null;
+  }
+  if(statusEl) statusEl.textContent = '讀取中...';
+  try{
+    var res = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action: 'getShift', store: STORE_ID, date: date })
+    });
+    var data = await res.json();
+    if(data.person){
+      if(CURRENT_STAFF_LIST.indexOf(data.person) < 0){
+        var opt2 = document.createElement('option');
+        opt2.value = data.person; opt2.textContent = data.person;
+        sel.appendChild(opt2);
+      }
+      sel.value = data.person;
+      sel._autoFilled = data.person;
+      if(tag){ tag.textContent = '✓ 系統判定'; tag.style.background = '#d4edda'; tag.style.color = '#2e7d32'; }
+      if(statusEl) statusEl.textContent = '✓ 從排班表自動帶入';
+      return data.person;
+    } else {
+      if(statusEl) statusEl.textContent = '❓ 排班表找不到此日期，請手動選擇';
+      if(tag){ tag.textContent = '手動'; tag.style.background = '#fff3cd'; tag.style.color = '#856404'; }
+      return null;
+    }
+  } catch(e){
+    console.warn('fetchShiftA error', e);
+    if(statusEl) statusEl.textContent = '⚠️ 讀取失敗：' + (e.message || e);
+    return null;
+  }
+}
+
+// 計算本月每位員工累積的 A 班獎金
+function recalcStaffBonus(){
+  var gridEl = document.getElementById('staff-bonus-grid');
+  var totalEl = document.getElementById('staff-bonus-total');
+  var labelEl = document.getElementById('bonus-month-label');
+  if(!gridEl || !totalEl) return;
+
+  var rate = BONUS_RATES[STORE_ID] || 0;
+  var dateStr = document.getElementById('record-date').value;
+  var ym = dateStr ? dateStr.substring(0, 7) : '';
+  if(labelEl) labelEl.textContent = ym ? ('（' + ym + ' 月 · ' + (rate * 100).toFixed(2).replace(/\.?0+$/, '') + '%）') : '';
+
+  // 初始化每人累計
+  var totals = {};
+  var dayCounts = {};
+  CURRENT_STAFF_LIST.forEach(function(n){ totals[n] = 0; dayCounts[n] = 0; });
+
+  var pool = 0;
+  var records = getAllRecords();
+
+  Object.keys(records).forEach(function(d){
+    if(ym && d.substring(0, 7) !== ym) return;
+    // 排除今天（用畫面上最新值取代）
+    if(d === dateStr) return;
+    var inp = (records[d].data || {}).inputs || {};
+    var net = parseFloat(inp['b-net']) || 0;
+    if(!net) return;
+    // 優先從排班表快取判定 A 班；找不到才回退用當初儲存的 i-shift-a
+    var person = findAShiftFromCache(d) || inp['i-shift-a'];
+    var bonus = net * rate;
+    pool += bonus;
+    if(person){
+      if(!totals.hasOwnProperty(person)){ totals[person] = 0; dayCounts[person] = 0; }
+      totals[person] += bonus;
+      dayCounts[person] += 1;
+    }
+  });
+
+  // 加上今天畫面上的
+  if(dateStr && (!ym || dateStr.substring(0, 7) === ym)){
+    var todayNet = parseFloat(document.getElementById('b-net').value) || 0;
+    // 優先快取、再來才是畫面上的選擇（手動覆蓋情況）
+    var todayA = findAShiftFromCache(dateStr) || document.getElementById('i-shift-a').value;
+    if(todayNet){
+      var todayBonus = todayNet * rate;
+      pool += todayBonus;
+      if(todayA){
+        if(!totals.hasOwnProperty(todayA)){ totals[todayA] = 0; dayCounts[todayA] = 0; }
+        totals[todayA] += todayBonus;
+        dayCounts[todayA] += 1;
+      }
+    }
+  }
+
+  // 找出最高獎金的人 (第一名)
+  var maxBonus = 0;
+  CURRENT_STAFF_LIST.forEach(function(n){
+    if(totals[n] > maxBonus) maxBonus = totals[n];
+  });
+
+  // 渲染員工卡片
+  if(CURRENT_STAFF_LIST.length === 0){
+    gridEl.innerHTML = '<div style="grid-column:1/-1;padding:12px;background:#fff3cd;color:#856404;border-radius:8px;font-size:13px;text-align:center">⚠️ 本店員工名單尚未設定，請至程式頂端 STAFF_LISTS 補齊</div>';
+  } else {
+    gridEl.innerHTML = CURRENT_STAFF_LIST.map(function(name){
+      var amt = totals[name] || 0;
+      var days = dayCounts[name] || 0;
+      var cls = 'staff-card';
+      if(amt === 0) cls += ' empty';
+      else if(amt === maxBonus) cls += ' top';
+      return '<div class="' + cls + '">' +
+        '<div class="sname">' + (amt === maxBonus && amt > 0 ? '👑 ' : '') + name + '</div>' +
+        '<div class="samt">NT$ ' + fmt(amt) + '</div>' +
+        '<div class="sdays">' + days + ' 天 A 班</div>' +
+        '</div>';
+    }).join('');
+  }
+  totalEl.textContent = 'NT$ ' + fmt(pool);
+}
+
 function recalc(){
   var wT = store.w.reduce(function(s, x){ return s + x.amt; }, 0);
   var dT = store.d.reduce(function(s, x){ return s + x.amt; }, 0);
   document.getElementById('w-total').textContent = 'NT$ ' + fmt(wT);
   document.getElementById('d-total').textContent = 'NT$ ' + fmt(dT);
-  var net = parseFloat(document.getElementById('b-net').value) || 0;
-  var cash = parseFloat(document.getElementById('b-cash').value) || 0;
-  document.getElementById('m-net').textContent = net ? ('NT$ ' + fmt(net)) : '—';
-  document.getElementById('m-cash').textContent = cash ? ('NT$ ' + fmt(cash)) : '—';
+
+  // === 本月累積營業額 + 獎金 ===
+  recalcMonthly();
+  // （底部的淨銷售額/現金收入顯示已移除）
   var wOk = checkSt(wT, 'i-withdrawal', 's-withdrawal');
   var dOk = checkSt(dT, 'i-daishuo', 's-daishuo');
   var jpApp = parseFloat(document.getElementById('i-jkopay').value) || 0;
@@ -797,7 +1168,7 @@ function recalc(){
 }
 
 // ==== 紀錄儲存/讀取 ====
-var INPUT_IDS = ['b-net','b-cash','i-expected','i-withdrawal','i-daishuo','b-jkopay','b-jko','i-jkopay','i-jko','i-deposit'];
+var INPUT_IDS = ['i-shift-a','i-opening','b-net','b-cash','i-expected','i-withdrawal','i-daishuo','b-jkopay','b-jko','i-jkopay','i-jko','i-deposit'];
 
 function todayStr(){
   var d = new Date();
@@ -850,12 +1221,9 @@ function clearFields(){
     imgs[k] = [];
     var t = document.getElementById('thumbs-' + k);
     if(t) t.innerHTML = '';
-    var btn = document.getElementById('btn-' + k);
-    if(btn && k !== 'summary') btn.disabled = true;
-    if(k === 'summary'){
-      var bs = document.getElementById('btn-summary');
-      if(bs) bs.disabled = true;
-    }
+    // 隱藏 AI 狀態列
+    var line = document.getElementById('ai-status-' + k);
+    if(line) line.style.display = 'none';
   });
   var td = document.getElementById('thumbs-deposit');
   if(td) td.innerHTML = '';
@@ -906,6 +1274,8 @@ async function loadRecord(date){
   document.getElementById('record-date').value = date;
   document.getElementById('history-select').value = date;
   updateSavedTag(date);
+  // 載入完後更新開箱金額比對提示
+  onOpeningChange();
 
   // 如果這筆有圖片，從雲端拉下來
   if(r.imageFileId && localStorage.getItem('cd_sync_url')){
@@ -942,8 +1312,41 @@ async function onDateChange(){
     if(confirm(date + ' 已有紀錄，要讀取這天的資料嗎？')){
       await loadRecord(date);
     }
+  } else {
+    // 沒有舊紀錄 → 嘗試從前一天自動帶入開箱金額
+    autoFillOpening(date);
   }
   updateSavedTag(date);
+  recalcMonthly();
+  // 自動抓當日 A 班（如果欄位是空的）
+  var shiftSel = document.getElementById('i-shift-a');
+  if(shiftSel && !shiftSel.value){
+    await fetchShiftA(date);
+    recalcStaffBonus();
+  }
+}
+
+// 自動帶入前一天的「隔日開箱金額」→ 今日開箱金額
+function autoFillOpening(date){
+  var openingEl = document.getElementById('i-opening');
+  if(!openingEl) return;
+  var prevNext = getPrevDayNextOpening(date);
+  // 如果已經有值就不覆蓋，只更新比對提示
+  if(openingEl.value === '' || openingEl.value == null){
+    if(prevNext != null){
+      openingEl.value = prevNext;
+    }
+  }
+  onOpeningChange();
+  recalcNextDay();
+}
+
+// 取得某日之前「最近的一筆」紀錄（不一定要恰好是前一天）
+function getPrevDayRecord(date){
+  var records = getAllRecords();
+  var dates = Object.keys(records).filter(function(d){ return d < date; }).sort();
+  if(dates.length === 0) return null;
+  return records[dates[dates.length - 1]];
 }
 
 async function deleteCurrentRecord(){
@@ -1243,12 +1646,25 @@ async function syncFromCloud(){
       var records = getAllRecords();
       if(records[today]) loadRecord(today);
       else updateSavedTag(today);
+    }).finally(function(){
+      autoFillOpening(today);
+      recalcMonthly();
+      // 一次抓整份排班表 → 套用今天 → 重算本月每人累計
+      loadSchedule().then(function(){
+        var shiftSel = document.getElementById('i-shift-a');
+        if(shiftSel && !shiftSel.value){
+          fetchShiftA(today);
+        }
+        recalcStaffBonus();
+      });
     });
   } else {
     setSyncBadge('📱 僅本機');
     var records = getAllRecords();
     if(records[today]) loadRecord(today);
     else updateSavedTag(today);
+    autoFillOpening(today);
+    recalcMonthly();
   }
 })();
 </script>
