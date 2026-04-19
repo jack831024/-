@@ -370,7 +370,7 @@ document.addEventListener('keydown', function(e){
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.04.19-04';
+var APP_VERSION = '2026.04.19-05';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -606,9 +606,9 @@ function updateApiStatus(){
   }
 }
 function hasApiKey(){
-  var key = localStorage.getItem('cd_gemini_key');
-  if(!key){
-    if(confirm('AI 功能需要先設定 Google Gemini API Key，要前往設定嗎？')){ openSettings(); }
+  // 金鑰已搬到 Apps Script 後端，只要有後端網址就能用 AI
+  if(!localStorage.getItem('cd_sync_url')){
+    alert('尚未設定後端網址，請聯絡管理員');
     return false;
   }
   return true;
