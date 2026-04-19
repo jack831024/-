@@ -319,6 +319,7 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
         <span class="uz-label">上傳存款收據截圖（自動讀取金額）</span>
       </div>
       <div class="thumb-row" id="thumbs-deposit"></div>
+      <div class="ai-status-line" id="ai-status-deposit" style="display:none"><span class="spinner" id="spin-deposit"></span><span id="btxt-deposit">AI 讀取中...</span></div>
       <div class="row" id="deposit-row">
         <span class="label">今日存入金額</span>
         <input class="amt-input" id="i-deposit" type="number" value="0" oninput="recalcNextDay()">
@@ -370,7 +371,7 @@ document.addEventListener('keydown', function(e){
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.04.19-13';
+var APP_VERSION = '2026.04.19-14';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -913,15 +914,42 @@ async function handleDepositFile(input){
   img.className = 'thumb';
   t.appendChild(img);
   if(!hasApiKey()) return;
+
+  // 顯示狀態列
+  var line = document.getElementById('ai-status-deposit');
+  var spin = document.getElementById('spin-deposit');
+  var btxt = document.getElementById('btxt-deposit');
+  if(line){ line.style.display = 'flex'; line.className = 'ai-status-line'; }
+  if(spin) spin.className = 'spinner on';
+  if(btxt) btxt.textContent = 'AI 讀取中...';
+
   try{
-    var raw = await geminiCall([file], '這是存款收據或截圖，請找出存入金額，只回傳純數字（不要單位、不要逗號、不要說明）。');
-    console.log('Deposit Gemini 回應：', raw);
-    var n = parseFloat(raw.replace(/[^0-9.]/g, ''));
-    if(!isNaN(n)){ document.getElementById('i-deposit').value = n; recalcNextDay(); }
-    else alert('AI 無法辨識金額，請手動填入');
+    var prompt = '這是存款憑證／ATM 收據／銀行轉帳截圖。' +
+      '請找出「存入金額」或「本次交易金額」或「存款金額」或「入帳金額」。' +
+      '常見標示：存入、存款、現金存入、入帳、轉入、金額、Deposit、Amount。' +
+      '若有多筆交易，請取「本次」或「當筆」那一筆；若不能判斷就取最大的那筆存款金額。' +
+      '只回傳純數字（不要單位、不要逗號、不要說明、不要 JSON）。';
+    var raw = await geminiCall([file], prompt);
+    console.log('[Deposit] Gemini 回應：', raw);
+    var cleaned = String(raw).replace(/,/g, '').replace(/[^0-9.]/g, '');
+    var n = parseFloat(cleaned);
+    console.log('[Deposit] 清理後數字：', n);
+    if(!isNaN(n) && n > 0){
+      document.getElementById('i-deposit').value = n;
+      recalcNextDay();
+      if(line) line.className = 'ai-status-line done';
+      if(spin) spin.className = 'spinner';
+      if(btxt) btxt.textContent = '✓ 讀取完成：NT$ ' + n;
+    } else {
+      if(line) line.className = 'ai-status-line err';
+      if(spin) spin.className = 'spinner';
+      if(btxt) btxt.textContent = 'AI 無法辨識金額，請手動填入';
+    }
   } catch(e){
-    console.error(e);
-    alert('AI 讀取失敗：' + (e.message || '未知錯誤'));
+    console.error('[Deposit] 讀取錯誤：', e);
+    if(line) line.className = 'ai-status-line err';
+    if(spin) spin.className = 'spinner';
+    if(btxt) btxt.textContent = '讀取失敗：' + (e.message || '未知錯誤');
   }
 }
 
