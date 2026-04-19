@@ -370,7 +370,7 @@ document.addEventListener('keydown', function(e){
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.04.19-07';
+var APP_VERSION = '2026.04.19-11';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -960,43 +960,69 @@ function recalcNextDay(){
 
 // 計算本月累積營業額 + 獎金（只算當月、不跨月）
 function recalcMonthly(){
-  var monthlyEl = document.getElementById('m-monthly');
-  var bonusEl = document.getElementById('m-bonus');
-  var pctEl = document.getElementById('m-bonus-pct');
-  if(!monthlyEl || !bonusEl) return;
+  try {
+    var monthlyEl = document.getElementById('m-monthly');
+    var bonusEl = document.getElementById('m-bonus');
+    var pctEl = document.getElementById('m-bonus-pct');
+    if(!monthlyEl || !bonusEl){
+      console.warn('[recalcMonthly] 找不到 DOM 元素');
+      return;
+    }
 
-  var rate = BONUS_RATES[STORE_ID] || 0;
-  if(pctEl) pctEl.textContent = '（' + (rate * 100).toFixed(2).replace(/\.?0+$/, '') + '%）';
+    var rate = BONUS_RATES[STORE_ID] || 0;
+    if(pctEl) pctEl.textContent = '（' + (rate * 100).toFixed(2).replace(/\.?0+$/, '') + '%）';
 
-  var dateStr = document.getElementById('record-date').value;
-  if(!dateStr){
-    monthlyEl.textContent = '—';
-    bonusEl.textContent = '—';
-    return;
+    // 日期：優先讀 record-date，沒有就 fallback 用今天
+    var dateStr = (document.getElementById('record-date').value || '').trim();
+    if(!dateStr){
+      dateStr = (typeof todayStr === 'function') ? todayStr() : new Date().toISOString().slice(0,10);
+      console.warn('[recalcMonthly] record-date 是空的，fallback 用今天：' + dateStr);
+    }
+    // 當前月份（例 2026-04）
+    var ym = dateStr.substring(0, 7);
+
+    // 累加本月所有已儲存紀錄的淨銷售額
+    var records = getAllRecords();
+    var recordKeys = Object.keys(records);
+    console.log('[recalcMonthly] STORE_ID=' + STORE_ID + ', 當前 ym=' + ym + ', dateStr=' + dateStr);
+    console.log('[recalcMonthly] 所有紀錄日期：', recordKeys);
+    var total = 0;
+    var matched = [];
+    recordKeys.forEach(function(d){
+      if(d.substring(0, 7) !== ym){
+        console.log('[recalcMonthly] 跳過 ' + d + '（不是 ' + ym + '）');
+        return;
+      }
+      if(d === dateStr){
+        console.log('[recalcMonthly] 跳過 ' + d + '（= 目前選的日期，改用畫面值）');
+        return;
+      }
+      var inp = (records[d].data || {}).inputs || {};
+      var n = parseFloat(inp['b-net']) || 0;
+      console.log('[recalcMonthly]   + ' + d + ' 淨銷售額=' + n);
+      total += n;
+      matched.push(d + '=' + n);
+    });
+    // 加上畫面上目前的淨銷售額
+    var todayNet = parseFloat(document.getElementById('b-net').value) || 0;
+    console.log('[recalcMonthly] 加上畫面當日淨銷售額 ' + todayNet);
+    total += todayNet;
+    console.log('[recalcMonthly] 本月累積 = ' + total + '（包含 ' + matched.length + ' 筆歷史紀錄）');
+
+    monthlyEl.textContent = 'NT$ ' + fmt(total);
+    var bonus = total * rate;
+    bonusEl.textContent = 'NT$ ' + fmt(bonus);
+
+    // 連動計算員工獎金分配
+    recalcStaffBonus();
+  } catch (e) {
+    console.error('[recalcMonthly] 錯誤：', e);
+    // 出錯也至少顯示 0 而不是 —
+    var m = document.getElementById('m-monthly');
+    var b = document.getElementById('m-bonus');
+    if(m && m.textContent === '—') m.textContent = 'NT$ 0';
+    if(b && b.textContent === '—') b.textContent = 'NT$ 0';
   }
-  // 當前月份（例 2026-04）
-  var ym = dateStr.substring(0, 7);
-
-  // 累加本月所有已儲存紀錄的淨銷售額
-  var records = getAllRecords();
-  var total = 0;
-  Object.keys(records).forEach(function(d){
-    if(d.substring(0, 7) !== ym) return;
-    // 排除今天當下的數值（今天還沒存），改用畫面上目前值
-    if(d === dateStr) return;
-    var inp = (records[d].data || {}).inputs || {};
-    total += parseFloat(inp['b-net']) || 0;
-  });
-  // 加上今天畫面上正在輸入的淨銷售額
-  var todayNet = parseFloat(document.getElementById('b-net').value) || 0;
-  total += todayNet;
-
-  monthlyEl.textContent = 'NT$ ' + fmt(total);
-  var bonus = total * rate;
-  bonusEl.textContent = 'NT$ ' + fmt(bonus);
-
-  // 連動計算員工獎金分配
-  recalcStaffBonus();
 }
 
 // A 班人員變動時重新算分配
@@ -1236,13 +1262,59 @@ function todayStr(){
 
 function recordsKey(){ return 'cd_records_' + (STORE_ID || 'default'); }
 
+// 把任何奇怪的日期字串（"Sun Apr 19 2026 00:00:00 GMT+0800"、"2026/4/19"等）轉成 "2026-04-19"
+function normalizeDateKey(k){
+  if(!k) return '';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(k)) return k;
+  var d = new Date(k);
+  if(isNaN(d.getTime())) return '';
+  var y = d.getFullYear();
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+
+// 檢查並修正 localStorage 裡所有壞掉的日期 key
+function migrateRecordKeys(){
+  try{
+    var raw = JSON.parse(localStorage.getItem(recordsKey()) || '{}');
+    var keys = Object.keys(raw);
+    var needFix = false;
+    var cleaned = {};
+    keys.forEach(function(k){
+      var nk = normalizeDateKey(k);
+      if(nk !== k) needFix = true;
+      if(nk){
+        // 若已經有同樣日期的乾淨 key，保留較新的 savedAt
+        if(cleaned[nk]){
+          var oldAt = new Date(cleaned[nk].savedAt || 0).getTime();
+          var newAt = new Date(raw[k].savedAt || 0).getTime();
+          if(newAt > oldAt) cleaned[nk] = raw[k];
+        } else {
+          cleaned[nk] = raw[k];
+        }
+      }
+    });
+    if(needFix){
+      localStorage.setItem(recordsKey(), JSON.stringify(cleaned));
+      console.warn('[migrateRecordKeys] 修正了壞掉的日期 key，共 ' + Object.keys(cleaned).length + ' 筆');
+    }
+  } catch(e){ console.error('[migrateRecordKeys] 錯誤', e); }
+}
+
 function getAllRecords(){
   try{ return JSON.parse(localStorage.getItem(recordsKey()) || '{}'); }
   catch(e){ return {}; }
 }
 
 function setAllRecords(r){
-  localStorage.setItem(recordsKey(), JSON.stringify(r));
+  // 寫入前也先把 key 統一成 YYYY-MM-DD
+  var clean = {};
+  Object.keys(r || {}).forEach(function(k){
+    var nk = normalizeDateKey(k);
+    if(nk) clean[nk] = r[k];
+  });
+  localStorage.setItem(recordsKey(), JSON.stringify(clean));
 }
 
 function collectData(){
@@ -1691,6 +1763,8 @@ async function syncFromCloud(){
 (function initRecords(){
   var today = todayStr();
   document.getElementById('record-date').value = today;
+  // 🔧 先把 localStorage 裡壞掉的日期 key 修正（例如 "Sun Apr 19 2026..." → "2026-04-19"）
+  migrateRecordKeys();
   renderHistoryList();
 
   var syncUrl = localStorage.getItem('cd_sync_url');
@@ -1703,6 +1777,9 @@ async function syncFromCloud(){
       if(records[today]) loadRecord(today);
       else updateSavedTag(today);
     }).finally(function(){
+      // 雲端資料拉回來後也再跑一次修正（setAllRecords 內已統一 key，但保險再跑）
+      migrateRecordKeys();
+      renderHistoryList();
       autoFillOpening(today);
       recalcMonthly();
       recalcStaffBonus();
