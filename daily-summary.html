@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>每日小結確認報表</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -133,6 +136,7 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
   <span>目前門市：<span class="user-name" id="u-name">—</span></span>
   <a class="logout-link" onclick="switchStore()">🏪 切換門市</a>
   <a class="logout-link" onclick="openSettings()">⚙️ 設定</a>
+  <span id="app-version-badge" title="目前版本" style="margin-left:auto;font-size:11px;color:#999;padding:3px 8px;background:#f5f5f5;border-radius:10px">v—</span>
 </div>
 
 <div class="modal-bg" id="settings-modal" onclick="if(event.target===this)closeSettings()">
@@ -223,14 +227,10 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
         <span class="status neutral" id="s-opening" style="font-size:13px">—</span>
       </div>
       <div class="row" style="background:#e8f5e8;border-radius:8px;padding:8px 10px;margin-bottom:6px;border-bottom:none">
-        <span class="label" style="font-weight:600;color:#2e7d32">👤 今日 A 班 <span id="shift-a-tag" style="font-size:10px;background:#d4edda;color:#2e7d32;padding:1px 6px;border-radius:8px;margin-left:4px">系統判定</span></span>
+        <span class="label" style="font-weight:600;color:#2e7d32">👤 今日 A 班</span>
         <select id="i-shift-a" class="amt-input" style="text-align:left" onchange="onShiftAChange()">
-          <option value="">— 尚未判定 —</option>
+          <option value="">— 請選擇 —</option>
         </select>
-      </div>
-      <div class="row sep" style="border-bottom:1px solid #eee;padding-bottom:8px;margin-bottom:8px;font-size:11px;color:#888">
-        <span>排班表狀態</span>
-        <span id="shift-a-status">—</span>
       </div>
       <div class="row"><span class="label">淨銷售額</span><input class="amt-input" id="b-net" type="number" placeholder="—" oninput="recalc()"></div>
       <div class="row" style="background:#f5f8ff"><span class="label" style="color:#4a90d9">本月累積營業額</span><span class="status neutral" id="m-monthly" style="font-weight:600;color:#4a90d9">—</span></div>
@@ -367,22 +367,73 @@ document.addEventListener('keydown', function(e){
 
 <script>
 // ============================================
-// ⭐ 內建金鑰（員工免設定）
+// 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
+// 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-// 每次開啟網頁都會自動套用這兩個設定值
-// 如需換金鑰或換後端網址，直接改下面兩行，重新上傳即可
-var BUILTIN_GEMINI_KEY = "AQ.Ab8RN6J6nPntvRsa4gzdYyG-TZji2NcBnyZMT7imlo6qDws9iA";
+var APP_VERSION = '2026.04.19-04';
+
+// ============================================
+// ⭐ 內建設定（員工免設定）
+// ============================================
+// Gemini API 金鑰已改放在 Apps Script 後端（不暴露在 GitHub），這邊只需要後端網址
 var BUILTIN_SYNC_URL   = "https://script.google.com/macros/s/AKfycbzQweLpmQ_5SPxr90Iu-GnqleHUFPbJph8RZuFeasAEKIEWA3xBr_MAdenIkIdciYmQDA/exec";
 var BUILTIN_MODEL      = "gemini-2.5-flash";
 
-// 每次載入都強制覆寫 localStorage，確保用的是最新值
+// 每次載入都強制套用最新後端網址
 (function applyBuiltinConfig(){
-  if(BUILTIN_GEMINI_KEY) localStorage.setItem('cd_gemini_key', BUILTIN_GEMINI_KEY);
-  if(BUILTIN_SYNC_URL)   localStorage.setItem('cd_sync_url',   BUILTIN_SYNC_URL);
+  if(BUILTIN_SYNC_URL) localStorage.setItem('cd_sync_url', BUILTIN_SYNC_URL);
   if(BUILTIN_MODEL && !localStorage.getItem('cd_gemini_model')){
     localStorage.setItem('cd_gemini_model', BUILTIN_MODEL);
   }
+  // 清掉舊版留下的失效金鑰
+  localStorage.removeItem('cd_gemini_key');
 })();
+// ============================================
+
+// ============================================
+// 🔄 自動偵測新版本（解決瀏覽器快取問題）
+// ============================================
+// 把版本號寫進畫面徽章
+(function showVersion(){
+  var el = document.getElementById('app-version-badge');
+  if(el) el.textContent = 'v' + APP_VERSION;
+})();
+
+// 定時（每 2 分鐘）+ 重新聚焦時，檢查 GitHub 上的最新版本
+async function checkForUpdate(silent){
+  try{
+    var resp = await fetch(location.pathname + '?_t=' + Date.now(), { cache: 'no-store' });
+    if(!resp.ok) return;
+    var text = await resp.text();
+    var m = text.match(/var\s+APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
+    if(!m) return;
+    var latest = m[1];
+    if(latest !== APP_VERSION){
+      var badge = document.getElementById('app-version-badge');
+      if(badge){
+        badge.textContent = '🔄 有新版 ' + latest + '（點我更新）';
+        badge.style.background = '#fff3cd';
+        badge.style.color = '#856404';
+        badge.style.cursor = 'pointer';
+        badge.onclick = function(){ location.reload(); };
+      }
+      if(!silent){
+        if(confirm('偵測到新版本 ' + latest + '（目前 ' + APP_VERSION + '），要重新載入套用嗎？')){
+          location.reload();
+        }
+      }
+    }
+  } catch(e){ /* 離線時靜默跳過 */ }
+}
+
+// 頁面載入 3 秒後先檢查一次（靜默，只更新徽章）
+setTimeout(function(){ checkForUpdate(true); }, 3000);
+// 之後每 2 分鐘再檢查
+setInterval(function(){ checkForUpdate(true); }, 120000);
+// 從背景回到前景時立即檢查
+document.addEventListener('visibilitychange', function(){
+  if(!document.hidden) checkForUpdate(true);
+});
 // ============================================
 
 // ==== 門市驗證 ====
@@ -397,12 +448,12 @@ var BONUS_RATES = {
   'shicheng-zhongxiao': 0.025   // 十城忠孝店 2.5%
 };
 
-// 各門市員工名單（之後請補齊真實名單）
+// 各門市 A 班候選員工名單
 var STAFF_LISTS = {
-  'chudian-zhonghe':    ['員工A','員工B','員工C'],       // ← 中和店：待補
-  'chudian-yongchun':   ['77','林韋翔','洪','宸','小澤','小邱'], // 永春店
-  'chudian-xinzhuang':  ['員工A','員工B','員工C'],       // ← 新莊店：待補
-  'shicheng-zhongxiao': ['員工A','員工B','員工C']        // ← 十城忠孝店：待補
+  'chudian-zhonghe':    ['李文少','褚心榆','劉濡瑜','施偉祥'],       // 中和店
+  'chudian-yongchun':   ['77','林韋翔','洪','宸','小澤','小邱'],     // 永春店
+  'chudian-xinzhuang':  ['蔡鈺豪','李嘉真','洪仕賢','蘇奕誠'],       // 新莊店
+  'shicheng-zhongxiao': ['阿哲','梓彥','王謖','麥克']                // 十城忠孝店
 };
 var CURRENT_STAFF_LIST = STAFF_LISTS[STORE_ID] || [];
 
@@ -576,21 +627,27 @@ function toB64(file){
 function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
 
 async function callModelOnce(model, key, parts){
-  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key);
-  var genConfig = {temperature: 0, maxOutputTokens: 4096};
-  if(model.indexOf('2.5') >= 0){
-    genConfig.thinkingConfig = {thinkingBudget: 0};
-  }
-  var r = await fetch(url, {
+  // key 參數保留但不用（金鑰藏在 Apps Script 後端）
+  var proxyUrl = localStorage.getItem('cd_sync_url');
+  if(!proxyUrl) throw new Error('尚未設定雲端同步網址（Apps Script 代理）');
+  var r = await fetch(proxyUrl, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({contents: [{parts: parts}], generationConfig: genConfig})
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action: 'geminiProxy', model: model, parts: parts })
   });
-  var d = await r.json();
-  console.log('[' + model + '] 回應：', d);
+  var wrap = await r.json();
+  console.log('[' + model + '] 代理回應：', wrap);
+  // Apps Script 層錯誤
+  if(wrap.error){
+    var pxErr = new Error(wrap.error.message || 'Apps Script 代理錯誤');
+    pxErr.code = wrap.error.code;
+    throw pxErr;
+  }
+  var d = wrap.data || {};
+  // Gemini API 原生錯誤
   if(d.error){
     var err = new Error(d.error.message || 'API 錯誤');
-    err.code = d.error.code;
+    err.code = d.error.code || wrap.code;
     err.status = d.error.status;
     throw err;
   }
@@ -606,8 +663,11 @@ async function callModelOnce(model, key, parts){
 }
 
 async function geminiCall(imageFiles, promptText){
-  var key = localStorage.getItem('cd_gemini_key');
-  if(!key) throw new Error('請先在右上角「⚙️ 設定」填入 API Key');
+  // 金鑰已移至 Apps Script，這邊只確認後端網址存在
+  var key = 'via-proxy';
+  if(!localStorage.getItem('cd_sync_url')){
+    throw new Error('尚未設定雲端後端網址，請聯絡管理員');
+  }
 
   var parts = [];
   for(var i = 0; i < imageFiles.length; i++){
@@ -933,14 +993,6 @@ function recalcMonthly(){
 
 // A 班人員變動時重新算分配
 function onShiftAChange(){
-  var sel = document.getElementById('i-shift-a');
-  var tag = document.getElementById('shift-a-tag');
-  // 如果使用者手動改過，tag 顯示「手動」
-  if(tag && sel._autoFilled && sel.value !== sel._autoFilled){
-    tag.textContent = '手動';
-    tag.style.background = '#fff3cd';
-    tag.style.color = '#856404';
-  }
   recalcStaffBonus();
 }
 
@@ -1072,12 +1124,10 @@ function recalcStaffBonus(){
     var inp = (records[d].data || {}).inputs || {};
     var net = parseFloat(inp['b-net']) || 0;
     if(!net) return;
-    // 優先從排班表快取判定 A 班；找不到才回退用當初儲存的 i-shift-a
-    var person = findAShiftFromCache(d) || inp['i-shift-a'];
+    var person = inp['i-shift-a']; // 使用者儲存當天時手動選的 A 班
     var bonus = net * rate;
     pool += bonus;
-    if(person){
-      if(!totals.hasOwnProperty(person)){ totals[person] = 0; dayCounts[person] = 0; }
+    if(person && totals.hasOwnProperty(person)){
       totals[person] += bonus;
       dayCounts[person] += 1;
     }
@@ -1086,13 +1136,11 @@ function recalcStaffBonus(){
   // 加上今天畫面上的
   if(dateStr && (!ym || dateStr.substring(0, 7) === ym)){
     var todayNet = parseFloat(document.getElementById('b-net').value) || 0;
-    // 優先快取、再來才是畫面上的選擇（手動覆蓋情況）
-    var todayA = findAShiftFromCache(dateStr) || document.getElementById('i-shift-a').value;
+    var todayA = document.getElementById('i-shift-a').value;
     if(todayNet){
       var todayBonus = todayNet * rate;
       pool += todayBonus;
-      if(todayA){
-        if(!totals.hasOwnProperty(todayA)){ totals[todayA] = 0; dayCounts[todayA] = 0; }
+      if(todayA && totals.hasOwnProperty(todayA)){
         totals[todayA] += todayBonus;
         dayCounts[todayA] += 1;
       }
@@ -1318,12 +1366,7 @@ async function onDateChange(){
   }
   updateSavedTag(date);
   recalcMonthly();
-  // 自動抓當日 A 班（如果欄位是空的）
-  var shiftSel = document.getElementById('i-shift-a');
-  if(shiftSel && !shiftSel.value){
-    await fetchShiftA(date);
-    recalcStaffBonus();
-  }
+  recalcStaffBonus();
 }
 
 // 自動帶入前一天的「隔日開箱金額」→ 今日開箱金額
@@ -1649,14 +1692,7 @@ async function syncFromCloud(){
     }).finally(function(){
       autoFillOpening(today);
       recalcMonthly();
-      // 一次抓整份排班表 → 套用今天 → 重算本月每人累計
-      loadSchedule().then(function(){
-        var shiftSel = document.getElementById('i-shift-a');
-        if(shiftSel && !shiftSel.value){
-          fetchShiftA(today);
-        }
-        recalcStaffBonus();
-      });
+      recalcStaffBonus();
     });
   } else {
     setSyncBadge('📱 僅本機');
