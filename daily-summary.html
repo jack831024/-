@@ -262,14 +262,24 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
     </div>
   </div>
   <div class="section">
-    <h3>退單 / 取消 截圖 <span class="ai-tag">AI 自動讀取</span></h3>
+    <h3>退單截圖 <span class="ai-tag">AI 自動讀取</span></h3>
     <div class="upload-zone">
       <input type="file" accept="image/*" multiple onchange="handleFiles(this,'refund')">
-      <span class="uz-icon">🚫</span>
-      <span class="uz-label">上傳退單 / 取消單截圖（可多張）</span>
+      <span class="uz-icon">↩️</span>
+      <span class="uz-label">上傳退單截圖（可多張）</span>
     </div>
     <div class="thumb-row" id="thumbs-refund"></div>
     <div class="ai-status-line" id="ai-status-refund" style="display:none"><span class="spinner" id="spin-refund"></span><span id="btxt-refund">AI 讀取中...</span></div>
+  </div>
+  <div class="section">
+    <h3>取消單截圖 <span class="ai-tag">AI 自動讀取</span></h3>
+    <div class="upload-zone">
+      <input type="file" accept="image/*" multiple onchange="handleFiles(this,'cancel')">
+      <span class="uz-icon">🚫</span>
+      <span class="uz-label">上傳取消單截圖（可多張）</span>
+    </div>
+    <div class="thumb-row" id="thumbs-cancel"></div>
+    <div class="ai-status-line" id="ai-status-cancel" style="display:none"><span class="spinner" id="spin-cancel"></span><span id="btxt-cancel">AI 讀取中...</span></div>
   </div>
   <div class="section">
     <h3>提現明細（發票 / 貨款）<span class="ai-tag">AI 自動讀取</span></h3>
@@ -376,7 +386,7 @@ document.addEventListener('keydown', function(e){
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.04.19-18';
+var APP_VERSION = '2026.04.19-20';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -688,7 +698,7 @@ function parseJson(raw){
 
 // ==== 主要邏輯 ====
 var store = {w:[], d:[]};
-var imgs = {summary:[], jkopay:[], jko:[], w:[], d:[], deposit:[], refund:[]};
+var imgs = {summary:[], jkopay:[], jko:[], w:[], d:[], deposit:[], refund:[], cancel:[]};
 function fmt(n){ return Math.round(n).toLocaleString(); }
 
 function handleFiles(input, key){
@@ -708,6 +718,7 @@ function handleFiles(input, key){
     if(key === 'summary') analyzeSummary();
     else if(key === 'w' || key === 'd') analyzeReceipts(key);
     else if(key === 'refund') analyzeRefund();
+    else if(key === 'cancel') analyzeCancel();
   }
 }
 
@@ -737,8 +748,13 @@ async function analyzeSummary(){
       '全支付別名：全盈+PAY、全盈PAY、全盈、PXPay、PX Pay+。' +
       '街口別名：街口支付、JKOPAY、JKO Pay、街口pay。' +
       '如果同一種支付方式出現多筆（例如多張交易），請把它們加總。' +
+      '\n⚠️ 重要：「退單」和「取消單」是【兩個完全不同的項目】，必須分開讀取，絕對不要合併加總！' +
+      '退單（refund）別名：退單、退貨、退款、Refund、Return。' +
+      '取消單（cancel）別名：取消單、取消、取消交易、廢單、作廢、Void、Cancel、審核後取消。' +
+      '如果截圖中同時看到「審核、取消單、退單」這種列表，退單金額只取「退單」那一欄的數字，取消金額只取「取消單」那一欄的數字。' +
+      '沒看到的項目填 null 或 0。' +
       '\n只回傳 JSON（不要 markdown、不要說明），找不到填 null：' +
-      '\n{"opening":開箱或開櫃或期初金額,"net":淨銷售額,"cash":現金金額,"expected":預期錢櫃或期末錢櫃金額,"withdrawal":提現合計絕對值,"daishuo":代收合計,"jkopay":全支付金額,"jko":街口金額}';
+      '\n{"opening":開箱或開櫃或期初金額,"net":淨銷售額,"cash":現金金額,"expected":預期錢櫃或期末錢櫃金額,"withdrawal":提現合計絕對值,"daishuo":代收合計,"jkopay":全支付金額,"jko":街口金額,"refund":退單金額,"cancel":取消單金額}';
     var raw = await geminiCall(imgs.summary, prompt);
     console.log('Gemini 回應：', raw);
     var p = parseJson(raw);
@@ -913,7 +929,7 @@ async function handleDepositFile(input){
   }
 }
 
-// 退單 / 取消截圖 AI 識別
+// 退單截圖 AI 識別（只讀退單，不管取消）
 async function analyzeRefund(){
   if(!hasApiKey()) return;
   var line = document.getElementById('ai-status-refund');
@@ -923,35 +939,74 @@ async function analyzeRefund(){
   if(spin) spin.className = 'spinner on';
   if(btxt) btxt.textContent = 'AI 讀取中...';
   try{
-    var prompt = '這些是退單或取消訂單的截圖／POS 系統列印。' +
-      '請分別找出「退單金額總計」和「取消金額總計」。' +
+    var prompt = '這些是【退單】截圖／POS 列印。' +
+      '⚠️ 重要：只要「退單」的金額，取消單、取消交易、廢單都不算！' +
       '退單別名：退單、退貨、退款、Refund、Return。' +
-      '取消別名：取消、取消交易、廢單、作廢、Void、Cancel。' +
-      '如果有多筆退單或多筆取消，請把同類型的都加總起來。' +
-      '如果只看到退單沒看到取消，cancel 就填 0；反之亦然。' +
+      '如果截圖同時出現「審核、取消單、退單」欄位，只取「退單」那一欄的金額。' +
+      '如果有多筆退單，全部加總。' +
+      '沒看到退單就回傳 0。' +
       '\n只回傳 JSON（不要 markdown、不要說明）：' +
-      '\n{"refund":退單金額加總,"cancel":取消金額加總}';
+      '\n{"refund":退單金額加總}';
     var raw = await geminiCall(imgs.refund, prompt);
     console.log('[Refund] Gemini 回應：', raw);
     var p = parseJson(raw);
     console.log('[Refund] 解析後：', p);
     var refundEl = document.getElementById('b-refund');
-    var cancelEl = document.getElementById('b-cancel');
-    var filled = [];
     if(refundEl && p.refund != null && !isNaN(parseFloat(p.refund))){
       refundEl.value = parseFloat(p.refund);
-      filled.push('退單 ' + p.refund);
+      recalc();
+      if(line) line.className = 'ai-status-line done';
+      if(spin) spin.className = 'spinner';
+      if(btxt) btxt.textContent = '✓ 讀取完成：退單 ' + parseFloat(p.refund);
+    } else {
+      if(line) line.className = 'ai-status-line err';
+      if(spin) spin.className = 'spinner';
+      if(btxt) btxt.textContent = '⚠️ AI 沒讀到退單金額';
     }
-    if(cancelEl && p.cancel != null && !isNaN(parseFloat(p.cancel))){
-      cancelEl.value = parseFloat(p.cancel);
-      filled.push('取消 ' + p.cancel);
-    }
-    recalc();
-    if(line) line.className = 'ai-status-line done';
-    if(spin) spin.className = 'spinner';
-    if(btxt) btxt.textContent = filled.length ? ('✓ 讀取完成：' + filled.join('、')) : '⚠️ AI 沒讀到金額';
   } catch(e){
     console.error('[Refund] 讀取錯誤：', e);
+    if(line) line.className = 'ai-status-line err';
+    if(spin) spin.className = 'spinner';
+    if(btxt) btxt.textContent = '讀取失敗：' + (e.message || '未知錯誤');
+  }
+}
+
+// 取消單截圖 AI 識別（只讀取消單，不管退單）
+async function analyzeCancel(){
+  if(!hasApiKey()) return;
+  var line = document.getElementById('ai-status-cancel');
+  var spin = document.getElementById('spin-cancel');
+  var btxt = document.getElementById('btxt-cancel');
+  if(line){ line.style.display = 'flex'; line.className = 'ai-status-line'; }
+  if(spin) spin.className = 'spinner on';
+  if(btxt) btxt.textContent = 'AI 讀取中...';
+  try{
+    var prompt = '這些是【取消單】截圖／POS 列印。' +
+      '⚠️ 重要：只要「取消單」的金額，退單、退貨、退款都不算！' +
+      '取消單別名：取消單、取消、取消交易、廢單、作廢、Void、Cancel、審核後取消。' +
+      '如果截圖同時出現「審核、取消單、退單」欄位，只取「取消單」那一欄的金額。' +
+      '如果有多筆取消，全部加總。' +
+      '沒看到取消就回傳 0。' +
+      '\n只回傳 JSON（不要 markdown、不要說明）：' +
+      '\n{"cancel":取消單金額加總}';
+    var raw = await geminiCall(imgs.cancel, prompt);
+    console.log('[Cancel] Gemini 回應：', raw);
+    var p = parseJson(raw);
+    console.log('[Cancel] 解析後：', p);
+    var cancelEl = document.getElementById('b-cancel');
+    if(cancelEl && p.cancel != null && !isNaN(parseFloat(p.cancel))){
+      cancelEl.value = parseFloat(p.cancel);
+      recalc();
+      if(line) line.className = 'ai-status-line done';
+      if(spin) spin.className = 'spinner';
+      if(btxt) btxt.textContent = '✓ 讀取完成：取消單 ' + parseFloat(p.cancel);
+    } else {
+      if(line) line.className = 'ai-status-line err';
+      if(spin) spin.className = 'spinner';
+      if(btxt) btxt.textContent = '⚠️ AI 沒讀到取消單金額';
+    }
+  } catch(e){
+    console.error('[Cancel] 讀取錯誤：', e);
     if(line) line.className = 'ai-status-line err';
     if(spin) spin.className = 'spinner';
     if(btxt) btxt.textContent = '讀取失敗：' + (e.message || '未知錯誤');
@@ -1721,7 +1776,7 @@ function importAll(input){
 }
 
 // ==== 圖片壓縮與處理 ====
-var IMAGE_SECTIONS = ['summary','jkopay','jko','w','d','deposit','refund'];
+var IMAGE_SECTIONS = ['summary','jkopay','jko','w','d','deposit','refund','cancel'];
 
 function compressImage(file, targetBytes){
   if(!targetBytes) targetBytes = 300 * 1024;
