@@ -62,7 +62,24 @@ h1{font-size:20px;font-weight:600;margin-bottom:4px}
   <p class="footer">© 內部系統 · 擇一門市後進入報表頁</p>
 </div>
 <script>
+// 各店密碼（客戶端驗證，防一般員工誤入，不是高強度安全）
+var STORE_PASSWORDS = {
+  'chudian-zhonghe':    '90369287',
+  'chudian-yongchun':   '94213054',
+  'chudian-xinzhuang':  '60749791',
+  'shicheng-zhongxiao': '61222042'
+};
+
 function selectStore(id, name){
+  var expected = STORE_PASSWORDS[id];
+  if(expected){
+    var input = prompt('請輸入【' + name + '】密碼：');
+    if(input === null) return; // 使用者按取消
+    if(String(input).trim() !== expected){
+      alert('❌ 密碼錯誤');
+      return;
+    }
+  }
   sessionStorage.setItem('cd_store', id);
   sessionStorage.setItem('cd_store_name', name);
   window.location.href = 'daily-summary.html';
