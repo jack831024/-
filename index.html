@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<\!DOCTYPE html>
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
@@ -9,7 +9,6 @@
 <meta name="theme-color" content="#1a0f1a">
 <title>門市入口 · 每日小結系統</title>
 <style>
-/* ===== 基礎重置 ===== */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{min-height:100%;overflow-x:hidden}
 body{
@@ -21,95 +20,279 @@ body{
     linear-gradient(160deg,#2a1618 0%,#1a0d14 45%,#0f0810 100%);
   min-height:100vh;
   display:flex;align-items:center;justify-content:center;
-  padding:2rem 1rem;
-  position:relative;
+  padding:2rem 1rem;position:relative;
   -webkit-font-smoothing:antialiased;
 }
-/* 背景細紋路 */
 body::before{
-  content:"";
-  position:fixed;inset:0;pointer-events:none;z-index:0;
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
   background-image:radial-gradient(rgba(255,255,255,.025) 1px,transparent 1px);
-  background-size:24px 24px;
-  opacity:.6;
+  background-size:24px 24px;opacity:.6;
 }
-
-/* ===== 主卡片 ===== */
 .card{
-  position:relative;z-index:1;
-  width:100%;max-width:460px;
+  position:relative;z-index:1;width:100%;max-width:460px;
   background:linear-gradient(145deg,rgba(46,28,30,.85),rgba(26,13,20,.75));
   backdrop-filter:blur(24px) saturate(1.3);
   -webkit-backdrop-filter:blur(24px) saturate(1.3);
   border:1px solid rgba(255,255,255,.08);
-  border-radius:24px;
-  padding:2.25rem 1.75rem 1.5rem;
-  box-shadow:
-    0 30px 70px rgba(0,0,0,.55),
-    0 8px 24px rgba(0,0,0,.35),
-    inset 0 1px 0 rgba(255,255,255,.06);
+  border-radius:24px;padding:2.25rem 1.75rem 1.5rem;
+  box-shadow:0 30px 70px rgba(0,0,0,.55),0 8px 24px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06);
   animation:cardIn .6s cubic-bezier(.22,.9,.3,1) both;
 }
-@keyframes cardIn{
-  from{opacity:0;transform:translateY(16px) scale(.98)}
-  to{opacity:1;transform:none}
-}
-
-/* ===== 標頭 ===== */
+@keyframes cardIn{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
 .header{text-align:center;margin-bottom:1.75rem}
 .mark{
   display:inline-flex;align-items:center;justify-content:center;
   width:64px;height:64px;border-radius:20px;
   background:linear-gradient(145deg,#ff8a4c,#d4612a);
   box-shadow:0 10px 28px rgba(255,138,76,.35),inset 0 1px 0 rgba(255,255,255,.35);
-  margin-bottom:14px;font-size:30px;
-  transform:rotate(-4deg);
+  margin-bottom:14px;font-size:30px;transform:rotate(-4deg);
 }
 h1{font-size:22px;font-weight:700;letter-spacing:.5px;color:#fff5e8}
-.subtitle{
-  font-size:12px;color:#bfa896;margin-top:6px;
-  letter-spacing:3px;text-transform:uppercase;
-}
-
-/* ===== 品牌分組標題 ===== */
+.subtitle{font-size:12px;color:#bfa896;margin-top:6px;letter-spacing:3px;text-transform:uppercase}
 .brand-label{
   display:flex;align-items:center;gap:12px;
-  font-size:11px;letter-spacing:4px;
-  color:#b89676;font-weight:600;
-  margin:1.25rem .25rem .75rem;
-  text-transform:uppercase;
+  font-size:11px;letter-spacing:4px;color:#b89676;font-weight:600;
+  margin:1.25rem .25rem .75rem;text-transform:uppercase;
 }
 .brand-label::before,.brand-label::after{
   content:"";flex:1;height:1px;
   background:linear-gradient(to right,transparent,rgba(184,150,118,.25),transparent);
 }
 .brand-label .zh{letter-spacing:2px;font-size:13px;color:#e8c9a1}
-
-/* ===== 門市按鈕 ===== */
-.store-grid{
-  display:grid;grid-template-columns:1fr 1fr;gap:12px;
-}
+.store-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .store-btn{
   position:relative;overflow:hidden;
   background:rgba(255,255,255,.035);
   border:1px solid rgba(255,255,255,.1);
-  border-radius:16px;
-  padding:1.1rem 1rem 1rem;
-  cursor:pointer;
-  text-align:left;
+  border-radius:16px;padding:1.1rem 1rem 1rem;cursor:pointer;text-align:left;
   font-family:inherit;color:inherit;
   transition:transform .25s cubic-bezier(.22,.9,.3,1),background .25s,border-color .25s,box-shadow .25s;
-  display:flex;flex-direction:column;gap:8px;
-  min-height:112px;
+  display:flex;flex-direction:column;gap:8px;min-height:112px;
 }
 .store-btn::before{
   content:"";position:absolute;inset:0;
   background:radial-gradient(circle at 85% 15%,rgba(255,255,255,.1),transparent 40%);
-  opacity:0;transition:opacity .3s;
-  pointer-events:none;
+  opacity:0;transition:opacity .3s;pointer-events:none;
 }
 .store-btn:hover::before,.store-btn:active::before{opacity:1}
 .store-btn:hover{transform:translateY(-3px)}
 .store-btn:active{transform:translateY(-1px) scale(.99)}
+.store-btn .top{display:flex;align-items:center;gap:10px}
+.store-btn .ico{
+  display:flex;align-items:center;justify-content:center;
+  width:40px;height:40px;border-radius:12px;font-size:20px;flex-shrink:0;
+}
+.store-btn .brand{font-size:10px;letter-spacing:3px;color:#a78564;font-weight:600}
+.store-btn .name{font-size:17px;font-weight:700;color:#fff5e8;letter-spacing:.5px}
+.store-btn .cta{font-size:11px;color:#8a7560;display:flex;align-items:center;gap:4px;margin-top:auto}
+.store-btn .arrow{transition:transform .3s;display:inline-block}
+.store-btn:hover .arrow{transform:translateX(4px)}
+.store-btn.chudian{border-color:rgba(255,138,76,.22)}
+.store-btn.chudian .ico{background:linear-gradient(145deg,rgba(255,138,76,.22),rgba(255,138,76,.08));color:#ffb088}
+.store-btn.chudian .brand{color:#e89665}
+.store-btn.chudian:hover{
+  background:rgba(255,138,76,.09);
+  border-color:rgba(255,138,76,.45);
+  box-shadow:0 12px 28px rgba(255,138,76,.15),inset 0 1px 0 rgba(255,255,255,.05);
+}
+.store-btn.chudian:hover .cta{color:#ffb088}
+.store-btn.shicheng{border-color:rgba(212,165,116,.22)}
+.store-btn.shicheng .ico{background:linear-gradient(145deg,rgba(212,165,116,.22),rgba(212,165,116,.08));color:#f0d4a3}
+.store-btn.shicheng .brand{color:#d4a574}
+.store-btn.shicheng:hover{
+  background:rgba(212,165,116,.09);
+  border-color:rgba(212,165,116,.45);
+  box-shadow:0 12px 28px rgba(212,165,116,.15),inset 0 1px 0 rgba(255,255,255,.05);
+}
+.store-btn.shicheng:hover .cta{color:#f0d4a3}
+.footer{
+  text-align:center;font-size:11px;color:#6b5a4c;letter-spacing:1.5px;
+  margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,.05);
+}
+.footer .dot{color:#4a3c32;margin:0 6px}
+.overlay{
+  position:fixed;inset:0;z-index:100;background:rgba(10,6,10,.6);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  display:none;align-items:center;justify-content:center;padding:1rem;
+  animation:fadeIn .25s ease-out;
+}
+.overlay.on{display:flex}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{
+  width:100%;max-width:360px;
+  background:linear-gradient(145deg,#2a1b1e,#1a0f14);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:22px;padding:1.75rem 1.5rem 1.25rem;
+  box-shadow:0 30px 80px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.08);
+  animation:modalIn .3s cubic-bezier(.2,.9,.3,1.2) both;
+}
+@keyframes modalIn{from{opacity:0;transform:translateY(20px) scale(.95)}to{opacity:1;transform:none}}
+.modal .ico-big{
+  width:52px;height:52px;border-radius:16px;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(145deg,rgba(255,138,76,.25),rgba(255,138,76,.05));
+  font-size:24px;margin:0 auto 14px;
+}
+.modal h2{text-align:center;font-size:17px;font-weight:700;color:#fff5e8;margin-bottom:4px}
+.modal .store-name{text-align:center;font-size:13px;color:#bfa896;margin-bottom:1.25rem;letter-spacing:1px}
+.pw-input{
+  width:100%;background:rgba(0,0,0,.3);
+  border:1.5px solid rgba(255,255,255,.1);
+  border-radius:12px;padding:.9rem 1rem;
+  font-size:18px;color:#fff;text-align:center;letter-spacing:6px;
+  font-family:inherit;transition:border-color .2s,background .2s;outline:none;
+}
+.pw-input::placeholder{color:#6b5a4c;letter-spacing:2px;font-size:14px}
+.pw-input:focus{border-color:#ff8a4c;background:rgba(0,0,0,.4)}
+.pw-input.shake{animation:shake .4s ease-in-out;border-color:#ff4b4b}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.pw-err{font-size:12px;color:#ff7070;text-align:center;margin-top:10px;min-height:16px;opacity:0;transition:opacity .2s}
+.pw-err.show{opacity:1}
+.modal-btns{display:flex;gap:8px;margin-top:1.25rem}
+.btn{
+  flex:1;padding:.85rem 1rem;border-radius:12px;
+  font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
+  transition:transform .15s,opacity .15s;border:none;letter-spacing:1px;
+}
+.btn:active{transform:scale(.97)}
+.btn-cancel{background:rgba(255,255,255,.06);color:#bfa896;border:1px solid rgba(255,255,255,.08)}
+.btn-submit{background:linear-gradient(145deg,#ff8a4c,#d4612a);color:#fff;box-shadow:0 6px 16px rgba(255,138,76,.35)}
+.btn-submit:hover{opacity:.92}
+@media(max-width:380px){
+  .card{padding:2rem 1.25rem 1.25rem}
+  .store-grid{grid-template-columns:1fr;gap:10px}
+  .store-btn{min-height:90px}
+  h1{font-size:20px}
+}
+</style>
+</head>
+<body>
 
-.store-btn .top{display:flex;align-i
+<div class="card">
+  <div class="header">
+    <div class="mark">🍲</div>
+    <h1>每日小結系統</h1>
+    <p class="subtitle">Staff Portal</p>
+  </div>
+
+  <div class="brand-label"><span class="zh">初殿</span></div>
+  <div class="store-grid">
+    <button class="store-btn chudian" onclick="openPw('chudian-zhonghe','初殿中和店')">
+      <div class="top">
+        <div class="ico">🍲</div>
+        <div>
+          <div class="brand">CHUDIAN</div>
+          <div class="name">中和店</div>
+        </div>
+      </div>
+      <div class="cta">進入報表 <span class="arrow">→</span></div>
+    </button>
+    <button class="store-btn chudian" onclick="openPw('chudian-yongchun','初殿永春店')">
+      <div class="top">
+        <div class="ico">🍲</div>
+        <div>
+          <div class="brand">CHUDIAN</div>
+          <div class="name">永春店</div>
+        </div>
+      </div>
+      <div class="cta">進入報表 <span class="arrow">→</span></div>
+    </button>
+    <button class="store-btn chudian" onclick="openPw('chudian-xinzhuang','初殿新莊店')" style="grid-column:span 2">
+      <div class="top">
+        <div class="ico">🍲</div>
+        <div>
+          <div class="brand">CHUDIAN</div>
+          <div class="name">新莊店</div>
+        </div>
+      </div>
+      <div class="cta">進入報表 <span class="arrow">→</span></div>
+    </button>
+  </div>
+
+  <div class="brand-label"><span class="zh">十城</span></div>
+  <div class="store-grid">
+    <button class="store-btn shicheng" onclick="openPw('shicheng-zhongxiao','十城忠孝店')" style="grid-column:span 2">
+      <div class="top">
+        <div class="ico">🏮</div>
+        <div>
+          <div class="brand">SHICHENG</div>
+          <div class="name">忠孝店</div>
+        </div>
+      </div>
+      <div class="cta">進入報表 <span class="arrow">→</span></div>
+    </button>
+  </div>
+
+  <p class="footer">
+    <span>內部系統</span>
+    <span class="dot">·</span>
+    <span>僅供員工使用</span>
+  </p>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="ico-big">🔐</div>
+    <h2>請輸入門市密碼</h2>
+    <p class="store-name" id="pw-store-name">—</p>
+    <input type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+           class="pw-input" id="pw-input" placeholder="請輸入 8 位數字密碼" maxlength="16">
+    <p class="pw-err" id="pw-err">密碼錯誤</p>
+    <div class="modal-btns">
+      <button class="btn btn-cancel" onclick="closePw()">取消</button>
+      <button class="btn btn-submit" onclick="submitPw()">進入</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var STORE_PASSWORDS = {
+  'chudian-zhonghe':    '90369287',
+  'chudian-yongchun':   '94213054',
+  'chudian-xinzhuang':  '60749791',
+  'shicheng-zhongxiao': '61222042'
+};
+
+var currentStore = null;
+
+function openPw(id, name){
+  currentStore = {id: id, name: name};
+  document.getElementById('pw-store-name').textContent = name;
+  document.getElementById('pw-input').value = '';
+  document.getElementById('pw-err').classList.remove('show');
+  document.getElementById('overlay').classList.add('on');
+  setTimeout(function(){ document.getElementById('pw-input').focus(); }, 100);
+}
+
+function closePw(){
+  document.getElementById('overlay').classList.remove('on');
+  currentStore = null;
+}
+
+function submitPw(){
+  if(\!currentStore) return;
+  var input = document.getElementById('pw-input');
+  var val = String(input.value).trim();
+  var expected = STORE_PASSWORDS[currentStore.id];
+  if(val === expected){
+    sessionStorage.setItem('cd_store', currentStore.id);
+    sessionStorage.setItem('cd_store_name', currentStore.name);
+    window.location.href = 'daily-summary.html';
+  } else {
+    input.classList.add('shake');
+    document.getElementById('pw-err').classList.add('show');
+    setTimeout(function(){ input.classList.remove('shake'); }, 400);
+    input.select();
+  }
+}
+
+document.getElementById('pw-input').addEventListener('keydown', function(e){
+  if(e.key === 'Enter') submitPw();
+  if(e.key === 'Escape') closePw();
+});
+document.getElementById('overlay').addEventListener('click', function(e){
+  if(e.target === this) closePw();
+});
+</script>
+</body>
+</html>
