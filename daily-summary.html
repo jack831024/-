@@ -144,30 +144,12 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
 
 <div class="modal-bg" id="settings-modal" onclick="if(event.target===this)closeSettings()">
   <div class="modal">
-    <h2>AI 功能設定（Gemini）</h2>
-    <p class="mdesc">設定 Google Gemini API Key 以啟用 AI 自動讀取功能（完全免費）</p>
-    <div class="hint">
-      📌 如何取得 免費 API Key：<br>
-      1. 前往 <a href="https://aistudio.google.com/" target="_blank">aistudio.google.com</a> 用 Google 帳號登入<br>
-      2. 左側點 <b>Get API key</b> → <b>Create API key</b><br>
-      3. 複製 AIzaSy... 貼到下方<br>
-      4. 完全免費，無需信用卡，每天 1500 次額度<br>
-      5. API Key 只存在你的瀏覽器，不會上傳
-    </div>
-    <div class="field">
-      <label>Google Gemini API Key <span class="api-status" id="api-status">未設定</span></label>
-      <input type="password" id="api-key-input" placeholder="AIzaSy...">
-    </div>
-    <div class="field">
-      <label>使用模型 <button type="button" onclick="listModels()" style="font-size:11px;padding:2px 8px;border:1px solid #4a90d9;border-radius:6px;background:#fff;color:#4a90d9;cursor:pointer;margin-left:6px">🔄 抓取可用清單</button></label>
-      <select id="api-model-input" style="width:100%;padding:11px 12px;border:1px solid #ddd;border-radius:10px;background:#fafafa;font-size:15px;outline:none">
-        <option value="gemini-2.5-flash">gemini-2.5-flash（推薦）</option>
-        <option value="gemini-2.5-pro">gemini-2.5-pro（品質最佳）</option>
-        <option value="gemini-2.0-flash">gemini-2.0-flash</option>
-        <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
-        <option value="gemini-flash-latest">gemini-flash-latest</option>
-      </select>
-      <p id="model-hint" style="font-size:11px;color:#888;margin-top:4px">💡 點「抓取可用清單」可查詢你的帳號目前支援哪些模型</p>
+    <h2>⚙️ 系統設定</h2>
+    <p class="mdesc">AI 金鑰與模型已在 Apps Script 後端設定，員工端無須調整</p>
+    <div class="hint" style="background:#e8f5e8;color:#2e7d32">
+      ✅ AI 功能已啟用（使用 <b>gemini-2.0-flash</b>）<br>
+      ✅ 金鑰由系統管理員統一管理<br>
+      ✅ 如遇讀取失敗，請聯繫店長
     </div>
     <hr style="border:none;border-top:1px solid #eee;margin:14px 0">
     <h2 style="margin-bottom:6px">☁️ 雲端同步（Google Sheet）</h2>
@@ -243,6 +225,12 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
       <div class="row"><span class="label">小結代收</span><input class="amt-input ai-only" id="i-daishuo" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
       <div class="row"><span class="label">全支付（小結）</span><input class="amt-input ai-only" id="b-jkopay" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
       <div class="row"><span class="label">街口（小結）</span><input class="amt-input ai-only" id="b-jko" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
+      <div class="row"><span class="label">退單金額</span><input class="amt-input ai-only" id="b-refund" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
+      <div class="row"><span class="label">取消金額</span><input class="amt-input ai-only" id="b-cancel" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
+      <div class="row" style="align-items:flex-start;padding-top:10px">
+        <span class="label">📝 備註</span>
+        <textarea id="i-remark" placeholder="今日備註（可留空）" rows="2" style="flex:1;min-height:50px;font-size:13px;padding:6px 8px;border:1px solid #ddd;border-radius:8px;background:#fafafa;outline:none;resize:vertical;font-family:inherit"></textarea>
+      </div>
     </div>
   </div>
   <div class="section">
@@ -272,6 +260,16 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
       <input class="amt-input" id="i-jko" type="number" placeholder="—" oninput="recalc()">
       <span class="status neutral" id="s-jko">—</span>
     </div>
+  </div>
+  <div class="section">
+    <h3>退單 / 取消 截圖 <span class="ai-tag">AI 自動讀取</span></h3>
+    <div class="upload-zone">
+      <input type="file" accept="image/*" multiple onchange="handleFiles(this,'refund')">
+      <span class="uz-icon">🚫</span>
+      <span class="uz-label">上傳退單 / 取消單截圖（可多張）</span>
+    </div>
+    <div class="thumb-row" id="thumbs-refund"></div>
+    <div class="ai-status-line" id="ai-status-refund" style="display:none"><span class="spinner" id="spin-refund"></span><span id="btxt-refund">AI 讀取中...</span></div>
   </div>
   <div class="section">
     <h3>提現明細（發票 / 貨款）<span class="ai-tag">AI 自動讀取</span></h3>
@@ -338,6 +336,10 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
   <div class="section">
     <h3>🏆 本月 A 班獎金累計 <span id="bonus-month-label" style="font-size:11px;color:#aaa;font-weight:400"></span></h3>
     <div class="staff-grid" id="staff-bonus-grid"></div>
+    <div style="text-align:right;margin-top:6px">
+      <button type="button" onclick="toggleBonusDetail()" id="bonus-detail-toggle" style="font-size:12px;padding:4px 10px;border:1px solid #4a90d9;border-radius:6px;background:#fff;color:#4a90d9;cursor:pointer">📋 顯示每日明細</button>
+    </div>
+    <div id="bonus-detail" style="display:none;margin-top:10px;max-height:360px;overflow-y:auto;border:1px solid #eee;border-radius:8px;padding:8px;background:#fafafa"></div>
     <div class="row" style="margin-top:12px;border-top:2px solid #eee;padding-top:10px;border-bottom:none">
       <span class="label" style="font-weight:600">本月獎金總額（全店）</span>
       <span class="tamt" id="staff-bonus-total">NT$ 0</span>
@@ -374,21 +376,21 @@ document.addEventListener('keydown', function(e){
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.04.19-15';
+var APP_VERSION = '2026.04.19-18';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
 // ============================================
 // Gemini API 金鑰已改放在 Apps Script 後端（不暴露在 GitHub），這邊只需要後端網址
 var BUILTIN_SYNC_URL   = "https://script.google.com/macros/s/AKfycbzQweLpmQ_5SPxr90Iu-GnqleHUFPbJph8RZuFeasAEKIEWA3xBr_MAdenIkIdciYmQDA/exec";
-var BUILTIN_MODEL      = "gemini-2.5-flash";
+// 固定使用 gemini-2.0-flash（免費額度最大，每天 1500 次）
+var BUILTIN_MODEL      = "gemini-2.0-flash";
 
-// 每次載入都強制套用最新後端網址
+// 每次載入都強制套用最新後端網址 + 強制覆蓋舊的模型設定
 (function applyBuiltinConfig(){
   if(BUILTIN_SYNC_URL) localStorage.setItem('cd_sync_url', BUILTIN_SYNC_URL);
-  if(BUILTIN_MODEL && !localStorage.getItem('cd_gemini_model')){
-    localStorage.setItem('cd_gemini_model', BUILTIN_MODEL);
-  }
+  // 永遠強制套用 BUILTIN_MODEL（不看舊的 localStorage）
+  localStorage.setItem('cd_gemini_model', BUILTIN_MODEL);
   // 清掉舊版留下的失效金鑰
   localStorage.removeItem('cd_gemini_key');
 })();
@@ -508,72 +510,27 @@ function switchStore(){
   }
 }
 
-// ==== API Key 設定 ====
+// ==== 設定（金鑰與模型已在 Apps Script 固定，不需要員工設定）====
 function openSettings(){
-  var key = localStorage.getItem('cd_gemini_key') || '';
-  var model = localStorage.getItem('cd_gemini_model') || 'gemini-2.5-flash';
-  var syncUrl = localStorage.getItem('cd_sync_url') || '';
-  document.getElementById('api-key-input').value = key;
-  document.getElementById('api-model-input').value = model;
-  document.getElementById('sync-url-input').value = syncUrl;
-  updateApiStatus();
+  var syncInput = document.getElementById('sync-url-input');
+  if(syncInput) syncInput.value = localStorage.getItem('cd_sync_url') || '';
   updateSyncStatus();
   document.getElementById('settings-modal').className = 'modal-bg on';
 }
 function closeSettings(){
   document.getElementById('settings-modal').className = 'modal-bg';
 }
-async function listModels(){
-  var key = document.getElementById('api-key-input').value.trim() || localStorage.getItem('cd_gemini_key');
-  var hint = document.getElementById('model-hint');
-  if(!key){ alert('請先輸入 API Key'); return; }
-  hint.textContent = '⏳ 查詢中...';
-  try{
-    var r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + encodeURIComponent(key));
-    var d = await r.json();
-    if(d.error) throw new Error(d.error.message);
-    var supported = (d.models || []).filter(function(m){
-      return m.supportedGenerationMethods && m.supportedGenerationMethods.indexOf('generateContent') >= 0;
-    });
-    if(supported.length === 0){ hint.textContent = '⚠️ 沒找到可用模型'; return; }
-    var sel = document.getElementById('api-model-input');
-    var currentVal = sel.value;
-    sel.innerHTML = '';
-    supported.forEach(function(m){
-      var name = m.name.replace('models/', '');
-      var opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = name + (m.displayName ? ' · ' + m.displayName : '');
-      sel.appendChild(opt);
-    });
-    // 優先選 flash 系列
-    var preferred = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
-    for(var i = 0; i < preferred.length; i++){
-      var opts = Array.from(sel.options);
-      var found = opts.find(function(o){ return o.value === preferred[i]; });
-      if(found){ sel.value = preferred[i]; break; }
-    }
-    if(!sel.value) sel.value = supported[0].name.replace('models/', '');
-    hint.textContent = '✅ 找到 ' + supported.length + ' 個可用模型';
-  } catch(e){
-    hint.textContent = '❌ 查詢失敗：' + e.message;
-  }
-}
+// 以下 listModels / saveApiKey 保留為空殼，避免舊連結誤觸報錯
+function listModels(){ /* 已移除，由 Apps Script 統一管理 */ }
 
 function saveApiKey(){
-  var key = document.getElementById('api-key-input').value.trim();
-  var model = document.getElementById('api-model-input').value;
-  var syncUrl = document.getElementById('sync-url-input').value.trim();
-  if(!key){ alert('請輸入 API Key'); return; }
-  if(!key.startsWith('AIza')){
-    if(!confirm('API Key 格式似乎不正確（Gemini 的 Key 通常以 AIza 開頭），確定要儲存嗎？')) return;
-  }
-  localStorage.setItem('cd_gemini_key', key);
-  localStorage.setItem('cd_gemini_model', model);
+  // 只處理雲端同步網址，金鑰與模型已移到 Apps Script
+  var syncInputEl = document.getElementById('sync-url-input');
+  var syncUrl = syncInputEl ? syncInputEl.value.trim() : '';
   if(syncUrl) localStorage.setItem('cd_sync_url', syncUrl);
   else localStorage.removeItem('cd_sync_url');
   closeSettings();
-  var msg = '設定已儲存（模型：' + model + '）';
+  var msg = '設定已儲存';
   if(syncUrl) msg += '\n雲端同步已啟用';
   alert(msg);
   // 重新載入同步資料
@@ -593,21 +550,20 @@ function updateSyncStatus(){
   }
 }
 function clearApiKey(){
-  if(confirm('確定要清除 API Key 嗎？')){
-    localStorage.removeItem('cd_gemini_key');
-    document.getElementById('api-key-input').value = '';
-    updateApiStatus();
+  // 原本是清除前端金鑰，現在金鑰在 Apps Script；這裡改成清除同步網址
+  if(confirm('確定要清除雲端同步設定嗎？（只會影響當前裝置，資料不會丟）')){
+    localStorage.removeItem('cd_sync_url');
+    var syncInput = document.getElementById('sync-url-input');
+    if(syncInput) syncInput.value = '';
+    updateSyncStatus();
   }
 }
 function updateApiStatus(){
+  // 金鑰已移到 Apps Script，這個函式保留空殼避免舊呼叫報錯
   var el = document.getElementById('api-status');
-  if(localStorage.getItem('cd_gemini_key')){
-    el.textContent = '已設定';
-    el.className = 'api-status set';
-  } else {
-    el.textContent = '未設定';
-    el.className = 'api-status unset';
-  }
+  if(!el) return;
+  el.textContent = '後端管理';
+  el.className = 'api-status set';
 }
 function hasApiKey(){
   // 金鑰已搬到 Apps Script 後端，只要有後端網址就能用 AI
@@ -689,9 +645,9 @@ async function geminiCall(imageFiles, promptText){
   }
   parts.push({text: promptText});
 
-  var primary = localStorage.getItem('cd_gemini_model') || 'gemini-2.5-flash';
-  // 若主模型壅塞 / 503，依序 fallback 到其他模型
-  var fallbackChain = [primary, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-2.0-flash-lite'];
+  var primary = localStorage.getItem('cd_gemini_model') || 'gemini-2.0-flash';
+  // 若主模型壅塞 / 503，依序 fallback 到其他模型（2.0-flash-lite 已下架，拿掉）
+  var fallbackChain = [primary, 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
   // 去重
   var tried = {};
   var models = fallbackChain.filter(function(m){ if(tried[m]) return false; tried[m] = 1; return true; });
@@ -732,7 +688,7 @@ function parseJson(raw){
 
 // ==== 主要邏輯 ====
 var store = {w:[], d:[]};
-var imgs = {summary:[], jkopay:[], jko:[], w:[], d:[], deposit:[]};
+var imgs = {summary:[], jkopay:[], jko:[], w:[], d:[], deposit:[], refund:[]};
 function fmt(n){ return Math.round(n).toLocaleString(); }
 
 function handleFiles(input, key){
@@ -751,6 +707,7 @@ function handleFiles(input, key){
   if(imgs[key].length > 0 && hasApiKey()){
     if(key === 'summary') analyzeSummary();
     else if(key === 'w' || key === 'd') analyzeReceipts(key);
+    else if(key === 'refund') analyzeRefund();
   }
 }
 
@@ -787,7 +744,7 @@ async function analyzeSummary(){
     var p = parseJson(raw);
     console.log('解析後：', p);
     // 注意：b-cash 欄位已移除，所以 map 裡沒有 cash
-    var map = {opening:'i-opening', net:'b-net', expected:'i-expected', withdrawal:'i-withdrawal', daishuo:'i-daishuo', jkopay:'b-jkopay', jko:'b-jko'};
+    var map = {opening:'i-opening', net:'b-net', expected:'i-expected', withdrawal:'i-withdrawal', daishuo:'i-daishuo', jkopay:'b-jkopay', jko:'b-jko', refund:'b-refund', cancel:'b-cancel'};
     var filled = [];
     var missing = [];
     var skipped = [];
@@ -950,6 +907,51 @@ async function handleDepositFile(input){
     }
   } catch(e){
     console.error('[Deposit] 讀取錯誤：', e);
+    if(line) line.className = 'ai-status-line err';
+    if(spin) spin.className = 'spinner';
+    if(btxt) btxt.textContent = '讀取失敗：' + (e.message || '未知錯誤');
+  }
+}
+
+// 退單 / 取消截圖 AI 識別
+async function analyzeRefund(){
+  if(!hasApiKey()) return;
+  var line = document.getElementById('ai-status-refund');
+  var spin = document.getElementById('spin-refund');
+  var btxt = document.getElementById('btxt-refund');
+  if(line){ line.style.display = 'flex'; line.className = 'ai-status-line'; }
+  if(spin) spin.className = 'spinner on';
+  if(btxt) btxt.textContent = 'AI 讀取中...';
+  try{
+    var prompt = '這些是退單或取消訂單的截圖／POS 系統列印。' +
+      '請分別找出「退單金額總計」和「取消金額總計」。' +
+      '退單別名：退單、退貨、退款、Refund、Return。' +
+      '取消別名：取消、取消交易、廢單、作廢、Void、Cancel。' +
+      '如果有多筆退單或多筆取消，請把同類型的都加總起來。' +
+      '如果只看到退單沒看到取消，cancel 就填 0；反之亦然。' +
+      '\n只回傳 JSON（不要 markdown、不要說明）：' +
+      '\n{"refund":退單金額加總,"cancel":取消金額加總}';
+    var raw = await geminiCall(imgs.refund, prompt);
+    console.log('[Refund] Gemini 回應：', raw);
+    var p = parseJson(raw);
+    console.log('[Refund] 解析後：', p);
+    var refundEl = document.getElementById('b-refund');
+    var cancelEl = document.getElementById('b-cancel');
+    var filled = [];
+    if(refundEl && p.refund != null && !isNaN(parseFloat(p.refund))){
+      refundEl.value = parseFloat(p.refund);
+      filled.push('退單 ' + p.refund);
+    }
+    if(cancelEl && p.cancel != null && !isNaN(parseFloat(p.cancel))){
+      cancelEl.value = parseFloat(p.cancel);
+      filled.push('取消 ' + p.cancel);
+    }
+    recalc();
+    if(line) line.className = 'ai-status-line done';
+    if(spin) spin.className = 'spinner';
+    if(btxt) btxt.textContent = filled.length ? ('✓ 讀取完成：' + filled.join('、')) : '⚠️ AI 沒讀到金額';
+  } catch(e){
+    console.error('[Refund] 讀取錯誤：', e);
     if(line) line.className = 'ai-status-line err';
     if(spin) spin.className = 'spinner';
     if(btxt) btxt.textContent = '讀取失敗：' + (e.message || '未知錯誤');
@@ -1184,11 +1186,12 @@ async function fetchShiftA(date){
   }
 }
 
-// 計算本月每位員工累積的 A 班獎金
+// 計算本月每位員工累積的 A 班獎金 + 每日明細
 function recalcStaffBonus(){
   var gridEl = document.getElementById('staff-bonus-grid');
   var totalEl = document.getElementById('staff-bonus-total');
   var labelEl = document.getElementById('bonus-month-label');
+  var detailEl = document.getElementById('bonus-detail');
   if(!gridEl || !totalEl) return;
 
   var rate = BONUS_RATES[STORE_ID] || 0;
@@ -1196,27 +1199,37 @@ function recalcStaffBonus(){
   var ym = dateStr ? dateStr.substring(0, 7) : '';
   if(labelEl) labelEl.textContent = ym ? ('（' + ym + ' 月 · ' + (rate * 100).toFixed(2).replace(/\.?0+$/, '') + '%）') : '';
 
-  // 初始化每人累計
+  // 初始化每人累計 + 每日明細
   var totals = {};
   var dayCounts = {};
-  CURRENT_STAFF_LIST.forEach(function(n){ totals[n] = 0; dayCounts[n] = 0; });
+  var detail = {}; // { 員工名: [{date, net, bonus}, ...] }
+  CURRENT_STAFF_LIST.forEach(function(n){
+    totals[n] = 0;
+    dayCounts[n] = 0;
+    detail[n] = [];
+  });
+  // 「未指定」桶：收容忘記選 A 班或選不在名單的紀錄
+  var unassigned = [];
 
   var pool = 0;
   var records = getAllRecords();
 
   Object.keys(records).forEach(function(d){
     if(ym && d.substring(0, 7) !== ym) return;
-    // 排除今天（用畫面上最新值取代）
-    if(d === dateStr) return;
+    if(d === dateStr) return; // 今日用畫面值
     var inp = (records[d].data || {}).inputs || {};
     var net = parseFloat(inp['b-net']) || 0;
     if(!net) return;
-    var person = inp['i-shift-a']; // 使用者儲存當天時手動選的 A 班
+    var person = inp['i-shift-a'];
     var bonus = net * rate;
     pool += bonus;
+    var entry = { date: d, net: net, bonus: bonus, person: person || '' };
     if(person && totals.hasOwnProperty(person)){
       totals[person] += bonus;
       dayCounts[person] += 1;
+      detail[person].push(entry);
+    } else {
+      unassigned.push(entry);
     }
   });
 
@@ -1227,14 +1240,24 @@ function recalcStaffBonus(){
     if(todayNet){
       var todayBonus = todayNet * rate;
       pool += todayBonus;
+      var todayEntry = { date: dateStr, net: todayNet, bonus: todayBonus, person: todayA || '' };
       if(todayA && totals.hasOwnProperty(todayA)){
         totals[todayA] += todayBonus;
         dayCounts[todayA] += 1;
+        detail[todayA].push(todayEntry);
+      } else {
+        unassigned.push(todayEntry);
       }
     }
   }
 
-  // 找出最高獎金的人 (第一名)
+  // 每人明細依日期排序
+  CURRENT_STAFF_LIST.forEach(function(n){
+    detail[n].sort(function(a, b){ return a.date < b.date ? -1 : 1; });
+  });
+  unassigned.sort(function(a, b){ return a.date < b.date ? -1 : 1; });
+
+  // 第一名
   var maxBonus = 0;
   CURRENT_STAFF_LIST.forEach(function(n){
     if(totals[n] > maxBonus) maxBonus = totals[n];
@@ -1258,6 +1281,68 @@ function recalcStaffBonus(){
     }).join('');
   }
   totalEl.textContent = 'NT$ ' + fmt(pool);
+
+  // 渲染每日明細（可摺疊）
+  if(detailEl){
+    var parts = [];
+    CURRENT_STAFF_LIST.forEach(function(name){
+      var rows = detail[name];
+      if(rows.length === 0){
+        parts.push('<div style="margin-bottom:8px"><div style="font-weight:600;color:#888;font-size:12px;padding:4px 6px;background:#fff;border-radius:6px">' + name + '：本月尚無紀錄</div></div>');
+        return;
+      }
+      var rowsHtml = rows.map(function(r){
+        var dateShort = r.date.substring(5).replace('-', '/');
+        return '<div style="display:flex;justify-content:space-between;padding:4px 8px;border-bottom:1px dashed #eee;font-size:12px">' +
+          '<span style="color:#555">' + dateShort + '</span>' +
+          '<span style="color:#888">淨銷 ' + fmt(r.net) + '</span>' +
+          '<span style="color:#d93025;font-weight:600;font-family:monospace;min-width:70px;text-align:right">+' + fmt(r.bonus) + '</span>' +
+          '</div>';
+      }).join('');
+      parts.push(
+        '<div style="margin-bottom:10px;background:#fff;border-radius:6px;overflow:hidden">' +
+          '<div style="font-weight:600;padding:6px 8px;background:#e8f5e8;color:#2e7d32;font-size:13px;display:flex;justify-content:space-between">' +
+            '<span>' + name + '</span>' +
+            '<span>共 ' + rows.length + ' 天 · NT$ ' + fmt(totals[name]) + '</span>' +
+          '</div>' +
+          rowsHtml +
+        '</div>'
+      );
+    });
+    if(unassigned.length > 0){
+      var uHtml = unassigned.map(function(r){
+        var ds = r.date.substring(5).replace('-', '/');
+        return '<div style="display:flex;justify-content:space-between;padding:4px 8px;border-bottom:1px dashed #eee;font-size:12px">' +
+          '<span style="color:#555">' + ds + '</span>' +
+          '<span style="color:#888">' + (r.person || '（未選 A 班）') + '</span>' +
+          '<span style="color:#d93025;font-weight:600;font-family:monospace;min-width:70px;text-align:right">+' + fmt(r.bonus) + '</span>' +
+          '</div>';
+      }).join('');
+      parts.push(
+        '<div style="margin-bottom:10px;background:#fff;border-radius:6px;overflow:hidden;border:1px solid #ffcdd2">' +
+          '<div style="font-weight:600;padding:6px 8px;background:#fff3cd;color:#856404;font-size:13px">' +
+            '⚠️ 未指定 A 班的紀錄（共 ' + unassigned.length + ' 天）' +
+          '</div>' +
+          uHtml +
+        '</div>'
+      );
+    }
+    detailEl.innerHTML = parts.join('') || '<div style="text-align:center;color:#aaa;padding:12px">本月暫無紀錄</div>';
+  }
+}
+
+// 切換顯示 / 隱藏每日明細
+function toggleBonusDetail(){
+  var d = document.getElementById('bonus-detail');
+  var btn = document.getElementById('bonus-detail-toggle');
+  if(!d) return;
+  if(d.style.display === 'none'){
+    d.style.display = 'block';
+    if(btn) btn.textContent = '📋 收合每日明細';
+  } else {
+    d.style.display = 'none';
+    if(btn) btn.textContent = '📋 顯示每日明細';
+  }
 }
 
 function recalc(){
@@ -1303,7 +1388,7 @@ function recalc(){
 }
 
 // ==== 紀錄儲存/讀取 ====
-var INPUT_IDS = ['i-shift-a','i-opening','b-net','i-expected','i-withdrawal','i-daishuo','b-jkopay','b-jko','i-jkopay','i-jko','i-deposit'];
+var INPUT_IDS = ['i-shift-a','i-opening','b-net','i-expected','i-withdrawal','i-daishuo','b-jkopay','b-jko','b-refund','b-cancel','i-remark','i-jkopay','i-jko','i-deposit'];
 
 function todayStr(){
   var d = new Date();
@@ -1636,7 +1721,7 @@ function importAll(input){
 }
 
 // ==== 圖片壓縮與處理 ====
-var IMAGE_SECTIONS = ['summary','jkopay','jko','w','d','deposit'];
+var IMAGE_SECTIONS = ['summary','jkopay','jko','w','d','deposit','refund'];
 
 function compressImage(file, targetBytes){
   if(!targetBytes) targetBytes = 300 * 1024;
