@@ -240,7 +240,6 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
     </table>
     <div class="add-row"><button onclick="addShiftRow()">+ 新增班別</button></div>
     <div class="threshold-row">
-      <label>遲到寬限：<input type="number" id="late-grace" value="5" min="0" max="60"> 分</label>
       <label>加班起算：下班後 <input type="number" id="ot-min" value="15" min="0" max="120"> 分起</label>
       <label>加班單位：<input type="number" id="ot-unit" value="30" min="1" max="60"> 分</label>
     </div>
@@ -450,15 +449,14 @@ function loadThreshFromLocalStorage(){
     var raw = localStorage.getItem(LS_KEY_THRESH);
     if(raw){
       var t = JSON.parse(raw);
-      if(typeof t.lateGrace === 'number') document.getElementById('late-grace').value = t.lateGrace;
-      if(typeof t.otStart    === 'number') document.getElementById('ot-min').value    = t.otStart;
-      if(typeof t.otUnit     === 'number') document.getElementById('ot-unit').value   = t.otUnit;
+      if(typeof t.otStart === 'number') document.getElementById('ot-min').value  = t.otStart;
+      if(typeof t.otUnit  === 'number') document.getElementById('ot-unit').value = t.otUnit;
     }
   }catch(e){}
 }
 function readThresh(){
   return {
-    lateGrace: Number(document.getElementById('late-grace').value) || 0,
+    lateGrace: 0,
     otStart:   Number(document.getElementById('ot-min').value) || 0,
     otUnit:    Number(document.getElementById('ot-unit').value) || 30
   };
@@ -467,7 +465,7 @@ function saveThresh(){
   localStorage.setItem(LS_KEY_THRESH, JSON.stringify(readThresh()));
 }
 document.addEventListener('change', function(e){
-  if(['late-grace','ot-min','ot-unit'].indexOf(e.target.id) >= 0) saveThresh();
+  if(['ot-min','ot-unit'].indexOf(e.target.id) >= 0) saveThresh();
 });
 
 // ============================================
