@@ -355,6 +355,14 @@ var ACTIVE_FILTER = 'all';
 (function initMonth(){
   var d = new Date();
   document.getElementById('month-picker').value = String(d.getMonth() + 1);
+  // 月份被手動變更 → 清掉舊班表，避免拿 A 月班表套 B 月打卡
+  document.getElementById('month-picker').addEventListener('change', function(){
+    if(SCHEDULE){
+      SCHEDULE = null;
+      document.getElementById('sched-preview').innerHTML = '';
+      setStatus('sched-status','warn','⚠️ 月份已變更，請重新「☁️ 載入班表」');
+    }
+  });
 })();
 
 // 依選取月份 + 當前年份組出 'YYYY-MM' 字串（給 API / 分析用）
@@ -630,7 +638,19 @@ function parsePdfFile(f){
           PUNCHES = { rows: [], filename: f.name, cols:{}, rawLines: allLines };
         } else {
           PUNCHES = { rows: parsed.rows, filename: f.name, cols: {}, rawLines: allLines };
-          setStatus('parse-status','ok','✅ PDF 解析成功：'+parsed.rows.length+' 筆打卡紀錄（'+parsed.people+' 位員工）');
+          // 自動同步月份：若 PDF 月份與選擇月份不一致，自動切換並提示重新載入班表
+          var firstDate = parsed.rows[0].date; // 'YYYY-MM-DD'
+          var pdfMonth = Number(firstDate.split('-')[1]);
+          var mpick = document.getElementById('month-picker');
+          var curMonth = Number(mpick.value);
+          if(pdfMonth && pdfMonth !== curMonth){
+            mpick.value = String(pdfMonth);
+            SCHEDULE = null; // 清掉舊月份的班表，強制重載
+            setStatus('sched-status','warn','⚠️ 月份已自動切換到 '+pdfMonth+'月（依 PDF 內容），請按「☁️ 載入班表」重新載入');
+            setStatus('parse-status','ok','✅ PDF 解析成功：'+parsed.rows.length+' 筆（'+parsed.people+' 人）｜偵測月份：'+pdfMonth+'月，已自動切換選單');
+          } else {
+            setStatus('parse-status','ok','✅ PDF 解析成功：'+parsed.rows.length+' 筆打卡紀錄（'+parsed.people+' 位員工）');
+          }
         }
         renderFileInfo(f);
         renderPdfDebug(allLines);
@@ -1279,10 +1299,82 @@ function runAnalysis(){
   ANALYSIS = results;
   ACTIVE_FILTER = 'all';
   renderSummary();
+  renderDiagnostics(y, m);
   renderResults();
   document.getElementById('btn-export').disabled = !results.length;
   document.getElementById('filter-chips').style.display = 'flex';
   document.getElementById('summary-grid').style.display = 'grid';
+}
+
+// 診斷：檢查班表月份 vs 打卡月份 / 班表姓名 vs 打卡姓名 不一致之處
+function renderDiagnostics(schedY, schedM){
+  var box = document.getElementById('diag-box');
+  if(!box){
+    box = document.createElement('div');
+    box.id = 'diag-box';
+    box.style.cssText = 'margin-bottom:12px;padding:10px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;font-size:12.5px;color:#9a3412;line-height:1.7';
+    var resultsContainer = document.getElementById('results-container');
+    resultsContainer.parentNode.insertBefore(box, resultsContainer);
+  }
+  var warnings = [];
+
+  // 1) 打卡月份 vs 班表月份
+  var monthCnt = {};
+  PUNCHES.rows.forEach(function(p){
+    var mm = Number(p.date.split('-')[1]);
+    monthCnt[mm] = (monthCnt[mm]||0) + 1;
+  });
+  var punchMonths = Object.keys(monthCnt).map(Number);
+  if(punchMonths.length && punchMonths.indexOf(schedM) < 0){
+    warnings.push('🚨 <b>月份不一致</b>：你選的是 <b>'+schedM+'月</b> 班表，但打卡資料是 <b>'+punchMonths.join('/')+'月</b>。'
+      + '請把月份選單切到 <b>'+punchMonths[0]+'月</b> → 按「☁️ 載入班表」→ 再重新分析。');
+  }
+
+  // 2) 班表姓名 vs 打卡姓名
+  var schedNames = {}, punchNames = {};
+  SCHEDULE.rows.forEach(function(r){ var k = normalizeName(r.name); if(k) schedNames[k] = r.name; });
+  PUNCHES.rows.forEach(function(p){ var k = normalizeName(p.name); if(k) punchNames[k] = p.name; });
+
+  var onlyInSched = [], onlyInPunch = [], matched = [];
+  Object.keys(schedNames).forEach(function(k){
+    if(punchNames[k]) matched.push(schedNames[k]);
+    else onlyInSched.push(schedNames[k]);
+  });
+  Object.keys(punchNames).forEach(function(k){
+    if(!schedNames[k]) onlyInPunch.push(punchNames[k]);
+  });
+
+  if(onlyInSched.length){
+    warnings.push('⚠️ <b>在班表有、但打卡 PDF 沒有</b>：'+onlyInSched.map(escapeHtml).join('、')+' → 這些人會被標成全月缺卡');
+  }
+  if(onlyInPunch.length){
+    warnings.push('ℹ️ <b>在打卡 PDF 有、但班表沒有</b>：'+onlyInPunch.map(escapeHtml).join('、')+' → 這些人完全不會出現在結果（沒有班表就沒辦法算加班/遲到）');
+  }
+
+  // 3) 班別代碼設定不完整
+  var shifts = readShiftsFromDom();
+  var shiftCodes = {};
+  shifts.forEach(function(s){ shiftCodes[s.code] = 1; });
+  var unknownCodes = {};
+  SCHEDULE.rows.forEach(function(r){
+    Object.keys(r.days||{}).forEach(function(d){
+      var c = String(r.days[d]||'').trim();
+      if(c && !shiftCodes[c]) unknownCodes[c] = (unknownCodes[c]||0) + 1;
+    });
+  });
+  var unkList = Object.keys(unknownCodes);
+  if(unkList.length){
+    warnings.push('⚠️ <b>班表出現未設定的班別代碼</b>：'+unkList.map(function(c){return escapeHtml(c)+'('+unknownCodes[c]+'天)';}).join('、')
+      + ' → 請到步驟 2「班別時間設定」新增這些代碼的上下班時間，否則這幾天無法判定加班/遲到');
+  }
+
+  if(!warnings.length){
+    box.style.display = 'none';
+    return;
+  }
+  box.style.display = 'block';
+  box.innerHTML = '<div style="font-weight:700;margin-bottom:6px;color:#7c2d12">🔍 診斷提示（請逐項處理後重新分析）</div>'
+    + warnings.map(function(w){return '<div>• '+w+'</div>';}).join('');
 }
 
 function toMin(hhmm){
