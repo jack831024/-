@@ -41,6 +41,7 @@ h1{font-size:24px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 .subtitle{font-size:13px;color:var(--ink-2)}
 .flow-tag{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:5px 12px;border-radius:999px;background:rgba(59,130,246,.08);color:var(--brand);font-size:12px;font-weight:600;letter-spacing:0.02em}
 .flow-tag.inventory{background:rgba(249,115,22,.1);color:var(--accent)}
+.flow-tag.overtime{background:rgba(16,185,129,.1);color:#059669}
 .flow-tag .pulse{width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 0 0 currentColor;animation:pulse 2s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(59,130,246,.4)}70%{box-shadow:0 0 0 8px rgba(59,130,246,0)}100%{box-shadow:0 0 0 0 rgba(59,130,246,0)}}
 
@@ -123,10 +124,13 @@ h1{font-size:24px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
   var flow = sessionStorage.getItem('cd_flow');
   var el = document.getElementById('flow-indicator');
   if(!flow){ return; }
-  var cls = flow === 'inventory' ? 'inventory' : '';
-  var icon = flow === 'inventory' ? '📦' : '📋';
-  var label = flow === 'inventory' ? '盤點表' : '小結報表';
-  el.innerHTML = '<span class="flow-tag '+cls+'"><span class="pulse"></span>'+icon+' '+label+'</span>';
+  var map = {
+    inventory: { cls:'inventory', icon:'📦', label:'盤點表' },
+    overtime:  { cls:'overtime',  icon:'💰', label:'計算加班費' },
+    summary:   { cls:'',          icon:'📋', label:'小結報表' }
+  };
+  var m = map[flow] || map.summary;
+  el.innerHTML = '<span class="flow-tag '+m.cls+'"><span class="pulse"></span>'+m.icon+' '+m.label+'</span>';
 })();
 
 // 各店密碼（客戶端驗證，防一般員工誤入，不是高強度安全）
@@ -139,8 +143,9 @@ var STORE_PASSWORDS = {
 
 function selectStore(id, name){
   var flow = sessionStorage.getItem('cd_flow');
-  // 盤點表流程：免密碼、免登入
-  if(flow !== 'inventory'){
+  // 盤點表、加班費流程：免密碼、免登入
+  var freeFlows = { inventory:1, overtime:1 };
+  if(!freeFlows[flow]){
     var expected = STORE_PASSWORDS[id];
     if(expected){
       var input = prompt('請輸入【' + name + '】密碼：');
@@ -153,7 +158,11 @@ function selectStore(id, name){
   }
   sessionStorage.setItem('cd_store', id);
   sessionStorage.setItem('cd_store_name', name);
-  window.location.href = (flow === 'inventory') ? 'inventory.html' : 'daily-summary.html';
+  var pageMap = {
+    inventory: 'inventory.html',
+    overtime:  'overtime.html'
+  };
+  window.location.href = pageMap[flow] || 'daily-summary.html';
 }
 </script>
 </body>
