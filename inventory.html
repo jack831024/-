@@ -159,6 +159,10 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
 .monthly thead th.weekend{background:linear-gradient(180deg,#e0e7ff 0%,#c7d2fe 100%);color:#3730a3}
 
 .monthly tbody th.c-name{position:sticky;left:0;background:#fff;padding:4px 10px;font-size:12px;font-weight:600;color:var(--ink);text-align:left;white-space:nowrap;border-right:1px solid var(--line);border-bottom:1px solid var(--line);z-index:2}
+.monthly tbody th.c-name-click{cursor:pointer;transition:background .15s}
+.monthly tbody th.c-name-click:hover{background:#fff7ed;color:var(--accent-dark)}
+.monthly tbody th.c-name-click .edit-icon{opacity:0;font-size:10px;color:var(--ink-3);margin-left:3px;transition:opacity .15s}
+.monthly tbody th.c-name-click:hover .edit-icon{opacity:1;color:var(--accent)}
 .monthly tbody td.c-type{position:sticky;left:80px;background:rgba(248,250,252,.95);padding:4px 8px;font-size:10.5px;font-weight:700;text-align:center;white-space:nowrap;border-right:1.5px solid var(--line);border-bottom:1px solid var(--line);z-index:1;letter-spacing:1px;min-width:68px}
 .monthly tbody td{padding:3px 5px;text-align:right;font-size:11.5px;font-family:ui-monospace,"SF Mono",Menlo,monospace;color:var(--ink);border-right:1px solid rgba(226,232,240,.5);border-bottom:1px solid rgba(226,232,240,.5);white-space:nowrap;min-width:36px}
 .monthly tbody tr.price-row td.c-type{color:var(--accent);background:rgba(255,247,237,.95)}
@@ -229,10 +233,16 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
     </div>
     <label style="font-size:12px;color:var(--ink-2);margin-bottom:6px;display:block;font-weight:600">Apps Script 網址</label>
     <input type="text" id="inv-sync-input" placeholder="https://script.google.com/macros/s/..../exec" style="width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;background:rgba(255,255,255,.7);font-size:13px;outline:none;font-family:ui-monospace,Menlo,monospace;margin-bottom:14px">
-    <div style="display:flex;gap:8px;justify-content:flex-end">
+
+    <hr style="border:none;border-top:1px solid var(--line);margin:14px 0">
+    <h2 style="font-size:15px;font-weight:700;margin-bottom:4px">🛠 修復錯誤日期</h2>
+    <p style="font-size:12.5px;color:var(--ink-2);margin-bottom:10px;line-height:1.6">AI 有時會把年份看錯（例如把 2026 辨識成 2015）。按下方按鈕會掃描<b>所有廠商</b>的紀錄，把年份異常的品項全部修正為當年，並同步到雲端。</p>
+    <button onclick="repairAllDates()" style="width:100%;padding:11px;border-radius:10px;border:1.5px solid #f59e0b;background:#fffbeb;color:#92400e;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;transition:all .15s" onmouseover="this.style.background='#fef3c7'" onmouseout="this.style.background='#fffbeb'">🔧 修復全部廠商的錯誤日期</button>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
       <button onclick="closeInvSettings()" style="padding:9px 16px;border-radius:10px;border:1.5px solid var(--line);background:#fff;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink-2);font-family:inherit">取消</button>
-      <button onclick="clearInvSync()" style="padding:9px 16px;border-radius:10px;border:1.5px solid rgba(220,38,38,.2);background:#fff;cursor:pointer;font-size:13px;font-weight:600;color:var(--danger);font-family:inherit">清除</button>
-      <button onclick="saveInvSync()" style="padding:9px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent) 0%,var(--accent-dark) 100%);color:#fff;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;box-shadow:0 4px 12px -4px rgba(249,115,22,.5)">儲存</button>
+      <button onclick="clearInvSync()" style="padding:9px 16px;border-radius:10px;border:1.5px solid rgba(220,38,38,.2);background:#fff;cursor:pointer;font-size:13px;font-weight:600;color:var(--danger);font-family:inherit">清除網址</button>
+      <button onclick="saveInvSync()" style="padding:9px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent) 0%,var(--accent-dark) 100%);color:#fff;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;box-shadow:0 4px 12px -4px rgba(249,115,22,.5)">儲存網址</button>
     </div>
   </div>
 </div>
@@ -323,7 +333,10 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
     </div>
     <div style="font-size:11.5px;color:var(--ink-2);background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:10px;padding:9px 12px;margin-bottom:10px;line-height:1.6;display:flex;gap:6px;align-items:flex-start">
       <span>💡</span>
-      <span><b>修正錯誤的方法：</b>點擊月度表任一「日期欄頭」或「格子」，該日資料會載入至上方「品項明細」，您可以直接修改、刪除或補上漏掉的品項，按「💾 儲存」覆蓋該日。</span>
+      <span>
+        <b>修正數字錯誤：</b>點擊月度表任一「日期欄頭」或「格子」，該日資料會載入至上方「品項明細」，修改後按「💾 儲存」覆蓋該日。<br>
+        <b>合併重複品項：</b>如 AI 辨識錯誤造成「速食麵」vs「迷食麵」分成兩列，點品項名稱（會顯示 ✎ 圖示）可重新命名，所有日期同名項目會一起合併。
+      </span>
     </div>
     <div id="hist-container"></div>
   </div>
@@ -337,16 +350,25 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
 // ============================================
 // 內建設定（與 daily-summary 共用同一組 Worker / 代理）
 // ============================================
-var BUILTIN_WORKER_URL  = "https://gemini-proxy.Jack129115175@gmail.com.workers.dev";
+// Worker URL 因為子網域含 '@' 被瀏覽器擋下，先停用；AI 走 Apps Script proxy
+var BUILTIN_WORKER_URL  = "";
 var BUILTIN_SYNC_URL    = "https://script.google.com/macros/s/AKfycbzQweLpmQ_5SPxr90Iu-GnqleHUFPbJph8RZuFeasAEKIEWA3xBr_MAdenIkIdciYmQDA/exec";
 // 盤點表專用 Apps Script（獨立於小結報表）
 var BUILTIN_INV_SYNC_URL = "https://script.google.com/macros/s/AKfycbxsKeyEnG83JJWAfcsyJ9vbt8pbX2zuSFygAtShcrjAHZ_Dn_3GawWWEyzCwHEads93RA/exec";
 var BUILTIN_MODEL       = "gemini-2.0-flash";  // 2.0 flash 免費配額較多（每天 1500 次）
 (function(){
-  if(BUILTIN_WORKER_URL)   localStorage.setItem('cd_worker_url', BUILTIN_WORKER_URL);
+  // Worker URL：有值就寫入、沒值就清掉舊的（避免壞網址殘留）
+  if(BUILTIN_WORKER_URL) localStorage.setItem('cd_worker_url', BUILTIN_WORKER_URL);
+  else                   localStorage.removeItem('cd_worker_url');
   if(BUILTIN_SYNC_URL)     localStorage.setItem('cd_sync_url', BUILTIN_SYNC_URL);
   if(BUILTIN_INV_SYNC_URL) localStorage.setItem('cd_inv_sync_url', BUILTIN_INV_SYNC_URL);
   localStorage.setItem('cd_gemini_model', BUILTIN_MODEL);
+  // 也清掉可能殘留的 direct key（若 key 已被您停用，留在裝置上只會每次浪費一次 400 請求）
+  var oldKey = localStorage.getItem('cd_gemini_direct_key');
+  if(oldKey && /^AIzaSy/.test(oldKey)){
+    // 保留使用者手動設定的 key；但若是我們 hardcode 過的範例值則清除
+    // （此處暫不自動清除，讓使用者自己決定）
+  }
 })();
 
 // ============================================
@@ -662,6 +684,7 @@ async function doAnalyze(){
   stat.innerHTML = '<span class="spinner"></span>正在讀取出貨單內容...';
 
   var defaultDate = document.getElementById('inv-date').value;
+  var currentYear = new Date().getFullYear();
   var prompt = '請仔細辨識這張「' + currentVendor + '」的出貨單/發票/收據，抽取每個品項的資訊。\n' +
     '只回傳 JSON 陣列（不要 markdown、不要說明文字）：\n' +
     '[{"name":"品項名稱","price":單價數字,"qty":貨量數字,"date":"出貨日期 YYYY-MM-DD"}]\n' +
@@ -669,7 +692,10 @@ async function doAnalyze(){
     '- name 為品項中文名稱（不含編號）\n' +
     '- price 為單價（不含貨量，若單上只有小計則 price 填 0）\n' +
     '- qty 為貨量數字（若標有單位，單位不要填進來）\n' +
-    '- date 為此單據的出貨日期；若單上沒有就填 "' + defaultDate + '"\n' +
+    '- 【重要】date 格式必須是西元 YYYY-MM-DD，年份 YYYY 預設是 ' + currentYear + '\n' +
+    '- 【台灣發票通常用民國年】若單據年份是 3 位數（100~199），代表民國年，必須 +1911 轉西元。例如 115/4/17 → 2026-04-17，114/12/31 → 2025-12-31\n' +
+    '- date 為此單據的出貨日期；若單上看不到年份或看不清楚，一律填 "' + defaultDate + '"\n' +
+    '- 絕對不要自己亂猜年份（不要填 2015、2021 等過去年份），有疑問就填 "' + defaultDate + '"\n' +
     '- 忽略總計/合計/稅額/折扣/運費等非品項列\n' +
     '- 所有數字不要千分號、不要貨幣符號';
 
@@ -684,7 +710,7 @@ async function doAnalyze(){
         name: String(row.name || '').trim(),
         price: Number(row.price) || 0,
         qty: Number(row.qty) || 0,
-        date: row.date || defaultDate,
+        date: normalizeDate(row.date) || defaultDate,
         _new: true
       });
     });
@@ -765,46 +791,158 @@ function storeKey(){
   return 'cd_inv_'+STORE_ID+'_'+currentVendor+'_'+document.getElementById('inv-date').value;
 }
 
+// 載入編輯中日期（editDate）的品項
+// 新邏輯：掃全部 keys，把 item.date === editDate 的品項都撈出來（不管它被存在哪個 key）
+// 這樣就不會發生「點 18 號卻看到 17 號品項」的情況
 function loadVendorData(){
-  var key = storeKey();
-  var raw = localStorage.getItem(key);
-  if(raw){
+  var editDate = document.getElementById('inv-date').value;
+  items = [];
+  var prefix = 'cd_inv_'+STORE_ID+'_'+currentVendor+'_';
+  var latestSavedAt = null;
+  for(var i=0;i<localStorage.length;i++){
+    var k = localStorage.key(i);
+    if(!k || k.indexOf(prefix) !== 0) continue;
     try{
-      var data = JSON.parse(raw);
-      items = data.items || [];
-      if(data.savedAt){
-        var t = new Date(data.savedAt).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-        document.getElementById('saved-tag').textContent = '✓ 上次儲存：'+t;
+      var data = JSON.parse(localStorage.getItem(k));
+      if(!data || !Array.isArray(data.items)) continue;
+      data.items.forEach(function(it){
+        var d = normalizeDate(it.date || data.date);
+        if(d === editDate){
+          items.push({
+            name: String(it.name || '').trim(),
+            price: Number(it.price) || 0,
+            qty: Number(it.qty) || 0,
+            date: editDate
+          });
+        }
+      });
+      if(data.savedAt && (!latestSavedAt || data.savedAt > latestSavedAt)){
+        latestSavedAt = data.savedAt;
       }
-    }catch(e){ items = []; }
+    }catch(e){}
+  }
+  if(latestSavedAt){
+    var t = new Date(latestSavedAt).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    document.getElementById('saved-tag').textContent = '✓ 上次儲存：'+t;
   }else{
-    items = [];
     document.getElementById('saved-tag').textContent = '';
   }
   renderTable();
   updateSummary();
 }
 
-function saveInv(){
+// 新的儲存邏輯：
+// 1. 先從所有其他 keys 把 date === editDate 的品項移除（因為 items[] 是這個日期的最新真相）
+// 2. 把 items[] 按 item.date 分組（通常都是 editDate，但若 AI 偵測到跨日就會分到其他 key）
+// 3. 每個日期分別存到自己的 key
+// 4. 雲端也按日期分別 upsert
+async function saveInv(){
   if(!currentVendor){ alert('請先選擇廠商'); return; }
   if(items.length === 0){ alert('尚無品項可儲存'); return; }
-  var dateStr = document.getElementById('inv-date').value;
+  var editDate = document.getElementById('inv-date').value;
   var savedAt = new Date().toISOString();
-  var data = { vendor: currentVendor, date: dateStr, items: items, savedAt: savedAt };
-  localStorage.setItem(storeKey(), JSON.stringify(data));
+
+  // 把 items[] 每個日期分組（預設沿用 editDate；AI 有抓到特定日期就用它）
+  var byDate = {};
+  items.forEach(function(it){
+    var d = normalizeDate(it.date) || editDate;
+    if(!byDate[d]) byDate[d] = [];
+    byDate[d].push({
+      name: String(it.name || '').trim(),
+      price: Number(it.price) || 0,
+      qty: Number(it.qty) || 0,
+      date: d
+    });
+  });
+
+  var prefix = 'cd_inv_'+STORE_ID+'_'+currentVendor+'_';
+
+  // Step 1: 把所有其他 keys 裡 date === editDate 的品項都移掉
+  //         （因為 editDate 的真相是現在的 items[]，其他 key 殘留的 editDate 品項要清掉）
+  for(var i=0;i<localStorage.length;i++){
+    var k = localStorage.key(i);
+    if(!k || k.indexOf(prefix) !== 0) continue;
+    try{
+      var data = JSON.parse(localStorage.getItem(k));
+      if(!data || !Array.isArray(data.items)) continue;
+      var filtered = data.items.filter(function(it){
+        return normalizeDate(it.date || data.date) !== editDate;
+      });
+      if(filtered.length !== data.items.length){
+        if(filtered.length === 0){
+          localStorage.removeItem(k);
+        }else{
+          data.items = filtered;
+          localStorage.setItem(k, JSON.stringify(data));
+        }
+      }
+    }catch(e){}
+  }
+
+  // Step 2: 每個 date 群組存到自己的 key（existing 同名品項會被覆蓋）
+  Object.keys(byDate).forEach(function(d){
+    var key = prefix + d;
+    var existing = localStorage.getItem(key);
+    var existingItems = [];
+    if(existing){
+      try{
+        var exData = JSON.parse(existing);
+        existingItems = exData.items || [];
+      }catch(e){}
+    }
+    // Upsert：new 裡同名（正規化）的品項覆蓋 existing；其餘 existing 保留
+    var newNames = {};
+    byDate[d].forEach(function(it){ newNames[normalizeItemName(it.name)] = true; });
+    var merged = existingItems.filter(function(it){
+      return !newNames[normalizeItemName(it.name)];
+    }).concat(byDate[d]);
+    localStorage.setItem(key, JSON.stringify({
+      vendor: currentVendor,
+      date: d,
+      items: merged,
+      savedAt: savedAt
+    }));
+  });
+
   var t = new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
   document.getElementById('saved-tag').textContent = '✓ 已儲存於 '+t+'（本機）';
-  // 背景同步雲端（best-effort）
-  cloudSaveInv(dateStr, savedAt).then(function(ok){
-    if(ok){
-      document.getElementById('saved-tag').textContent = '✓ 已儲存於 '+t+'（本機 + 雲端 ✅）';
-      loadHistory();
-    }
-  });
+
+  // Step 3: 雲端同步 — 每個日期各自 upsert；editDate 若沒品項了，送空陣列以清除該日雲端資料
+  var url = localStorage.getItem('cd_inv_sync_url');
+  if(url){
+    var dates = Object.keys(byDate);
+    if(!byDate[editDate]) dates.push(editDate); // 觸發清除 editDate 雲端
+    try{
+      var promises = dates.map(function(d){
+        var its = (byDate[d] || []).map(function(it){
+          return { name: it.name, price: it.price, qty: it.qty, date: d };
+        });
+        return fetch(url, {
+          method:'POST',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify({
+            action:'saveInventory',
+            store: STORE_ID,
+            vendor: currentVendor,
+            date: d,
+            items: its,
+            savedAt: savedAt
+          })
+        }).then(function(r){ return r.json(); }).catch(function(e){ console.warn('雲端 '+d+' 失敗', e); return null; });
+      });
+      var results = await Promise.all(promises);
+      var okCount = results.filter(function(r){ return r && r.ok; }).length;
+      if(okCount > 0){
+        document.getElementById('saved-tag').textContent = '✓ 已儲存於 '+t+'（本機 + 雲端 ✅ '+okCount+' 天）';
+      }
+    }catch(e){ console.warn('雲端同步整體失敗', e); }
+  }
+
   alert('✅ ['+currentVendor+'] 已儲存 '+items.length+' 筆品項');
   loadHistory();
 }
 
+// 舊版雲端儲存，保留給其他地方（例如 renameItem）使用
 async function cloudSaveInv(dateStr, savedAt){
   var url = localStorage.getItem('cd_inv_sync_url');
   if(!url) return false;
@@ -844,6 +982,69 @@ function clearAll(){
 // 歷史總表：掃 localStorage + 雲端拉取，做 pivot
 // 結構：{ items: {品項: {日期: {price,qty}}}, dates: [日期排序後] }
 // ============================================
+// 點品項名 → 重新命名，同時把所有日期該品項的名稱一起改
+// 常見場景：AI OCR 把「速食麵」看成「迷食麵」造成分裂，手動改回原本的名稱即可合併
+async function renameItem(oldName){
+  if(!currentVendor){ return; }
+  var newName = prompt('將「'+oldName+'」改名為（可合併同名品項）：', oldName);
+  if(newName === null) return;
+  newName = String(newName).trim();
+  if(!newName || newName === oldName) return;
+
+  var normalizedOld = normalizeItemName(oldName);
+  var prefix = 'cd_inv_'+STORE_ID+'_'+currentVendor+'_';
+  var affected = [];  // { key, date, data }
+
+  for(var i=0;i<localStorage.length;i++){
+    var k = localStorage.key(i);
+    if(!k || k.indexOf(prefix) !== 0) continue;
+    try{
+      var data = JSON.parse(localStorage.getItem(k));
+      if(!data || !Array.isArray(data.items)) continue;
+      var changed = false;
+      data.items.forEach(function(it){
+        if(normalizeItemName(it.name) === normalizedOld){
+          it.name = newName;
+          changed = true;
+        }
+      });
+      if(changed){
+        localStorage.setItem(k, JSON.stringify(data));
+        affected.push({ key:k, date:data.date, data:data });
+      }
+    }catch(e){}
+  }
+
+  // 同步更新雲端：每個受影響日期都 upsert 一次
+  var url = localStorage.getItem('cd_inv_sync_url');
+  var cloudUpdated = 0;
+  if(url && affected.length > 0){
+    try{
+      var results = await Promise.all(affected.map(function(a){
+        return fetch(url, {
+          method:'POST',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify({
+            action:'saveInventory',
+            store: STORE_ID,
+            vendor: currentVendor,
+            date: a.date,
+            items: a.data.items,
+            savedAt: a.data.savedAt || new Date().toISOString()
+          })
+        }).then(function(r){ return r.json(); }).catch(function(){ return null; });
+      }));
+      cloudUpdated = results.filter(function(r){ return r && r.ok; }).length;
+    }catch(e){ console.warn('雲端改名失敗', e); }
+  }
+
+  alert('✅ 已將「'+oldName+'」改為「'+newName+'」\n'+
+        '本機更新：'+affected.length+' 天\n'+
+        (url ? '雲端更新：'+cloudUpdated+' 天' : '（未設定雲端同步）'));
+
+  loadHistory();
+}
+
 async function loadHistory(){
   if(!currentVendor) return;
   var box = document.getElementById('hist-container');
@@ -870,13 +1071,14 @@ async function loadHistory(){
         // 雲端資料為準（同 date+name 以雲端覆蓋本機）
         var cloudMap = {};
         j.records.forEach(function(row){
-          var k = row.date+'|'+row.name;
-          cloudMap[k] = { date: row.date, name: row.name, price: row.price, qty: row.qty };
+          var nd = normalizeDate(row.date);
+          var k = nd+'|'+row.name;
+          cloudMap[k] = { date: nd, name: row.name, price: row.price, qty: row.qty };
         });
         // 合併：先保留 local 的，雲端再蓋過去
         var merged = {};
         allRecords.forEach(function(row){
-          merged[row.date+'|'+row.name] = row;
+          merged[normalizeDate(row.date)+'|'+row.name] = row;
         });
         Object.keys(cloudMap).forEach(function(k){ merged[k] = cloudMap[k]; });
         allRecords = Object.keys(merged).map(function(k){ return merged[k]; });
@@ -904,7 +1106,7 @@ function scanLocalInventory(){
         var name = String(it.name||'').trim();
         if(!name) return;
         records.push({
-          date: it.date || data.date,
+          date: normalizeDate(it.date || data.date),
           name: name,
           price: Number(it.price) || 0,
           qty: Number(it.qty) || 0
@@ -928,6 +1130,78 @@ function normalizeItemName(s){
     .replace(/\s+/g, ' ');
 }
 
+// 日期正規化：把 AI 可能回傳的各種格式統一成 YYYY-MM-DD
+// 支援：
+//   - 西元："2026-04-18" / "2026-4-18" / "2026/4/18" / "2026年4月18日"
+//   - 民國："115-04-18" / "115/4/18" / "民國115年4月18日" / "115.4.18"（3 位數年份）
+//   - 只有月日："4/18" / "4-18" / "4月18日"（補當年）
+// 另加年份合理性檢查：若最終年份 < 當年 - 2 或 > 當年 + 1，判定為 AI 看錯，用當年取代
+function normalizeDate(s){
+  if(!s) return '';
+  s = String(s).trim();
+  if(!s) return '';
+  // 去掉 "民國" 前綴方便後續解析
+  s = s.replace(/^民國/, '');
+
+  var yy = '', mm = '', dd = '';
+
+  // 標準 YYYY-MM-DD
+  var m0 = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(m0){ yy = m0[1]; mm = m0[2]; dd = m0[3]; }
+
+  // 民國：3 位數年份（100~199）+ 分隔符 + 月 + 日 → 例 115/04/17、115-4-17、115年4月17日
+  if(!yy){
+    var mROC = s.match(/^(\d{3})[\-\/年\.](\d{1,2})[\-\/月\.](\d{1,2})日?$/);
+    if(mROC){
+      var rocY = parseInt(mROC[1], 10);
+      if(rocY >= 100 && rocY <= 199){
+        yy = String(rocY + 1911);
+        mm = String(mROC[2]).padStart(2,'0');
+        dd = String(mROC[3]).padStart(2,'0');
+      }
+    }
+  }
+
+  // YYYY[-/年.]M[-/月.]D[日?]（4 位數年）
+  if(!yy){
+    var m = s.match(/(\d{4})[\-\/年\.](\d{1,2})[\-\/月\.](\d{1,2})日?/);
+    if(m){ yy = m[1]; mm = String(m[2]).padStart(2,'0'); dd = String(m[3]).padStart(2,'0'); }
+  }
+
+  // M/D（沒年份，補當年）
+  if(!yy){
+    var m2 = s.match(/^(\d{1,2})[\-\/月](\d{1,2})日?$/);
+    if(m2){
+      yy = String(new Date().getFullYear());
+      mm = String(m2[1]).padStart(2,'0');
+      dd = String(m2[2]).padStart(2,'0');
+    }
+  }
+
+  // 最後交給 Date 物件嘗試
+  if(!yy){
+    var d = new Date(s);
+    if(!isNaN(d.getTime())){
+      yy = String(d.getFullYear());
+      mm = String(d.getMonth()+1).padStart(2,'0');
+      dd = String(d.getDate()).padStart(2,'0');
+    }
+  }
+  if(!yy) return s; // 解析不了，原樣回傳
+
+  // 年份合理性：AI 常把 2026 看成 2015/2021 或直接給 115，若年份明顯怪異就修正為當年
+  var now = new Date().getFullYear();
+  var yNum = parseInt(yy, 10);
+  // 如果是民國範圍（100~199），再嘗試轉一次
+  if(yNum >= 100 && yNum <= 199){
+    yNum = yNum + 1911;
+  }
+  if(yNum < now - 2 || yNum > now + 1){
+    yNum = now;
+  }
+  return String(yNum) + '-' + mm + '-' + dd;
+}
+
 function renderHistoryTable(box, stat, records){
   // 取目前選擇的月份（預設：今天所在月）
   var picker = document.getElementById('month-picker');
@@ -948,10 +1222,12 @@ function renderHistoryTable(box, stat, records){
   var nameOrder = [];
   (records || []).forEach(function(r){
     if(!r.date || !r.name) return;
-    if(r.date.indexOf(yearMonth+'-') !== 0) return;
+    var dt = normalizeDate(r.date);
+    if(!dt || dt.indexOf(yearMonth+'-') !== 0) return;
     var n = normalizeItemName(r.name);
     if(!n) return;
-    var day = parseInt(r.date.split('-')[2], 10);
+    var day = parseInt(dt.split('-')[2], 10);
+    if(isNaN(day)) return;
     if(!pivot[n]){ pivot[n] = {}; nameOrder.push(n); }
     var prev = pivot[n][day] || { price:0, qty:0 };
     // 同日同品項：單價取最新、貨量累加（若同日多張單）
@@ -962,8 +1238,36 @@ function renderHistoryTable(box, stat, records){
   });
 
   if(nameOrder.length === 0){
-    box.innerHTML = '<div class="grid-empty"><span class="big">📭</span>'+yearMonth+' 此廠商尚無紀錄<br><span style="font-size:12px">上傳出貨單並儲存後會出現在此</span></div>';
-    stat.textContent = '0 品項';
+    // 診斷：列出讀到了多少筆、有哪些日期（幫助排查）
+    var totalRecords = (records || []).length;
+    var dateSummary = {};
+    (records || []).forEach(function(r){
+      var d = normalizeDate(r.date);
+      if(d) dateSummary[d.substring(0,7)] = (dateSummary[d.substring(0,7)] || 0) + 1;
+    });
+    var otherMonths = Object.keys(dateSummary).sort();
+    var diagHtml = '<div class="grid-empty"><span class="big">📭</span>'+yearMonth+' 此廠商尚無紀錄';
+    if(totalRecords > 0){
+      diagHtml += '<br><br><span style="font-size:12px;color:var(--ink-2)">'+
+        '🔍 <b>診斷：</b>此廠商共讀到 '+totalRecords+' 筆紀錄，但沒有在 '+yearMonth+' 月份';
+      if(otherMonths.length > 0){
+        diagHtml += '<br>📅 實際有資料的月份：<b style="color:var(--accent)">'+
+          otherMonths.map(function(m){ return m+'（'+dateSummary[m]+'筆）'; }).join('、')+
+          '</b><br>👉 請切換上方月份選擇器</span>';
+      }else{
+        diagHtml += '<br>⚠️ 所有紀錄的日期都無法解析</span>';
+      }
+    }else{
+      diagHtml += '<br><span style="font-size:12px">上傳出貨單並儲存後會出現在此</span>';
+      diagHtml += '<br><br><span style="font-size:11px;color:var(--ink-3)">'+
+        '🏪 門市：'+STORE_ID+'<br>'+
+        '🚚 廠商：'+currentVendor+'<br>'+
+        '☁️ 雲端網址：'+(localStorage.getItem('cd_inv_sync_url') ? '已設定' : '未設定')+'</span>';
+    }
+    diagHtml += '</div>';
+    box.innerHTML = diagHtml;
+    stat.textContent = totalRecords + ' 筆紀錄（本月 0 品項）';
+    console.log('[月度表診斷] 讀到紀錄：', records);
     return;
   }
 
@@ -995,7 +1299,7 @@ function renderHistoryTable(box, stat, records){
   nameOrder.forEach(function(n){
     var itemTotalQty = 0, itemTotalAmt = 0;
     // price row
-    html += '<tr class="price-row item-top"><th class="c-name" rowspan="2" title="點任一格可載入該日編輯">'+escapeAttr(n)+'</th><td class="c-type">採購價</td>';
+    html += '<tr class="price-row item-top"><th class="c-name c-name-click" rowspan="2" onclick="renameItem(\''+escapeAttr(n).replace(/'/g,"\\\'")+'\')" title="點品項名可重新命名並合併重複項">'+escapeAttr(n)+' <span class="edit-icon">✎</span></th><td class="c-type">採購價</td>';
     for(var d=1; d<=daysInMonth; d++){
       var c = pivot[n][d];
       var wk = isWeekend(d) ? ' weekend' : '';
@@ -1094,6 +1398,150 @@ function clearInvSync(){
   if(!confirm('確定要清除雲端同步網址嗎？')) return;
   localStorage.removeItem('cd_inv_sync_url');
   document.getElementById('inv-sync-input').value = '';
+}
+
+// ============================================
+// 修復所有廠商的錯誤日期（一次性清理工具）
+// 掃全部 cd_inv_<store>_* keys → 重新 normalizeDate 每個 item.date
+// 若年份被修正了，localStorage 重寫、雲端重推
+// ============================================
+async function repairAllDates(){
+  if(!confirm('將掃描【目前門市所有廠商】的盤點紀錄，把年份異常的日期（例如 2015、2021）自動修正為 '+new Date().getFullYear()+' 年。\n\n' +
+              '同時會同步更新雲端。繼續嗎？')){
+    return;
+  }
+
+  var prefix = 'cd_inv_'+STORE_ID+'_';
+  var report = {};  // vendor → { fixed: N, dates: [...], keys: [oldKey->newKey] }
+  var affectedCloudJobs = [];  // { vendor, date, items, savedAt }
+
+  // 先收集所有 keys
+  var allKeys = [];
+  for(var i=0;i<localStorage.length;i++){
+    var k = localStorage.key(i);
+    if(k && k.indexOf(prefix) === 0) allKeys.push(k);
+  }
+
+  allKeys.forEach(function(k){
+    try{
+      var data = JSON.parse(localStorage.getItem(k));
+      if(!data || !Array.isArray(data.items)) return;
+
+      // 解析 key 中的廠商與日期：cd_inv_<store>_<vendor>_<date>
+      var suffix = k.substring(prefix.length);  // <vendor>_<date>
+      var lastUnderscore = suffix.lastIndexOf('_');
+      if(lastUnderscore < 0) return;
+      var vendorName = suffix.substring(0, lastUnderscore);
+      var originalKeyDate = suffix.substring(lastUnderscore + 1);
+
+      if(!report[vendorName]) report[vendorName] = { fixed: 0, dates: {} };
+
+      // 逐一修 item.date
+      var anyItemFixed = false;
+      var byNewDate = {};  // newDate → items[]
+      data.items.forEach(function(it){
+        var oldDate = it.date || originalKeyDate;
+        var newDate = normalizeDate(oldDate);
+        if(oldDate !== newDate) anyItemFixed = true;
+        it.date = newDate;
+        (byNewDate[newDate] = byNewDate[newDate] || []).push(it);
+      });
+
+      // key 的日期也可能有誤，重新算（取這 key 裡第一個 date）
+      var newKeyDate = normalizeDate(originalKeyDate);
+      if(newKeyDate !== originalKeyDate) anyItemFixed = true;
+
+      if(!anyItemFixed) return;
+
+      report[vendorName].fixed += data.items.length;
+
+      // 先移除舊 key
+      localStorage.removeItem(k);
+
+      // 把 items 按新日期重新分配到新 keys
+      Object.keys(byNewDate).forEach(function(d){
+        var newKey = prefix + vendorName + '_' + d;
+        var existing = localStorage.getItem(newKey);
+        var existingItems = [];
+        if(existing){
+          try{ existingItems = JSON.parse(existing).items || []; }catch(e){}
+        }
+        // 同名覆蓋
+        var newNames = {};
+        byNewDate[d].forEach(function(it){ newNames[normalizeItemName(it.name)] = true; });
+        var merged = existingItems.filter(function(it){
+          return !newNames[normalizeItemName(it.name)];
+        }).concat(byNewDate[d]);
+
+        localStorage.setItem(newKey, JSON.stringify({
+          vendor: vendorName,
+          date: d,
+          items: merged,
+          savedAt: data.savedAt || new Date().toISOString()
+        }));
+
+        report[vendorName].dates[d] = (report[vendorName].dates[d] || 0) + byNewDate[d].length;
+
+        // 紀錄需要同步雲端的 (vendor, date)
+        affectedCloudJobs.push({
+          vendor: vendorName,
+          date: d,
+          items: merged,
+          savedAt: data.savedAt || new Date().toISOString()
+        });
+      });
+    }catch(e){ console.warn('修復 '+k+' 失敗：', e); }
+  });
+
+  var vendorsFixed = Object.keys(report).filter(function(v){ return report[v].fixed > 0; });
+  if(vendorsFixed.length === 0){
+    alert('✅ 掃描完成：沒有發現錯誤日期');
+    return;
+  }
+
+  // 雲端同步
+  var url = localStorage.getItem('cd_inv_sync_url');
+  var cloudOk = 0;
+  if(url && affectedCloudJobs.length > 0){
+    try{
+      // 分批避免太多並發（每批 5 個）
+      var batchSize = 5;
+      for(var b=0; b<affectedCloudJobs.length; b+=batchSize){
+        var batch = affectedCloudJobs.slice(b, b+batchSize);
+        var results = await Promise.all(batch.map(function(job){
+          return fetch(url, {
+            method:'POST',
+            headers:{'Content-Type':'text/plain;charset=utf-8'},
+            body: JSON.stringify({
+              action:'saveInventory',
+              store: STORE_ID,
+              vendor: job.vendor,
+              date: job.date,
+              items: job.items,
+              savedAt: job.savedAt
+            })
+          }).then(function(r){ return r.json(); }).catch(function(){ return null; });
+        }));
+        cloudOk += results.filter(function(r){ return r && r.ok; }).length;
+      }
+    }catch(e){ console.warn('雲端批次同步失敗', e); }
+  }
+
+  // 顯示結果
+  var msg = '✅ 修復完成\n\n';
+  msg += '📋 受影響的廠商（' + vendorsFixed.length + ' 家）：\n';
+  vendorsFixed.forEach(function(v){
+    var dateList = Object.keys(report[v].dates).sort().slice(0, 5).join('、');
+    msg += '  • ' + v + '（' + report[v].fixed + ' 筆 → ' + dateList + (Object.keys(report[v].dates).length > 5 ? '…' : '') + '）\n';
+  });
+  msg += '\n☁️ 雲端同步：' + (url ? cloudOk + ' / ' + affectedCloudJobs.length + ' 天成功' : '未設定，僅更新本機');
+  alert(msg);
+
+  closeInvSettings();
+  if(currentVendor){
+    loadVendorData();
+    loadHistory();
+  }
 }
 // ESC 關閉
 document.addEventListener('keydown', function(e){

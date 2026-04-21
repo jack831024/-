@@ -417,7 +417,9 @@ var APP_VERSION = '2026.04.20-05';
 // ============================================
 // ⭐ Cloudflare Worker 代理網址（最快路徑，藏 key 用）
 // 部署步驟見 worker.js 檔案上方註解，部署完把 workers.dev URL 填到下面引號
-var BUILTIN_WORKER_URL = "https://gemini-proxy.Jack129115175@gmail.com.workers.dev";
+// 目前留空：舊網址子網域含 '@' 會被瀏覽器視為 credentials 而拒絕 fetch
+// 如未來重部 Worker 請填回新網址（不能包含 '@'）
+var BUILTIN_WORKER_URL = "";
 
 // Apps Script 代理網址（Worker 失敗時的後備 + Sheet 同步）
 var BUILTIN_SYNC_URL   = "https://script.google.com/macros/s/AKfycbzQweLpmQ_5SPxr90Iu-GnqleHUFPbJph8RZuFeasAEKIEWA3xBr_MAdenIkIdciYmQDA/exec";
@@ -429,7 +431,9 @@ var BUILTIN_GEMINI_KEY = "";
 
 // 每次載入都強制套用內建設定
 (function applyBuiltinConfig(){
+  // Worker URL：有值寫入、空值主動清掉（避免上一版的壞網址殘留在裝置上）
   if(BUILTIN_WORKER_URL) localStorage.setItem('cd_worker_url', BUILTIN_WORKER_URL);
+  else                   localStorage.removeItem('cd_worker_url');
   if(BUILTIN_SYNC_URL)   localStorage.setItem('cd_sync_url', BUILTIN_SYNC_URL);
   localStorage.setItem('cd_gemini_model', BUILTIN_MODEL);
   if(BUILTIN_GEMINI_KEY) localStorage.setItem('cd_gemini_direct_key', BUILTIN_GEMINI_KEY);
