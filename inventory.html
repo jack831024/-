@@ -114,6 +114,7 @@ table.items{width:100%;border-collapse:separate;border-spacing:0;min-width:560px
 .items .col-del{width:36px;text-align:center}
 .items .col-qty,.items .col-price{width:90px}
 .items .col-date{width:140px}
+.items .col-name{width:160px;min-width:120px;max-width:200px}
 
 .items input, .items input[type=date]{width:100%;padding:7px 9px;border:1.5px solid transparent;border-radius:8px;background:rgba(15,23,42,.02);font-size:13px;outline:none;transition:all .15s;font-family:inherit;color:var(--ink)}
 .items input:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(249,115,22,.1)}
@@ -261,7 +262,7 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
       <span class="uz-icon">📷</span>
       <span class="uz-label">點此拍照或選擇照片（可一次多張）</span>
       <span class="uz-hint">支援 JPG / PNG / HEIC，建議每張 &lt; 3MB</span>
-      <input type="file" id="inv-files" accept="image/*" multiple capture="environment" onchange="handleFiles(this)">
+      <input type="file" id="inv-files" accept="image/*" multiple onchange="handleFiles(this)">
     </label>
     <div class="thumb-row" id="thumb-row"></div>
     <button class="analyze-btn" id="analyze-btn" onclick="doAnalyze()" disabled>
@@ -283,7 +284,7 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
       <table class="items">
         <thead>
           <tr>
-            <th>品項</th>
+            <th class="col-name">品項</th>
             <th class="col-price" style="text-align:right">單價</th>
             <th class="col-qty" style="text-align:right">貨量</th>
             <th class="col-date">出貨日期</th>
@@ -304,7 +305,6 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
 
   <!-- 動作列 -->
   <div class="btn-row" id="action-row" style="display:none">
-    <button onclick="clearAll()" class="danger">清空本張</button>
     <button class="primary" onclick="saveInv()">💾 儲存此廠商</button>
   </div>
   <span class="saved-tag" id="saved-tag"></span>
@@ -337,12 +337,15 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
 // ============================================
 // 內建設定（與 daily-summary 共用同一組 Worker / 代理）
 // ============================================
-var BUILTIN_WORKER_URL = "https://gemini-proxy.Jack129115175@gmail.com.workers.dev";
-var BUILTIN_SYNC_URL   = "https://script.google.com/macros/s/AKfycbzQweLpmQ_5SPxr90Iu-GnqleHUFPbJph8RZuFeasAEKIEWA3xBr_MAdenIkIdciYmQDA/exec";
-var BUILTIN_MODEL      = "gemini-2.0-flash";  // 2.0 flash 免費配額較多（每天 1500 次）
+var BUILTIN_WORKER_URL  = "https://gemini-proxy.Jack129115175@gmail.com.workers.dev";
+var BUILTIN_SYNC_URL    = "https://script.google.com/macros/s/AKfycbzQweLpmQ_5SPxr90Iu-GnqleHUFPbJph8RZuFeasAEKIEWA3xBr_MAdenIkIdciYmQDA/exec";
+// 盤點表專用 Apps Script（獨立於小結報表）
+var BUILTIN_INV_SYNC_URL = "https://script.google.com/macros/s/AKfycbxsKeyEnG83JJWAfcsyJ9vbt8pbX2zuSFygAtShcrjAHZ_Dn_3GawWWEyzCwHEads93RA/exec";
+var BUILTIN_MODEL       = "gemini-2.0-flash";  // 2.0 flash 免費配額較多（每天 1500 次）
 (function(){
-  if(BUILTIN_WORKER_URL) localStorage.setItem('cd_worker_url', BUILTIN_WORKER_URL);
-  if(BUILTIN_SYNC_URL)   localStorage.setItem('cd_sync_url', BUILTIN_SYNC_URL);
+  if(BUILTIN_WORKER_URL)   localStorage.setItem('cd_worker_url', BUILTIN_WORKER_URL);
+  if(BUILTIN_SYNC_URL)     localStorage.setItem('cd_sync_url', BUILTIN_SYNC_URL);
+  if(BUILTIN_INV_SYNC_URL) localStorage.setItem('cd_inv_sync_url', BUILTIN_INV_SYNC_URL);
   localStorage.setItem('cd_gemini_model', BUILTIN_MODEL);
 })();
 
@@ -912,6 +915,19 @@ function scanLocalInventory(){
   return records;
 }
 
+// 名稱正規化：解決「看起來一樣但無法合併」的狀況
+//   - 去除前後空白
+//   - 移除零寬字元（U+200B-U+200D、U+FEFF、U+00A0 不可見空白）
+//   - 全形空白 (U+3000) 轉半形
+//   - 多個空白合併為一個
+function normalizeItemName(s){
+  return String(s || '')
+    .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '')
+    .replace(/\u3000/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
 function renderHistoryTable(box, stat, records){
   // 取目前選擇的月份（預設：今天所在月）
   var picker = document.getElementById('month-picker');
@@ -926,16 +942,20 @@ function renderHistoryTable(box, stat, records){
   var daysInMonth = new Date(year, month, 0).getDate();
 
   // 依所選月份過濾並建 pivot：pivot[name][day] = {price, qty}
+  // 名稱正規化：移除不可見字元、兩側空白、合併多個空白、全形空白轉半形
+  // 這樣「蛤蠣 」「蛤蠣」「蛤蠣（中間空格）」等都會歸到同一列
   var pivot = {};
   var nameOrder = [];
   (records || []).forEach(function(r){
     if(!r.date || !r.name) return;
     if(r.date.indexOf(yearMonth+'-') !== 0) return;
+    var n = normalizeItemName(r.name);
+    if(!n) return;
     var day = parseInt(r.date.split('-')[2], 10);
-    if(!pivot[r.name]){ pivot[r.name] = {}; nameOrder.push(r.name); }
-    var prev = pivot[r.name][day] || { price:0, qty:0 };
+    if(!pivot[n]){ pivot[n] = {}; nameOrder.push(n); }
+    var prev = pivot[n][day] || { price:0, qty:0 };
     // 同日同品項：單價取最新、貨量累加（若同日多張單）
-    pivot[r.name][day] = {
+    pivot[n][day] = {
       price: (Number(r.price) || prev.price),
       qty: (prev.qty || 0) + (Number(r.qty) || 0)
     };
