@@ -748,11 +748,16 @@ function parseAttendancePdfItems(pagesItems){
     var ys = Object.keys(byY).map(Number).sort(function(a,b){ return b-a; }); // 上→下
 
     // 找出每個員工的表頭列（含「工號」「姓名」「部門」）
+    // 支援格式：
+    //   「工號1 姓名 jack 部門 Not Set1」
+    //   「工號 ： 1 姓名 ： jack 部門 ： Not Set1」（含全形冒號、空格）
+    //   「工號:1 姓名:jack 部門:Not Set1」
     var empHeaders = [];
+    var reHeader = /工號[\s:：]*(\S+?)[\s:：]+姓名[\s:：]*(\S+?)[\s:：]+部門/;
     ys.forEach(function(y, idx){
       var row = byY[y].slice().sort(function(a,b){ return a.x-b.x; });
       var combined = row.map(function(it){ return it.str; }).join(' ').replace(/\s+/g,' ');
-      var m = combined.match(/工號\s*(\S+?)\s*姓名\s*(\S+?)\s*部門/);
+      var m = combined.match(reHeader);
       if(m){
         empHeaders.push({ y: y, yIdx: idx, workerId: m[1], name: m[2] });
       }
@@ -903,32 +908,44 @@ function parsePunchPdfLines(lines){
   var currentName = '';
   var peopleSet = {};
 
-  var reOnlyName    = /^[\u4e00-\u9fa5·‧・]{2,6}$/;
-  var reNamePrefix  = /(?:姓名|員工|員工姓名|人員|Name)\s*[:：]?\s*([\u4e00-\u9fa5·‧・]{2,6})/;
+  var reOnlyName    = /^[\u4e00-\u9fa5A-Za-z·‧・]{2,12}$/;
+  // 支援中英文姓名：姓名 ： jack / 姓名:張小明 / Name: BOB
+  var reNamePrefix  = /(?:姓名|員工|員工姓名|人員|Name)\s*[:：]?\s*([\u4e00-\u9fa5A-Za-z·‧・]{2,12})/;
   var reNameLeading = /^([\u4e00-\u9fa5·‧・]{2,6})[\s\u00a0]+/;
   var reDateFull    = /(\d{4})[\/\-年](\d{1,2})[\/\-月](\d{1,2})/;
   var reDateShort   = /(?:^|[^\d])(\d{1,2})[\/\-](\d{1,2})(?![\d])/;
   var reTime        = /(\d{1,2})[:：](\d{2})(?!\d)/g;
 
+  // 這些字雖然是 2-6 個中文字，但明顯不是姓名
+  var reNotName = /^(考勤記錄|考勤日期|工號|姓名|部門|日期|合計|小計|備註|星期|時間|員工|人員|表格|記錄|標題|部分)$/;
+
   lines.forEach(function(rawLine){
     var line = rawLine.replace(/\s+/g,' ').trim();
     if(!line) return;
 
-    // 1) 純姓名行 → 記下當前姓名
+    // 1) 純姓名行 → 記下當前姓名（排除「考勤記錄」等明顯非姓名的字串）
     var m1 = line.match(reOnlyName);
-    if(m1){ currentName = m1[0]; return; }
+    if(m1){
+      if(!reNotName.test(m1[0])) currentName = m1[0];
+      return;
+    }
 
-    // 2) 行內含「姓名：XXX」
+    // 2) 行內含「姓名：XXX」（中英文都支援）
     var m2 = line.match(reNamePrefix);
-    if(m2){ currentName = m2[1]; }
+    if(m2){
+      currentName = m2[1];
+      // 有抓到姓名但本行不會有打卡時間（姓名表頭行），直接跳下一行
+      return;
+    }
 
     // 3) 行首姓名（表格格式）
     var lineName = currentName;
     var m3 = line.match(reNameLeading);
     if(m3 && !m1){
       var candidate = m3[1];
-      // 避免把「日期」「合計」這類標題當作姓名
-      if(!/日期|合計|小計|備註|姓名|員工|人員|星期|週|時間|Total|Name/i.test(candidate)){
+      // 避免把「工號/日期/合計/考勤」這類標題當作姓名
+      if(!reNotName.test(candidate) &&
+         !/日期|合計|小計|備註|姓名|員工|人員|星期|週|時間|工號|部門|考勤|記錄|Total|Name/i.test(candidate)){
         lineName = candidate;
         currentName = candidate;
       }
