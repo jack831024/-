@@ -262,12 +262,19 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
     <div id="vendor-grid"></div>
   </div>
 
-  <!-- 隱藏日期（預設今天，點月度表可切換）-->
-  <input type="hidden" id="inv-date">
+  <!-- 貨單日期 -->
+  <div class="section" id="date-section" style="display:none">
+    <h3><span class="step-num">2</span>貨單日期</h3>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input type="date" id="inv-date" onchange="onInvDateChange()" style="padding:11px 14px;border:1.5px solid var(--line);border-radius:11px;background:rgba(255,255,255,.8);font-size:15px;outline:none;flex:1;min-width:170px;font-family:inherit;color:var(--ink);font-weight:600;transition:all .18s">
+      <button onclick="setEditingDate(todayDate())" style="padding:11px 16px;border:1.5px solid var(--line);border-radius:10px;background:rgba(255,255,255,.8);cursor:pointer;font-size:13px;font-weight:600;color:var(--ink-2);font-family:inherit;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--line)';this.style.color='var(--ink-2)'">今天</button>
+    </div>
+    <p style="font-size:11.5px;color:var(--ink-3);margin-top:8px;line-height:1.6">💡 請依貨單上實際的日期輸入，AI 只會辨識品項、單價、貨量，不會猜日期，避免辨識錯誤。</p>
+  </div>
 
   <!-- 上傳 + AI -->
   <div class="section" id="upload-section" style="display:none">
-    <h3><span class="step-num">2</span>上傳出貨單 / 發票</h3>
+    <h3><span class="step-num">3</span>上傳出貨單 / 發票</h3>
     <label class="upload-zone">
       <span class="uz-icon">📷</span>
       <span class="uz-label">點此拍照或選擇照片（可一次多張）</span>
@@ -285,7 +292,7 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
   <!-- 表格 -->
   <div class="section" id="table-section" style="display:none">
     <h3>
-      <span class="step-num">3</span>品項明細
+      <span class="step-num">4</span>品項明細
       <span id="edit-badge" style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:999px;background:rgba(249,115,22,.1);color:var(--accent);font-weight:600;letter-spacing:0.5px">
         📅 <span id="editing-date">今天</span>
       </span>
@@ -469,6 +476,7 @@ function selectVendor(name, btnEl){
   document.querySelectorAll('.vendor-btn').forEach(function(b){ b.classList.remove('active'); });
   btnEl.classList.add('active');
 
+  document.getElementById('date-section').style.display = 'block';
   document.getElementById('upload-section').style.display = 'block';
   document.getElementById('table-section').style.display = 'block';
   document.getElementById('action-row').style.display = 'flex';
@@ -479,7 +487,14 @@ function selectVendor(name, btnEl){
   // 自動載入該廠商的歷史資料
   loadVendorData();
   loadHistory();
-  document.getElementById('upload-section').scrollIntoView({behavior:'smooth',block:'start'});
+  document.getElementById('date-section').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// 使用者手動改貨單日期 → 載入那天的資料
+function onInvDateChange(){
+  if(!currentVendor) return;
+  var d = document.getElementById('inv-date').value;
+  setEditingDate(d);
 }
 
 // 統一的「今天」字串
@@ -683,19 +698,15 @@ async function doAnalyze(){
   stat.className = 'ai-status info on';
   stat.innerHTML = '<span class="spinner"></span>正在讀取出貨單內容...';
 
-  var defaultDate = document.getElementById('inv-date').value;
-  var currentYear = new Date().getFullYear();
+  var invoiceDate = document.getElementById('inv-date').value;
   var prompt = '請仔細辨識這張「' + currentVendor + '」的出貨單/發票/收據，抽取每個品項的資訊。\n' +
     '只回傳 JSON 陣列（不要 markdown、不要說明文字）：\n' +
-    '[{"name":"品項名稱","price":單價數字,"qty":貨量數字,"date":"出貨日期 YYYY-MM-DD"}]\n' +
+    '[{"name":"品項名稱","price":單價數字,"qty":貨量數字}]\n' +
     '規則：\n' +
     '- name 為品項中文名稱（不含編號）\n' +
     '- price 為單價（不含貨量，若單上只有小計則 price 填 0）\n' +
     '- qty 為貨量數字（若標有單位，單位不要填進來）\n' +
-    '- 【重要】date 格式必須是西元 YYYY-MM-DD，年份 YYYY 預設是 ' + currentYear + '\n' +
-    '- 【台灣發票通常用民國年】若單據年份是 3 位數（100~199），代表民國年，必須 +1911 轉西元。例如 115/4/17 → 2026-04-17，114/12/31 → 2025-12-31\n' +
-    '- date 為此單據的出貨日期；若單上看不到年份或看不清楚，一律填 "' + defaultDate + '"\n' +
-    '- 絕對不要自己亂猜年份（不要填 2015、2021 等過去年份），有疑問就填 "' + defaultDate + '"\n' +
+    '- 【不要辨識日期】日期由系統自動填入，你只需專注品項資訊\n' +
     '- 忽略總計/合計/稅額/折扣/運費等非品項列\n' +
     '- 所有數字不要千分號、不要貨幣符號';
 
@@ -710,7 +721,7 @@ async function doAnalyze(){
         name: String(row.name || '').trim(),
         price: Number(row.price) || 0,
         qty: Number(row.qty) || 0,
-        date: normalizeDate(row.date) || defaultDate,
+        date: invoiceDate,  // 一律使用使用者輸入的貨單日期
         _new: true
       });
     });
