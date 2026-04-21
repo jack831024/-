@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>盤點表</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#3b82f6;
+  --accent:#f97316;
+  --accent-dark:#ea580c;
+  --ink:#0f172a;
+  --ink-2:#475569;
+  --ink-3:#94a3b8;
+  --line:#e2e8f0;
+  --danger:#dc2626;
+  --ok:#10b981;
+}
+html,body{height:100%}
+body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;padding:1rem;
+  background:
+    radial-gradient(1000px 500px at 10% -10%, #fde4d3 0%, transparent 50%),
+    radial-gradient(800px 500px at 110% 10%, #fef3c7 0%, transparent 55%),
+    linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+}
+
+.topbar{max-width:820px;margin:0 auto 14px;display:flex;align-items:center;gap:10px;padding:4px 4px;flex-wrap:wrap}
+.back-btn{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);transition:all .2s;box-shadow:0 4px 12px -4px rgba(15,23,42,.08);flex-shrink:0}
+.back-btn:hover{background:#fff;color:var(--accent);transform:translateX(-2px)}
+.back-btn svg{width:17px;height:17px}
+
+.store-chip{display:flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;background:rgba(255,255,255,.8);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);border-radius:999px;font-size:13px;color:var(--ink);font-weight:600;box-shadow:0 4px 12px -4px rgba(15,23,42,.06)}
+.store-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#fb923c);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px}
+.spacer{flex:1}
+
+.wrap{max-width:820px;margin:0 auto;padding:0 0 3rem}
+
+.hero-card{background:linear-gradient(135deg,#fff7ed 0%,#ffedd5 100%);border:1px solid rgba(249,115,22,.15);border-radius:20px;padding:1.25rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(249,115,22,.06),0 8px 24px -12px rgba(249,115,22,.2)}
+.hero-icon{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--accent) 0%,#fb923c 100%);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 8px 20px -8px rgba(249,115,22,.5);flex-shrink:0}
+.hero-text h1{font-size:20px;font-weight:700;letter-spacing:-0.02em;margin-bottom:3px}
+.hero-text p{font-size:12.5px;color:var(--ink-2)}
+
+.section{background:rgba(255,255,255,.78);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.9);border-radius:18px;padding:1.1rem 1.25rem;margin-bottom:14px;box-shadow:0 1px 2px rgba(15,23,42,.03),0 6px 18px -10px rgba(15,23,42,.08)}
+h3{font-size:13px;font-weight:700;color:var(--ink-2);margin-bottom:12px;display:flex;align-items:center;gap:6px;letter-spacing:0.01em;flex-wrap:wrap}
+h3 .icon{font-size:15px}
+h3 .step-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;margin-right:4px}
+
+.vendor-group{margin-top:14px}
+.vendor-group:first-child{margin-top:0}
+.vendor-group-title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--ink-2);margin-bottom:10px;padding-bottom:8px;border-bottom:1.5px dashed var(--line);letter-spacing:0.03em}
+.vendor-group-title .gi{font-size:16px}
+.vendor-group-title .gcount{margin-left:auto;font-size:10px;font-weight:600;color:var(--ink-3);background:rgba(15,23,42,.04);padding:2px 8px;border-radius:999px;letter-spacing:1px}
+.vendor-group.meat .vendor-group-title{color:#b91c1c}
+.vendor-group.veg .vendor-group-title{color:#15803d}
+.vendor-group.monthly .vendor-group-title{color:#7c3aed}
+.vendor-group.other .vendor-group-title{color:#0369a1}
+
+.vendor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
+.vendor-btn{padding:10px 8px;border:1.5px solid var(--line);border-radius:11px;background:rgba(255,255,255,.6);cursor:pointer;font-size:13px;font-weight:600;color:var(--ink-2);transition:all .18s;font-family:inherit;line-height:1.3;text-align:center;min-height:42px;display:flex;align-items:center;justify-content:center}
+.vendor-btn:hover{border-color:var(--accent);background:#fff;color:var(--accent);transform:translateY(-2px);box-shadow:0 6px 14px -6px rgba(249,115,22,.25)}
+.vendor-btn.active{background:linear-gradient(135deg,var(--accent) 0%,#fb923c 100%);color:#fff;border-color:transparent;box-shadow:0 6px 16px -6px rgba(249,115,22,.5)}
+.vendor-group.veg .vendor-btn.active{background:linear-gradient(135deg,#16a34a 0%,#22c55e 100%);box-shadow:0 6px 16px -6px rgba(22,163,74,.5)}
+.vendor-group.veg .vendor-btn:hover{border-color:#16a34a;color:#16a34a;box-shadow:0 6px 14px -6px rgba(22,163,74,.25)}
+.vendor-group.meat .vendor-btn.active{background:linear-gradient(135deg,#dc2626 0%,#ef4444 100%);box-shadow:0 6px 16px -6px rgba(220,38,38,.5)}
+.vendor-group.meat .vendor-btn:hover{border-color:#dc2626;color:#dc2626;box-shadow:0 6px 14px -6px rgba(220,38,38,.25)}
+.vendor-group.monthly .vendor-btn.active{background:linear-gradient(135deg,#7c3aed 0%,#a78bfa 100%);box-shadow:0 6px 16px -6px rgba(124,58,237,.5)}
+.vendor-group.monthly .vendor-btn:hover{border-color:#7c3aed;color:#7c3aed;box-shadow:0 6px 14px -6px rgba(124,58,237,.25)}
+.vendor-group.other .vendor-btn.active{background:linear-gradient(135deg,#0369a1 0%,#38bdf8 100%);box-shadow:0 6px 16px -6px rgba(3,105,161,.5)}
+.vendor-group.other .vendor-btn:hover{border-color:#0369a1;color:#0369a1;box-shadow:0 6px 14px -6px rgba(3,105,161,.25)}
+
+.shicheng-placeholder{text-align:center;padding:2rem 1rem;color:var(--ink-3);font-size:13px;line-height:1.8}
+.shicheng-placeholder .big{font-size:36px;display:block;margin-bottom:8px;opacity:.5}
+
+.upload-zone{border:2px dashed #fdba74;border-radius:14px;padding:1.5rem;text-align:center;cursor:pointer;transition:all .2s;background:rgba(255,247,237,.5);position:relative}
+.upload-zone:hover{border-color:var(--accent);background:rgba(255,247,237,.9)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.uz-icon{font-size:32px;display:block;margin-bottom:6px}
+.uz-label{font-size:13px;color:var(--ink-2);font-weight:500;pointer-events:none}
+.uz-hint{font-size:11px;color:var(--ink-3);margin-top:4px;pointer-events:none}
+
+.thumb-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.thumb-wrap{position:relative;display:inline-block}
+.thumb{width:100px;height:100px;object-fit:cover;border-radius:12px;border:1.5px solid var(--line);cursor:zoom-in;transition:all .15s;box-shadow:0 2px 8px -2px rgba(15,23,42,.1)}
+.thumb:hover{transform:scale(1.04);border-color:var(--accent)}
+.thumb-del{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:var(--danger);color:#fff;border:2px solid #fff;font-size:14px;line-height:16px;text-align:center;cursor:pointer;box-shadow:0 2px 6px rgba(220,38,38,.4);font-weight:bold;padding:0}
+.thumb-del:hover{background:#b91c1c;transform:scale(1.1)}
+
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;align-items:center;justify-content:center;z-index:9999;cursor:zoom-out;padding:20px}
+.lightbox.on{display:flex}
+.lightbox img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 20px 50px rgba(0,0,0,.6)}
+
+.analyze-btn{width:100%;padding:13px;margin-top:12px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--accent) 0%,var(--accent-dark) 100%);color:#fff;font-size:14.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .18s;letter-spacing:0.02em;box-shadow:0 6px 16px -6px rgba(249,115,22,.5);font-family:inherit}
+.analyze-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 10px 22px -6px rgba(249,115,22,.55)}
+.analyze-btn:disabled{background:#cbd5e1;cursor:not-allowed;box-shadow:none;color:#64748b}
+
+.ai-status{padding:10px 14px;border-radius:11px;font-size:13px;display:none;align-items:center;gap:8px;margin-top:10px;font-weight:500}
+.ai-status.on{display:flex}
+.ai-status.info{background:rgba(59,130,246,.08);color:var(--brand)}
+.ai-status.ok{background:rgba(16,185,129,.08);color:var(--ok)}
+.ai-status.err{background:rgba(220,38,38,.08);color:var(--danger)}
+
+.spinner{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;flex-shrink:0;opacity:.7}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.table-wrap{overflow-x:auto;margin:0 -1.25rem;padding:0 1.25rem}
+table.items{width:100%;border-collapse:separate;border-spacing:0;min-width:560px}
+.items th{text-align:left;padding:8px 10px;font-size:11.5px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:1px;border-bottom:1.5px solid var(--line)}
+.items td{padding:6px 5px;border-bottom:1px solid rgba(226,232,240,.6);vertical-align:middle}
+.items tr:last-child td{border-bottom:none}
+.items .col-del{width:36px;text-align:center}
+.items .col-qty,.items .col-price{width:90px}
+.items .col-date{width:140px}
+
+.items input, .items input[type=date]{width:100%;padding:7px 9px;border:1.5px solid transparent;border-radius:8px;background:rgba(15,23,42,.02);font-size:13px;outline:none;transition:all .15s;font-family:inherit;color:var(--ink)}
+.items input:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(249,115,22,.1)}
+.items input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono",Menlo,monospace}
+.items .del{background:none;border:none;cursor:pointer;color:var(--ink-3);font-size:17px;width:28px;height:28px;border-radius:8px;transition:all .15s;display:flex;align-items:center;justify-content:center;margin:0 auto}
+.items .del:hover{background:rgba(220,38,38,.1);color:var(--danger)}
+
+.items .highlight{animation:flash 1.2s ease-out}
+@keyframes flash{0%{background:rgba(249,115,22,.2)}100%{background:transparent}}
+
+.empty{text-align:center;color:var(--ink-3);font-size:12.5px;padding:20px 0;font-style:italic}
+
+.add-row{margin-top:10px;padding:6px 0 0;border-top:1px dashed var(--line)}
+.add-row button{font-size:13px;padding:8px 16px;border:1.5px dashed var(--accent);border-radius:10px;background:rgba(255,247,237,.5);cursor:pointer;color:var(--accent);font-weight:600;transition:all .18s;font-family:inherit;width:100%}
+.add-row button:hover{background:var(--accent);color:#fff;border-style:solid}
+
+.summary-bar{display:flex;gap:12px;margin-top:14px;padding:12px 14px;background:linear-gradient(135deg,#f1f5f9 0%,#e2e8f0 100%);border-radius:12px;font-size:12px;color:var(--ink-2)}
+.summary-bar .item{flex:1;text-align:center}
+.summary-bar .item .val{font-size:17px;font-weight:700;color:var(--ink);display:block;margin-top:2px;font-family:ui-monospace,"SF Mono",Menlo,monospace}
+
+/* 月度盤點表 */
+.history-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.history-toolbar .month-picker{padding:8px 12px;font-size:13px;border:1.5px solid var(--line);border-radius:10px;background:rgba(255,255,255,.8);cursor:pointer;color:var(--ink);font-family:inherit;font-weight:600;transition:all .18s;outline:none}
+.history-toolbar .month-picker:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(249,115,22,.1)}
+.history-toolbar .refresh-btn{padding:6px 12px;font-size:12px;border:1.5px solid var(--line);border-radius:10px;background:rgba(255,255,255,.8);cursor:pointer;color:var(--ink-2);font-family:inherit;font-weight:500;transition:all .18s;display:flex;align-items:center;gap:5px}
+.history-toolbar .refresh-btn:hover{background:#fff;color:var(--accent);border-color:var(--accent)}
+.history-toolbar .hist-stat{font-size:11px;color:var(--ink-3);margin-left:auto}
+.history-toolbar .src-chip{font-size:10px;padding:3px 8px;border-radius:999px;font-weight:600;letter-spacing:1px}
+.history-toolbar .src-chip.cloud{background:rgba(59,130,246,.1);color:var(--brand)}
+.history-toolbar .src-chip.local{background:rgba(245,158,11,.1);color:#b45309}
+
+.grid-wrap{overflow:auto;max-height:620px;border:1px solid var(--line);border-radius:12px;background:#fff}
+table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
+.monthly thead th{position:sticky;top:0;background:linear-gradient(180deg,#dbeafe 0%,#bfdbfe 100%);padding:7px 6px;font-size:11px;font-weight:700;color:#1e40af;text-align:center;white-space:nowrap;border-right:1px solid #93c5fd;border-bottom:1.5px solid #60a5fa;z-index:3;min-width:36px}
+.monthly thead th.day-col{cursor:pointer;transition:background .15s}
+.monthly thead th.day-col:hover{background:linear-gradient(180deg,#93c5fd 0%,#60a5fa 100%);color:#fff}
+.monthly tbody td.cell-click{cursor:pointer;transition:all .12s}
+.monthly tbody td.cell-click:hover{background:#fef3c7;color:var(--accent-dark);box-shadow:inset 0 0 0 1.5px var(--accent);font-weight:700}
+.monthly thead th.c-name{left:0;z-index:5;text-align:left;padding:7px 10px;min-width:80px;background:linear-gradient(180deg,#dbeafe 0%,#bfdbfe 100%)}
+.monthly thead th.c-type{left:80px;z-index:5;min-width:68px;background:linear-gradient(180deg,#dbeafe 0%,#bfdbfe 100%)}
+.monthly thead th.c-sum{background:linear-gradient(180deg,#fecaca 0%,#fca5a5 100%);color:#991b1b;min-width:72px;font-size:10.5px;letter-spacing:0}
+.monthly thead th.weekend{background:linear-gradient(180deg,#e0e7ff 0%,#c7d2fe 100%);color:#3730a3}
+
+.monthly tbody th.c-name{position:sticky;left:0;background:#fff;padding:4px 10px;font-size:12px;font-weight:600;color:var(--ink);text-align:left;white-space:nowrap;border-right:1px solid var(--line);border-bottom:1px solid var(--line);z-index:2}
+.monthly tbody td.c-type{position:sticky;left:80px;background:rgba(248,250,252,.95);padding:4px 8px;font-size:10.5px;font-weight:700;text-align:center;white-space:nowrap;border-right:1.5px solid var(--line);border-bottom:1px solid var(--line);z-index:1;letter-spacing:1px;min-width:68px}
+.monthly tbody td{padding:3px 5px;text-align:right;font-size:11.5px;font-family:ui-monospace,"SF Mono",Menlo,monospace;color:var(--ink);border-right:1px solid rgba(226,232,240,.5);border-bottom:1px solid rgba(226,232,240,.5);white-space:nowrap;min-width:36px}
+.monthly tbody tr.price-row td.c-type{color:var(--accent);background:rgba(255,247,237,.95)}
+.monthly tbody tr.qty-row td.c-type{color:var(--brand);background:rgba(239,246,255,.95)}
+.monthly tbody tr.item-top th, .monthly tbody tr.item-top td{border-top:1.5px solid var(--line)}
+.monthly tbody td.weekend{background:rgba(224,231,255,.3)}
+.monthly tbody td.zero{color:#cbd5e1}
+.monthly tbody td.c-sum{background:#fee2e2;color:#991b1b;font-weight:700;text-align:right;border-left:1.5px solid #fca5a5}
+
+.monthly tfoot td, .monthly tfoot th{position:sticky;bottom:0;background:linear-gradient(0deg,#fce7f3 0%,#fbcfe8 100%);padding:7px 6px;font-size:11px;font-weight:700;color:#9d174d;border-top:2px solid #f472b6;font-family:ui-monospace,"SF Mono",Menlo,monospace;z-index:2}
+.monthly tfoot th{left:0;text-align:left;padding:7px 10px;color:#831843;z-index:4}
+.monthly tfoot td.c-sum-foot{background:linear-gradient(0deg,#fecaca 0%,#fca5a5 100%);color:#7f1d1d;text-align:right;border-left:1.5px solid #f87171}
+.monthly tfoot td.zero{color:#f9a8d4}
+.monthly tfoot td.weekend{background:linear-gradient(0deg,#fbcfe8 0%,#f9a8d4 100%)}
+
+.grid-empty{text-align:center;padding:3rem 1rem;color:var(--ink-3);font-size:13px;line-height:1.8}
+.grid-empty .big{font-size:36px;display:block;margin-bottom:8px;opacity:.4}
+
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.btn-row button{flex:1;min-width:100px;padding:13px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;border:1.5px solid var(--line);background:rgba(255,255,255,.8);color:var(--ink-2);transition:all .18s;font-family:inherit;letter-spacing:0.02em}
+.btn-row button:hover{background:#fff;transform:translateY(-1px)}
+.btn-row button.primary{background:linear-gradient(135deg,var(--accent) 0%,var(--accent-dark) 100%);color:#fff;border-color:transparent;box-shadow:0 6px 16px -6px rgba(249,115,22,.5)}
+.btn-row button.primary:hover{box-shadow:0 10px 22px -6px rgba(249,115,22,.55)}
+.btn-row button.danger{color:var(--danger);border-color:rgba(220,38,38,.2)}
+.btn-row button.danger:hover{background:rgba(220,38,38,.05);border-color:var(--danger)}
+
+.saved-tag{font-size:12px;color:var(--ok);margin-top:10px;display:block;text-align:center;font-weight:500}
+
+@media(max-width:520px){
+  body{padding:.75rem}
+  .hero-card{padding:1rem}
+  .hero-icon{width:44px;height:44px;font-size:22px}
+  .hero-text h1{font-size:18px}
+  .vendor-grid{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="location.href='home.html'" title="返回主頁">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+  </button>
+  <div class="store-chip">
+    <div class="store-avatar" id="u-avatar">📦</div>
+    <span id="u-store">—</span>
+  </div>
+  <span class="spacer"></span>
+  <button class="back-btn" onclick="openInvSettings()" title="設定雲端同步網址" style="width:auto;padding:0 12px;font-size:12px;font-weight:500;gap:6px">
+    ⚙️ 設定
+  </button>
+  <button class="back-btn" onclick="location.href='index.html'" title="切換門市" style="width:auto;padding:0 14px;font-size:12px;font-weight:500;gap:6px">
+    🏪 切換門市
+  </button>
+</div>
+
+<!-- 設定視窗 -->
+<div id="inv-settings-modal" style="position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:100;padding:1rem">
+  <div style="background:#fff;border-radius:18px;padding:1.75rem;max-width:480px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3)">
+    <h2 style="font-size:18px;font-weight:700;margin-bottom:6px">⚙️ 盤點表雲端同步設定</h2>
+    <p style="font-size:13px;color:var(--ink-2);margin-bottom:1rem;line-height:1.6">填入<b>盤點表專用</b>的 Apps Script 網址（與小結報表是<b>不同</b>的部署）。留空則只存本機。</p>
+    <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px 14px;font-size:12px;color:#9a3412;line-height:1.6;margin-bottom:14px">
+      📌 部署步驟：<br>
+      1. 打開 <code>盤點表-script.gs</code> 檔案<br>
+      2. 貼到新的 Apps Script 專案<br>
+      3. 部署 → 新增部署 → Web app<br>
+      4. 把 <code>/exec</code> 網址貼到下方
+    </div>
+    <label style="font-size:12px;color:var(--ink-2);margin-bottom:6px;display:block;font-weight:600">Apps Script 網址</label>
+    <input type="text" id="inv-sync-input" placeholder="https://script.google.com/macros/s/..../exec" style="width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;background:rgba(255,255,255,.7);font-size:13px;outline:none;font-family:ui-monospace,Menlo,monospace;margin-bottom:14px">
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="closeInvSettings()" style="padding:9px 16px;border-radius:10px;border:1.5px solid var(--line);background:#fff;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink-2);font-family:inherit">取消</button>
+      <button onclick="clearInvSync()" style="padding:9px 16px;border-radius:10px;border:1.5px solid rgba(220,38,38,.2);background:#fff;cursor:pointer;font-size:13px;font-weight:600;color:var(--danger);font-family:inherit">清除</button>
+      <button onclick="saveInvSync()" style="padding:9px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent) 0%,var(--accent-dark) 100%);color:#fff;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;box-shadow:0 4px 12px -4px rgba(249,115,22,.5)">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="hero-card">
+    <div class="hero-icon">📦</div>
+    <div class="hero-text">
+      <h1>盤點表</h1>
+      <p id="subtitle">出貨單辨識與庫存紀錄</p>
+    </div>
+  </div>
+
+  <!-- 廠商選擇（初殿） -->
+  <div class="section" id="vendor-section">
+    <h3><span class="step-num">1</span>選擇廠商</h3>
+    <div id="vendor-grid"></div>
+  </div>
+
+  <!-- 隱藏日期（預設今天，點月度表可切換）-->
+  <input type="hidden" id="inv-date">
+
+  <!-- 上傳 + AI -->
+  <div class="section" id="upload-section" style="display:none">
+    <h3><span class="step-num">2</span>上傳出貨單 / 發票</h3>
+    <label class="upload-zone">
+      <span class="uz-icon">📷</span>
+      <span class="uz-label">點此拍照或選擇照片（可一次多張）</span>
+      <span class="uz-hint">支援 JPG / PNG / HEIC，建議每張 &lt; 3MB</span>
+      <input type="file" id="inv-files" accept="image/*" multiple capture="environment" onchange="handleFiles(this)">
+    </label>
+    <div class="thumb-row" id="thumb-row"></div>
+    <button class="analyze-btn" id="analyze-btn" onclick="doAnalyze()" disabled>
+      <span id="ai-icon">🤖</span>
+      <span id="ai-text">AI 辨識品項</span>
+    </button>
+    <div class="ai-status" id="ai-status"></div>
+  </div>
+
+  <!-- 表格 -->
+  <div class="section" id="table-section" style="display:none">
+    <h3>
+      <span class="step-num">3</span>品項明細
+      <span id="edit-badge" style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:999px;background:rgba(249,115,22,.1);color:var(--accent);font-weight:600;letter-spacing:0.5px">
+        📅 <span id="editing-date">今天</span>
+      </span>
+    </h3>
+    <div class="table-wrap">
+      <table class="items">
+        <thead>
+          <tr>
+            <th>品項</th>
+            <th class="col-price" style="text-align:right">單價</th>
+            <th class="col-qty" style="text-align:right">貨量</th>
+            <th class="col-date">出貨日期</th>
+            <th class="col-del"></th>
+          </tr>
+        </thead>
+        <tbody id="item-tbody"></tbody>
+      </table>
+    </div>
+    <div class="add-row">
+      <button onclick="addRow()">＋ 新增一列</button>
+    </div>
+    <div class="summary-bar">
+      <div class="item">品項數<span class="val" id="sum-count">0</span></div>
+      <div class="item">總金額<span class="val" id="sum-total">$0</span></div>
+    </div>
+  </div>
+
+  <!-- 動作列 -->
+  <div class="btn-row" id="action-row" style="display:none">
+    <button onclick="clearAll()" class="danger">清空本張</button>
+    <button class="primary" onclick="saveInv()">💾 儲存此廠商</button>
+  </div>
+  <span class="saved-tag" id="saved-tag"></span>
+
+  <!-- 月度盤點表 -->
+  <div class="section" id="history-section" style="display:none">
+    <h3><span class="icon">📊</span>月度盤點表（此廠商）</h3>
+    <div class="history-toolbar">
+      <input type="month" id="month-picker" class="month-picker" onchange="loadHistory()">
+      <button class="refresh-btn" onclick="loadHistory()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-3-6.7L21 8M21 3v5h-5"/></svg>
+        重新整理
+      </button>
+      <span class="src-chip" id="hist-src">本機</span>
+      <span class="hist-stat" id="hist-stat">—</span>
+    </div>
+    <div style="font-size:11.5px;color:var(--ink-2);background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:10px;padding:9px 12px;margin-bottom:10px;line-height:1.6;display:flex;gap:6px;align-items:flex-start">
+      <span>💡</span>
+      <span><b>修正錯誤的方法：</b>點擊月度表任一「日期欄頭」或「格子」，該日資料會載入至上方「品項明細」，您可以直接修改、刪除或補上漏掉的品項，按「💾 儲存」覆蓋該日。</span>
+    </div>
+    <div id="hist-container"></div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="this.classList.remove('on')">
+  <img id="lightbox-img" alt="">
+</div>
+
+<script>
+// ============================================
+// 內建設定（與 daily-summary 共用同一組 Worker / 代理）
+// ============================================
+var BUILTIN_WORKER_URL = "https://gemini-proxy.Jack129115175@gmail.com.workers.dev";
+var BUILTIN_SYNC_URL   = "https://script.google.com/macros/s/AKfycbzQweLpmQ_5SPxr90Iu-GnqleHUFPbJph8RZuFeasAEKIEWA3xBr_MAdenIkIdciYmQDA/exec";
+var BUILTIN_MODEL      = "gemini-2.0-flash";  // 2.0 flash 免費配額較多（每天 1500 次）
+(function(){
+  if(BUILTIN_WORKER_URL) localStorage.setItem('cd_worker_url', BUILTIN_WORKER_URL);
+  if(BUILTIN_SYNC_URL)   localStorage.setItem('cd_sync_url', BUILTIN_SYNC_URL);
+  localStorage.setItem('cd_gemini_model', BUILTIN_MODEL);
+})();
+
+// ============================================
+// 廠商清單（依門市、分區）
+// ============================================
+var VENDOR_GROUPS = {
+  chudian: [
+    {
+      key: 'veg',
+      title: '一區',
+      icon: '🥬',
+      vendors: ['菜商','能源','雜費','潔盈','三億','和興','開元','巨倉','西北','冰淇淋','歐嘉','養殖人生','同賀']
+    },
+    {
+      key: 'meat',
+      title: '肉一區',
+      icon: '🥩',
+      vendors: ['新燁','正順','瑞騰','泰安','以曜','美福']
+    }
+  ],
+  shicheng: [
+    {
+      key: 'monthly',
+      title: '月結廠商',
+      icon: '📅',
+      vendors: ['正順','開元','菜商','三億','和興']
+    },
+    {
+      key: 'other',
+      title: '其他廠商',
+      icon: '🛒',
+      vendors: ['西北','泰安','小菜','慶豐','雞蛋','雜費','慶豐米行','碗筷','巨倉']
+    }
+  ]
+};
+
+// ============================================
+// 登入檢查（盤點表免員工登入、只檢查門市）
+// ============================================
+var STORE_ID = sessionStorage.getItem('cd_store');
+var STORE_NAME = sessionStorage.getItem('cd_store_name');
+
+(function checkStore(){
+  if(!STORE_ID || !STORE_NAME){
+    sessionStorage.setItem('cd_flow', 'inventory');
+    window.location.href = 'index.html';
+    return;
+  }
+  document.getElementById('u-store').textContent = STORE_NAME;
+  document.getElementById('subtitle').textContent = STORE_NAME + ' · 出貨單辨識與庫存紀錄';
+  document.title = STORE_NAME + ' - 盤點表';
+
+  var brand = STORE_ID.indexOf('shicheng') >= 0 ? 'shicheng' : 'chudian';
+  if(brand === 'shicheng'){
+    document.getElementById('u-avatar').textContent = '🏮';
+  }
+  renderVendorGrid(brand);
+
+  // 預設日期為今天
+  document.getElementById('inv-date').value = todayDate();
+})();
+
+// ============================================
+// 廠商選擇
+// ============================================
+var currentVendor = null;
+
+function renderVendorGrid(brand){
+  brand = brand || 'chudian';
+  var groups = VENDOR_GROUPS[brand] || [];
+  var container = document.getElementById('vendor-grid');
+  container.innerHTML = '';
+  groups.forEach(function(group){
+    var wrap = document.createElement('div');
+    wrap.className = 'vendor-group ' + group.key;
+    wrap.innerHTML =
+      '<div class="vendor-group-title">'+
+        '<span class="gi">'+group.icon+'</span>'+
+        '<span>'+group.title+'</span>'+
+        '<span class="gcount">'+group.vendors.length+' 家</span>'+
+      '</div>'+
+      '<div class="vendor-grid"></div>';
+    var gridEl = wrap.querySelector('.vendor-grid');
+    group.vendors.forEach(function(name){
+      var btn = document.createElement('button');
+      btn.className = 'vendor-btn';
+      btn.textContent = name;
+      btn.dataset.group = group.key;
+      btn.onclick = function(){ selectVendor(name, btn); };
+      gridEl.appendChild(btn);
+    });
+    container.appendChild(wrap);
+  });
+}
+
+function selectVendor(name, btnEl){
+  currentVendor = name;
+  document.querySelectorAll('.vendor-btn').forEach(function(b){ b.classList.remove('active'); });
+  btnEl.classList.add('active');
+
+  document.getElementById('upload-section').style.display = 'block';
+  document.getElementById('table-section').style.display = 'block';
+  document.getElementById('action-row').style.display = 'flex';
+  document.getElementById('history-section').style.display = 'block';
+
+  // 預設編輯今天
+  setEditingDate(todayDate());
+  // 自動載入該廠商的歷史資料
+  loadVendorData();
+  loadHistory();
+  document.getElementById('upload-section').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// 統一的「今天」字串
+function todayDate(){
+  var t = new Date();
+  return t.getFullYear() + '-' + String(t.getMonth()+1).padStart(2,'0') + '-' + String(t.getDate()).padStart(2,'0');
+}
+
+// 設定目前編輯的日期（會觸發資料重載）
+function setEditingDate(dateStr){
+  document.getElementById('inv-date').value = dateStr;
+  var badge = document.getElementById('editing-date');
+  if(badge){
+    var today = todayDate();
+    if(dateStr === today){
+      badge.textContent = '今天（' + dateStr + '）';
+      badge.parentElement.style.background = 'rgba(249,115,22,.1)';
+      badge.parentElement.style.color = 'var(--accent)';
+    }else{
+      badge.textContent = '編輯中：' + dateStr;
+      badge.parentElement.style.background = 'rgba(59,130,246,.1)';
+      badge.parentElement.style.color = 'var(--brand)';
+    }
+  }
+  loadVendorData();
+}
+
+// ============================================
+// 圖片上傳 / 預覽
+// ============================================
+var uploadedFiles = [];
+
+function handleFiles(input){
+  var newFiles = Array.from(input.files);
+  uploadedFiles = uploadedFiles.concat(newFiles);
+  input.value = '';
+  renderThumbs();
+  document.getElementById('analyze-btn').disabled = uploadedFiles.length === 0;
+}
+
+function renderThumbs(){
+  var row = document.getElementById('thumb-row');
+  row.innerHTML = '';
+  uploadedFiles.forEach(function(f, idx){
+    var wrap = document.createElement('div');
+    wrap.className = 'thumb-wrap';
+    var img = document.createElement('img');
+    img.className = 'thumb';
+    img.src = URL.createObjectURL(f);
+    img.onclick = function(){ openLightbox(img.src); };
+    var del = document.createElement('button');
+    del.className = 'thumb-del';
+    del.textContent = '×';
+    del.onclick = function(e){ e.stopPropagation(); uploadedFiles.splice(idx,1); renderThumbs(); document.getElementById('analyze-btn').disabled = uploadedFiles.length === 0; };
+    wrap.appendChild(img);
+    wrap.appendChild(del);
+    row.appendChild(wrap);
+  });
+}
+
+function openLightbox(src){
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('on');
+}
+
+// ============================================
+// Gemini 辨識（沿用 daily-summary 的三層 fallback）
+// ============================================
+function toB64(file){
+  return new Promise(function(res, rej){
+    var r = new FileReader();
+    r.onload = function(){ res(r.result.split(',')[1]); };
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+var DIRECT_CALL_DISABLED = false;
+
+function parseGeminiResponse(d, model){
+  if(d && d.error){
+    var err = new Error(d.error.message || 'API 錯誤');
+    err.code = d.error.code; err.status = d.error.status;
+    throw err;
+  }
+  if(!d || !d.candidates || d.candidates.length === 0) throw new Error('沒有候選答案');
+  var cand = d.candidates[0];
+  if(cand.finishReason === 'MAX_TOKENS') throw new Error('回應被截斷');
+  if(cand.finishReason === 'SAFETY') throw new Error('被安全過濾器擋下');
+  var text = cand.content && cand.content.parts && cand.content.parts[0] && cand.content.parts[0].text;
+  if(!text) throw new Error('空內容');
+  return text;
+}
+
+async function callModelOnce(model, parts){
+  var workerUrl = localStorage.getItem('cd_worker_url');
+  var directKey = localStorage.getItem('cd_gemini_direct_key');
+  var proxyUrl  = localStorage.getItem('cd_sync_url');
+  if(!workerUrl && !directKey && !proxyUrl) throw new Error('尚未設定任何 AI 路徑');
+
+  if(workerUrl){
+    try{
+      var wr = await fetch(workerUrl, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ model: model, parts: parts })
+      });
+      var wd = await wr.json();
+      if(!wr.ok && !wd.error){ var e = new Error('Worker HTTP '+wr.status); e.code = wr.status; throw e; }
+      return parseGeminiResponse(wd, model);
+    }catch(we){
+      var wmsg = (we.message||'').toLowerCase();
+      var wBusy = we.code===503||we.code===429||wmsg.indexOf('overloaded')>=0||wmsg.indexOf('unavailable')>=0||wmsg.indexOf('rate')>=0;
+      if(wBusy) throw we;
+      console.warn('Worker 失敗，嘗試下一路徑：'+we.message);
+    }
+  }
+
+  if(directKey && !DIRECT_CALL_DISABLED){
+    try{
+      var directUrl = 'https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(directKey);
+      var dr = await fetch(directUrl, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ contents:[{ parts: parts }] })
+      });
+      var dd = await dr.json();
+      if(!dr.ok && !dd.error){ var he = new Error('HTTP '+dr.status); he.code = dr.status; throw he; }
+      return parseGeminiResponse(dd, model);
+    }catch(de){
+      var dmsg = (de.message||'').toLowerCase();
+      var dBusy = de.code===503||de.code===429||dmsg.indexOf('overloaded')>=0||dmsg.indexOf('unavailable')>=0||dmsg.indexOf('rate')>=0;
+      if(dBusy) throw de;
+      if(proxyUrl){ DIRECT_CALL_DISABLED = true; }else{ throw de; }
+    }
+  }
+
+  if(!proxyUrl) throw new Error('沒有代理網址可後備');
+  var r = await fetch(proxyUrl, {
+    method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action:'geminiProxy', model: model, parts: parts })
+  });
+  var wrap = await r.json();
+  if(wrap.error){
+    var em = typeof wrap.error === 'string' ? wrap.error : (wrap.error.message || JSON.stringify(wrap.error));
+    throw new Error(em);
+  }
+  return parseGeminiResponse(wrap.data || {}, model);
+}
+
+async function geminiCall(files, promptText){
+  var parts = [];
+  for(var i=0;i<files.length;i++){
+    var f = files[i];
+    var b64 = await toB64(f);
+    parts.push({ inline_data:{ mime_type: f.type||'image/jpeg', data: b64 } });
+  }
+  parts.push({ text: promptText });
+
+  var primary = localStorage.getItem('cd_gemini_model') || 'gemini-2.0-flash';
+  // 優先 2.0-flash（免費額度高），若壅塞/下架再退回 latest / 2.5 系列
+  var chain = [primary, 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
+  var tried = {}; var models = chain.filter(function(m){ if(tried[m])return false; tried[m]=1; return true; });
+
+  var lastErr;
+  for(var mi=0;mi<models.length;mi++){
+    for(var at=0;at<3;at++){
+      try{ return await callModelOnce(models[mi], parts); }
+      catch(e){
+        lastErr = e;
+        var msg = (e.message||'').toLowerCase();
+        var busy = e.code===503||e.code===429||msg.indexOf('overloaded')>=0||msg.indexOf('unavailable')>=0||msg.indexOf('rate')>=0;
+        if(busy && at<2){ await sleep((at+1)*1000); continue; }
+        break;
+      }
+    }
+  }
+  throw lastErr || new Error('所有模型皆失敗');
+}
+
+function parseJson(raw){
+  var clean = raw.replace(/```json|```/g,'').trim();
+  var match = clean.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
+  if(match) clean = match[0];
+  return JSON.parse(clean);
+}
+
+// ============================================
+// AI 辨識
+// ============================================
+async function doAnalyze(){
+  if(!currentVendor){ alert('請先選擇廠商'); return; }
+  if(uploadedFiles.length === 0){ alert('請先上傳出貨單照片'); return; }
+
+  var btn = document.getElementById('analyze-btn');
+  var icon = document.getElementById('ai-icon');
+  var text = document.getElementById('ai-text');
+  var stat = document.getElementById('ai-status');
+
+  btn.disabled = true;
+  icon.innerHTML = '<span class="spinner"></span>';
+  text.textContent = 'AI 辨識中，請稍候...';
+  stat.className = 'ai-status info on';
+  stat.innerHTML = '<span class="spinner"></span>正在讀取出貨單內容...';
+
+  var defaultDate = document.getElementById('inv-date').value;
+  var prompt = '請仔細辨識這張「' + currentVendor + '」的出貨單/發票/收據，抽取每個品項的資訊。\n' +
+    '只回傳 JSON 陣列（不要 markdown、不要說明文字）：\n' +
+    '[{"name":"品項名稱","price":單價數字,"qty":貨量數字,"date":"出貨日期 YYYY-MM-DD"}]\n' +
+    '規則：\n' +
+    '- name 為品項中文名稱（不含編號）\n' +
+    '- price 為單價（不含貨量，若單上只有小計則 price 填 0）\n' +
+    '- qty 為貨量數字（若標有單位，單位不要填進來）\n' +
+    '- date 為此單據的出貨日期；若單上沒有就填 "' + defaultDate + '"\n' +
+    '- 忽略總計/合計/稅額/折扣/運費等非品項列\n' +
+    '- 所有數字不要千分號、不要貨幣符號';
+
+  try{
+    var raw = await geminiCall(uploadedFiles, prompt);
+    var arr = parseJson(raw);
+    if(!Array.isArray(arr)) throw new Error('回傳格式非陣列');
+
+    var before = items.length;
+    arr.forEach(function(row){
+      items.push({
+        name: String(row.name || '').trim(),
+        price: Number(row.price) || 0,
+        qty: Number(row.qty) || 0,
+        date: row.date || defaultDate,
+        _new: true
+      });
+    });
+    renderTable();
+    updateSummary();
+
+    stat.className = 'ai-status ok on';
+    stat.innerHTML = '✓ 辨識完成，新增 ' + arr.length + ' 筆品項';
+  }catch(e){
+    console.error(e);
+    stat.className = 'ai-status err on';
+    stat.innerHTML = '⚠️ 辨識失敗：' + (e.message || '未知錯誤');
+  }finally{
+    btn.disabled = false;
+    icon.textContent = '🤖';
+    text.textContent = '再辨識一批（可累加）';
+  }
+}
+
+// ============================================
+// 表格
+// ============================================
+var items = [];
+
+function renderTable(){
+  var tb = document.getElementById('item-tbody');
+  tb.innerHTML = '';
+  if(items.length === 0){
+    tb.innerHTML = '<tr><td colspan="5" class="empty">尚無品項，請上傳出貨單由 AI 辨識，或點下方「新增一列」手動輸入</td></tr>';
+    return;
+  }
+  items.forEach(function(it, idx){
+    var tr = document.createElement('tr');
+    if(it._new){ tr.classList.add('highlight'); delete it._new; }
+    tr.innerHTML =
+      '<td><input type="text" value="'+escapeAttr(it.name)+'" onchange="upd('+idx+',\'name\',this.value)" placeholder="品項名稱"></td>'+
+      '<td class="col-price"><input type="number" step="0.01" value="'+(it.price||'')+'" onchange="upd('+idx+',\'price\',this.value)" placeholder="0"></td>'+
+      '<td class="col-qty"><input type="number" step="0.01" value="'+(it.qty||'')+'" onchange="upd('+idx+',\'qty\',this.value)" placeholder="0"></td>'+
+      '<td class="col-date"><input type="date" value="'+escapeAttr(it.date||'')+'" onchange="upd('+idx+',\'date\',this.value)"></td>'+
+      '<td class="col-del"><button class="del" onclick="delRow('+idx+')" title="刪除">×</button></td>';
+    tb.appendChild(tr);
+  });
+}
+
+function escapeAttr(s){
+  return String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function upd(idx, field, val){
+  if(field === 'price' || field === 'qty') items[idx][field] = Number(val) || 0;
+  else items[idx][field] = val;
+  updateSummary();
+}
+
+function delRow(idx){
+  items.splice(idx, 1);
+  renderTable();
+  updateSummary();
+}
+
+function addRow(){
+  items.push({ name:'', price:0, qty:0, date: document.getElementById('inv-date').value, _new:true });
+  renderTable();
+  updateSummary();
+}
+
+function updateSummary(){
+  var total = 0;
+  items.forEach(function(it){ total += (Number(it.price)||0) * (Number(it.qty)||0); });
+  document.getElementById('sum-count').textContent = items.length;
+  document.getElementById('sum-total').textContent = '$' + Math.round(total).toLocaleString();
+}
+
+// ============================================
+// 儲存 / 載入 / 清空
+// ============================================
+function storeKey(){
+  return 'cd_inv_'+STORE_ID+'_'+currentVendor+'_'+document.getElementById('inv-date').value;
+}
+
+function loadVendorData(){
+  var key = storeKey();
+  var raw = localStorage.getItem(key);
+  if(raw){
+    try{
+      var data = JSON.parse(raw);
+      items = data.items || [];
+      if(data.savedAt){
+        var t = new Date(data.savedAt).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+        document.getElementById('saved-tag').textContent = '✓ 上次儲存：'+t;
+      }
+    }catch(e){ items = []; }
+  }else{
+    items = [];
+    document.getElementById('saved-tag').textContent = '';
+  }
+  renderTable();
+  updateSummary();
+}
+
+function saveInv(){
+  if(!currentVendor){ alert('請先選擇廠商'); return; }
+  if(items.length === 0){ alert('尚無品項可儲存'); return; }
+  var dateStr = document.getElementById('inv-date').value;
+  var savedAt = new Date().toISOString();
+  var data = { vendor: currentVendor, date: dateStr, items: items, savedAt: savedAt };
+  localStorage.setItem(storeKey(), JSON.stringify(data));
+  var t = new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('saved-tag').textContent = '✓ 已儲存於 '+t+'（本機）';
+  // 背景同步雲端（best-effort）
+  cloudSaveInv(dateStr, savedAt).then(function(ok){
+    if(ok){
+      document.getElementById('saved-tag').textContent = '✓ 已儲存於 '+t+'（本機 + 雲端 ✅）';
+      loadHistory();
+    }
+  });
+  alert('✅ ['+currentVendor+'] 已儲存 '+items.length+' 筆品項');
+  loadHistory();
+}
+
+async function cloudSaveInv(dateStr, savedAt){
+  var url = localStorage.getItem('cd_inv_sync_url');
+  if(!url) return false;
+  try{
+    var r = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({
+        action:'saveInventory',
+        store: STORE_ID,
+        vendor: currentVendor,
+        date: dateStr,
+        items: items,
+        savedAt: savedAt
+      })
+    });
+    var j = await r.json();
+    return !!j.ok;
+  }catch(e){ console.warn('雲端同步失敗', e); return false; }
+}
+
+function clearAll(){
+  if(!confirm('確定要清空【'+currentVendor+'】此張盤點資料嗎？')) return;
+  localStorage.removeItem(storeKey());
+  items = [];
+  uploadedFiles = [];
+  renderThumbs();
+  renderTable();
+  updateSummary();
+  document.getElementById('analyze-btn').disabled = true;
+  document.getElementById('ai-status').className = 'ai-status';
+  document.getElementById('saved-tag').textContent = '';
+  loadHistory();
+}
+
+// ============================================
+// 歷史總表：掃 localStorage + 雲端拉取，做 pivot
+// 結構：{ items: {品項: {日期: {price,qty}}}, dates: [日期排序後] }
+// ============================================
+async function loadHistory(){
+  if(!currentVendor) return;
+  var box = document.getElementById('hist-container');
+  var stat = document.getElementById('hist-stat');
+  var srcChip = document.getElementById('hist-src');
+  stat.textContent = '載入中...';
+
+  // 先從 localStorage 抓
+  var localRecords = scanLocalInventory();
+  var allRecords = localRecords.slice();
+  var src = 'local';
+
+  // 若有設定雲端 URL，也從雲端拉
+  var url = localStorage.getItem('cd_inv_sync_url');
+  if(url){
+    try{
+      var r = await fetch(url, {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({ action:'getInventoryHistory', store: STORE_ID, vendor: currentVendor })
+      });
+      var j = await r.json();
+      if(j && j.ok && Array.isArray(j.records)){
+        // 雲端資料為準（同 date+name 以雲端覆蓋本機）
+        var cloudMap = {};
+        j.records.forEach(function(row){
+          var k = row.date+'|'+row.name;
+          cloudMap[k] = { date: row.date, name: row.name, price: row.price, qty: row.qty };
+        });
+        // 合併：先保留 local 的，雲端再蓋過去
+        var merged = {};
+        allRecords.forEach(function(row){
+          merged[row.date+'|'+row.name] = row;
+        });
+        Object.keys(cloudMap).forEach(function(k){ merged[k] = cloudMap[k]; });
+        allRecords = Object.keys(merged).map(function(k){ return merged[k]; });
+        src = 'cloud';
+      }
+    }catch(e){ console.warn('雲端讀取失敗', e); }
+  }
+
+  srcChip.className = 'src-chip ' + src;
+  srcChip.textContent = src === 'cloud' ? '雲端 + 本機' : '本機';
+
+  renderHistoryTable(box, stat, allRecords);
+}
+
+function scanLocalInventory(){
+  var prefix = 'cd_inv_'+STORE_ID+'_'+currentVendor+'_';
+  var records = [];
+  for(var i=0;i<localStorage.length;i++){
+    var k = localStorage.key(i);
+    if(!k || k.indexOf(prefix) !== 0) continue;
+    try{
+      var data = JSON.parse(localStorage.getItem(k));
+      if(!data || !Array.isArray(data.items)) continue;
+      data.items.forEach(function(it){
+        var name = String(it.name||'').trim();
+        if(!name) return;
+        records.push({
+          date: it.date || data.date,
+          name: name,
+          price: Number(it.price) || 0,
+          qty: Number(it.qty) || 0
+        });
+      });
+    }catch(e){}
+  }
+  return records;
+}
+
+function renderHistoryTable(box, stat, records){
+  // 取目前選擇的月份（預設：今天所在月）
+  var picker = document.getElementById('month-picker');
+  if(!picker.value){
+    var now = new Date();
+    picker.value = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  }
+  var yearMonth = picker.value; // "2026-04"
+  var ym = yearMonth.split('-');
+  var year = parseInt(ym[0], 10);
+  var month = parseInt(ym[1], 10);
+  var daysInMonth = new Date(year, month, 0).getDate();
+
+  // 依所選月份過濾並建 pivot：pivot[name][day] = {price, qty}
+  var pivot = {};
+  var nameOrder = [];
+  (records || []).forEach(function(r){
+    if(!r.date || !r.name) return;
+    if(r.date.indexOf(yearMonth+'-') !== 0) return;
+    var day = parseInt(r.date.split('-')[2], 10);
+    if(!pivot[r.name]){ pivot[r.name] = {}; nameOrder.push(r.name); }
+    var prev = pivot[r.name][day] || { price:0, qty:0 };
+    // 同日同品項：單價取最新、貨量累加（若同日多張單）
+    pivot[r.name][day] = {
+      price: (Number(r.price) || prev.price),
+      qty: (prev.qty || 0) + (Number(r.qty) || 0)
+    };
+  });
+
+  if(nameOrder.length === 0){
+    box.innerHTML = '<div class="grid-empty"><span class="big">📭</span>'+yearMonth+' 此廠商尚無紀錄<br><span style="font-size:12px">上傳出貨單並儲存後會出現在此</span></div>';
+    stat.textContent = '0 品項';
+    return;
+  }
+
+  // 判斷週末：用 year/month/day 建 Date 看 getDay（0=日, 6=六）
+  function isWeekend(day){
+    var dt = new Date(year, month-1, day);
+    var w = dt.getDay();
+    return w === 0 || w === 6;
+  }
+  function cellClass(day){ return isWeekend(day) ? ' class="weekend"' : ''; }
+
+  // 建 HTML
+  var html = '<div class="grid-wrap"><table class="monthly">';
+
+  // thead（日期欄可點擊 → 載入該日編輯）
+  html += '<thead><tr><th class="c-name">品項</th><th class="c-type">類型</th>';
+  for(var d=1; d<=daysInMonth; d++){
+    var wk = isWeekend(d) ? 'weekend' : '';
+    html += '<th class="day-col '+wk+'" onclick="editDay('+d+')" title="點擊編輯 '+yearMonth+'-'+String(d).padStart(2,'0')+'">'+d+'</th>';
+  }
+  html += '<th class="c-sum">總進貨量</th><th class="c-sum">總進貨金額</th></tr></thead>';
+
+  // tbody
+  html += '<tbody>';
+  var grandTotal = 0;
+  var dailySum = {};
+  for(var dd=1; dd<=daysInMonth; dd++) dailySum[dd] = 0;
+
+  nameOrder.forEach(function(n){
+    var itemTotalQty = 0, itemTotalAmt = 0;
+    // price row
+    html += '<tr class="price-row item-top"><th class="c-name" rowspan="2" title="點任一格可載入該日編輯">'+escapeAttr(n)+'</th><td class="c-type">採購價</td>';
+    for(var d=1; d<=daysInMonth; d++){
+      var c = pivot[n][d];
+      var wk = isWeekend(d) ? ' weekend' : '';
+      var clk = ' onclick="editDay('+d+')" title="編輯 '+yearMonth+'-'+String(d).padStart(2,'0')+'"';
+      if(c && c.price > 0){
+        html += '<td class="cell-click'+wk+'"'+clk+'>'+formatNum(c.price)+'</td>';
+      }else{
+        html += '<td class="cell-click zero'+wk+'"'+clk+'>—</td>';
+      }
+    }
+    // 累計 amount
+    for(var d=1; d<=daysInMonth; d++){
+      var c = pivot[n][d];
+      if(c){
+        var amt = (c.price||0) * (c.qty||0);
+        itemTotalAmt += amt;
+        dailySum[d] += amt;
+      }
+    }
+    grandTotal += itemTotalAmt;
+    html += '<td class="c-sum zero">—</td><td class="c-sum">'+formatNum(itemTotalAmt)+'</td></tr>';
+
+    // qty row
+    html += '<tr class="qty-row"><td class="c-type">進貨量</td>';
+    for(var d=1; d<=daysInMonth; d++){
+      var c = pivot[n][d];
+      var wk = isWeekend(d) ? ' weekend' : '';
+      var clk = ' onclick="editDay('+d+')" title="編輯 '+yearMonth+'-'+String(d).padStart(2,'0')+'"';
+      if(c && c.qty > 0){
+        itemTotalQty += c.qty;
+        html += '<td class="cell-click'+wk+'"'+clk+'>'+formatNum(c.qty)+'</td>';
+      }else{
+        html += '<td class="cell-click zero'+wk+'"'+clk+'>—</td>';
+      }
+    }
+    html += '<td class="c-sum">'+formatNum(itemTotalQty)+'</td><td class="c-sum zero">—</td></tr>';
+  });
+  html += '</tbody>';
+
+  // tfoot：送貨款金額
+  html += '<tfoot><tr><th colspan="2">送貨款金額</th>';
+  for(var d=1; d<=daysInMonth; d++){
+    var wk = isWeekend(d) ? ' weekend' : '';
+    if(dailySum[d] > 0){
+      html += '<td class="'+wk.trim()+'">'+formatNum(dailySum[d])+'</td>';
+    }else{
+      html += '<td class="zero'+wk+'">—</td>';
+    }
+  }
+  html += '<td class="c-sum-foot zero">—</td><td class="c-sum-foot">'+formatNum(grandTotal)+'</td></tr></tfoot>';
+
+  html += '</table></div>';
+  box.innerHTML = html;
+  stat.textContent = nameOrder.length + ' 品項 · ' + yearMonth + ' · 總金額 $' + formatNum(grandTotal);
+}
+
+function formatNum(n){
+  var num = Number(n) || 0;
+  if(num === Math.floor(num)) return num.toLocaleString();
+  return (Math.round(num * 10000) / 10000).toLocaleString();
+}
+
+// 月度表格子被點擊 → 載入該日資料至編輯區
+function editDay(day){
+  if(!currentVendor) return;
+  var picker = document.getElementById('month-picker');
+  if(!picker.value) return;
+  var dateStr = picker.value + '-' + String(day).padStart(2,'0');
+  setEditingDate(dateStr);
+  // 捲動到品項明細
+  document.getElementById('table-section').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ============================================
+// 雲端同步設定視窗
+// ============================================
+function openInvSettings(){
+  document.getElementById('inv-sync-input').value = localStorage.getItem('cd_inv_sync_url') || '';
+  document.getElementById('inv-settings-modal').style.display = 'flex';
+}
+function closeInvSettings(){
+  document.getElementById('inv-settings-modal').style.display = 'none';
+}
+function saveInvSync(){
+  var v = document.getElementById('inv-sync-input').value.trim();
+  if(v && v.indexOf('https://script.google.com/') !== 0){
+    if(!confirm('網址看起來不是 Apps Script 的 /exec 網址，確定要儲存嗎？')) return;
+  }
+  if(v) localStorage.setItem('cd_inv_sync_url', v);
+  else  localStorage.removeItem('cd_inv_sync_url');
+  closeInvSettings();
+  alert('✅ 設定已儲存' + (v ? '，下次儲存/載入會同步雲端' : '，已清除雲端網址'));
+  if(currentVendor) loadHistory();
+}
+function clearInvSync(){
+  if(!confirm('確定要清除雲端同步網址嗎？')) return;
+  localStorage.removeItem('cd_inv_sync_url');
+  document.getElementById('inv-sync-input').value = '';
+}
+// ESC 關閉
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape'){
+    closeInvSettings();
+    document.getElementById('lightbox').classList.remove('on');
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+# 系統檔
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 編輯器設定
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 暫存 / 備份
+*.tmp
+*.bak
+*.log
+*.old
+
+# Node（未來若加前端工具用得上）
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# 本機設定（如果之後抽出敏感設定時用）
+config.local.js
+.env
+.env.local

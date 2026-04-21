@@ -3,38 +3,83 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>員工登入 - 每日小結確認</title>
+<title>員工登入</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(135deg,#4a90d9 0%,#357abd 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;color:#1a1a1a}
-.card{width:100%;max-width:380px;background:#fff;border-radius:16px;padding:2rem 1.75rem;box-shadow:0 10px 40px rgba(0,0,0,.2)}
-.logo{text-align:center;margin-bottom:1.5rem}
-.logo-icon{font-size:40px;display:block;margin-bottom:8px}
-h1{font-size:20px;font-weight:600;text-align:center;margin-bottom:4px}
-.subtitle{font-size:13px;color:#888;text-align:center;margin-bottom:1.75rem}
+:root{
+  --brand:#3b82f6;
+  --brand-dark:#2563eb;
+  --accent:#f97316;
+  --ink:#0f172a;
+  --ink-2:#475569;
+  --ink-3:#94a3b8;
+  --line:#e2e8f0;
+  --danger:#dc2626;
+}
+html,body{height:100%}
+body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;position:relative;overflow-x:hidden;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #dbeafe 0%, transparent 50%),
+    radial-gradient(900px 500px at 110% 10%, #fde4d3 0%, transparent 55%),
+    radial-gradient(800px 600px at 50% 120%, #e0e7ff 0%, transparent 60%),
+    linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+}
+
+.back-btn{position:fixed;top:20px;left:20px;width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);transition:all .2s;box-shadow:0 4px 12px -4px rgba(15,23,42,.1);z-index:10}
+.back-btn:hover{background:#fff;color:var(--brand);transform:translateX(-2px);box-shadow:0 8px 20px -6px rgba(15,23,42,.15)}
+.back-btn svg{width:18px;height:18px}
+
+.card{width:100%;max-width:400px;background:rgba(255,255,255,.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.9);border-radius:24px;padding:2.25rem 2rem;box-shadow:0 1px 2px rgba(15,23,42,.04),0 24px 48px -16px rgba(15,23,42,.15)}
+
+.logo{text-align:center;margin-bottom:1.75rem}
+.logo-icon{width:64px;height:64px;margin:0 auto 12px;border-radius:20px;background:linear-gradient(135deg,#dbeafe 0%,#bfdbfe 100%);color:var(--brand);display:flex;align-items:center;justify-content:center;font-size:32px;line-height:1;box-shadow:0 8px 20px -8px rgba(59,130,246,.4),inset 0 1px 0 rgba(255,255,255,.6)}
+.logo-icon.shicheng{background:linear-gradient(135deg,#fed7aa 0%,#fdba74 100%);color:var(--accent);box-shadow:0 8px 20px -8px rgba(249,115,22,.4),inset 0 1px 0 rgba(255,255,255,.6)}
+h1{font-size:22px;font-weight:700;text-align:center;margin-bottom:4px;letter-spacing:-0.02em;background:linear-gradient(135deg,#0f172a 0%,#475569 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{font-size:13px;color:var(--ink-2);text-align:center;margin-bottom:.5rem}
+.store-chip{display:flex;justify-content:center;margin-bottom:1.5rem}
+.store-chip span{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:rgba(59,130,246,.08);color:var(--brand);font-size:12px;font-weight:600}
+
 .field{margin-bottom:14px}
-.flabel{font-size:13px;color:#555;margin-bottom:6px;display:block;font-weight:500}
-.finput{width:100%;padding:11px 12px;border:1px solid #ddd;border-radius:10px;background:#fafafa;font-size:15px;outline:none;transition:border-color .15s}
-.finput:focus{border-color:#4a90d9;background:#fff}
-.btn{width:100%;padding:12px;margin-top:8px;border:none;border-radius:10px;background:#4a90d9;color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s}
-.btn:hover{background:#357abd}
-.btn:active{transform:translateY(1px)}
-.err{background:#fdecea;color:#d93025;padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none;border:1px solid #f5b7b1}
-.err.on{display:block}
-.footer{text-align:center;font-size:12px;color:#aaa;margin-top:1.5rem}
-.hint{font-size:12px;color:#888;text-align:center;margin-top:12px;line-height:1.5}
-.back-link{text-align:center;margin-top:10px}
-.back-link a{font-size:12px;color:#4a90d9;cursor:pointer;text-decoration:none}
+.flabel{font-size:12px;color:var(--ink-2);margin-bottom:7px;display:block;font-weight:600;letter-spacing:0.02em}
+.finput{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;background:rgba(255,255,255,.7);font-size:15px;outline:none;transition:all .18s;font-family:inherit;color:var(--ink)}
+.finput:focus{border-color:var(--brand);background:#fff;box-shadow:0 0 0 4px rgba(59,130,246,.1)}
+.finput::placeholder{color:var(--ink-3)}
+
+.btn{width:100%;padding:13px;margin-top:10px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:all .18s;font-family:inherit;letter-spacing:0.02em;box-shadow:0 6px 16px -6px rgba(59,130,246,.5)}
+.btn:hover{transform:translateY(-1px);box-shadow:0 10px 22px -6px rgba(59,130,246,.55)}
+.btn:active{transform:translateY(0)}
+
+.err{background:rgba(220,38,38,.08);color:var(--danger);padding:11px 14px;border-radius:10px;font-size:13px;margin-bottom:14px;display:none;border:1px solid rgba(220,38,38,.2);align-items:center;gap:8px}
+.err.on{display:flex}
+.err::before{content:"⚠️";font-size:14px}
+
+.hint{font-size:12px;color:var(--ink-3);text-align:center;margin-top:16px;line-height:1.6}
+.back-link{text-align:center;margin-top:8px}
+.back-link a{font-size:12px;color:var(--brand);cursor:pointer;text-decoration:none;font-weight:500}
 .back-link a:hover{text-decoration:underline}
+.footer{text-align:center;font-size:11px;color:var(--ink-3);letter-spacing:1px;margin-top:1.25rem}
+
+@media(max-width:420px){
+  body{padding:1rem}
+  .card{padding:1.75rem 1.5rem;border-radius:20px}
+  .back-btn{top:14px;left:14px}
+}
 </style>
 </head>
 <body>
+
+<button class="back-btn" onclick="location.href='index.html'" title="返回門市選擇">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+</button>
+
 <div class="card">
   <div class="logo">
-    <span class="logo-icon" id="store-icon">🍲</span>
+    <div class="logo-icon" id="store-icon">🍲</div>
     <h1>員工登入</h1>
-    <p class="subtitle" id="store-subtitle">每日小結確認</p>
+    <p class="subtitle">請輸入您的姓名與共用密碼</p>
   </div>
+  <div class="store-chip"><span id="store-chip-text">—</span></div>
+
   <div class="err" id="err"></div>
   <form id="login-form" onsubmit="return doLogin(event)">
     <div class="field">
@@ -49,24 +94,21 @@ h1{font-size:20px;font-weight:600;text-align:center;margin-bottom:4px}
   </form>
   <p class="hint">登入後至關閉分頁為止皆保持登入狀態</p>
   <p class="back-link"><a onclick="backToStores()">← 切換其他門市</a></p>
-  <p class="footer">© 內部系統</p>
+  <p class="footer">© INTERNAL SYSTEM</p>
 </div>
-<script>
-// ===== 共用密碼設定 =====
-// 如需變更密碼，請直接修改下方這一行。
-const SHARED_PASSWORD = "chudian2026";
-// =======================
 
-// 檢查是否已選擇門市
+<script>
+const SHARED_PASSWORD = "chudian2026";
+
 const storeId = sessionStorage.getItem('cd_store');
 const storeName = sessionStorage.getItem('cd_store_name');
 if(!storeId || !storeName){
   window.location.href = 'index.html';
 }else{
-  document.getElementById('store-subtitle').textContent = storeName + ' · 每日小結確認';
-  // 十城用不同 icon
+  document.getElementById('store-chip-text').textContent = '📍 ' + storeName;
   if(storeId.indexOf('shicheng') >= 0){
     document.getElementById('store-icon').textContent = '🏮';
+    document.getElementById('store-icon').classList.add('shicheng');
   }
 }
 
@@ -96,13 +138,14 @@ function doLogin(e){
   }
   sessionStorage.setItem('cd_user', name);
   sessionStorage.setItem('cd_login_at', new Date().toISOString());
-  window.location.href = 'daily-summary.html';
+  var flow = sessionStorage.getItem('cd_flow');
+  window.location.href = (flow === 'inventory') ? 'inventory.html' : 'daily-summary.html';
   return false;
 }
 
-// 若已登入，直接跳轉
 if(sessionStorage.getItem('cd_user')){
-  window.location.href = 'daily-summary.html';
+  var flow = sessionStorage.getItem('cd_flow');
+  window.location.href = (flow === 'inventory') ? 'inventory.html' : 'daily-summary.html';
 }
 </script>
 </body>

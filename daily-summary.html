@@ -37,6 +37,9 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
 .thumb-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;min-height:0}
 .thumb{width:120px;height:120px;object-fit:cover;border-radius:10px;border:1px solid #ddd;cursor:zoom-in;transition:transform .15s}
 .thumb:hover{transform:scale(1.05);border-color:#4a90d9}
+.thumb-wrap{position:relative;display:inline-block}
+.thumb-del{position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:50%;background:#e74c3c;color:#fff;border:2px solid #fff;font-size:16px;line-height:18px;text-align:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3);font-weight:bold;padding:0;user-select:none}
+.thumb-del:hover{background:#c0392b;transform:scale(1.1)}
 /* 點縮圖放大檢視 */
 .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:9999;cursor:zoom-out;padding:20px}
 .lightbox.on{display:flex}
@@ -90,11 +93,16 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
 .mlabel{font-size:12px;color:#888;margin-bottom:4px}
 .mval{font-size:22px;font-weight:600;color:#1a1a1a}
 .ai-tag{font-size:10px;background:#e8f0fe;color:#1a6fd4;border-radius:4px;padding:1px 5px;margin-left:4px;vertical-align:middle;font-weight:400}
-.user-bar{display:flex;justify-content:flex-end;align-items:center;gap:8px;max-width:720px;margin:0 auto 8px;padding:6px 4px;font-size:12px;color:#666}
-.user-avatar{width:26px;height:26px;border-radius:50%;background:#4a90d9;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
-.user-name{font-weight:500;color:#333}
-.logout-link{color:#4a90d9;cursor:pointer;text-decoration:none;font-size:12px;padding:3px 8px;border:1px solid #e0e0e0;border-radius:6px;background:#fff;transition:all .15s}
-.logout-link:hover{background:#f0f7ff;border-color:#4a90d9}
+.user-bar{display:flex;align-items:center;gap:8px;max-width:720px;margin:0 auto 10px;padding:6px 4px;font-size:12px;color:#666;flex-wrap:wrap}
+.user-bar .spacer{flex:1}
+.back-btn-mini{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#475569;transition:all .18s;box-shadow:0 2px 6px -2px rgba(15,23,42,.08);flex-shrink:0}
+.back-btn-mini:hover{background:#fff;color:#3b82f6;transform:translateX(-2px);border-color:#bfdbfe}
+.back-btn-mini svg{width:16px;height:16px}
+.user-chip-wrap{display:flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;background:rgba(255,255,255,.9);border:1px solid #e2e8f0;border-radius:999px;box-shadow:0 2px 6px -2px rgba(15,23,42,.06)}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#60a5fa);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.user-name{font-weight:600;color:#0f172a}
+.logout-link{color:#475569;cursor:pointer;text-decoration:none;font-size:12px;padding:6px 11px;border:1px solid #e2e8f0;border-radius:10px;background:rgba(255,255,255,.9);transition:all .18s;font-weight:500}
+.logout-link:hover{background:#fff;color:#3b82f6;border-color:#bfdbfe}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:100;padding:1rem}
 .modal-bg.on{display:flex}
 .modal{background:#fff;border-radius:14px;padding:1.5rem;max-width:440px;width:100%;max-height:90vh;overflow-y:auto}
@@ -135,34 +143,50 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
 </head>
 <body>
 <div class="user-bar">
-  <div class="user-avatar" id="u-avatar">🏪</div>
-  <span>目前門市：<span class="user-name" id="u-name">—</span></span>
+  <button class="back-btn-mini" onclick="location.href='home.html'" title="返回主頁">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+  </button>
+  <div class="user-chip-wrap">
+    <div class="user-avatar" id="u-avatar">🏪</div>
+    <span class="user-name" id="u-name">—</span>
+  </div>
   <a class="logout-link" onclick="switchStore()">🏪 切換門市</a>
   <a class="logout-link" onclick="openSettings()">⚙️ 設定</a>
-  <span id="app-version-badge" title="目前版本" style="margin-left:auto;font-size:11px;color:#999;padding:3px 8px;background:#f5f5f5;border-radius:10px">v—</span>
+  <span class="spacer"></span>
+  <span id="app-version-badge" title="目前版本" style="font-size:11px;color:#94a3b8;padding:4px 10px;background:rgba(255,255,255,.9);border:1px solid #e2e8f0;border-radius:10px;font-weight:500">v—</span>
 </div>
 
 <div class="modal-bg" id="settings-modal" onclick="if(event.target===this)closeSettings()">
   <div class="modal">
     <h2>⚙️ 系統設定</h2>
-    <p class="mdesc">AI 金鑰與模型已在 Apps Script 後端設定，員工端無須調整</p>
-    <div class="hint" style="background:#e8f5e8;color:#2e7d32">
-      ✅ AI 功能已啟用（使用 <b>gemini-2.0-flash</b>）<br>
-      ✅ 金鑰由系統管理員統一管理<br>
-      ✅ 如遇讀取失敗，請聯繫店長
-    </div>
+    <p class="mdesc">AI 模型固定使用 <b>gemini-2.0-flash</b>（免費配額較多：每天 1500 次）</p>
+
     <hr style="border:none;border-top:1px solid #eee;margin:14px 0">
-    <h2 style="margin-bottom:6px">☁️ 雲端同步（Google Sheet）</h2>
-    <p class="mdesc">設定後，所有裝置能同步歷史紀錄</p>
-    <div class="hint">
-      📌 如何取得同步網址：<br>
-      1. 前往 <a href="https://sheets.new" target="_blank">sheets.new</a> 建新 Google 試算表<br>
-      2. 選單「擴充功能」→「Apps Script」<br>
-      3. 刪除預設程式，貼上我提供的腳本<br>
-      4. 右上角「部署」→「新增部署作業」→ 類型選「網頁應用程式」<br>
-      5. 執行身分：「我」，存取權：「任何人」<br>
-      6. 複製網址貼到下方
+    <h2 style="margin-bottom:6px">🚀 Cloudflare Worker 代理網址（最快、推薦）</h2>
+    <p class="mdesc">填入後，AI 直接走 Cloudflare Worker（比 Apps Script 快 3~5 秒），key 藏在 Worker 裡不外洩</p>
+    <div class="field">
+      <label>Worker URL <span class="api-status" id="worker-url-status">未設定</span></label>
+      <input type="text" id="worker-url-input" placeholder="https://gemini-proxy.你帳號.workers.dev">
     </div>
+
+    <hr style="border:none;border-top:1px solid #eee;margin:14px 0">
+    <h2 style="margin-bottom:6px">⚡ Gemini 直呼叫金鑰（加速用）</h2>
+    <p class="mdesc">填入後，AI 識別會直接打 Google API（比走 Apps Script 快 3~5 秒）。失敗時會自動退回走 Apps Script 代理</p>
+    <div class="hint" style="background:#fff5e6;color:#8a5a00">
+      ⚠️ 此金鑰會存在瀏覽器裡，請務必到 Google Cloud Console 加上「HTTP 來源限制」：<br>
+      • APIs &amp; Services → Credentials → 編輯該金鑰<br>
+      • Application restrictions 選「HTTP referrers」<br>
+      • 新增 <code>https://jack831024.github.io/*</code><br>
+      • API restrictions 只勾選「Generative Language API」
+    </div>
+    <div class="field">
+      <label>Gemini API Key <span class="api-status" id="direct-key-status">未設定</span></label>
+      <input type="password" id="direct-key-input" placeholder="AIzaSy... (留空則只走 Apps Script)">
+    </div>
+
+    <hr style="border:none;border-top:1px solid #eee;margin:14px 0">
+    <h2 style="margin-bottom:6px">☁️ Apps Script 代理（後備 + 同步）</h2>
+    <p class="mdesc">直呼叫壞掉時的後備路徑，也用來同步歷史紀錄到 Google Sheet</p>
     <div class="field">
       <label>Google Apps Script 網址 <span class="api-status" id="sync-status">未設定</span></label>
       <input type="text" id="sync-url-input" placeholder="https://script.google.com/macros/s/..../exec">
@@ -386,22 +410,29 @@ document.addEventListener('keydown', function(e){
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.04.19-20';
+var APP_VERSION = '2026.04.20-05';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
 // ============================================
-// Gemini API 金鑰已改放在 Apps Script 後端（不暴露在 GitHub），這邊只需要後端網址
+// ⭐ Cloudflare Worker 代理網址（最快路徑，藏 key 用）
+// 部署步驟見 worker.js 檔案上方註解，部署完把 workers.dev URL 填到下面引號
+var BUILTIN_WORKER_URL = "https://gemini-proxy.Jack129115175@gmail.com.workers.dev";
+
+// Apps Script 代理網址（Worker 失敗時的後備 + Sheet 同步）
 var BUILTIN_SYNC_URL   = "https://script.google.com/macros/s/AKfycbzQweLpmQ_5SPxr90Iu-GnqleHUFPbJph8RZuFeasAEKIEWA3xBr_MAdenIkIdciYmQDA/exec";
-// 固定使用 gemini-2.0-flash（免費額度最大，每天 1500 次）
+// 使用 gemini-2.0-flash（免費配額較多：每天 1500 次）
 var BUILTIN_MODEL      = "gemini-2.0-flash";
 
-// 每次載入都強制套用最新後端網址 + 強制覆蓋舊的模型設定
+// Gemini API 金鑰（直呼叫用，僅建議在私人裝置手動設定，不要 hardcode）
+var BUILTIN_GEMINI_KEY = "";
+
+// 每次載入都強制套用內建設定
 (function applyBuiltinConfig(){
-  if(BUILTIN_SYNC_URL) localStorage.setItem('cd_sync_url', BUILTIN_SYNC_URL);
-  // 永遠強制套用 BUILTIN_MODEL（不看舊的 localStorage）
+  if(BUILTIN_WORKER_URL) localStorage.setItem('cd_worker_url', BUILTIN_WORKER_URL);
+  if(BUILTIN_SYNC_URL)   localStorage.setItem('cd_sync_url', BUILTIN_SYNC_URL);
   localStorage.setItem('cd_gemini_model', BUILTIN_MODEL);
-  // 清掉舊版留下的失效金鑰
+  if(BUILTIN_GEMINI_KEY) localStorage.setItem('cd_gemini_direct_key', BUILTIN_GEMINI_KEY);
   localStorage.removeItem('cd_gemini_key');
 })();
 // ============================================
@@ -520,30 +551,53 @@ function switchStore(){
   }
 }
 
-// ==== 設定（金鑰與模型已在 Apps Script 固定，不需要員工設定）====
+// ==== 設定（direct key 加速 + Apps Script 代理後備）====
 function openSettings(){
+  var workerInput = document.getElementById('worker-url-input');
+  if(workerInput) workerInput.value = localStorage.getItem('cd_worker_url') || '';
   var syncInput = document.getElementById('sync-url-input');
   if(syncInput) syncInput.value = localStorage.getItem('cd_sync_url') || '';
+  var directInput = document.getElementById('direct-key-input');
+  if(directInput) directInput.value = localStorage.getItem('cd_gemini_direct_key') || '';
+  updateWorkerUrlStatus();
   updateSyncStatus();
+  updateDirectKeyStatus();
   document.getElementById('settings-modal').className = 'modal-bg on';
 }
 function closeSettings(){
   document.getElementById('settings-modal').className = 'modal-bg';
 }
-// 以下 listModels / saveApiKey 保留為空殼，避免舊連結誤觸報錯
+// 保留空殼避免舊連結誤觸報錯
 function listModels(){ /* 已移除，由 Apps Script 統一管理 */ }
 
 function saveApiKey(){
-  // 只處理雲端同步網址，金鑰與模型已移到 Apps Script
+  // 處理 Worker URL + direct key + 代理網址
+  var workerInputEl = document.getElementById('worker-url-input');
+  var workerUrl = workerInputEl ? workerInputEl.value.trim() : '';
+  if(workerUrl) localStorage.setItem('cd_worker_url', workerUrl);
+  else localStorage.removeItem('cd_worker_url');
+
   var syncInputEl = document.getElementById('sync-url-input');
   var syncUrl = syncInputEl ? syncInputEl.value.trim() : '';
   if(syncUrl) localStorage.setItem('cd_sync_url', syncUrl);
   else localStorage.removeItem('cd_sync_url');
+
+  var directInputEl = document.getElementById('direct-key-input');
+  var directKey = directInputEl ? directInputEl.value.trim() : '';
+  if(directKey){
+    localStorage.setItem('cd_gemini_direct_key', directKey);
+    DIRECT_CALL_DISABLED = false;
+  } else {
+    localStorage.removeItem('cd_gemini_direct_key');
+  }
+
   closeSettings();
-  var msg = '設定已儲存';
-  if(syncUrl) msg += '\n雲端同步已啟用';
-  alert(msg);
-  // 重新載入同步資料
+  var msgParts = [];
+  if(workerUrl) msgParts.push('🚀 Cloudflare Worker 已啟用');
+  if(directKey) msgParts.push('⚡ Gemini 直呼叫已啟用');
+  if(syncUrl)   msgParts.push('☁️ Apps Script 代理已啟用');
+  alert(msgParts.length ? ('設定已儲存\n' + msgParts.join('\n')) : '設定已儲存');
+
   if(syncUrl){
     syncFromCloud().then(function(){ renderHistoryList(); });
   }
@@ -551,6 +605,7 @@ function saveApiKey(){
 
 function updateSyncStatus(){
   var el = document.getElementById('sync-status');
+  if(!el) return;
   if(localStorage.getItem('cd_sync_url')){
     el.textContent = '已啟用';
     el.className = 'api-status set';
@@ -559,13 +614,46 @@ function updateSyncStatus(){
     el.className = 'api-status unset';
   }
 }
+
+function updateDirectKeyStatus(){
+  var el = document.getElementById('direct-key-status');
+  if(!el) return;
+  if(localStorage.getItem('cd_gemini_direct_key')){
+    el.textContent = '已啟用';
+    el.className = 'api-status set';
+  } else {
+    el.textContent = '未設定';
+    el.className = 'api-status unset';
+  }
+}
+
+function updateWorkerUrlStatus(){
+  var el = document.getElementById('worker-url-status');
+  if(!el) return;
+  if(localStorage.getItem('cd_worker_url')){
+    el.textContent = '已啟用';
+    el.className = 'api-status set';
+  } else {
+    el.textContent = '未設定';
+    el.className = 'api-status unset';
+  }
+}
+
 function clearApiKey(){
-  // 原本是清除前端金鑰，現在金鑰在 Apps Script；這裡改成清除同步網址
-  if(confirm('確定要清除雲端同步設定嗎？（只會影響當前裝置，資料不會丟）')){
+  if(confirm('確定要清除 Worker / 直呼叫金鑰 / Apps Script 代理 的設定嗎？（只影響當前裝置，資料不會丟）')){
+    localStorage.removeItem('cd_worker_url');
     localStorage.removeItem('cd_sync_url');
+    localStorage.removeItem('cd_gemini_direct_key');
+    DIRECT_CALL_DISABLED = false;
+    var workerInput = document.getElementById('worker-url-input');
+    if(workerInput) workerInput.value = '';
     var syncInput = document.getElementById('sync-url-input');
     if(syncInput) syncInput.value = '';
+    var directInput = document.getElementById('direct-key-input');
+    if(directInput) directInput.value = '';
+    updateWorkerUrlStatus();
     updateSyncStatus();
+    updateDirectKeyStatus();
   }
 }
 function updateApiStatus(){
@@ -576,9 +664,9 @@ function updateApiStatus(){
   el.className = 'api-status set';
 }
 function hasApiKey(){
-  // 金鑰已搬到 Apps Script 後端，只要有後端網址就能用 AI
-  if(!localStorage.getItem('cd_sync_url')){
-    alert('尚未設定後端網址，請聯絡管理員');
+  // 有 Worker、direct key 或 Apps Script 代理網址其中一個就能用 AI
+  if(!localStorage.getItem('cd_worker_url') && !localStorage.getItem('cd_gemini_direct_key') && !localStorage.getItem('cd_sync_url')){
+    alert('尚未設定任何 Gemini 路徑，請聯絡管理員');
     return false;
   }
   return true;
@@ -596,40 +684,19 @@ function toB64(file){
 
 function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
 
-async function callModelOnce(model, key, parts){
-  // key 參數保留但不用（金鑰藏在 Apps Script 後端）
-  var proxyUrl = localStorage.getItem('cd_sync_url');
-  if(!proxyUrl) throw new Error('尚未設定雲端同步網址（Apps Script 代理）');
-  var r = await fetch(proxyUrl, {
-    method: 'POST',
-    headers: {'Content-Type': 'text/plain;charset=utf-8'},
-    body: JSON.stringify({ action: 'geminiProxy', model: model, parts: parts })
-  });
-  var wrap = await r.json();
-  console.log('[' + model + '] 代理回應：', wrap);
-  // Apps Script 層錯誤
-  if(wrap.error){
-    // wrap.error 可能是字串或 { code, message } 物件
-    var errMsg = typeof wrap.error === 'string'
-      ? wrap.error
-      : (wrap.error.message || JSON.stringify(wrap.error));
-    // 特別判斷：未部署新版本的典型錯誤
-    if(errMsg.indexOf('unknown action') >= 0){
-      errMsg = '後端尚未部署新版本（需要到 Apps Script → 部署 → 管理部署 → ✏️ → 新版本 → 部署）';
-    }
-    var pxErr = new Error(errMsg);
-    pxErr.code = (typeof wrap.error === 'object') ? wrap.error.code : undefined;
-    throw pxErr;
-  }
-  var d = wrap.data || {};
-  // Gemini API 原生錯誤
-  if(d.error){
+// 這個 session 是否要跳過「直接呼叫 Gemini」
+// （direct 失敗過一次後就改走 Apps Script 代理，避免每次都等 direct timeout）
+var DIRECT_CALL_DISABLED = false;
+
+// 解析 Gemini 原生回應（直呼叫 / 代理 data 部分共用）
+function parseGeminiResponse(d, model){
+  if(d && d.error){
     var err = new Error(d.error.message || 'API 錯誤');
-    err.code = d.error.code || wrap.code;
+    err.code = d.error.code;
     err.status = d.error.status;
     throw err;
   }
-  if(!d.candidates || d.candidates.length === 0){
+  if(!d || !d.candidates || d.candidates.length === 0){
     throw new Error('沒有候選答案（可能被安全過濾器攔截）');
   }
   var cand = d.candidates[0];
@@ -640,11 +707,110 @@ async function callModelOnce(model, key, parts){
   return text;
 }
 
+async function callModelOnce(model, key, parts){
+  var workerUrl = localStorage.getItem('cd_worker_url');
+  var directKey = localStorage.getItem('cd_gemini_direct_key');
+  var proxyUrl  = localStorage.getItem('cd_sync_url');
+  if(!workerUrl && !directKey && !proxyUrl){
+    throw new Error('尚未設定任何 Gemini 路徑');
+  }
+
+  // ========== 0) 最優先：Cloudflare Worker 代理（低延遲、藏 key）==========
+  if(workerUrl){
+    try{
+      var wr = await fetch(workerUrl, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ model: model, parts: parts })
+      });
+      var wd = await wr.json();
+      console.log('[' + model + '] Worker 回應：', wd);
+      if(!wr.ok && !wd.error){
+        var wHErr = new Error('Worker HTTP ' + wr.status);
+        wHErr.code = wr.status;
+        throw wHErr;
+      }
+      return parseGeminiResponse(wd, model);
+    } catch(we){
+      var wmsg = (we.message || '').toLowerCase();
+      var wIsBusy = we.code === 503 || we.code === 429
+                  || wmsg.indexOf('overloaded') >= 0
+                  || wmsg.indexOf('unavailable') >= 0
+                  || wmsg.indexOf('rate') >= 0;
+      if(wIsBusy) throw we;
+      console.warn('[' + model + '] Worker 失敗（' + we.message + '），改走下一路徑');
+    }
+  }
+
+  // ========== 1) 次選：直接呼叫 Gemini（有 key 的裝置）==========
+  if(directKey && !DIRECT_CALL_DISABLED){
+    try{
+      var directUrl = 'https://generativelanguage.googleapis.com/v1beta/models/'
+                    + encodeURIComponent(model)
+                    + ':generateContent?key=' + encodeURIComponent(directKey);
+      var dr = await fetch(directUrl, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ contents: [{ parts: parts }] })
+      });
+      var dd = await dr.json();
+      console.log('[' + model + '] 直呼叫回應：', dd);
+      // HTTP 層錯誤（403 referrer / 400 key invalid …）
+      if(!dr.ok && !dd.error){
+        var hErr = new Error('HTTP ' + dr.status);
+        hErr.code = dr.status;
+        throw hErr;
+      }
+      return parseGeminiResponse(dd, model);
+    } catch(de){
+      var dmsg = (de.message || '').toLowerCase();
+      var isBusy = de.code === 503 || de.code === 429
+                 || dmsg.indexOf('overloaded') >= 0
+                 || dmsg.indexOf('unavailable') >= 0
+                 || dmsg.indexOf('rate') >= 0;
+      // 壅塞/配額 → 直接拋，讓外層模型 fallback + 重試機制處理
+      if(isBusy) throw de;
+      // 其他錯誤（referrer 403、金鑰錯、網路錯、CORS…）→ 本次 session 之後都走代理
+      if(proxyUrl){
+        DIRECT_CALL_DISABLED = true;
+        console.warn('[' + model + '] 直呼叫失敗（' + de.message + '），本次 session 改走 Apps Script 代理');
+        // 繼續往下走代理邏輯
+      } else {
+        // 沒有代理可回退，直接拋
+        throw de;
+      }
+    }
+  }
+
+  // ========== 2) 後備：Apps Script 代理 ==========
+  if(!proxyUrl) throw new Error('沒有代理網址可當後備，請在設定中填入 Apps Script 網址');
+  var r = await fetch(proxyUrl, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action: 'geminiProxy', model: model, parts: parts })
+  });
+  var wrap = await r.json();
+  console.log('[' + model + '] 代理回應：', wrap);
+  // Apps Script 層錯誤
+  if(wrap.error){
+    var errMsg = typeof wrap.error === 'string'
+      ? wrap.error
+      : (wrap.error.message || JSON.stringify(wrap.error));
+    if(errMsg.indexOf('unknown action') >= 0){
+      errMsg = '後端尚未部署新版本（需要到 Apps Script → 部署 → 管理部署 → ✏️ → 新版本 → 部署）';
+    }
+    var pxErr = new Error(errMsg);
+    pxErr.code = (typeof wrap.error === 'object') ? wrap.error.code : undefined;
+    throw pxErr;
+  }
+  return parseGeminiResponse(wrap.data || {}, model);
+}
+
 async function geminiCall(imageFiles, promptText){
-  // 金鑰已移至 Apps Script，這邊只確認後端網址存在
+  // 可用 Worker、direct key、或 Apps Script 代理（擇一即可）
   var key = 'via-proxy';
-  if(!localStorage.getItem('cd_sync_url')){
-    throw new Error('尚未設定雲端後端網址，請聯絡管理員');
+  if(!localStorage.getItem('cd_worker_url') && !localStorage.getItem('cd_gemini_direct_key') && !localStorage.getItem('cd_sync_url')){
+    throw new Error('尚未設定任何 Gemini 路徑，請聯絡管理員');
   }
 
   var parts = [];
@@ -656,7 +822,7 @@ async function geminiCall(imageFiles, promptText){
   parts.push({text: promptText});
 
   var primary = localStorage.getItem('cd_gemini_model') || 'gemini-2.0-flash';
-  // 若主模型壅塞 / 503，依序 fallback 到其他模型（2.0-flash-lite 已下架，拿掉）
+  // 優先 2.0-flash（免費額度高），若壅塞/下架再退回 latest / 2.5 系列
   var fallbackChain = [primary, 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
   // 去重
   var tried = {};
@@ -702,24 +868,52 @@ var imgs = {summary:[], jkopay:[], jko:[], w:[], d:[], deposit:[], refund:[], ca
 function fmt(n){ return Math.round(n).toLocaleString(); }
 
 function handleFiles(input, key){
-  imgs[key] = Array.from(input.files);
-  var t = document.getElementById('thumbs-' + key);
-  t.innerHTML = '';
-  imgs[key].forEach(function(f){
-    var img = document.createElement('img');
-    img.src = URL.createObjectURL(f);
-    img.className = 'thumb';
-    t.appendChild(img);
-  });
+  // 累加：將新選的檔案加到原本清單後面，不要覆蓋
+  var newFiles = Array.from(input.files);
+  if(!imgs[key]) imgs[key] = [];
+  imgs[key] = imgs[key].concat(newFiles);
+  // 清空 input 讓同一張圖也能再選一次
+  input.value = '';
+  renderThumbs(key);
   var btn = document.getElementById('btn-' + key);
   if(btn) btn.disabled = imgs[key].length === 0;
-  // 自動觸發 AI 識別
-  if(imgs[key].length > 0 && hasApiKey()){
+  // 自動觸發 AI 識別（只在有新增檔案時）
+  if(newFiles.length > 0 && hasApiKey()){
     if(key === 'summary') analyzeSummary();
     else if(key === 'w' || key === 'd') analyzeReceipts(key);
     else if(key === 'refund') analyzeRefund();
     else if(key === 'cancel') analyzeCancel();
   }
+}
+
+function renderThumbs(key){
+  var t = document.getElementById('thumbs-' + key);
+  if(!t) return;
+  t.innerHTML = '';
+  (imgs[key] || []).forEach(function(f, idx){
+    var wrap = document.createElement('span');
+    wrap.className = 'thumb-wrap';
+    var img = document.createElement('img');
+    img.src = URL.createObjectURL(f);
+    img.className = 'thumb';
+    wrap.appendChild(img);
+    var del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'thumb-del';
+    del.innerHTML = '&times;';
+    del.title = '移除這張';
+    del.onclick = function(e){ e.stopPropagation(); removeImage(key, idx); };
+    wrap.appendChild(del);
+    t.appendChild(wrap);
+  });
+}
+
+function removeImage(key, idx){
+  if(!imgs[key]) return;
+  imgs[key].splice(idx, 1);
+  renderThumbs(key);
+  var btn = document.getElementById('btn-' + key);
+  if(btn) btn.disabled = imgs[key].length === 0;
 }
 
 function handlePayFile(input, key){
