@@ -240,7 +240,7 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
     </table>
     <div class="add-row"><button onclick="addShiftRow()">+ 新增班別</button></div>
     <div class="threshold-row">
-      <label>加班起算：下班後 <input type="number" id="ot-min" value="15" min="0" max="120"> 分起</label>
+      <label>加班起算：超出 <input type="number" id="ot-min" value="15" min="0" max="120"> 分起（下班、午休晚進/早出都適用）</label>
       <label>加班單位：<input type="number" id="ot-unit" value="30" min="1" max="60"> 分</label>
     </div>
   </div>
@@ -1284,17 +1284,37 @@ function runAnalysis(){
       }
 
       var otMin = 0;
+      var u = th.otUnit || 1;
+
+      // (1) 下班超時
       if(shift.workOut && punches.length){
         var lastP = toMin(punches[punches.length-1]);
         var workOutM = toMin(shift.workOut);
         // 跨午夜：若下班 <= 上班，當成隔日
         if(shift.workIn && toMin(shift.workIn) > workOutM) workOutM += 24*60;
-        if(lastP < workOutM - 2*60) lastP = lastP; // （保留簡單版：不做跨午夜 lastP 調整）
         var over = lastP - workOutM;
         if(over >= th.otStart){
-          // 以 otUnit 為單位向下取整
-          var u = th.otUnit || 1;
-          otMin = Math.floor(over / u) * u;
+          otMin += Math.floor(over / u) * u;
+        }
+      }
+
+      // (2) 午休時間加班：晚進休 + 早出休
+      //   晚進休 = 午休開始時間晚於排定（例：排定 14:00 休，14:15 才打卡 → +15 分）
+      //   早出休 = 午休結束時間早於排定（例：排定 15:00 上工，14:45 就打卡 → +15 分）
+      //   需有 breakIn/breakOut 設定且至少 4 次打卡，依時間順序定位（p[1]=進休, p[2]=出休）
+      if(shift.breakIn && shift.breakOut && punches.length >= 4){
+        var breakInM  = toMin(shift.breakIn);
+        var breakOutM = toMin(shift.breakOut);
+        var p2 = toMin(punches[1]);
+        var p3 = toMin(punches[2]);
+
+        var overBI = p2 - breakInM;   // 晚進休
+        if(overBI >= th.otStart){
+          otMin += Math.floor(overBI / u) * u;
+        }
+        var earlyBO = breakOutM - p3; // 早出休
+        if(earlyBO >= th.otStart){
+          otMin += Math.floor(earlyBO / u) * u;
         }
       }
 
