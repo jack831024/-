@@ -739,29 +739,36 @@ function parseAttendancePdfItems(pagesItems){
       if(m){ year = Number(m[1]); month = Number(m[2]); }
     }
 
-    // 按 Y 分組（同 y 視為一列）
-    var byY = {};
-    items.forEach(function(it){
-      var y = Math.round(it.y);
-      (byY[y] = byY[y] || []).push(it);
-    });
-    var ys = Object.keys(byY).map(Number).sort(function(a,b){ return b-a; }); // 上→下
-
     // 找出每個員工的表頭列（含「工號」「姓名」「部門」）
+    // 用 Y 視窗 ±3pt 聚合同一視覺列的 items；PDF 裡同一列的文字 Y 可能有微小差異，
+    // 若直接用 Math.round(y) 分組可能把「工號」與「姓名」/「部門」拆到不同群組而導致比對失敗。
     // 支援格式：
     //   「工號1 姓名 jack 部門 Not Set1」
     //   「工號 ： 1 姓名 ： jack 部門 ： Not Set1」（含全形冒號、空格）
     //   「工號:1 姓名:jack 部門:Not Set1」
-    var empHeaders = [];
     var reHeader = /工號[\s:：]*(\S+?)[\s:：]+姓名[\s:：]*(\S+?)[\s:：]+部門/;
-    ys.forEach(function(y, idx){
-      var row = byY[y].slice().sort(function(a,b){ return a.x-b.x; });
-      var combined = row.map(function(it){ return it.str; }).join(' ').replace(/\s+/g,' ');
+    var Y_TOLERANCE = 3;
+    var empHeaders = [];
+    var seenHeaderY = {};
+    items.forEach(function(ghItem){
+      if(!/工號/.test(String(ghItem.str || ''))) return;
+      var yKey = Math.round(ghItem.y);
+      if(seenHeaderY[yKey]) return;
+      // 聚合 Y ±3pt 的所有 items 成為同一視覺列
+      var sameRow = items.filter(function(it){
+        return Math.abs(it.y - ghItem.y) <= Y_TOLERANCE;
+      });
+      sameRow.sort(function(a,b){ return a.x - b.x; });
+      var combined = sameRow.map(function(it){ return it.str; }).join(' ').replace(/\s+/g,' ');
       var m = combined.match(reHeader);
       if(m){
-        empHeaders.push({ y: y, yIdx: idx, workerId: m[1], name: m[2] });
+        seenHeaderY[yKey] = true;
+        empHeaders.push({ y: ghItem.y, workerId: m[1], name: m[2] });
       }
     });
+
+    // 由上往下排序（PDF Y 越大越上）
+    empHeaders.sort(function(a,b){ return b.y - a.y; });
 
     if(!empHeaders.length) return;
 
@@ -770,9 +777,9 @@ function parseAttendancePdfItems(pagesItems){
       var topY = emp.y;
       var bottomY = (ei + 1 < empHeaders.length) ? empHeaders[ei+1].y : -Infinity;
 
-      // 本區段的所有 items（嚴格小於表頭 Y、嚴格大於下一個表頭 Y）
+      // 本區段的所有 items（用 Y 視窗避開表頭本身）
       var secItems = items.filter(function(it){
-        return it.y < topY && it.y > bottomY;
+        return it.y < topY - Y_TOLERANCE && it.y > bottomY + Y_TOLERANCE;
       });
       if(!secItems.length) return;
 
@@ -828,10 +835,10 @@ function parseAttendancePdfItems(pagesItems){
  *   C) 空格分隔多位數：「1 2 3 4 5 6 7 8 9 10 11 12」
  */
 function findDayColumns(secItems){
-  // 按 Y 分組
+  // 按 Y 分組（3pt bucket 容忍排版誤差）
   var byY = {};
   secItems.forEach(function(it){
-    var y = Math.round(it.y);
+    var y = Math.round(it.y / 3) * 3;
     (byY[y] = byY[y] || []).push(it);
   });
   var ys = Object.keys(byY).map(Number).sort(function(a,b){ return b-a; });
