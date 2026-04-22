@@ -343,6 +343,26 @@ var LS_KEY_URL_FALLBACK = 'cd_ot_sync_url';
 var LS_KEY_COLS   = 'cd_ot_cols';
 var LS_KEY_THRESH = 'cd_ot_thresh';
 
+// ============================================
+// ⭐ 內建各店班表 Apps Script /exec 網址
+// 這裡填好後，新裝置打開直接就有預設值，不用每台手動貼。
+// 之後如要換網址，改這裡並推 Github Pages 即可（同店所有裝置會自動更新）。
+// 留空字串 '' 代表該店尚未部署，使用者仍可在 ⚙️ 設定手動覆寫。
+// ============================================
+var BUILTIN_OT_URLS = {
+  'chudian-zhonghe':    '',  // ← 中和店班表 /exec（待部署）
+  'chudian-yongchun':   '',  // ← 永春店班表 /exec（待部署）
+  'chudian-xinzhuang':  '',  // ← 新莊店班表 /exec（待部署）
+  'shicheng-zhongxiao': 'https://script.google.com/macros/s/AKfycbw9u5NK_GXlvI1R8tDdXI7lLKhnFjXsTEmC6QjmcC35lNZzxgp6Yk3wOdYdqsAOoYk/exec'
+};
+
+// 每次載入若該店有內建網址，自動寫入 localStorage（讓新裝置即用）
+(function applyBuiltinOtUrl(){
+  if(!STORE) return;
+  var url = BUILTIN_OT_URLS[STORE];
+  if(url) localStorage.setItem(LS_KEY_URL, url);
+})();
+
 // 狀態
 var SCHEDULE = null;   // { year, month, rows: [{name, days:{1:'早',2:'中',...}}] }
 var PUNCHES  = null;   // { rows: [{name, date:'YYYY-MM-DD', time:'HH:mm'}], filename }
