@@ -817,6 +817,11 @@ function parseAttendancePdfItems(pagesItems){
   empHeaders.sort(function(a,b){ return b.y - a.y; });
   if(!empHeaders.length) return { rows: [], people: 0 };
 
+  // 全局日期欄：從整份文件找日數最多的「日期列」
+  // 這個會在「員工自己的區段內找不到日期欄」時當 fallback
+  // （特別是最後一個員工，他下方通常沒有日期列）
+  var globalColMap = findDayColumns(items);
+
   // 逐個員工區塊
   empHeaders.forEach(function(emp, ei){
     var topY = emp.y;
@@ -827,29 +832,10 @@ function parseAttendancePdfItems(pagesItems){
     });
     if(!secItems.length) return;
 
-    var colMap = findDayColumns(secItems);
-    if(!colMap.length){
-      // 找不到日期欄但仍有打卡時間 → 至少把員工列入（讓 PT 偵測能抓到他）
-      // 這種情況常見於跨頁的最後一個員工：時間在下一頁但沒有對應的日期列
-      var hasTime = secItems.some(function(it){
-        return /^\d{1,2}[:：]\d{2}$/.test(String(it.str||'').trim());
-      });
-      if(hasTime){
-        // 用月份 1 號當佔位日期，讓員工至少出現在 PUNCHES 裡
-        var placeholderDate = year + '-' + String(month).padStart(2,'0') + '-01';
-        secItems.forEach(function(it){
-          var s2 = String(it.str || '').trim();
-          var tm2 = s2.match(/^(\d{1,2})[:：](\d{2})$/);
-          if(!tm2) return;
-          var hh2 = Number(tm2[1]), mm22 = Number(tm2[2]);
-          if(hh2 < 0 || hh2 > 29 || mm22 < 0 || mm22 > 59) return;
-          var time2 = String(hh2).padStart(2,'0') + ':' + String(mm22).padStart(2,'0');
-          outRows.push({ name: emp.name, date: placeholderDate, time: time2 });
-          peopleSet[emp.name] = 1;
-        });
-      }
-      return;
-    }
+    // 優先用本區段的日期欄（最準）；本區段沒有 → 用文件全局日期欄
+    var localColMap = findDayColumns(secItems);
+    var colMap = (localColMap.length >= globalColMap.length) ? localColMap : globalColMap;
+    if(!colMap.length) return;
 
     secItems.forEach(function(it){
       var s3 = String(it.str || '').trim();
