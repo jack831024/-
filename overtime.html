@@ -1297,6 +1297,9 @@ function runAnalysis(){
       var date = y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
       var k = normalizeName(name)+'|'+date;
       var punches = (punchMap[k]||[]).slice().sort();
+      // 合併重複打卡：相鄰 < 15 分鐘視為同一筆（避免員工忘記是否打過卡而連按兩下造成假加班）
+      // 最後一個 cluster 保留最晚（實際下班時間），其他 cluster 保留最早
+      var punchesEff = dedupPunchClusters(punches, 15);
 
       if(!shift || (!shift.workIn && !shift.workOut)){
         // 休假或無上下班時間：只要有打卡視為「休假出勤」
@@ -1310,11 +1313,12 @@ function runAnalysis(){
 
       var expectedPunches = Number(shift.punches||0);
       var required = expectedPunches > 0 ? expectedPunches : 2;
-      var missing = punches.length < required;
+      // 缺卡判定用「合併後」的打卡數，避免因為連按兩下被誤算成符合
+      var missing = punchesEff.length < required;
 
       var lateMin = 0;
-      if(shift.workIn && punches.length){
-        var firstP = toMin(punches[0]);
+      if(shift.workIn && punchesEff.length){
+        var firstP = toMin(punchesEff[0]);
         var workInM = toMin(shift.workIn);
         var diff = firstP - workInM - th.lateGrace;
         if(diff > 0) lateMin = diff;
@@ -1324,8 +1328,8 @@ function runAnalysis(){
       var u = th.otUnit || 1;
 
       // (1) 下班超時
-      if(shift.workOut && punches.length){
-        var lastP = toMin(punches[punches.length-1]);
+      if(shift.workOut && punchesEff.length){
+        var lastP = toMin(punchesEff[punchesEff.length-1]);
         var workOutM = toMin(shift.workOut);
         // 跨午夜：若下班 <= 上班，當成隔日
         if(shift.workIn && toMin(shift.workIn) > workOutM) workOutM += 24*60;
@@ -1338,12 +1342,12 @@ function runAnalysis(){
       // (2) 午休時間加班：晚進休 + 早出休
       //   晚進休 = 午休開始時間晚於排定（例：排定 14:00 休，14:15 才打卡 → +15 分）
       //   早出休 = 午休結束時間早於排定（例：排定 15:00 上工，14:45 就打卡 → +15 分）
-      //   需有 breakIn/breakOut 設定且至少 4 次打卡，依時間順序定位（p[1]=進休, p[2]=出休）
-      if(shift.breakIn && shift.breakOut && punches.length >= 4){
+      //   需有 breakIn/breakOut 設定且合併後至少 4 次打卡，依時間順序定位（p[1]=進休, p[2]=出休）
+      if(shift.breakIn && shift.breakOut && punchesEff.length >= 4){
         var breakInM  = toMin(shift.breakIn);
         var breakOutM = toMin(shift.breakOut);
-        var p2 = toMin(punches[1]);
-        var p3 = toMin(punches[2]);
+        var p2 = toMin(punchesEff[1]);
+        var p3 = toMin(punchesEff[2]);
 
         var overBI = p2 - breakInM;   // 晚進休
         if(overBI >= th.otStart){
@@ -1361,12 +1365,15 @@ function runAnalysis(){
       if(missing) flags.push('miss');
       if(!flags.length) flags.push('ok');
 
+      var dedupNote = (punches.length !== punchesEff.length)
+        ? ('原 '+punches.length+' 次 → 合併重複後 '+punchesEff.length+' 次')
+        : '';
       results.push({
         name:name, date:date, code:code, shiftName:shift.name||code,
         expectShift:(shift.workIn||'')+'~'+(shift.workOut||''),
-        punches:punches, required:required,
+        punches:punches, punchesEff:punchesEff, required:required,
         overtimeMin:otMin, lateMin:lateMin, missing:missing,
-        flags:flags, note:''
+        flags:flags, note:dedupNote
       });
     });
   });
@@ -1464,6 +1471,34 @@ function toMin(hhmm){
   return Number(p[0])*60 + Number(p[1]||0);
 }
 
+/**
+ * 合併過近的重複打卡（員工忘記是否已打卡而連按兩下的情況）
+ *   1) 把相鄰間隔 < gapMin 分鐘的打卡視為同一個 cluster
+ *   2) 每個 cluster 留一個代表時間：
+ *        - 最後一個 cluster（下班區）→ 留最晚（保留實際停留時間）
+ *        - 其他 cluster（上班、進休、出休）→ 留最早（避免後面那筆被誤判成下個時段）
+ *   範例：[15:01, 15:05] → 留 15:01；[22:44, 22:52] 若是最後 cluster → 留 22:52
+ */
+function dedupPunchClusters(sortedPunches, gapMin){
+  if(!sortedPunches || sortedPunches.length <= 1) return (sortedPunches||[]).slice();
+  gapMin = gapMin || 15;
+  var clusters = [[sortedPunches[0]]];
+  for(var i = 1; i < sortedPunches.length; i++){
+    var lastClusterArr = clusters[clusters.length-1];
+    var prev = toMin(lastClusterArr[lastClusterArr.length-1]);
+    var cur  = toMin(sortedPunches[i]);
+    if(cur - prev < gapMin){
+      lastClusterArr.push(sortedPunches[i]);   // 同一 cluster
+    } else {
+      clusters.push([sortedPunches[i]]);       // 新 cluster
+    }
+  }
+  return clusters.map(function(cluster, idx){
+    if(idx === clusters.length - 1) return cluster[cluster.length-1]; // 最後 cluster 留最晚
+    return cluster[0];                                                // 其他 cluster 留最早
+  });
+}
+
 // 姓名正規化：去大小寫、去前後非字母字元（數字前綴 / 員工編號後綴）
 // 例：'3wangsu' → 'wangsu'；'WANGSU' → 'wangsu'；'張小明 001' → '張小明'
 function normalizeName(n){
@@ -1525,7 +1560,9 @@ function renderResults(){
       '<td>', escapeHtml(r.code), ' ', escapeHtml(r.shiftName||''), '</td>',
       '<td>', escapeHtml(r.expectShift||''), '</td>',
       '<td>', r.punches.length ? escapeHtml(r.punches.join(' / ')) : '<span style="color:#cbd5e1">—</span>',
-             r.required ? ' <span style="color:#94a3b8;font-size:11px">('+r.punches.length+'/'+r.required+')</span>' : '', '</td>',
+             r.required ? ' <span style="color:#94a3b8;font-size:11px">('+r.punches.length+'/'+r.required+')</span>' : '',
+             r.note ? ' <span style="color:#0369a1;font-size:11px;background:rgba(3,105,161,.08);padding:2px 7px;border-radius:999px;margin-left:4px">' + escapeHtml(r.note) + '</span>' : '',
+             '</td>',
       '<td class="c-num">', r.lateMin>0 ? (r.lateMin+' 分') : '—', '</td>',
       '<td class="c-num">', r.overtimeMin>0 ? (r.overtimeMin+' 分') : '—', '</td>',
       '<td>', tags, '</td>',
