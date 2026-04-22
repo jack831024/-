@@ -182,6 +182,54 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
 .grid-empty{text-align:center;padding:3rem 1rem;color:var(--ink-3);font-size:13px;line-height:1.8}
 .grid-empty .big{font-size:36px;display:block;margin-bottom:8px;opacity:.4}
 
+/* 月度成本與利潤分析 */
+.biz-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+.biz-card{background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:14px;padding:14px 16px;position:relative;overflow:hidden;transition:all .2s}
+.biz-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0}
+.biz-card.revenue::before{background:linear-gradient(90deg,#3b82f6,#60a5fa)}
+.biz-card.vendor::before{background:linear-gradient(90deg,#f97316,#fb923c)}
+.biz-card.hr::before{background:linear-gradient(90deg,#8b5cf6,#a78bfa)}
+.biz-card.rent::before{background:linear-gradient(90deg,#ec4899,#f472b6)}
+.biz-card.profit::before{background:linear-gradient(90deg,#10b981,#34d399)}
+.biz-card.profit.loss::before{background:linear-gradient(90deg,#dc2626,#ef4444)}
+.biz-card.revenue{grid-column:span 2;background:linear-gradient(135deg,#dbeafe 0%,#eff6ff 100%)}
+.biz-card.profit{grid-column:span 2;background:linear-gradient(135deg,#d1fae5 0%,#ecfdf5 100%)}
+.biz-card.profit.loss{background:linear-gradient(135deg,#fee2e2 0%,#fef2f2 100%)}
+
+.biz-label{font-size:12px;color:var(--ink-2);font-weight:600;letter-spacing:0.02em;margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.biz-label .ico{font-size:15px}
+.biz-value{font-size:22px;font-weight:700;color:var(--ink);font-family:ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:-0.02em;line-height:1.2}
+.biz-card.revenue .biz-value{color:#1e40af;font-size:26px}
+.biz-card.profit .biz-value{color:#047857;font-size:26px}
+.biz-card.profit.loss .biz-value{color:#b91c1c}
+.biz-hint{font-size:11.5px;color:var(--ink-3);margin-top:5px;font-weight:500}
+.biz-hint .pct{color:var(--accent);font-weight:700}
+.biz-card.revenue .biz-hint .pct{color:#1e40af}
+.biz-card.profit .biz-hint .pct{color:#047857}
+.biz-card.profit.loss .biz-hint .pct{color:#b91c1c}
+
+.biz-input{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:rgba(255,255,255,.8);font-size:18px;font-weight:700;outline:none;font-family:ui-monospace,"SF Mono",Menlo,monospace;color:var(--ink);transition:all .15s;margin:2px 0}
+.biz-input:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(249,115,22,.1)}
+.biz-card.hr .biz-input:focus{border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.1)}
+.biz-card.rent .biz-input:focus{border-color:#ec4899;box-shadow:0 0 0 3px rgba(236,72,153,.1)}
+
+.biz-breakdown{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);max-height:200px;overflow-y:auto}
+.biz-vendor-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:12px;gap:8px;border-bottom:1px solid rgba(226,232,240,.5)}
+.biz-vendor-row:last-child{border-bottom:none}
+.biz-vendor-row.total{border-top:1.5px solid var(--line);border-bottom:none;padding-top:8px;margin-top:2px;font-weight:700;color:var(--ink)}
+.biz-vendor-name{flex:1;color:var(--ink-2);font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.biz-vendor-amt{font-family:ui-monospace,"SF Mono",Menlo,monospace;color:var(--ink);font-weight:600;min-width:80px;text-align:right}
+.biz-vendor-pct{font-family:ui-monospace,"SF Mono",Menlo,monospace;color:var(--accent);font-weight:600;min-width:55px;text-align:right;font-size:11.5px}
+.biz-vendor-row.current{background:rgba(249,115,22,.05);margin:0 -6px;padding-left:6px;padding-right:6px;border-radius:6px}
+.biz-vendor-row.current .biz-vendor-name::before{content:"▸ ";color:var(--accent)}
+
+.biz-nodata{text-align:center;padding:20px 10px;color:var(--ink-3);font-size:12px;line-height:1.6}
+
+@media(max-width:480px){
+  .biz-grid{grid-template-columns:1fr}
+  .biz-card.revenue,.biz-card.profit{grid-column:span 1}
+}
+
 .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 .btn-row button{flex:1;min-width:100px;padding:13px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;border:1.5px solid var(--line);background:rgba(255,255,255,.8);color:var(--ink-2);transition:all .18s;font-family:inherit;letter-spacing:0.02em}
 .btn-row button:hover{background:#fff;transform:translateY(-1px)}
@@ -349,6 +397,51 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
     </div>
     <div id="hist-container"></div>
   </div>
+
+  <!-- 月度成本與利潤分析 -->
+  <div class="section" id="analysis-section" style="display:none">
+    <h3>💎 月度成本與利潤分析<span id="analysis-month" style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:999px;background:rgba(59,130,246,.1);color:var(--brand);font-weight:600">—</span></h3>
+
+    <div class="biz-grid">
+      <!-- 總營業額 -->
+      <div class="biz-card revenue">
+        <div class="biz-label"><span class="ico">📊</span>總營業額</div>
+        <div class="biz-value" id="biz-revenue">NT$ 0</div>
+        <div class="biz-hint" id="biz-revenue-hint">依小結報表當月累計</div>
+      </div>
+
+      <!-- 所有廠商成本（跨欄） -->
+      <div class="biz-card vendor" style="grid-column:span 2">
+        <div class="biz-label"><span class="ico">📦</span>所有廠商成本</div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <div class="biz-value" id="biz-vendor-total">NT$ 0</div>
+          <div class="biz-hint" style="margin-top:0"><span class="pct" id="biz-vendor-pct">—</span> 佔營業額</div>
+        </div>
+        <div class="biz-breakdown" id="biz-vendor-breakdown"></div>
+      </div>
+
+      <!-- 人事成本 -->
+      <div class="biz-card hr">
+        <div class="biz-label"><span class="ico">👥</span>人事成本</div>
+        <input type="number" id="biz-hr-input" class="biz-input" placeholder="請輸入金額" onchange="saveBizInputs()">
+        <div class="biz-hint"><span class="pct" id="biz-hr-pct">—</span> 佔營業額</div>
+      </div>
+
+      <!-- 房租 -->
+      <div class="biz-card rent">
+        <div class="biz-label"><span class="ico">🏠</span>房租</div>
+        <input type="number" id="biz-rent-input" class="biz-input" placeholder="預設 45000" onchange="saveBizInputs()">
+        <div class="biz-hint"><span class="pct" id="biz-rent-pct">—</span> 佔營業額</div>
+      </div>
+
+      <!-- 利潤 -->
+      <div class="biz-card profit">
+        <div class="biz-label"><span class="ico">💎</span>利潤（營業額 − 廠商 − 人事 − 房租）</div>
+        <div class="biz-value" id="biz-profit">NT$ 0</div>
+        <div class="biz-hint"><span class="pct" id="biz-profit-pct">—</span> 佔營業額</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="lightbox" id="lightbox" onclick="this.classList.remove('on')">
@@ -483,6 +576,7 @@ function selectVendor(name, btnEl){
   document.getElementById('table-section').style.display = 'block';
   document.getElementById('action-row').style.display = 'flex';
   document.getElementById('history-section').style.display = 'block';
+  document.getElementById('analysis-section').style.display = 'block';
 
   // 預設編輯今天
   setEditingDate(todayDate());
@@ -1104,6 +1198,7 @@ async function loadHistory(){
   srcChip.textContent = src === 'cloud' ? '雲端 + 本機' : '本機';
 
   renderHistoryTable(box, stat, allRecords);
+  renderBusinessSummary();
 }
 
 function scanLocalInventory(){
@@ -1448,6 +1543,146 @@ function renderHistoryTable(box, stat, records){
   html += '</table></div>';
   box.innerHTML = html;
   stat.textContent = nameOrder.length + ' 品項 · ' + yearMonth + ' · 總金額 $' + formatNum(grandTotal);
+}
+
+// ============================================
+// 月度成本與利潤分析
+// 資料源：
+//   - 營業額：localStorage['cd_records_<store>']（由小結報表寫入）
+//   - 廠商成本：掃全部 cd_inv_<store>_*_<date> 裡的品項，依月份累加
+//   - 人事成本：使用者手動輸入，存 cd_biz_hr_<store>_<ym>
+//   - 房租：使用者手動輸入（預設 45000），存 cd_biz_rent_<store>
+//   - 利潤：營業額 − 廠商 − 人事 − 房租
+// ============================================
+function getMonthlyRevenue(yearMonth){
+  var records = {};
+  try{ records = JSON.parse(localStorage.getItem('cd_records_'+STORE_ID) || '{}'); }catch(e){ return 0; }
+  var total = 0;
+  Object.keys(records).forEach(function(d){
+    if(d.substring(0, 7) !== yearMonth) return;
+    var inp = (records[d].data || {}).inputs || {};
+    var n = parseFloat(inp['b-net']) || 0;
+    total += n;
+  });
+  return total;
+}
+
+function getAllVendorTotals(yearMonth){
+  var prefix = 'cd_inv_'+STORE_ID+'_';
+  var totals = {}; // vendor → amount
+  for(var i=0;i<localStorage.length;i++){
+    var k = localStorage.key(i);
+    if(!k || k.indexOf(prefix) !== 0) continue;
+    try{
+      var data = JSON.parse(localStorage.getItem(k));
+      if(!data || !Array.isArray(data.items)) continue;
+      // 從 key 解析 vendor：cd_inv_<store>_<vendor>_<date>
+      var suffix = k.substring(prefix.length);
+      var lastUnderscore = suffix.lastIndexOf('_');
+      if(lastUnderscore < 0) continue;
+      var vendor = suffix.substring(0, lastUnderscore);
+      data.items.forEach(function(it){
+        var d = normalizeDate(it.date || data.date);
+        if(!d || d.substring(0, 7) !== yearMonth) return;
+        var amt = (Number(it.price) || 0) * (Number(it.qty) || 0);
+        totals[vendor] = (totals[vendor] || 0) + amt;
+      });
+    }catch(e){}
+  }
+  return totals;
+}
+
+function fmtNT(n){
+  var num = Math.round(Number(n) || 0);
+  return 'NT$ ' + num.toLocaleString();
+}
+function pctOf(part, whole){
+  if(!whole || whole <= 0) return '—';
+  return ((part / whole) * 100).toFixed(2).replace(/\.?0+$/, '') + '%';
+}
+
+function saveBizInputs(){
+  var picker = document.getElementById('month-picker');
+  if(!picker) return;
+  var yearMonth = picker.value;
+  var hrCost = Number(document.getElementById('biz-hr-input').value) || 0;
+  var rent = Number(document.getElementById('biz-rent-input').value) || 0;
+  localStorage.setItem('cd_biz_hr_'+STORE_ID+'_'+yearMonth, String(hrCost));
+  localStorage.setItem('cd_biz_rent_'+STORE_ID, String(rent));
+  renderBusinessSummary();
+}
+
+function loadBizInputs(yearMonth){
+  var hrCost = localStorage.getItem('cd_biz_hr_'+STORE_ID+'_'+yearMonth) || '';
+  var rent = localStorage.getItem('cd_biz_rent_'+STORE_ID);
+  if(rent === null) rent = '45000';
+  document.getElementById('biz-hr-input').value = hrCost;
+  document.getElementById('biz-rent-input').value = rent;
+}
+
+function renderBusinessSummary(){
+  var picker = document.getElementById('month-picker');
+  if(!picker || !picker.value) return;
+  var yearMonth = picker.value;
+
+  // 載入該月的人事成本 + 房租
+  loadBizInputs(yearMonth);
+
+  // 月份徽章
+  var monthBadge = document.getElementById('analysis-month');
+  if(monthBadge) monthBadge.textContent = yearMonth;
+
+  // 1) 營業額
+  var revenue = getMonthlyRevenue(yearMonth);
+  document.getElementById('biz-revenue').textContent = fmtNT(revenue);
+  var hintEl = document.getElementById('biz-revenue-hint');
+  if(revenue > 0){
+    hintEl.innerHTML = '依小結報表 ' + yearMonth + ' 累計淨銷售額';
+  }else{
+    hintEl.innerHTML = '<span style="color:#dc2626">⚠️ 讀不到小結資料（請先在本裝置打開「小結報表」一次以載入資料）</span>';
+  }
+
+  // 2) 各廠商成本
+  var vendorTotals = getAllVendorTotals(yearMonth);
+  var vendorNames = Object.keys(vendorTotals).filter(function(v){ return vendorTotals[v] > 0; });
+  var vendorGrandTotal = vendorNames.reduce(function(acc, v){ return acc + vendorTotals[v]; }, 0);
+  document.getElementById('biz-vendor-total').textContent = fmtNT(vendorGrandTotal);
+  document.getElementById('biz-vendor-pct').textContent = pctOf(vendorGrandTotal, revenue);
+
+  // 細項列表（排序：金額由大到小）
+  var breakdownHtml = '';
+  if(vendorNames.length === 0){
+    breakdownHtml = '<div class="biz-nodata">本月尚未儲存任何廠商資料</div>';
+  }else{
+    vendorNames.sort(function(a, b){ return vendorTotals[b] - vendorTotals[a]; });
+    vendorNames.forEach(function(v){
+      var cls = (v === currentVendor) ? ' current' : '';
+      breakdownHtml += '<div class="biz-vendor-row'+cls+'">'+
+        '<span class="biz-vendor-name">'+escapeAttr(v)+'</span>'+
+        '<span class="biz-vendor-amt">'+fmtNT(vendorTotals[v]).replace('NT$ ','')+'</span>'+
+        '<span class="biz-vendor-pct">'+pctOf(vendorTotals[v], revenue)+'</span>'+
+        '</div>';
+    });
+    breakdownHtml += '<div class="biz-vendor-row total">'+
+      '<span class="biz-vendor-name">全部廠商合計</span>'+
+      '<span class="biz-vendor-amt">'+fmtNT(vendorGrandTotal).replace('NT$ ','')+'</span>'+
+      '<span class="biz-vendor-pct">'+pctOf(vendorGrandTotal, revenue)+'</span>'+
+      '</div>';
+  }
+  document.getElementById('biz-vendor-breakdown').innerHTML = breakdownHtml;
+
+  // 3) 人事成本 + 4) 房租
+  var hrCost = Number(document.getElementById('biz-hr-input').value) || 0;
+  var rent = Number(document.getElementById('biz-rent-input').value) || 0;
+  document.getElementById('biz-hr-pct').textContent = pctOf(hrCost, revenue);
+  document.getElementById('biz-rent-pct').textContent = pctOf(rent, revenue);
+
+  // 5) 利潤
+  var profit = revenue - vendorGrandTotal - hrCost - rent;
+  document.getElementById('biz-profit').textContent = fmtNT(profit);
+  document.getElementById('biz-profit-pct').textContent = pctOf(profit, revenue);
+  var profitCard = document.querySelector('.biz-card.profit');
+  if(profitCard) profitCard.classList.toggle('loss', profit < 0);
 }
 
 function formatNum(n){
