@@ -388,10 +388,14 @@ var BUILTIN_OT_URLS = {
 };
 
 // 每次載入若該店有內建網址，自動寫入 localStorage（讓新裝置即用）
+// 並清掉舊版的全域 fallback key，避免不同裝置殘留舊值造成「每台機器看到不同網址」
 (function applyBuiltinOtUrl(){
   if(!STORE) return;
   var url = BUILTIN_OT_URLS[STORE];
-  if(url) localStorage.setItem(LS_KEY_URL, url);
+  if(url){
+    localStorage.setItem(LS_KEY_URL, url);
+    localStorage.removeItem(LS_KEY_URL_FALLBACK);
+  }
 })();
 
 // 狀態
