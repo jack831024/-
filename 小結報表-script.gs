@@ -91,7 +91,7 @@ function doPost(e) {
 
     if (body.action === 'geminiProxy') {
       // 代理 Gemini API 呼叫（隱藏金鑰）
-      var resp = callGeminiProxy(body.model || 'gemini-2.5-flash', body.parts || []);
+      var resp = callGeminiProxy(body.model || 'gemini-2.5-flash', body.parts || [], body.generationConfig || null);
       return json(resp);
     }
 
@@ -228,7 +228,7 @@ function getShiftFromSchedule(store, dateStr) {
 // 🤖 Gemini 代理：前端把 prompt + 圖片 base64 傳進來，
 // 由 Apps Script 用本機金鑰呼叫 Gemini，回傳純文字結果
 // ============================================
-function callGeminiProxy(model, parts) {
+function callGeminiProxy(model, parts, clientGenConfig) {
   try {
     var key = getGeminiApiKey();
     if (!key || key.indexOf('AIzaSy') !== 0) {
@@ -247,7 +247,15 @@ function callGeminiProxy(model, parts) {
       var m = chain[i];
       var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + m +
                 ':generateContent?key=' + encodeURIComponent(key);
+      // 預設 temperature=0 + 4096 tokens；前端若有指定 generationConfig 則合併覆蓋
       var genConfig = { temperature: 0, maxOutputTokens: 4096 };
+      if (clientGenConfig && typeof clientGenConfig === 'object') {
+        Object.keys(clientGenConfig).forEach(function(k){
+          if (clientGenConfig[k] !== undefined && clientGenConfig[k] !== null) {
+            genConfig[k] = clientGenConfig[k];
+          }
+        });
+      }
       if (m.indexOf('2.5') >= 0) {
         genConfig.thinkingConfig = { thinkingBudget: 0 };
       }

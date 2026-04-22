@@ -27,3 +27,6 @@ package-lock.json
 config.local.js
 .env
 .env.local
+
+# Claude Code 工作目錄（worktree、agent state）
+.claude/

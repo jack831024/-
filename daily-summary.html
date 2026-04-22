@@ -719,13 +719,16 @@ async function callModelOnce(model, key, parts){
     throw new Error('尚未設定任何 Gemini 路徑');
   }
 
+  // 給所有路徑通用的低 temperature 設定（讓辨識數字更穩定）
+  var genConfig = { temperature: 0, topP: 0.1, topK: 1 };
+
   // ========== 0) 最優先：Cloudflare Worker 代理（低延遲、藏 key）==========
   if(workerUrl){
     try{
       var wr = await fetch(workerUrl, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ model: model, parts: parts })
+        body: JSON.stringify({ model: model, parts: parts, generationConfig: genConfig })
       });
       var wd = await wr.json();
       console.log('[' + model + '] Worker 回應：', wd);
@@ -755,7 +758,7 @@ async function callModelOnce(model, key, parts){
       var dr = await fetch(directUrl, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ contents: [{ parts: parts }] })
+        body: JSON.stringify({ contents: [{ parts: parts }], generationConfig: genConfig })
       });
       var dd = await dr.json();
       console.log('[' + model + '] 直呼叫回應：', dd);
@@ -791,7 +794,7 @@ async function callModelOnce(model, key, parts){
   var r = await fetch(proxyUrl, {
     method: 'POST',
     headers: {'Content-Type': 'text/plain;charset=utf-8'},
-    body: JSON.stringify({ action: 'geminiProxy', model: model, parts: parts })
+    body: JSON.stringify({ action: 'geminiProxy', model: model, parts: parts, generationConfig: genConfig })
   });
   var wrap = await r.json();
   console.log('[' + model + '] 代理回應：', wrap);
@@ -941,18 +944,65 @@ async function analyzeSummary(){
   line.style.display = 'flex'; line.className = 'ai-status-line';
   spin.className = 'spinner on'; btxt.textContent = 'AI 讀取中...';
   try{
-    var prompt = '請從這些小結/結算截圖中讀取數字。' +
-      '全支付與街口都是行動支付，通常出現在「行動支付」「電子支付」「第三方支付」區塊。' +
-      '全支付別名：全盈+PAY、全盈PAY、全盈、PXPay、PX Pay+。' +
-      '街口別名：街口支付、JKOPAY、JKO Pay、街口pay。' +
-      '如果同一種支付方式出現多筆（例如多張交易），請把它們加總。' +
-      '\n⚠️ 重要：「退單」和「取消單」是【兩個完全不同的項目】，必須分開讀取，絕對不要合併加總！' +
-      '退單（refund）別名：退單、退貨、退款、Refund、Return。' +
-      '取消單（cancel）別名：取消單、取消、取消交易、廢單、作廢、Void、Cancel、審核後取消。' +
-      '如果截圖中同時看到「審核、取消單、退單」這種列表，退單金額只取「退單」那一欄的數字，取消金額只取「取消單」那一欄的數字。' +
-      '沒看到的項目填 null 或 0。' +
-      '\n只回傳 JSON（不要 markdown、不要說明），找不到填 null：' +
-      '\n{"opening":開箱或開櫃或期初金額,"net":淨銷售額,"cash":現金金額,"expected":預期錢櫃或期末錢櫃金額,"withdrawal":提現合計絕對值,"daishuo":代收合計,"jkopay":全支付金額,"jko":街口金額,"refund":退單金額,"cancel":取消單金額}';
+    var prompt =
+'你是收銀機小結報表的數字辨識專家。請從上傳的小結／結算截圖中精確讀取以下 10 個欄位。\n' +
+'若同一欄位有多筆（多張交易、多項小計），請全部加總。看不到或不確定就填 null（千萬不要猜測或互填）。\n' +
+'\n' +
+'【欄位 1：opening = 開櫃金額】\n' +
+'  別名：開櫃金額／開機金額／開箱金額／期初金額／期初現金／開帳金額／上一班結餘／開機現金／Opening／Open\n' +
+'  位置：通常出現在小結【最上方】（日期、班別、店號附近），是「今天開始時錢櫃裡有多少現金」。\n' +
+'  ⚠️ 不要與「現金」「現金總額」「期末／預期錢櫃」混淆！\n' +
+'  ⚠️ 如果截圖只有「期末」「結櫃」沒有「期初／開櫃」，opening 直接填 null（不要拿期末當開櫃）。\n' +
+'\n' +
+'【欄位 2：net = 淨銷售額】\n' +
+'  別名：淨銷售額／淨銷售／銷售淨額／Net Sales\n' +
+'  ⚠️ 不要拿「總銷售」「毛銷售」「總額」當 net。\n' +
+'\n' +
+'【欄位 3：cash = 現金金額】\n' +
+'  別名：現金／現金總計／現金小計／Cash\n' +
+'  ⚠️ 不要與「開櫃」「期末錢櫃」混淆。\n' +
+'\n' +
+'【欄位 4：expected = 預期錢櫃／結櫃金額】\n' +
+'  別名：預期錢櫃／結櫃金額／期末金額／期末錢櫃／預期金額／應有現金／Expected Cash\n' +
+'  位置：小結【最下方】，「實際錢櫃／點數現金」之前。\n' +
+'\n' +
+'【欄位 5：withdrawal = 提現】\n' +
+'  別名：提現合計／提現／提領／取現／Withdrawal\n' +
+'  ⚠️ 取絕對值（負數也記為正）。\n' +
+'\n' +
+'【欄位 6：daishuo = 代收合計】\n' +
+'  別名：代收合計／代收總計／代收金額／代收總額／代收\n' +
+'  ⚠️ 如果有【多筆代收項目】（例如「代收水電 + 代收政府 + 代收停車 + 代收物業」），請把所有「代收 XXX」全部加總。\n' +
+'  ⚠️ 不要把「代付」「代繳」當 daishuo（除非那真的是代收欄位）。\n' +
+'  ⚠️ 不要與「總代收金額／代收項目數」這種「筆數」欄位混淆，daishuo 要的是「金額」。\n' +
+'\n' +
+'【欄位 7：jkopay = 全支付】\n' +
+'  別名：全支付／全盈+PAY／全盈PAY／全盈／PXPay／PX Pay+／PX 全支付\n' +
+'  通常在「行動支付」「電子支付」「第三方支付」區塊，跟街口、Line Pay 並列。\n' +
+'  🚨 全支付【不是】街口！兩個是不同公司的不同支付方式，絕對不要互填！\n' +
+'  🚨 如果截圖只有「街口」沒有「全支付／全盈／PXPay」，jkopay 一律填 null。\n' +
+'\n' +
+'【欄位 8：jko = 街口】\n' +
+'  別名：街口／街口支付／JKOPAY／JKO Pay／街口pay\n' +
+'  🚨 街口【不是】全支付！兩個是不同支付方式，絕對不要互填！\n' +
+'  🚨 如果截圖只有「全支付／全盈」沒有「街口／JKO」，jko 一律填 null。\n' +
+'\n' +
+'【欄位 9：refund = 退單金額】\n' +
+'  別名：退單／退貨／退款／Refund／Return\n' +
+'  🚨 退單【不等於】取消單！兩者完全不同，必須分開讀取，絕對不要合併。\n' +
+'\n' +
+'【欄位 10：cancel = 取消單金額】\n' +
+'  別名：取消單／取消／取消交易／廢單／作廢／審核後取消／Void／Cancel\n' +
+'  🚨 取消單【不等於】退單！\n' +
+'  ⚠️ 如果同時看到「審核 / 取消單 / 退單」這種多欄列表，refund 只取「退單」那欄、cancel 只取「取消單」那欄。\n' +
+'\n' +
+'【格式規則】\n' +
+'  - 數字去逗號去單位（例 "1,234元"／"NT$1234" → 1234）\n' +
+'  - 看不清楚或不確定 → 填 null（不要猜，不要互填）\n' +
+'  - 只回傳純 JSON，不要 markdown 圍欄、不要任何說明文字\n' +
+'\n' +
+'【輸出格式】\n' +
+'{"opening":number|null,"net":number|null,"cash":number|null,"expected":number|null,"withdrawal":number|null,"daishuo":number|null,"jkopay":number|null,"jko":number|null,"refund":number|null,"cancel":number|null}';
     var raw = await geminiCall(imgs.summary, prompt);
     console.log('Gemini 回應：', raw);
     var p = parseJson(raw);
@@ -991,12 +1041,26 @@ async function analyzeSummary(){
 async function analyzePayFile(key, file){
   if(!hasApiKey()) return;
   try{
-    var label = key === 'jkopay' ? '全支付' : '街口';
-    var prompt = '這是' + label + '截圖，請找出本日即時金額或當日交易總計，只回傳純數字（不要單位、不要逗號、不要說明）。';
+    var label, hint;
+    if(key === 'jkopay'){
+      label = '全支付';
+      hint = '全支付別名：全盈+PAY、全盈PAY、PXPay、PX Pay+。注意這【不是】街口！';
+    } else {
+      label = '街口';
+      hint = '街口別名：JKOPAY、JKO Pay。注意這【不是】全支付！';
+    }
+    var prompt =
+'這是' + label + ' App 的當日交易截圖。' + hint + '\n' +
+'請找出【今日／本日】的「實收金額」「交易總計」「總收入」或「即時金額」（通常顯示在最顯眼的大字位置）。\n' +
+'規則：\n' +
+'  - 只取本日金額（不要月累計、不要昨日、不要週累計）\n' +
+'  - 數字去逗號去單位（例如 "NT$1,234" → 1234）\n' +
+'  - 找不到請回傳 0\n' +
+'只回傳純數字，不要任何文字、單位、貨幣符號、逗號或解釋。';
     var raw = await geminiCall([file], prompt);
     console.log(key + ' Gemini 回應：', raw);
-    var n = parseFloat(raw.replace(/[^0-9.]/g, ''));
-    if(!isNaN(n)){ document.getElementById('i-' + key).value = n; recalc(); }
+    var n = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+    if(!isNaN(n) && n > 0){ document.getElementById('i-' + key).value = n; recalc(); }
     else alert('AI 無法辨識金額，請手動填入');
   } catch(e){
     console.error(e);

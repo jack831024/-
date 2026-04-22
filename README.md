@@ -1,27 +1,30 @@
 # 初殿 / 十城 · 內部管理系統
 
-店內使用的 Web App，包含「每日小結確認」與「盤點表」兩大模組，前端純靜態 HTML/JS，後端走 Google Apps Script + Google Sheet。
+店內使用的 Web App，目前包含 **3 個模組**：每日小結確認、盤點表、加班費計算。
+前端純靜態 HTML/JS（部署在 GitHub Pages），後端走 Google Apps Script + Google Sheet。
 
 ---
 
-## 📂 檔案說明
+## 📂 檔案結構
 
 ### 前端頁面
 
-| 檔案 | 用途 |
-|---|---|
-| `home.html` | 主頁：選擇功能（小結報表 / 盤點表） |
-| `index.html` | 門市選擇（四家店） |
-| `login.html` | 員工登入（僅小結流程，盤點表免登入） |
-| `daily-summary.html` | 每日小結確認報表 |
-| `inventory.html` | 盤點表（AI 辨識出貨單 + 月度總表） |
+| 檔案 | 用途 | 來源（流程） |
+|---|---|---|
+| `home.html` | 主頁：選擇 3 大功能 | 第一站 |
+| `index.html` | 門市選擇（4 家店） | 由 home 進入 |
+| `login.html` | 員工登入（僅小結流程要） | 小結流程才用 |
+| `daily-summary.html` | 每日小結確認報表（含 AI 辨識） | summary 流程 |
+| `inventory.html` | 盤點表（含 AI 辨識出貨單 + 月度總表） | inventory 流程 |
+| `overtime.html` | 加班費計算（班表 + 打卡 Excel/PDF 分析） | overtime 流程 |
 
-### 後端（Google Apps Script）
+### 後端（Google Apps Script，每個模組各自獨立部署）
 
-| 檔案 | 用途 |
-|---|---|
-| `小結報表-script.gs` | 小結報表的雲端同步 + Gemini 代理 |
-| `盤點表-script.gs` | 盤點表的雲端同步（獨立部署） |
+| 檔案 | 用途 | 部署數量 |
+|---|---|---|
+| `小結報表-script.gs` | 小結雲端同步 + Gemini 代理 | 1 份 |
+| `盤點表-script.gs` | 盤點表雲端同步 | 1 份 |
+| `加班費-script.gs` | 從各店班表試算表讀取當月班表 | **每家店各 1 份**（4 份） |
 
 ---
 
@@ -30,32 +33,34 @@
 ```
 home.html
   │
-  ├─ 小結報表 → index.html → login.html → daily-summary.html
+  ├─ 📋 小結報表    → index.html → login.html → daily-summary.html
   │
-  └─ 盤點表   → index.html → inventory.html（免登入）
+  ├─ 📦 盤點表      → index.html → inventory.html        （免登入）
+  │
+  └─ 💰 計算加班費  → index.html → overtime.html          （免登入）
 ```
 
 ---
 
-## 🤖 AI 辨識
+## 🤖 AI 辨識（小結 + 盤點）
 
-使用 **Gemini 2.0 Flash**（免費配額每天 1500 次），透過三層路徑呼叫：
+使用 **Gemini 2.0 Flash**（免費配額每天 1500 次），透過三層路徑呼叫，依序 fallback：
 
-1. **Cloudflare Worker**（最快，金鑰藏在 Worker 環境變數）
-2. **直呼叫 Gemini API**（若前端有設 `cd_gemini_direct_key`）
-3. **Apps Script 代理**（金鑰在 Script Properties，當其他管道失敗時的 fallback）
+1. **Cloudflare Worker**（最快、金鑰藏在 Worker 環境變數）
+2. **直接呼叫 Gemini API**（裝置有設 `cd_gemini_direct_key` 才會用）
+3. **Apps Script 代理**（金鑰在 Script Properties，最後備援）
 
-Fallback 模型鏈：`gemini-2.0-flash` → `gemini-flash-latest` → `gemini-2.5-flash`
+模型備援鏈：`gemini-2.0-flash` → `gemini-flash-latest` → `gemini-2.5-flash`
+
+所有路徑都會帶 `generationConfig: { temperature: 0, topP: 0.1, topK: 1 }`，讓數字辨識更穩定。
 
 ---
 
-## ☁️ 雲端同步（Apps Script 部署）
+## ☁️ Apps Script 部署
 
-兩個模組需**各自獨立**的 Apps Script 專案、各自的 Google 試算表。
+### 1. 小結報表（部署 1 次）
 
-### 小結報表
-
-1. 建立 Google 試算表 A
+1. 建立 Google 試算表 A（存放每日小結資料）
 2. 試算表 → 擴充功能 → Apps Script
 3. 貼上 `小結報表-script.gs` 內容
 4. 專案設定 → 指令碼屬性 → 新增 `GEMINI_API_KEY`
@@ -63,13 +68,24 @@ Fallback 模型鏈：`gemini-2.0-flash` → `gemini-flash-latest` → `gemini-2.
 6. 部署 → Web app → 執行身分：我、可存取：所有人
 7. 把 `/exec` 網址貼回 `daily-summary.html` 的 ⚙️ 設定
 
-### 盤點表
+### 2. 盤點表（部署 1 次）
 
-1. 建立**另一份** Google 試算表 B
+1. 建立**另一份** Google 試算表 B（存放盤點資料）
 2. 重複上面 2–3（貼 `盤點表-script.gs`）
 3. 執行 `forceAuth` 授權
 4. 部署 → Web app（新的一份）
 5. 把 `/exec` 網址貼回 `inventory.html` 的 ⚙️ 設定
+
+### 3. 加班費（**每家店各部署 1 份**，共 4 份）
+
+每家店有自己的「班表 Google 試算表」，要在那份試算表內各自部署：
+
+1. 打開該店班表試算表 → 擴充功能 → Apps Script
+2. 貼上 `加班費-script.gs` 內容
+3. 視班表分頁名稱調整 `SCHEDULE_SHEET_NAME`（預設 `'{月}月'` 會對應到「1月/2月/3月/4月」分頁）
+4. 執行 `forceAuth` 授權
+5. 部署 → Web app
+6. 切到 `overtime.html` → 選該店 → ⚙️ 設定 → 貼上對應 `/exec` 網址（每家店各自儲存）
 
 ---
 
@@ -96,9 +112,23 @@ Fallback 模型鏈：`gemini-2.0-flash` → `gemini-flash-latest` → `gemini-2.
 
 ---
 
+## ⏰ 加班費判定規則
+
+| 情境 | 判定 |
+|---|---|
+| 第 1 次打卡 > 班別開始時間 | **遲到** |
+| 第 4 次打卡 > 班別下班時間，超過 N 分（門檻可調，預設 15 分） | **加班** |
+| 第 2 次打卡 > 班別午休開始時間，超過 N 分 | **加班**（晚進休） |
+| 第 3 次打卡 < 班別午休結束時間，超過 N 分 | **加班**（早出休） |
+| 當日打卡次數 < 班別應打卡次數 | **缺卡** |
+
+加班時數以「加班單位」（預設 30 分）向下取整。
+
+---
+
 ## 🔐 帳號與密碼
 
-> ⚠️ 前端密碼只為防止一般員工誤入，**不具強安全性**，請保持 Repo 為 Private。
+> ⚠️ 前端密碼僅防員工誤入，**不具強安全性**，請保持 Repo 為 Private。
 
 - **共用員工密碼**（登入小結用）：寫在 `login.html` 的 `SHARED_PASSWORD`
 - **各店密碼**（小結進入門市時）：寫在 `index.html` 的 `STORE_PASSWORDS`
@@ -109,10 +139,13 @@ Fallback 模型鏈：`gemini-2.0-flash` → `gemini-flash-latest` → `gemini-2.
 
 ### localStorage 鍵名
 - `cd_store`、`cd_store_name`、`cd_user`、`cd_login_at`
-- `cd_flow`（主頁來源：`summary` / `inventory`）
+- `cd_flow`（主頁來源：`summary` / `inventory` / `overtime`）
 - `cd_worker_url`、`cd_sync_url`、`cd_inv_sync_url`、`cd_gemini_direct_key`、`cd_gemini_model`
 - `cd_inv_<門市>_<廠商>_<日期>`（盤點表單張）
+- `cd_ot_sync_url_<門市>`（每家店各自的加班費 Apps Script URL）
+- `cd_ot_shifts_<門市>`、`cd_ot_thresh`、`cd_ot_cols`（加班費班別與門檻設定）
 
 ### Google Sheet 結構
-- 小結：每店一分頁，欄位 `日期 / JSON資料 / 儲存時間 / 儲存者 / 圖片FileID`
-- 盤點：每店一分頁 `<門市>-盤點`，欄位 `日期 / 廠商 / 品項 / 單價 / 貨量 / 金額 / 儲存時間 / 儲存者`
+- **小結**：每店一分頁，欄位 `日期 / JSON資料 / 儲存時間 / 儲存者 / 圖片FileID`
+- **盤點**：每店一分頁 `<門市>-盤點`，欄位 `日期 / 廠商 / 品項 / 單價 / 貨量 / 金額 / 儲存時間 / 儲存者`
+- **班表**（加班費讀）：每店有自己的試算表，分頁名稱通常是 `1月`/`2月`/`3月`/`4月`，A 欄=姓名、B~AF 欄=該日班別代碼
