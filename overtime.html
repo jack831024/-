@@ -289,6 +289,34 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
       </div>
     </div>
   </div>
+
+  <!-- Step 5: PT 工時計算 -->
+  <div class="section">
+    <h3><span class="step-num">5</span><span class="icon">💼</span> PT 工時計算
+      <span class="hint">自動辨識「打卡有但班表沒有」的人為 PT，依打卡計算工時</span>
+    </h3>
+    <div class="threshold-row" style="background:rgba(219,234,254,.4)">
+      <label>時薪 NT$ <input type="number" id="pt-wage" value="200" min="0" max="9999" step="1"></label>
+      <label>加班分界 <input type="number" id="pt-ot-hours" value="8" min="1" max="24" step="0.5"> 小時/日</label>
+      <label>加班倍率 ×<input type="number" id="pt-ot-mult" value="1.34" min="1" max="3" step="0.01"></label>
+    </div>
+    <div class="analysis-toolbar" style="margin-top:12px">
+      <button class="btn btn-primary" id="btn-pt-analyze" onclick="runPtAnalysis()" disabled style="background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%);box-shadow:0 6px 16px -6px rgba(59,130,246,.45)">💼 PT 開始分析</button>
+      <button class="btn btn-ghost" id="btn-pt-export" onclick="exportPtCsv()" disabled>⬇️ 匯出 PT CSV</button>
+    </div>
+    <div class="summary-grid" id="pt-summary-grid" style="display:none">
+      <div class="sum-card ppl" style="border-left-color:#3b82f6"><div class="k">PT 人數</div><div class="v" id="pt-s-ppl">0</div></div>
+      <div class="sum-card ot"><div class="k">總工時</div><div class="v" id="pt-s-hours">0<span class="u"> 小時</span></div></div>
+      <div class="sum-card ot" style="border-left-color:#f59e0b"><div class="k">加班時數</div><div class="v" id="pt-s-ot">0<span class="u"> 小時</span></div></div>
+      <div class="sum-card ppl" style="border-left-color:#16a34a"><div class="k">總工資</div><div class="v" id="pt-s-wage">NT$ 0</div></div>
+    </div>
+    <div id="pt-results-container" style="margin-top:10px">
+      <div class="empty-state">
+        <span class="big">💼</span>
+        <div>尚未分析。請先完成步驟 1~3，再按「PT 開始分析」</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- 設定彈窗 -->
@@ -1243,6 +1271,8 @@ function loadColCfg(){
 // ============================================
 function maybeEnableAnalyze(){
   document.getElementById('btn-analyze').disabled = !(SCHEDULE && PUNCHES && PUNCHES.rows && PUNCHES.rows.length);
+  // PT 分析只需要打卡，不需要班表（PT = 打卡有但班表沒有的人）
+  document.getElementById('btn-pt-analyze').disabled = !(PUNCHES && PUNCHES.rows && PUNCHES.rows.length);
 }
 
 function runAnalysis(){
@@ -1553,10 +1583,233 @@ function exportCsv(){
 }
 
 // ============================================
+// 💼 PT 工時計算
+// ============================================
+var PT_ANALYSIS = null;  // [{ name, date, punches:[..], workMin, normalMin, otMin, wage }]
+var LS_KEY_PT = 'cd_ot_pt_cfg_' + STORE;
+
+// 讀取/儲存 PT 設定
+function loadPtCfg(){
+  try{
+    var raw = localStorage.getItem(LS_KEY_PT);
+    if(raw){
+      var c = JSON.parse(raw);
+      if(typeof c.wage     === 'number') document.getElementById('pt-wage').value     = c.wage;
+      if(typeof c.otHours  === 'number') document.getElementById('pt-ot-hours').value = c.otHours;
+      if(typeof c.otMult   === 'number') document.getElementById('pt-ot-mult').value  = c.otMult;
+    }
+  }catch(e){}
+}
+function savePtCfg(){
+  localStorage.setItem(LS_KEY_PT, JSON.stringify({
+    wage:    Number(document.getElementById('pt-wage').value)     || 200,
+    otHours: Number(document.getElementById('pt-ot-hours').value) || 8,
+    otMult:  Number(document.getElementById('pt-ot-mult').value)  || 1.34
+  }));
+}
+document.addEventListener('change', function(e){
+  if(['pt-wage','pt-ot-hours','pt-ot-mult'].indexOf(e.target.id) >= 0) savePtCfg();
+});
+
+/**
+ * 由打卡時間估算單日工時（分鐘）
+ *  - 2 次打卡：last - first（無扣休息）
+ *  - 4 次打卡：(p2-p1) + (p4-p3)（中間視為休息扣掉）
+ *  - 3 次：last - first - 中間段時間估計（保守扣 30 分）
+ *  - 其他：last - first
+ */
+function calcWorkMin(punches){
+  if(!punches || punches.length < 2) return 0;
+  var t = punches.map(toMin).sort(function(a,b){ return a-b; });
+  if(t.length === 4){
+    return (t[1]-t[0]) + (t[3]-t[2]);
+  }
+  if(t.length === 3){
+    var span = t[2]-t[0];
+    return Math.max(0, span - 30);
+  }
+  return t[t.length-1] - t[0];
+}
+
+function runPtAnalysis(){
+  if(!PUNCHES || !PUNCHES.rows.length){
+    alert('請先上傳打卡 Excel/PDF');
+    return;
+  }
+  savePtCfg();
+  var wage    = Number(document.getElementById('pt-wage').value)     || 200;
+  var otHours = Number(document.getElementById('pt-ot-hours').value) || 8;
+  var otMult  = Number(document.getElementById('pt-ot-mult').value)  || 1.34;
+
+  // 班表姓名集合（normalize）
+  var schedNames = {};
+  if(SCHEDULE && SCHEDULE.rows){
+    SCHEDULE.rows.forEach(function(r){
+      var k = normalizeName(r.name);
+      if(k) schedNames[k] = true;
+    });
+  }
+
+  // 打卡按 (姓名, 日期) 分組
+  var groups = {};
+  PUNCHES.rows.forEach(function(p){
+    var k = normalizeName(p.name);
+    if(!k) return;
+    // 已在班表的人不算 PT
+    if(schedNames[k]) return;
+    var key = p.name + '|' + p.date;
+    if(!groups[key]) groups[key] = { name:p.name, date:p.date, punches:[] };
+    groups[key].punches.push(p.time);
+  });
+
+  // 沒有任何 PT 候選
+  var keys = Object.keys(groups);
+  if(!keys.length){
+    document.getElementById('pt-results-container').innerHTML =
+      '<div class="empty-state"><span class="big">✨</span><div>沒有找到 PT 員工。<br>'
+      + '<span style="font-size:11.5px;color:#94a3b8">PT = 打卡資料中有出現、但班表中沒有的人。'
+      + (SCHEDULE ? '' : '<br>（目前未載入班表，所有打卡的人都會被視為已排班員工，請先載入班表再分析 PT）')
+      + '</span></div></div>';
+    document.getElementById('pt-summary-grid').style.display = 'none';
+    return;
+  }
+
+  var results = keys.map(function(k){
+    var g = groups[k];
+    var sortedPunches = g.punches.slice().sort();
+    var workMin = calcWorkMin(sortedPunches);
+    var hours   = workMin / 60;
+    var thHours = otHours;
+    var normalH = Math.min(hours, thHours);
+    var otH     = Math.max(0, hours - thHours);
+    var pay     = normalH * wage + otH * wage * otMult;
+    return {
+      name: g.name,
+      date: g.date,
+      punches: sortedPunches,
+      workMin: workMin,
+      hours: hours,
+      normalHours: normalH,
+      otHours: otH,
+      wage: pay
+    };
+  });
+
+  results.sort(function(a,b){
+    if(a.date !== b.date) return a.date<b.date?-1:1;
+    if(a.name !== b.name) return a.name<b.name?-1:1;
+    return 0;
+  });
+
+  PT_ANALYSIS = results;
+  renderPtSummary();
+  renderPtResults();
+  document.getElementById('btn-pt-export').disabled = !results.length;
+  document.getElementById('pt-summary-grid').style.display = 'grid';
+}
+
+function renderPtSummary(){
+  if(!PT_ANALYSIS) return;
+  var pplSet = {}, totalH = 0, totalOtH = 0, totalWage = 0;
+  PT_ANALYSIS.forEach(function(r){
+    pplSet[r.name] = 1;
+    totalH    += r.hours;
+    totalOtH  += r.otHours;
+    totalWage += r.wage;
+  });
+  document.getElementById('pt-s-ppl').textContent   = Object.keys(pplSet).length;
+  document.getElementById('pt-s-hours').innerHTML   = totalH.toFixed(1)+'<span class="u"> 小時</span>';
+  document.getElementById('pt-s-ot').innerHTML      = totalOtH.toFixed(1)+'<span class="u"> 小時</span>';
+  document.getElementById('pt-s-wage').textContent  = 'NT$ '+Math.round(totalWage).toLocaleString();
+}
+
+function renderPtResults(){
+  if(!PT_ANALYSIS || !PT_ANALYSIS.length){
+    document.getElementById('pt-results-container').innerHTML =
+      '<div class="empty-state"><span class="big">📭</span><div>沒有資料可顯示</div></div>';
+    return;
+  }
+
+  // 先依姓名分組做小計
+  var byPerson = {};
+  PT_ANALYSIS.forEach(function(r){
+    if(!byPerson[r.name]) byPerson[r.name] = { rows:[], totalH:0, totalOtH:0, totalWage:0 };
+    byPerson[r.name].rows.push(r);
+    byPerson[r.name].totalH    += r.hours;
+    byPerson[r.name].totalOtH  += r.otHours;
+    byPerson[r.name].totalWage += r.wage;
+  });
+
+  var html = ['<div class="results-wrap"><table class="results"><thead><tr>',
+    '<th>日期</th><th>姓名</th><th>打卡時間</th>',
+    '<th>當日工時</th><th>一般時數</th><th>加班時數</th><th>當日工資</th></tr></thead><tbody>'];
+
+  Object.keys(byPerson).forEach(function(name){
+    var p = byPerson[name];
+    p.rows.forEach(function(r){
+      html.push('<tr>',
+        '<td>', escapeHtml(r.date.substring(5)), '</td>',
+        '<td class="c-name">', escapeHtml(r.name), '</td>',
+        '<td>', r.punches.length ? escapeHtml(r.punches.join(' / ')) : '<span style="color:#cbd5e1">—</span>',
+              ' <span style="color:#94a3b8;font-size:11px">('+r.punches.length+')</span></td>',
+        '<td class="c-num">', r.hours.toFixed(2), ' 小時</td>',
+        '<td class="c-num">', r.normalHours.toFixed(2), '</td>',
+        '<td class="c-num" style="color:', r.otHours>0?'#b45309':'#94a3b8', ';font-weight:', r.otHours>0?'700':'500', '">',
+              r.otHours>0 ? r.otHours.toFixed(2) : '—', '</td>',
+        '<td class="c-num" style="font-weight:600">NT$ ', Math.round(r.wage).toLocaleString(), '</td>',
+      '</tr>');
+    });
+    // 小計列
+    html.push('<tr style="background:rgba(59,130,246,.06);font-weight:700">',
+      '<td colspan="3" style="text-align:right;color:#1e40af">↳ ', escapeHtml(name), ' 小計：</td>',
+      '<td class="c-num">', p.totalH.toFixed(2), ' 小時</td>',
+      '<td class="c-num">', (p.totalH - p.totalOtH).toFixed(2), '</td>',
+      '<td class="c-num" style="color:', p.totalOtH>0?'#b45309':'#94a3b8', '">', p.totalOtH.toFixed(2), '</td>',
+      '<td class="c-num" style="color:#15803d">NT$ ', Math.round(p.totalWage).toLocaleString(), '</td>',
+    '</tr>');
+  });
+
+  html.push('</tbody></table></div>');
+  document.getElementById('pt-results-container').innerHTML = html.join('');
+}
+
+function exportPtCsv(){
+  if(!PT_ANALYSIS || !PT_ANALYSIS.length) return;
+  var wage    = Number(document.getElementById('pt-wage').value)     || 200;
+  var otMult  = Number(document.getElementById('pt-ot-mult').value)  || 1.34;
+  var headers = ['日期','姓名','打卡次數','打卡時間','當日工時(小時)','一般時數','加班時數(×'+otMult+')','當日工資'];
+  var lines = [headers.join(',')];
+  PT_ANALYSIS.forEach(function(r){
+    var cells = [
+      r.date, r.name, r.punches.length,
+      '"'+r.punches.join(' / ')+'"',
+      r.hours.toFixed(2), r.normalHours.toFixed(2), r.otHours.toFixed(2),
+      Math.round(r.wage)
+    ];
+    lines.push(cells.join(','));
+  });
+  // 加總列
+  var totalH = 0, totalOtH = 0, totalWage = 0;
+  PT_ANALYSIS.forEach(function(r){ totalH += r.hours; totalOtH += r.otHours; totalWage += r.wage; });
+  lines.push(['','','','總計', totalH.toFixed(2), (totalH-totalOtH).toFixed(2), totalOtH.toFixed(2), Math.round(totalWage)].join(','));
+  lines.push('');
+  lines.push('時薪 NT$,'+wage+',加班倍率,×'+otMult);
+
+  var blob = new Blob(["\uFEFF"+lines.join('\n')], { type:'text/csv;charset=utf-8' });
+  var a = document.createElement('a');
+  var ym = getSelectedYM();
+  a.href = URL.createObjectURL(blob);
+  a.download = 'PT工時_'+STORE_NAME+'_'+ym+'.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ============================================
 // 啟動
 // ============================================
 renderShifts();
 loadThreshFromLocalStorage();
+loadPtCfg();
 
 // 若尚未設定 URL 提示
 (function checkUrl(){
