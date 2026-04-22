@@ -293,24 +293,14 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
   <!-- Step 5: PT 工時計算 -->
   <div class="section">
     <h3><span class="step-num">5</span><span class="icon">💼</span> PT 工時計算
-      <span class="hint">自動辨識「打卡有但班表沒有」的人為 PT，依打卡計算工時</span>
+      <span class="hint">上傳打卡後自動帶入 PT 名單。規則：加班分界 8 小時、加班倍率 ×1.34、15 分鐘為單位</span>
     </h3>
-    <div class="threshold-row" style="background:rgba(219,234,254,.4)">
-      <label>預設時薪 NT$ <input type="number" id="pt-wage" value="200" min="0" max="9999" step="1"></label>
-      <label>加班分界 <input type="number" id="pt-ot-hours" value="8" min="1" max="24" step="0.5"> 小時/日</label>
-      <label>加班倍率 ×<input type="number" id="pt-ot-mult" value="1.34" min="1" max="3" step="0.01"></label>
-      <label title="工時以 15 分鐘為單位：上班打卡向後取（16:46 算 17:00）、下班打卡向前取（21:14 算 21:00）">
-        <input type="checkbox" id="pt-snap15" checked> 15 分為單位
-      </label>
-    </div>
 
-    <!-- 個別 PT 時薪設定 -->
-    <div style="margin-top:14px;padding:10px 12px;background:rgba(59,130,246,.04);border:1px dashed rgba(59,130,246,.2);border-radius:10px">
+    <!-- 個別 PT 時薪設定（上傳打卡時自動帶入）-->
+    <div style="padding:10px 12px;background:rgba(59,130,246,.04);border:1px dashed rgba(59,130,246,.2);border-radius:10px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-        <span style="font-weight:700;font-size:13px;color:#1e40af">👤 個別 PT 時薪</span>
-        <span style="font-size:11.5px;color:var(--ink-3)">沒設定的人 → 用上方「預設時薪」計算</span>
-        <div style="flex:1"></div>
-        <button class="btn btn-ghost" onclick="autoImportPtList()" style="font-size:12px;padding:6px 12px" title="從打卡資料找出未排班的人加入名單">↻ 從打卡自動匯入</button>
+        <span style="font-weight:700;font-size:13px;color:#1e40af">👤 PT 名單與時薪</span>
+        <span style="font-size:11.5px;color:var(--ink-3)">上傳打卡後自動帶入未排班員工 → 手動填時薪 → 開始分析</span>
       </div>
       <table class="shifts-table" id="pt-list-tbl">
         <thead><tr><th>姓名</th><th class="col-time">時薪 NT$</th><th class="col-del"></th></tr></thead>
@@ -1292,6 +1282,10 @@ function maybeEnableAnalyze(){
   document.getElementById('btn-analyze').disabled = !(SCHEDULE && PUNCHES && PUNCHES.rows && PUNCHES.rows.length);
   // PT 分析只需要打卡，不需要班表（PT = 打卡有但班表沒有的人）
   document.getElementById('btn-pt-analyze').disabled = !(PUNCHES && PUNCHES.rows && PUNCHES.rows.length);
+  // 打卡解析完成 → 自動匯入 PT 名單（不彈窗）
+  if(PUNCHES && PUNCHES.rows && PUNCHES.rows.length){
+    autoImportPtList(true);
+  }
 }
 
 function runAnalysis(){
@@ -1608,30 +1602,11 @@ var PT_ANALYSIS = null;  // [{ name, date, punches:[..], workMin, normalMin, otM
 var LS_KEY_PT      = 'cd_ot_pt_cfg_'  + STORE;
 var LS_KEY_PT_LIST = 'cd_ot_pt_list_' + STORE;
 
-// 讀取/儲存 PT 設定
-function loadPtCfg(){
-  try{
-    var raw = localStorage.getItem(LS_KEY_PT);
-    if(raw){
-      var c = JSON.parse(raw);
-      if(typeof c.wage     === 'number') document.getElementById('pt-wage').value     = c.wage;
-      if(typeof c.otHours  === 'number') document.getElementById('pt-ot-hours').value = c.otHours;
-      if(typeof c.otMult   === 'number') document.getElementById('pt-ot-mult').value  = c.otMult;
-      if(typeof c.snap15   === 'boolean') document.getElementById('pt-snap15').checked = c.snap15;
-    }
-  }catch(e){}
-}
-function savePtCfg(){
-  localStorage.setItem(LS_KEY_PT, JSON.stringify({
-    wage:    Number(document.getElementById('pt-wage').value)     || 200,
-    otHours: Number(document.getElementById('pt-ot-hours').value) || 8,
-    otMult:  Number(document.getElementById('pt-ot-mult').value)  || 1.34,
-    snap15:  document.getElementById('pt-snap15').checked
-  }));
-}
-document.addEventListener('change', function(e){
-  if(['pt-wage','pt-ot-hours','pt-ot-mult','pt-snap15'].indexOf(e.target.id) >= 0) savePtCfg();
-});
+// PT 計算規則寫死（用戶要求）：
+//   加班分界 8 小時 / 日、加班倍率 ×1.34、工時以 15 分鐘為單位
+var PT_OT_HOURS = 8;
+var PT_OT_MULT  = 1.34;
+var PT_SNAP15   = true;
 
 // === 個別 PT 名單與時薪 ===
 function loadPtList(){
@@ -1683,10 +1658,11 @@ function delPtRow(btn){
   savePtList();
 }
 // 從打卡資料自動匯入未排班員工到 PT 名單（不覆蓋已存在的人）
-function autoImportPtList(){
+//   silent=true 時：不彈視窗、不提示「沒新增」，給上傳時自動觸發用
+function autoImportPtList(silent){
   if(!PUNCHES || !PUNCHES.rows.length){
-    alert('請先上傳打卡 Excel/PDF 再匯入');
-    return;
+    if(!silent) alert('請先上傳打卡 Excel/PDF 再匯入');
+    return 0;
   }
   var schedNames = {};
   if(SCHEDULE && SCHEDULE.rows){
@@ -1710,10 +1686,13 @@ function autoImportPtList(){
     addPtRow(found[k], '');
     added++;
   });
-  savePtList();
-  alert(added > 0
-    ? '✅ 自動匯入 ' + added + ' 位 PT（時薪欄位請手動填寫，留空會用預設時薪）'
-    : 'ℹ️ 沒有可匯入的新 PT（打卡裡的人都已排班或已在名單中）');
+  if(added > 0) savePtList();
+  if(!silent){
+    alert(added > 0
+      ? '✅ 自動匯入 ' + added + ' 位 PT（請手動填時薪）'
+      : 'ℹ️ 沒有可匯入的新 PT');
+  }
+  return added;
 }
 function getPtWageMap(){
   var map = {};
@@ -1754,13 +1733,23 @@ function runPtAnalysis(){
     alert('請先上傳打卡 Excel/PDF');
     return;
   }
-  savePtCfg();
   savePtList();
-  var defaultWage = Number(document.getElementById('pt-wage').value)     || 200;
-  var otHours     = Number(document.getElementById('pt-ot-hours').value) || 8;
-  var otMult      = Number(document.getElementById('pt-ot-mult').value)  || 1.34;
-  var snap15      = document.getElementById('pt-snap15').checked;
-  var wageByName  = getPtWageMap(); // { normalizedName: wage }
+  var otHours    = PT_OT_HOURS;
+  var otMult     = PT_OT_MULT;
+  var snap15     = PT_SNAP15;
+  var wageByName = getPtWageMap(); // { normalizedName: wage }
+
+  // 檢查是否有 PT 沒填時薪，列出來提示
+  var missingWage = readPtListFromDom().filter(function(p){
+    var w = Number(p.wage) || 0;
+    return p.name && w <= 0;
+  });
+  if(missingWage.length){
+    var go = confirm('⚠️ 以下 ' + missingWage.length + ' 位 PT 還沒填時薪：\n\n  '
+      + missingWage.map(function(p){return p.name;}).join('、')
+      + '\n\n沒填時薪的人工資會算 0。確定要繼續分析嗎？');
+    if(!go) return;
+  }
 
   // 班表姓名集合（normalize）
   var schedNames = {};
@@ -1803,7 +1792,7 @@ function runPtAnalysis(){
     var thHours = otHours;
     var normalH = Math.min(hours, thHours);
     var otH     = Math.max(0, hours - thHours);
-    var personWage = wageByName[normalizeName(g.name)] || defaultWage;
+    var personWage = wageByName[normalizeName(g.name)] || 0; // 沒填時薪 → 0
     var pay     = normalH * personWage + otH * personWage * otMult;
     return {
       name: g.name,
@@ -1900,9 +1889,7 @@ function renderPtResults(){
 
 function exportPtCsv(){
   if(!PT_ANALYSIS || !PT_ANALYSIS.length) return;
-  var defaultWage = Number(document.getElementById('pt-wage').value)     || 200;
-  var otMult      = Number(document.getElementById('pt-ot-mult').value)  || 1.34;
-  var snap15      = document.getElementById('pt-snap15').checked;
+  var otMult = PT_OT_MULT;
   var headers = ['日期','姓名','時薪','打卡次數','打卡時間','當日工時(小時)','一般時數','加班時數(×'+otMult+')','當日工資'];
   var lines = [headers.join(',')];
   PT_ANALYSIS.forEach(function(r){
@@ -1919,7 +1906,7 @@ function exportPtCsv(){
   PT_ANALYSIS.forEach(function(r){ totalH += r.hours; totalOtH += r.otHours; totalWage += r.wage; });
   lines.push(['','','','','總計', totalH.toFixed(2), (totalH-totalOtH).toFixed(2), totalOtH.toFixed(2), Math.round(totalWage)].join(','));
   lines.push('');
-  lines.push('預設時薪 NT$,'+defaultWage+',加班倍率,×'+otMult+',15 分鐘取整,'+(snap15?'是':'否'));
+  lines.push('規則：加班分界 '+PT_OT_HOURS+' 小時/日,加班倍率 ×'+otMult+',工時 15 分鐘為單位');
 
   var blob = new Blob(["\uFEFF"+lines.join('\n')], { type:'text/csv;charset=utf-8' });
   var a = document.createElement('a');
@@ -1935,7 +1922,6 @@ function exportPtCsv(){
 // ============================================
 renderShifts();
 loadThreshFromLocalStorage();
-loadPtCfg();
 renderPtList();
 
 // 若尚未設定 URL 提示
