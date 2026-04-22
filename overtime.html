@@ -239,10 +239,6 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
       <tbody id="shifts-tbody"></tbody>
     </table>
     <div class="add-row"><button onclick="addShiftRow()">+ 新增班別</button></div>
-    <div class="threshold-row">
-      <label>加班起算：超出 <input type="number" id="ot-min" value="15" min="0" max="120"> 分起（下班、午休晚進/早出都適用）</label>
-      <label>加班單位：<input type="number" id="ot-unit" value="30" min="1" max="60"> 分</label>
-    </div>
   </div>
 
   <!-- Step 3: 上傳打卡 Excel -->
@@ -260,6 +256,14 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
       <button class="btn btn-ghost" onclick="togglePdfDebug()" id="pdf-debug-btn">📄 查看 PDF 原始擷取內容</button>
       <div id="pdf-debug-body" style="display:none;margin-top:10px;padding:12px 14px;background:#f8fafc;border:1px solid var(--line);border-radius:10px;font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:11.5px;color:#334155;max-height:320px;overflow:auto;white-space:pre-wrap;word-break:break-all;line-height:1.6"></div>
     </div>
+  </div>
+
+  <!-- Step 3.5: 姓名對照（班表 ↔ 打卡）-->
+  <div class="section" id="namemap-section" style="display:none">
+    <h3><span class="icon">👥</span> 姓名對照（班表 ↔ 打卡）
+      <span class="hint">若班表姓名跟打卡姓名拼法不同（例：3wangsu vs WANGSU），這裡手動指定對應關係，會自動存起來</span>
+    </h3>
+    <div id="namemap-content"></div>
   </div>
 
   <!-- Step 4: 分析 -->
@@ -292,9 +296,7 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
 
   <!-- Step 5: PT 工時計算 -->
   <div class="section">
-    <h3><span class="step-num">5</span><span class="icon">💼</span> PT 工時計算
-      <span class="hint">上傳打卡後自動帶入 PT 名單。規則：加班分界 8 小時、加班倍率 ×1.34、15 分鐘為單位</span>
-    </h3>
+    <h3><span class="step-num">5</span><span class="icon">💼</span> PT 工時計算</h3>
 
     <!-- 個別 PT 時薪設定（上傳打卡時自動帶入）-->
     <div style="padding:10px 12px;background:rgba(59,130,246,.04);border:1px dashed rgba(59,130,246,.2);border-radius:10px">
@@ -507,31 +509,12 @@ function findShift(code){
 }
 
 // ============================================
-// 門檻設定（遲到寬限、加班起算、加班單位）
+// 正職加班規則（寫死）：
+//   遲到寬限 0 分、加班起算超出 15 分、加班單位 15 分
 // ============================================
-function loadThreshFromLocalStorage(){
-  try{
-    var raw = localStorage.getItem(LS_KEY_THRESH);
-    if(raw){
-      var t = JSON.parse(raw);
-      if(typeof t.otStart === 'number') document.getElementById('ot-min').value  = t.otStart;
-      if(typeof t.otUnit  === 'number') document.getElementById('ot-unit').value = t.otUnit;
-    }
-  }catch(e){}
-}
 function readThresh(){
-  return {
-    lateGrace: 0,
-    otStart:   Number(document.getElementById('ot-min').value) || 0,
-    otUnit:    Number(document.getElementById('ot-unit').value) || 30
-  };
+  return { lateGrace: 0, otStart: 15, otUnit: 15 };
 }
-function saveThresh(){
-  localStorage.setItem(LS_KEY_THRESH, JSON.stringify(readThresh()));
-}
-document.addEventListener('change', function(e){
-  if(['ot-min','ot-unit'].indexOf(e.target.id) >= 0) saveThresh();
-});
 
 // ============================================
 // 班表載入（從 Google Apps Script）
@@ -1286,12 +1269,13 @@ function maybeEnableAnalyze(){
   if(PUNCHES && PUNCHES.rows && PUNCHES.rows.length){
     autoImportPtList(true);
   }
+  // 兩邊資料都齊 → 顯示姓名對照 UI
+  refreshNameMapUI();
 }
 
 function runAnalysis(){
   if(!SCHEDULE || !PUNCHES) return;
   saveShifts();
-  saveThresh();
   var shifts = readShiftsFromDom();
   var shiftMap = {};
   shifts.forEach(function(s){ shiftMap[s.code] = s; });
@@ -1321,8 +1305,9 @@ function runAnalysis(){
       var shift = shiftMap[code];
       // 未定義的班別代碼 → 仍記一筆，標成 unknown
       var date = y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-      var k = normalizeName(name)+'|'+date;
-      var punches = (punchMap[k]||[]).slice().sort();
+      // 用 resolvePunchKey 套用使用者在「姓名對照」設定的手動對應
+      var pk = resolvePunchKey(name);
+      var punches = pk ? ((punchMap[pk+'|'+date]||[]).slice().sort()) : [];
 
       if(!shift || (!shift.workIn && !shift.workOut)){
         // 休假或無上下班時間：只要有打卡視為「休假出勤」
@@ -1501,6 +1486,118 @@ function normalizeName(n){
     .trim();
 }
 
+// ============================================
+// 👥 姓名對照（班表 ↔ 打卡）
+// ============================================
+var LS_KEY_NAMEMAP = 'cd_ot_namemap_' + STORE;
+function loadNameMap(){
+  try{
+    var raw = localStorage.getItem(LS_KEY_NAMEMAP);
+    if(raw) return JSON.parse(raw) || {};
+  }catch(e){}
+  return {};
+}
+function saveNameMap(map){
+  localStorage.setItem(LS_KEY_NAMEMAP, JSON.stringify(map || {}));
+}
+// 取得 schedule 姓名對應的 punch 姓名 key（normalize 後）
+//   nameMap[schedNormalized] = punchNormalized | '__none__' | undefined(自動 = 同名)
+function resolvePunchKey(schedName){
+  var schedKey = normalizeName(schedName);
+  var map = loadNameMap();
+  var v = map[schedKey];
+  if(v === '__none__') return null;       // 明確標記無對應
+  if(v) return v;                          // 手動對應
+  return schedKey;                         // 自動 = normalize 後同名
+}
+
+function refreshNameMapUI(){
+  var section = document.getElementById('namemap-section');
+  if(!SCHEDULE || !SCHEDULE.rows || !SCHEDULE.rows.length || !PUNCHES || !PUNCHES.rows.length){
+    section.style.display = 'none';
+    return;
+  }
+  // 收集打卡姓名（normalize → 顯示用原名）
+  var punchNames = {}; // { normalizedKey: displayName }
+  PUNCHES.rows.forEach(function(p){
+    var k = normalizeName(p.name);
+    if(k && !punchNames[k]) punchNames[k] = p.name;
+  });
+  var punchKeys = Object.keys(punchNames).sort();
+
+  var nameMap = loadNameMap();
+
+  var html = ['<table class="shifts-table" style="font-size:12.5px"><thead><tr>',
+    '<th>班表姓名</th><th>對應打卡姓名</th><th class="col-time">狀態</th>',
+    '</tr></thead><tbody>'];
+
+  SCHEDULE.rows.forEach(function(r){
+    var schedKey = normalizeName(r.name);
+    var current = nameMap[schedKey] || '';
+    var resolved = resolvePunchKey(r.name);
+
+    var status, statusColor;
+    if(current === '__none__'){
+      status = '⚠️ 標為無對應';
+      statusColor = '#b45309';
+    } else if(current){
+      status = '✓ 手動對應';
+      statusColor = '#059669';
+    } else if(punchNames[schedKey]){
+      status = '✓ 自動匹配';
+      statusColor = '#059669';
+    } else {
+      status = '⚠️ 找不到對應';
+      statusColor = '#dc2626';
+    }
+
+    var opts = '<option value="">— 自動匹配 ('+(punchNames[schedKey]?'有':'找不到')+') —</option>';
+    punchKeys.forEach(function(pk){
+      opts += '<option value="' + escapeAttr(pk) + '"' + (pk === current ? ' selected' : '') + '>' + escapeHtml(punchNames[pk]) + '</option>';
+    });
+    opts += '<option value="__none__"' + (current === '__none__' ? ' selected' : '') + '>— 無對應（沒打卡資料）—</option>';
+
+    html.push('<tr>',
+      '<td><b>', escapeHtml(r.name), '</b></td>',
+      '<td><select data-sched="', escapeAttr(schedKey), '" onchange="onNameMapChange(this)" style="width:100%;padding:6px 8px;border:1.5px solid var(--line);border-radius:7px;background:rgba(255,255,255,.9);font-size:12.5px;font-family:inherit">', opts, '</select></td>',
+      '<td style="color:', statusColor, ';font-size:12px;font-weight:600">', status, '</td>',
+    '</tr>');
+  });
+
+  html.push('</tbody></table>');
+
+  // 補上「打卡有但班表沒有」的人（會被歸入 PT）的提示
+  var schedKeys = {};
+  SCHEDULE.rows.forEach(function(r){ schedKeys[normalizeName(r.name)] = true; });
+  var mappedPunches = {};
+  Object.keys(nameMap).forEach(function(sk){
+    var v = nameMap[sk];
+    if(v && v !== '__none__') mappedPunches[v] = true;
+  });
+  var orphanPunches = punchKeys.filter(function(pk){
+    return !schedKeys[pk] && !mappedPunches[pk];
+  });
+  if(orphanPunches.length){
+    html.push('<div style="margin-top:10px;padding:8px 12px;background:rgba(59,130,246,.06);border:1px dashed rgba(59,130,246,.3);border-radius:8px;font-size:12px;color:#1e40af">',
+      'ℹ️ 打卡有但沒對應到班表的人（會被歸入 PT 名單）：',
+      '<b>', orphanPunches.map(function(pk){return escapeHtml(punchNames[pk]);}).join('、'), '</b>',
+    '</div>');
+  }
+
+  section.style.display = 'block';
+  document.getElementById('namemap-content').innerHTML = html.join('');
+}
+
+function onNameMapChange(sel){
+  var schedKey = sel.getAttribute('data-sched');
+  var val = sel.value;
+  var map = loadNameMap();
+  if(!val) delete map[schedKey];
+  else map[schedKey] = val;
+  saveNameMap(map);
+  refreshNameMapUI();
+}
+
 function renderSummary(){
   if(!ANALYSIS){ return; }
   var pplSet = {}, otMin = 0, lateCnt = 0, missCnt = 0;
@@ -1671,6 +1768,13 @@ function autoImportPtList(silent){
       if(k) schedNames[k] = true;
     });
   }
+  // 在「姓名對照」中已被手動對應的 punch 姓名 → 視為正職、不歸 PT
+  var nameMap = loadNameMap();
+  var mappedPunches = {};
+  Object.keys(nameMap).forEach(function(sk){
+    var v = nameMap[sk];
+    if(v && v !== '__none__') mappedPunches[v] = true;
+  });
   var existing = {};
   readPtListFromDom().forEach(function(p){
     existing[normalizeName(p.name)] = true;
@@ -1678,7 +1782,7 @@ function autoImportPtList(silent){
   var found = {};
   PUNCHES.rows.forEach(function(p){
     var k = normalizeName(p.name);
-    if(!k || schedNames[k] || existing[k] || found[k]) return;
+    if(!k || schedNames[k] || mappedPunches[k] || existing[k] || found[k]) return;
     found[k] = p.name;
   });
   var added = 0;
@@ -1759,14 +1863,21 @@ function runPtAnalysis(){
       if(k) schedNames[k] = true;
     });
   }
+  // 在「姓名對照」中已被手動對應的 punch 姓名 → 視為正職
+  var nameMap = loadNameMap();
+  var mappedPunches = {};
+  Object.keys(nameMap).forEach(function(sk){
+    var v = nameMap[sk];
+    if(v && v !== '__none__') mappedPunches[v] = true;
+  });
 
   // 打卡按 (姓名, 日期) 分組
   var groups = {};
   PUNCHES.rows.forEach(function(p){
     var k = normalizeName(p.name);
     if(!k) return;
-    // 已在班表的人不算 PT
-    if(schedNames[k]) return;
+    // 已在班表的人 / 已手動對應的人 → 不算 PT
+    if(schedNames[k] || mappedPunches[k]) return;
     var key = p.name + '|' + p.date;
     if(!groups[key]) groups[key] = { name:p.name, date:p.date, punches:[] };
     groups[key].punches.push(p.time);
@@ -1921,7 +2032,6 @@ function exportPtCsv(){
 // 啟動
 // ============================================
 renderShifts();
-loadThreshFromLocalStorage();
 renderPtList();
 
 // 若尚未設定 URL 提示
