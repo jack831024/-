@@ -66,6 +66,11 @@ h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 .menu-card.inventory:hover .icon-wrap{background:linear-gradient(135deg,var(--accent) 0%,#fb923c 100%);color:#fff;transform:scale(1.05)}
 .menu-card.inventory .mgo{color:var(--accent)}
 
+.menu-card.order .icon-wrap{background:linear-gradient(135deg,#dcfce7 0%,#bbf7d0 100%);color:#16a34a}
+.menu-card.order::after{background:linear-gradient(90deg,#16a34a,#4ade80)}
+.menu-card.order:hover .icon-wrap{background:linear-gradient(135deg,#16a34a 0%,#22c55e 100%);color:#fff;transform:scale(1.05)}
+.menu-card.order .mgo{color:#16a34a}
+
 .footer{text-align:center;font-size:11px;color:var(--ink-3);letter-spacing:1px;margin-top:1rem}
 .footer .year{font-weight:600;color:var(--ink-2)}
 
@@ -106,6 +111,13 @@ h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
       <span class="mdesc">食材、耗材庫存盤點紀錄，<br>支援每日與每週盤點</span>
       <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
     </button>
+    <button class="menu-card order" onclick="goOrder()">
+      <span class="num">03</span>
+      <span class="icon-wrap">🛒</span>
+      <span class="mtitle">叫貨系統</span>
+      <span class="mdesc">依今日銷售預估明日叫貨量，<br>湯底／肉品／蔬菜自動推算</span>
+      <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+    </button>
   </div>
 
   <p class="footer">© <span class="year">2026</span> · INTERNAL SYSTEM</p>
@@ -117,6 +129,9 @@ function goFlow(flow){
   sessionStorage.removeItem('cd_store');
   sessionStorage.removeItem('cd_store_name');
   window.location.href = 'index.html';
+}
+function goOrder(){
+  window.location.href = 'order.html';
 }
 </script>
 </body>

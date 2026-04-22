@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>叫貨系統</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#3b82f6;
+  --accent:#16a34a;
+  --accent-dark:#15803d;
+  --ink:#0f172a;
+  --ink-2:#475569;
+  --ink-3:#94a3b8;
+  --line:#e2e8f0;
+  --danger:#dc2626;
+}
+html,body{height:100%}
+body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;padding:1rem;
+  background:
+    radial-gradient(1000px 500px at 10% -10%, #dcfce7 0%, transparent 50%),
+    radial-gradient(800px 500px at 110% 10%, #e0f2fe 0%, transparent 55%),
+    linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+}
+
+.topbar{max-width:820px;margin:0 auto 14px;display:flex;align-items:center;gap:10px;padding:4px 4px}
+.back-btn{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);transition:all .2s;box-shadow:0 4px 12px -4px rgba(15,23,42,.08);flex-shrink:0}
+.back-btn:hover{background:#fff;color:var(--accent);transform:translateX(-2px)}
+.back-btn svg{width:17px;height:17px}
+.spacer{flex:1}
+
+.wrap{max-width:820px;margin:0 auto;padding:0 0 3rem}
+
+.hero-card{background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%);border:1px solid rgba(22,163,74,.15);border-radius:20px;padding:1.25rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(22,163,74,.06),0 8px 24px -12px rgba(22,163,74,.2)}
+.hero-icon{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--accent) 0%,#22c55e 100%);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 8px 20px -8px rgba(22,163,74,.5);flex-shrink:0}
+.hero-text h1{font-size:20px;font-weight:700;letter-spacing:-0.02em;margin-bottom:3px}
+.hero-text p{font-size:12.5px;color:var(--ink-2)}
+
+.section{background:rgba(255,255,255,.78);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.9);border-radius:18px;padding:1.1rem 1.25rem;margin-bottom:14px;box-shadow:0 1px 2px rgba(15,23,42,.03),0 6px 18px -10px rgba(15,23,42,.08)}
+h3{font-size:13px;font-weight:700;color:var(--ink-2);margin-bottom:12px;display:flex;align-items:center;gap:6px;letter-spacing:0.01em;flex-wrap:wrap}
+h3 .step-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;margin-right:4px}
+h3 .hint{margin-left:auto;font-size:11px;font-weight:500;color:var(--ink-3)}
+
+.upload-zone{border:2px dashed #86efac;border-radius:14px;padding:1.25rem;text-align:center;cursor:pointer;transition:all .2s;background:rgba(240,253,244,.5);position:relative}
+.upload-zone:hover{border-color:var(--accent);background:rgba(240,253,244,.9)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.uz-icon{font-size:28px;display:block;margin-bottom:4px}
+.uz-label{font-size:13px;color:var(--ink-2);font-weight:500;pointer-events:none}
+.uz-hint{font-size:11px;color:var(--ink-3);margin-top:4px;pointer-events:none}
+
+.or-sep{display:flex;align-items:center;gap:10px;margin:12px 0;color:var(--ink-3);font-size:11px;letter-spacing:2px}
+.or-sep::before,.or-sep::after{content:"";flex:1;height:1px;background:var(--line)}
+
+textarea.paste-area{width:100%;min-height:120px;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;font-size:12px;font-family:ui-monospace,"SF Mono",Menlo,monospace;outline:none;resize:vertical;background:rgba(255,255,255,.6);transition:all .18s;color:var(--ink)}
+textarea.paste-area:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
+
+.btn-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.btn{padding:10px 16px;border:none;border-radius:11px;font-size:13.5px;font-weight:600;cursor:pointer;transition:all .18s;font-family:inherit;display:inline-flex;align-items:center;gap:6px}
+.btn.primary{background:linear-gradient(135deg,var(--accent) 0%,var(--accent-dark) 100%);color:#fff;box-shadow:0 6px 14px -6px rgba(22,163,74,.5)}
+.btn.primary:hover{transform:translateY(-1px);box-shadow:0 10px 20px -6px rgba(22,163,74,.55)}
+.btn.ghost{background:rgba(255,255,255,.6);color:var(--ink-2);border:1.5px solid var(--line)}
+.btn.ghost:hover{background:#fff;color:var(--accent);border-color:var(--accent)}
+.btn:disabled{background:#cbd5e1;color:#64748b;cursor:not-allowed;box-shadow:none}
+
+.status{padding:10px 14px;border-radius:11px;font-size:13px;display:none;align-items:center;gap:8px;margin-top:10px;font-weight:500}
+.status.on{display:flex}
+.status.info{background:rgba(59,130,246,.08);color:var(--brand)}
+.status.ok{background:rgba(22,163,74,.08);color:var(--accent)}
+.status.err{background:rgba(220,38,38,.08);color:var(--danger)}
+
+/* 解析結果 */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+.stat-card{background:linear-gradient(135deg,#fff 0%,#f0fdf4 100%);border:1px solid rgba(22,163,74,.12);border-radius:14px;padding:14px 14px}
+.stat-card .label{font-size:11px;color:var(--ink-3);font-weight:600;letter-spacing:1.5px;text-transform:uppercase}
+.stat-card .val{font-size:28px;font-weight:700;color:var(--ink);margin-top:2px;font-family:ui-monospace,"SF Mono",Menlo,monospace;line-height:1.1}
+.stat-card .unit{font-size:12px;color:var(--ink-2);margin-left:4px;font-weight:500}
+
+.table-wrap{overflow-x:auto;margin:0 -1.25rem;padding:0 1.25rem}
+.items-table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;min-width:480px}
+.items-table th{text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:1px;border-bottom:1.5px solid var(--line);white-space:nowrap}
+.items-table .col-name{min-width:150px}
+.items-table .col-qty,.items-table .col-per,.items-table .col-total{width:90px;white-space:nowrap}
+.items-table .col-del{width:36px}
+.items-table td{padding:7px 10px;border-bottom:1px solid rgba(226,232,240,.6);vertical-align:middle}
+.items-table tr:last-child td{border-bottom:none}
+.items-table .col-qty,.items-table .col-per,.items-table .col-total{text-align:right;font-family:ui-monospace,"SF Mono",Menlo,monospace}
+.items-table .col-total{font-weight:700;color:var(--accent-dark)}
+.items-table .col-del{width:34px;text-align:center}
+.items-table input{width:80px;padding:6px 8px;border:1.5px solid transparent;border-radius:8px;background:rgba(15,23,42,.02);font-size:13px;outline:none;transition:all .15s;font-family:ui-monospace,"SF Mono",Menlo,monospace;text-align:right;color:var(--ink)}
+.items-table input.name{width:100%;text-align:left;font-family:inherit}
+.items-table input:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(22,163,74,.1)}
+.items-table .del{background:none;border:none;cursor:pointer;color:var(--ink-3);font-size:16px;width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin:0 auto}
+.items-table .del:hover{background:rgba(220,38,38,.1);color:var(--danger)}
+
+.empty{text-align:center;color:var(--ink-3);font-size:12.5px;padding:24px 0;font-style:italic}
+
+.add-row{margin-top:10px;padding:8px 0 0;border-top:1px dashed var(--line)}
+.add-row button{font-size:13px;padding:8px 16px;border:1.5px dashed var(--accent);border-radius:10px;background:rgba(240,253,244,.5);cursor:pointer;color:var(--accent);font-weight:600;transition:all .18s;font-family:inherit;width:100%}
+.add-row button:hover{background:var(--accent);color:#fff;border-style:solid}
+
+.summary-bar{display:flex;gap:12px;margin-top:14px;padding:12px 14px;background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%);border-radius:12px;font-size:12px;color:var(--ink-2);border:1px solid rgba(22,163,74,.12)}
+.summary-bar .item{flex:1;text-align:center}
+.summary-bar .item .val{font-size:17px;font-weight:700;color:var(--accent-dark);display:block;margin-top:2px;font-family:ui-monospace,"SF Mono",Menlo,monospace}
+
+.subtab{display:flex;gap:6px;margin-bottom:10px;border-bottom:1.5px solid var(--line);padding-bottom:0}
+.subtab button{background:none;border:none;padding:8px 14px;font-size:13px;font-weight:600;color:var(--ink-3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1.5px;transition:all .15s;font-family:inherit}
+.subtab button.on{color:var(--accent);border-bottom-color:var(--accent)}
+.subtab button:hover:not(.on){color:var(--ink-2)}
+
+.tab-pane{display:none}
+.tab-pane.on{display:block}
+
+@media(max-width:520px){
+  body{padding:0.75rem}
+  .hero-card{padding:1rem}
+  .section{padding:1rem}
+  .stat-card .val{font-size:24px}
+  .items-table input{width:68px}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="location.href='home.html'" title="返回主頁">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+  </button>
+  <div class="spacer"></div>
+</div>
+
+<div class="wrap">
+
+  <div class="hero-card">
+    <div class="hero-icon">🛒</div>
+    <div class="hero-text">
+      <h1>叫貨系統</h1>
+      <p>依今日銷售自動推算明日建議叫貨量</p>
+    </div>
+  </div>
+
+  <!-- 1. 資料來源 -->
+  <div class="section">
+    <h3><span class="step-num">1</span>🧾 今日銷售報表 <span class="hint">上傳 .xlsx 或貼上文字</span></h3>
+    <label class="upload-zone">
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+      <span class="uz-icon">📂</span>
+      <span class="uz-label">點此上傳／拖放 報表.xlsx</span>
+      <span class="uz-hint">會自動讀取湯底、肉品明細</span>
+    </label>
+    <div class="or-sep">或</div>
+    <textarea id="pasteArea" class="paste-area" placeholder="從 Excel 複製貼上（含 *湯底 / *肉品 / 名稱 / 數量 …）"></textarea>
+    <div class="btn-row">
+      <button class="btn primary" onclick="parsePaste()">🔍 解析內容</button>
+      <button class="btn ghost" onclick="loadDemo()">載入範例</button>
+      <button class="btn ghost" onclick="clearAll()">清除</button>
+    </div>
+    <div id="status" class="status"></div>
+  </div>
+
+  <!-- 2. 解析結果 -->
+  <div class="section" id="resultSec" style="display:none">
+    <h3><span class="step-num">2</span>📊 解析結果</h3>
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="label">今日人數</div>
+        <div class="val"><span id="peopleVal">0</span><span class="unit">位</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="label">湯底總數</div>
+        <div class="val"><span id="soupVal">0</span><span class="unit">份</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="label">肉品總份</div>
+        <div class="val"><span id="meatVal">0</span><span class="unit">份</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 叫貨建議 -->
+  <div class="section" id="suggestSec" style="display:none">
+    <h3><span class="step-num">3</span>📦 明日建議叫貨量 <span class="hint">每項係數可編輯，自動儲存</span></h3>
+
+    <div class="subtab">
+      <button class="on" data-tab="veg" onclick="switchTab('veg')">🥬 蔬菜</button>
+      <button data-tab="meat" onclick="switchTab('meat')">🥩 肉品</button>
+    </div>
+
+    <!-- 蔬菜 -->
+    <div class="tab-pane on" id="tab-veg">
+      <div class="table-wrap">
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th class="col-name">品項</th>
+            <th class="col-qty">每人(g)</th>
+            <th class="col-qty">人數</th>
+            <th class="col-total">建議(g)</th>
+            <th class="col-del"></th>
+          </tr>
+        </thead>
+        <tbody id="vegBody"></tbody>
+      </table>
+      </div>
+      <div class="add-row"><button onclick="addVeg()">＋ 新增蔬菜品項</button></div>
+      <div class="summary-bar">
+        <div class="item">品項數 <span class="val" id="vegCount">0</span></div>
+        <div class="item">建議總量 <span class="val"><span id="vegSumG">0</span> g ≈ <span id="vegSumKg">0</span> kg</span></div>
+      </div>
+    </div>
+
+    <!-- 肉品 -->
+    <div class="tab-pane" id="tab-meat">
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th>品項</th>
+            <th class="col-qty">份數</th>
+            <th class="col-qty">每份(g)</th>
+            <th class="col-total">建議(g)</th>
+            <th class="col-del"></th>
+          </tr>
+        </thead>
+        <tbody id="meatBody"></tbody>
+      </table>
+      <div class="add-row"><button onclick="addMeat()">＋ 手動新增肉品</button></div>
+      <div class="summary-bar">
+        <div class="item">品項數 <span class="val" id="meatCount">0</span></div>
+        <div class="item">建議總量 <span class="val"><span id="meatSumG">0</span> g ≈ <span id="meatSumKg">0</span> kg</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const LS_VEG = 'cd_order_veg_cfg';
+const LS_MEAT = 'cd_order_meat_cfg';
+
+// 預設蔬菜（之後再細填每人克數）
+const DEFAULT_VEG = [
+  { name:'高麗菜',    perPerson:0 },
+  { name:'大白菜',    perPerson:0 },
+  { name:'青江菜',    perPerson:0 },
+  { name:'大陸妹',    perPerson:0 },
+  { name:'金針菇',    perPerson:0 },
+  { name:'玉米',      perPerson:0 },
+  { name:'白蘿蔔',    perPerson:0 },
+  { name:'番茄',      perPerson:0 },
+  { name:'豆皮',      perPerson:0 },
+  { name:'凍豆腐',    perPerson:0 }
+];
+
+let state = {
+  people: 0,
+  soupTotal: 0,
+  meats: [],   // {name, qty, perServing}
+  veg: []      // {name, perPerson}
+};
+
+// ===== 解析 =====
+// 報表格式：每個 section 以 "*名稱" 或 "名稱"（如 "平日肉品"） 開頭，
+// 接一行 "名稱 / 數量" 表頭，再來是資料列。
+const SOUP_SECTIONS = ['湯底'];
+const MEAT_SECTIONS = ['肉品','二樓肉品','平日肉品','單點肉品'];
+const SKIP_SECTIONS = ['套餐不顯示','套餐','優惠活動','超值加點'];
+
+function normalize(s){ return (s||'').replace(/^\*+/,'').replace(/\s+/g,'').trim(); }
+
+function parseRows(rows){
+  // rows: 2D array of strings (from xlsx) or lines split from paste
+  let section = null;   // 'soup' | 'meat' | 'skip'
+  let people = 0;
+  const meats = [];
+
+  for(const row of rows){
+    // 撈出非空欄
+    const cells = row.filter(c => c != null && String(c).trim() !== '');
+    if(cells.length === 0) continue;
+    const first = String(cells[0]).trim();
+    const firstN = normalize(first);
+
+    // section header：整行只有一個非空文字，且不是 "名稱"/"數量"/數字
+    const isHeader = cells.length === 1 && isNaN(Number(first)) && first !== '名稱' && first !== '數量';
+    if(isHeader){
+      if(SOUP_SECTIONS.includes(firstN)) section = 'soup';
+      else if(MEAT_SECTIONS.includes(firstN)) section = 'meat';
+      else if(SKIP_SECTIONS.includes(firstN)) section = 'skip';
+      else section = 'other';
+      continue;
+    }
+    if(first === '名稱' || firstN === '名稱') continue;
+
+    // 資料列：最後一欄通常是數量
+    const qty = Number(cells[cells.length-1]);
+    if(!Number.isFinite(qty)) continue;
+    const name = String(cells[0]).replace(/^\[配餐\]\s*/,'').replace(/》/g,'').trim();
+
+    if(section === 'soup'){
+      people += qty;
+    } else if(section === 'meat'){
+      if(qty > 0 && !/蔬食自助吧|海鮮|蛤蜊|肉蛋糕|共鍋費/.test(name)){
+        meats.push({ name, qty });
+      }
+    }
+  }
+
+  return { people, meats };
+}
+
+function parsePaste(){
+  const txt = document.getElementById('pasteArea').value;
+  if(!txt.trim()){ showStatus('err','請先貼上內容或上傳檔案'); return; }
+  const rows = txt.split(/\r?\n/).map(line => line.split(/\t|\||,/));
+  applyParsed(parseRows(rows));
+}
+
+function handleFile(file){
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+      // 顯示原始內容到 pasteArea 方便 debug / 手動編輯
+      document.getElementById('pasteArea').value = rows.map(r => r.join(' | ')).join('\n');
+      applyParsed(parseRows(rows));
+    }catch(err){
+      showStatus('err', '讀檔失敗：' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function applyParsed({people, meats}){
+  state.people = people;
+  state.soupTotal = people;
+  // 合併同名肉品（如二樓/一樓都有的品項）
+  const map = {};
+  for(const m of meats){
+    map[m.name] = (map[m.name]||0) + m.qty;
+  }
+  const savedMeatCfg = JSON.parse(localStorage.getItem(LS_MEAT) || '{}');
+  state.meats = Object.entries(map).map(([name, qty]) => ({
+    name, qty, perServing: Number(savedMeatCfg[name] || 0)
+  })).sort((a,b) => b.qty - a.qty);
+
+  document.getElementById('peopleVal').textContent = people;
+  document.getElementById('soupVal').textContent = people;
+  document.getElementById('meatVal').textContent = state.meats.reduce((s,m)=>s+m.qty,0);
+
+  document.getElementById('resultSec').style.display = 'block';
+  document.getElementById('suggestSec').style.display = 'block';
+  renderVeg();
+  renderMeat();
+  showStatus('ok', `解析完成 · ${people} 人 · ${state.meats.length} 種肉品`);
+}
+
+// ===== 渲染 =====
+function renderVeg(){
+  const tbody = document.getElementById('vegBody');
+  if(state.veg.length === 0){
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">尚無蔬菜品項，點下方「新增」開始設定</td></tr>`;
+  } else {
+    tbody.innerHTML = state.veg.map((v,i) => {
+      const total = Math.round((v.perPerson||0) * state.people);
+      return `<tr>
+        <td><input class="name" value="${escapeHtml(v.name)}" oninput="updVeg(${i},'name',this.value)"></td>
+        <td class="col-qty"><input type="number" min="0" step="1" value="${v.perPerson||0}" oninput="updVeg(${i},'perPerson',this.value)"></td>
+        <td class="col-qty">${state.people}</td>
+        <td class="col-total">${total.toLocaleString()}</td>
+        <td class="col-del"><button class="del" onclick="delVeg(${i})" title="刪除">×</button></td>
+      </tr>`;
+    }).join('');
+  }
+  document.getElementById('vegCount').textContent = state.veg.length;
+  const sumG = state.veg.reduce((s,v) => s + (v.perPerson||0) * state.people, 0);
+  document.getElementById('vegSumG').textContent = Math.round(sumG).toLocaleString();
+  document.getElementById('vegSumKg').textContent = (sumG/1000).toFixed(1);
+}
+
+function renderMeat(){
+  const tbody = document.getElementById('meatBody');
+  if(state.meats.length === 0){
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">尚無肉品資料，請先解析今日銷售</td></tr>`;
+  } else {
+    tbody.innerHTML = state.meats.map((m,i) => {
+      const total = Math.round((m.perServing||0) * m.qty);
+      return `<tr>
+        <td><input class="name" value="${escapeHtml(m.name)}" oninput="updMeat(${i},'name',this.value)"></td>
+        <td class="col-qty"><input type="number" min="0" step="1" value="${m.qty}" oninput="updMeat(${i},'qty',this.value)"></td>
+        <td class="col-qty"><input type="number" min="0" step="1" value="${m.perServing||0}" oninput="updMeat(${i},'perServing',this.value)"></td>
+        <td class="col-total">${total.toLocaleString()}</td>
+        <td class="col-del"><button class="del" onclick="delMeat(${i})" title="刪除">×</button></td>
+      </tr>`;
+    }).join('');
+  }
+  document.getElementById('meatCount').textContent = state.meats.length;
+  const sumG = state.meats.reduce((s,m) => s + (m.perServing||0) * m.qty, 0);
+  document.getElementById('meatSumG').textContent = Math.round(sumG).toLocaleString();
+  document.getElementById('meatSumKg').textContent = (sumG/1000).toFixed(1);
+}
+
+// ===== 編輯 =====
+function updVeg(i, field, val){
+  if(field === 'name') state.veg[i].name = val;
+  else state.veg[i].perPerson = Number(val)||0;
+  saveVeg();
+  // 只更新計算欄位，不重渲整表，避免輸入框失焦
+  const row = document.querySelectorAll('#vegBody tr')[i];
+  if(row){
+    const total = Math.round((state.veg[i].perPerson||0) * state.people);
+    row.children[3].textContent = total.toLocaleString();
+  }
+  updateVegSum();
+}
+function updateVegSum(){
+  const sumG = state.veg.reduce((s,v) => s + (v.perPerson||0) * state.people, 0);
+  document.getElementById('vegSumG').textContent = Math.round(sumG).toLocaleString();
+  document.getElementById('vegSumKg').textContent = (sumG/1000).toFixed(1);
+}
+function delVeg(i){ state.veg.splice(i,1); saveVeg(); renderVeg(); }
+function addVeg(){ state.veg.push({ name:'新品項', perPerson:0 }); saveVeg(); renderVeg(); }
+function saveVeg(){ localStorage.setItem(LS_VEG, JSON.stringify(state.veg)); }
+
+function updMeat(i, field, val){
+  if(field === 'name') state.meats[i].name = val;
+  else state.meats[i][field] = Number(val)||0;
+  saveMeat();
+  const row = document.querySelectorAll('#meatBody tr')[i];
+  if(row){
+    const m = state.meats[i];
+    const total = Math.round((m.perServing||0) * m.qty);
+    row.children[3].textContent = total.toLocaleString();
+  }
+  updateMeatSum();
+}
+function updateMeatSum(){
+  const sumG = state.meats.reduce((s,m) => s + (m.perServing||0) * m.qty, 0);
+  document.getElementById('meatSumG').textContent = Math.round(sumG).toLocaleString();
+  document.getElementById('meatSumKg').textContent = (sumG/1000).toFixed(1);
+}
+function delMeat(i){ state.meats.splice(i,1); saveMeat(); renderMeat(); }
+function addMeat(){ state.meats.push({ name:'新肉品', qty:0, perServing:0 }); saveMeat(); renderMeat(); }
+function saveMeat(){
+  const map = {};
+  for(const m of state.meats) map[m.name] = m.perServing || 0;
+  localStorage.setItem(LS_MEAT, JSON.stringify(map));
+}
+
+// ===== Tab =====
+function switchTab(t){
+  document.querySelectorAll('.subtab button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('on', p.id === 'tab-'+t));
+}
+
+// ===== Utilities =====
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function showStatus(kind, msg){
+  const el = document.getElementById('status');
+  el.className = 'status on '+kind;
+  el.textContent = msg;
+}
+
+function loadDemo(){
+  document.getElementById('pasteArea').value =
+`*湯底
+名稱 | 數量
+[配餐] 原味湯底 | 24
+[配餐] 素食湯底 | 3
+[配餐] 蒜頭蛤蜊湯底 | 3
+[配餐] 韓式泡菜湯底 | 1
+[配餐] 十全藥膳湯底 | 4
+[配餐] 香濃牛奶湯底 | 3
+[配餐] 白胡椒雞湯 | 1
+[配餐] 素食十全藥膳湯底 | 2
+[配餐] 四川麻辣湯底 | 3
+[配餐] 蒙古孜然湯底 | 1
+
+*肉品
+名稱 | 數量
+[配餐] 蔬食自助吧 | 5
+[配餐] 美國藍帶培根牛 | 1
+[配餐] 澳洲頂級霜降和牛 | 2
+[配餐] 頂級霜降松阪豬 | 1
+[配餐] 美國上選Choice牛小排 | 1
+[配餐] 美國安格斯CAB嫩肩牛 | 1
+
+*二樓肉品
+名稱 | 數量
+[配餐] 》美國藍帶培根牛 | 3
+[配餐] 》台灣上選梅花豬 | 2
+[配餐] 》美國安格斯CAB嫩肩牛 | 3
+[配餐] 》澳洲頂級霜降和牛 | 3
+[配餐] 》美國頂級Prime翼板牛 | 1
+
+平日肉品
+名稱 | 數量
+[配餐] 平日套餐 台灣上選梅花豬 | 8
+[配餐] 平日套餐 美國藍帶培根牛 | 12
+[配餐] 平日套餐 台灣嚴選培根豬 | 1`;
+  showStatus('info', '範例已載入，點「解析內容」試試');
+}
+
+function clearAll(){
+  document.getElementById('pasteArea').value = '';
+  document.getElementById('fileInput').value = '';
+  document.getElementById('status').className = 'status';
+  document.getElementById('resultSec').style.display = 'none';
+  document.getElementById('suggestSec').style.display = 'none';
+  state = { people:0, soupTotal:0, meats:[], veg: loadVeg() };
+}
+
+function loadVeg(){
+  const saved = localStorage.getItem(LS_VEG);
+  if(saved){
+    try { return JSON.parse(saved); } catch(e){}
+  }
+  return DEFAULT_VEG.slice();
+}
+
+// ===== 初始化 =====
+document.getElementById('fileInput').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if(f) handleFile(f);
+});
+state.veg = loadVeg();
+// 預渲染空的建議區（之後解析後自動顯示）
+</script>
+</body>
+</html>
