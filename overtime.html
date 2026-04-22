@@ -1539,6 +1539,14 @@ function normalizeName(n){
     .trim();
 }
 
+// 是否為英文名（不含任何中日韓統一表意文字）
+//   PT 偵測時只收英文名，避免中文名拼法對不上時被誤判為 PT
+//   例：班表「張小明」打卡「張小明 」(尾空白) → 不屬於 PT，仍是 FT 名字對不上的問題
+function isEnglishName(n){
+  if(!n) return false;
+  return !/[\u3400-\u9fff\uF900-\uFAFF]/.test(String(n));
+}
+
 function renderSummary(){
   if(!ANALYSIS){ return; }
   var pplSet = {}, otMin = 0, lateCnt = 0, missCnt = 0;
@@ -1737,6 +1745,7 @@ function autoImportPtList(silent){
   PUNCHES.rows.forEach(function(p){
     var k = normalizeName(p.name);
     if(!k || schedNames[k] || existing[k] || found[k]) return;
+    if(!isEnglishName(p.name)) return; // 只收英文名（中文名對不上 = FT 命名差異，不算 PT）
     found[k] = p.name;
   });
   var added = 0;
@@ -1825,6 +1834,8 @@ function runPtAnalysis(){
     if(!k) return;
     // 已在班表的人不算 PT
     if(schedNames[k]) return;
+    // 只算英文名（中文名對不上 = FT 命名差異，不該歸入 PT）
+    if(!isEnglishName(p.name)) return;
     var key = p.name + '|' + p.date;
     if(!groups[key]) groups[key] = { name:p.name, date:p.date, punches:[] };
     groups[key].punches.push(p.time);
