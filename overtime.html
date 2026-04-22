@@ -1297,9 +1297,10 @@ function runAnalysis(){
       var date = y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
       var k = normalizeName(name)+'|'+date;
       var punches = (punchMap[k]||[]).slice().sort();
-      // 合併重複打卡：相鄰 < 15 分鐘視為同一筆（避免員工忘記是否打過卡而連按兩下造成假加班）
-      // 最後一個 cluster 保留最晚（實際下班時間），其他 cluster 保留最早
-      var punchesEff = dedupPunchClusters(punches, 15);
+      // 永遠把打卡合併到「應有 N 次」，每筆對應一個排定時段（取最有利於員工的時間）
+      // 員工忘記是否打過卡而連按兩下，會被自動合併避免假加班
+      var requiredCount = Number(shift && shift.punches) || 2;
+      var punchesEff = mergePunchesToN(punches, requiredCount);
 
       if(!shift || (!shift.workIn && !shift.workOut)){
         // 休假或無上下班時間：只要有打卡視為「休假出勤」
@@ -1336,6 +1337,16 @@ function runAnalysis(){
         var over = lastP - workOutM;
         if(over >= th.otStart){
           otMin += Math.floor(over / u) * u;
+        }
+      }
+
+      // (1b) 上班早到加班：第一筆早於排定 ≥ 15 分（例：排定 11:00 上班，10:45 就打卡 → +15 分）
+      if(shift.workIn && punchesEff.length){
+        var firstP2  = toMin(punchesEff[0]);
+        var workInM2 = toMin(shift.workIn);
+        var earlyIn  = workInM2 - firstP2;
+        if(earlyIn >= th.otStart){
+          otMin += Math.floor(earlyIn / u) * u;
         }
       }
 
@@ -1472,30 +1483,38 @@ function toMin(hhmm){
 }
 
 /**
- * 合併過近的重複打卡（員工忘記是否已打卡而連按兩下的情況）
- *   1) 把相鄰間隔 < gapMin 分鐘的打卡視為同一個 cluster
- *   2) 每個 cluster 留一個代表時間：
- *        - 最後一個 cluster（下班區）→ 留最晚（保留實際停留時間）
- *        - 其他 cluster（上班、進休、出休）→ 留最早（避免後面那筆被誤判成下個時段）
- *   範例：[15:01, 15:05] → 留 15:01；[22:44, 22:52] 若是最後 cluster → 留 22:52
+ * 把任意數量的打卡合併為「應有 N 次」，每筆對應到一個排定時段
+ *
+ *   1) 多於 N 筆 → 用 agglomerative clustering，反覆合併「相鄰間隔最小」的兩個 cluster
+ *      直到剩 N 個 cluster（員工忘記打過卡會連按兩下，視為同一筆）
+ *   2) 每個 cluster 取「最有利於員工」的代表時間（依 cluster 在當日的位置）：
+ *        index 偶數（上班 / 出休）→ 取最早（早到/早回工作 = 加班方向）
+ *        index 奇數（進休 / 下班）→ 取最晚（晚進休/晚下班 = 加班方向）
+ *
+ *   範例：1100-1400 1500-2100 班別（4 筆）
+ *     · 打 10:46 + 10:55 → 合併成上班 cluster，取最早 10:46（< 15 分，不算加班）
+ *     · 打 10:45 → 早 15 分鐘 ≥ 15 → 算加班
+ *     · 打 14:05 + 14:10 → 進休 cluster，取最晚 14:10（< 15 分，不算加班）
+ *     · 打 14:05 + 14:10 + 14:15 → 取最晚 14:15 ≥ 15 → 算加班
  */
-function dedupPunchClusters(sortedPunches, gapMin){
-  if(!sortedPunches || sortedPunches.length <= 1) return (sortedPunches||[]).slice();
-  gapMin = gapMin || 15;
-  var clusters = [[sortedPunches[0]]];
-  for(var i = 1; i < sortedPunches.length; i++){
-    var lastClusterArr = clusters[clusters.length-1];
-    var prev = toMin(lastClusterArr[lastClusterArr.length-1]);
-    var cur  = toMin(sortedPunches[i]);
-    if(cur - prev < gapMin){
-      lastClusterArr.push(sortedPunches[i]);   // 同一 cluster
-    } else {
-      clusters.push([sortedPunches[i]]);       // 新 cluster
+function mergePunchesToN(sortedPunches, N){
+  if(!sortedPunches || !N || N < 1) return (sortedPunches||[]).slice();
+  if(sortedPunches.length <= N) return sortedPunches.slice();
+
+  var clusters = sortedPunches.map(function(p){ return [p]; });
+  while(clusters.length > N){
+    var minGap = Infinity, minIdx = -1;
+    for(var i = 0; i < clusters.length - 1; i++){
+      var lastOfA  = clusters[i][clusters[i].length-1];
+      var firstOfB = clusters[i+1][0];
+      var gap = toMin(firstOfB) - toMin(lastOfA);
+      if(gap < minGap){ minGap = gap; minIdx = i; }
     }
+    clusters[minIdx] = clusters[minIdx].concat(clusters[minIdx+1]);
+    clusters.splice(minIdx+1, 1);
   }
   return clusters.map(function(cluster, idx){
-    if(idx === clusters.length - 1) return cluster[cluster.length-1]; // 最後 cluster 留最晚
-    return cluster[0];                                                // 其他 cluster 留最早
+    return (idx % 2 === 1) ? cluster[cluster.length-1] : cluster[0];
   });
 }
 
