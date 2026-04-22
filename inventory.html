@@ -163,6 +163,7 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
 .monthly tbody th.c-name-click:hover{background:#fff7ed;color:var(--accent-dark)}
 .monthly tbody th.c-name-click .edit-icon{opacity:0;font-size:10px;color:var(--ink-3);margin-left:3px;transition:opacity .15s}
 .monthly tbody th.c-name-click:hover .edit-icon{opacity:1;color:var(--accent)}
+.monthly tbody th.c-name-click .alias-badge{display:inline-block;font-size:10px;padding:1px 7px;border-radius:999px;background:rgba(16,185,129,.15);color:#047857;font-weight:700;margin-left:5px;vertical-align:middle;cursor:help;letter-spacing:0.3px}
 .monthly tbody td.c-type{position:sticky;left:80px;background:rgba(248,250,252,.95);padding:4px 8px;font-size:10.5px;font-weight:700;text-align:center;white-space:nowrap;border-right:1.5px solid var(--line);border-bottom:1px solid var(--line);z-index:1;letter-spacing:1px;min-width:68px}
 .monthly tbody td{padding:3px 5px;text-align:right;font-size:11.5px;font-family:ui-monospace,"SF Mono",Menlo,monospace;color:var(--ink);border-right:1px solid rgba(226,232,240,.5);border-bottom:1px solid rgba(226,232,240,.5);white-space:nowrap;min-width:36px}
 .monthly tbody tr.price-row td.c-type{color:var(--accent);background:rgba(255,247,237,.95)}
@@ -342,7 +343,8 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
       <span>💡</span>
       <span>
         <b>修正數字錯誤：</b>點擊月度表任一「日期欄頭」或「格子」，該日資料會載入至上方「品項明細」，修改後按「💾 儲存」覆蓋該日。<br>
-        <b>合併重複品項：</b>如 AI 辨識錯誤造成「速食麵」vs「迷食麵」分成兩列，點品項名稱（會顯示 ✎ 圖示）可重新命名，所有日期同名項目會一起合併。
+        <b>自動合併近似品項：</b>字元相似度 ≥ 33%（例「鴨肉丸」vs「上等縣肉丸」）會自動歸為同品項，該列會顯示綠色 <span style="display:inline-block;font-size:10px;padding:1px 6px;border-radius:999px;background:rgba(16,185,129,.15);color:#047857;font-weight:700">＋N</span> 徽章（懸停可看合併的別名）。<br>
+        <b>手動合併品項：</b>點品項名稱（會顯示 ✎ 圖示）可重新命名，所有日期同名項目會一起合併並同步雲端。
       </span>
     </div>
     <div id="hist-container"></div>
@@ -1141,6 +1143,65 @@ function normalizeItemName(s){
     .replace(/\s+/g, ' ');
 }
 
+// 模糊比對門檻：字元 Jaccard 相似度 ≥ 此值時判定為同品項
+// 例："鴨肉丸" vs "上等縣肉丸" → 共用 {肉,丸} / 聯集 {鴨,上,等,縣,肉,丸} = 2/6 ≈ 33%
+// 例："速食麵(箱)滷味專用" vs "迷食麵(箱)滷味專用" → ≈ 82%
+var FUZZY_MATCH_THRESHOLD = 0.33;
+
+// 計算兩個字串的字元集合 Jaccard 相似度（0~1）
+function jaccardSimilarity(a, b){
+  if(a === b) return 1;
+  if(!a || !b) return 0;
+  var setA = {}, setB = {};
+  for(var i=0;i<a.length;i++) setA[a.charAt(i)] = true;
+  for(var j=0;j<b.length;j++) setB[b.charAt(j)] = true;
+  var inter = 0, sizeA = 0, sizeB = 0;
+  for(var k in setA){ sizeA++; if(setB[k]) inter++; }
+  for(var k in setB){ sizeB++; }
+  var union = sizeA + sizeB - inter;
+  return union === 0 ? 0 : inter / union;
+}
+
+// 把一批名稱做群集：同一群的名字視為相同品項
+// 回傳：{ nameToRep: {n1: rep1, n2: rep1, ...}, repAliases: {rep1: [alias, ...]} }
+function clusterSimilarNames(nameCounts){
+  var names = Object.keys(nameCounts);
+  var clusters = []; // [[name, ...], ...]
+
+  names.forEach(function(n){
+    // 找第一個「任一成員」與 n 相似度 ≥ 門檻的群組
+    var joinedIdx = -1;
+    for(var i=0;i<clusters.length;i++){
+      for(var j=0;j<clusters[i].length;j++){
+        if(jaccardSimilarity(n, clusters[i][j]) >= FUZZY_MATCH_THRESHOLD){
+          joinedIdx = i; break;
+        }
+      }
+      if(joinedIdx >= 0) break;
+    }
+    if(joinedIdx >= 0) clusters[joinedIdx].push(n);
+    else clusters.push([n]);
+  });
+
+  // 每群選一個代表名：出現次數最多；次數相同時用較長的
+  var nameToRep = {};
+  var repAliases = {};
+  clusters.forEach(function(g){
+    var rep = g[0];
+    var repScore = [nameCounts[rep] || 0, rep.length];
+    g.forEach(function(n){
+      var s = [nameCounts[n] || 0, n.length];
+      if(s[0] > repScore[0] || (s[0] === repScore[0] && s[1] > repScore[1])){
+        rep = n; repScore = s;
+      }
+    });
+    repAliases[rep] = g.filter(function(n){ return n !== rep; });
+    g.forEach(function(n){ nameToRep[n] = rep; });
+  });
+
+  return { nameToRep: nameToRep, repAliases: repAliases };
+}
+
 // 日期正規化：把 AI 可能回傳的各種格式統一成 YYYY-MM-DD
 // 支援：
 //   - 西元："2026-04-18" / "2026-4-18" / "2026/4/18" / "2026年4月18日"
@@ -1226,9 +1287,23 @@ function renderHistoryTable(box, stat, records){
   var month = parseInt(ym[1], 10);
   var daysInMonth = new Date(year, month, 0).getDate();
 
-  // 依所選月份過濾並建 pivot：pivot[name][day] = {price, qty}
-  // 名稱正規化：移除不可見字元、兩側空白、合併多個空白、全形空白轉半形
-  // 這樣「蛤蠣 」「蛤蠣」「蛤蠣（中間空格）」等都會歸到同一列
+  // Step 1: 先蒐集本月所有名稱與出現次數（正規化之後）
+  var nameCounts = {};
+  (records || []).forEach(function(r){
+    if(!r.date || !r.name) return;
+    var dt = normalizeDate(r.date);
+    if(!dt || dt.indexOf(yearMonth+'-') !== 0) return;
+    var n = normalizeItemName(r.name);
+    if(!n) return;
+    nameCounts[n] = (nameCounts[n] || 0) + 1;
+  });
+
+  // Step 2: 模糊群集（Jaccard ≥ 33%）→ 決定每個名稱對應的代表名
+  var clusterResult = clusterSimilarNames(nameCounts);
+  var nameToRep = clusterResult.nameToRep;
+  var repAliases = clusterResult.repAliases;
+
+  // Step 3: 用代表名建 pivot：pivot[rep][day] = {price, qty}
   var pivot = {};
   var nameOrder = [];
   (records || []).forEach(function(r){
@@ -1237,12 +1312,13 @@ function renderHistoryTable(box, stat, records){
     if(!dt || dt.indexOf(yearMonth+'-') !== 0) return;
     var n = normalizeItemName(r.name);
     if(!n) return;
+    var rep = nameToRep[n] || n;
     var day = parseInt(dt.split('-')[2], 10);
     if(isNaN(day)) return;
-    if(!pivot[n]){ pivot[n] = {}; nameOrder.push(n); }
-    var prev = pivot[n][day] || { price:0, qty:0 };
-    // 同日同品項：單價取最新、貨量累加（若同日多張單）
-    pivot[n][day] = {
+    if(!pivot[rep]){ pivot[rep] = {}; nameOrder.push(rep); }
+    var prev = pivot[rep][day] || { price:0, qty:0 };
+    // 同日同品項：單價取最新、貨量累加（若同日多張單或相似名合併）
+    pivot[rep][day] = {
       price: (Number(r.price) || prev.price),
       qty: (prev.qty || 0) + (Number(r.qty) || 0)
     };
@@ -1310,7 +1386,14 @@ function renderHistoryTable(box, stat, records){
   nameOrder.forEach(function(n){
     var itemTotalQty = 0, itemTotalAmt = 0;
     // price row
-    html += '<tr class="price-row item-top"><th class="c-name c-name-click" rowspan="2" onclick="renameItem(\''+escapeAttr(n).replace(/'/g,"\\\'")+'\')" title="點品項名可重新命名並合併重複項">'+escapeAttr(n)+' <span class="edit-icon">✎</span></th><td class="c-type">採購價</td>';
+    var aliases = repAliases[n] || [];
+    var aliasBadge = aliases.length > 0
+      ? '<span class="alias-badge" title="自動合併相似品項：'+aliases.join('、')+'">＋'+aliases.length+'</span>'
+      : '';
+    var aliasTitle = aliases.length > 0
+      ? '此列已自動合併：'+aliases.join('、')+'\n點擊可重新命名'
+      : '點品項名可重新命名並合併重複項';
+    html += '<tr class="price-row item-top"><th class="c-name c-name-click" rowspan="2" onclick="renameItem(\''+escapeAttr(n).replace(/'/g,"\\\'")+'\')" title="'+escapeAttr(aliasTitle)+'">'+escapeAttr(n)+aliasBadge+' <span class="edit-icon">✎</span></th><td class="c-type">採購價</td>';
     for(var d=1; d<=daysInMonth; d++){
       var c = pivot[n][d];
       var wk = isWeekend(d) ? ' weekend' : '';
