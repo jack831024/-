@@ -294,7 +294,7 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
     <div style="padding:10px 12px;background:rgba(59,130,246,.04);border:1px dashed rgba(59,130,246,.2);border-radius:10px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
         <span style="font-weight:700;font-size:13px;color:#1e40af">👤 PT 名單與時薪</span>
-        <span style="font-size:11.5px;color:var(--ink-3)">上傳打卡後自動帶入未排班員工 → 手動填時薪 → 開始分析</span>
+        <span style="font-size:11.5px;color:var(--ink-3)">載入班表後自動帶入未排班員工 → 手動填時薪 → 開始分析</span>
       </div>
       <table class="shifts-table" id="pt-list-tbl">
         <thead><tr><th>姓名</th><th class="col-time">時薪 NT$</th><th class="col-del"></th></tr></thead>
@@ -555,6 +555,11 @@ function loadSchedule(){
       SCHEDULE = data;
       renderSchedulePreview();
       setStatus('sched-status','ok','✅ 已載入 '+(data.rows||[]).length+' 位員工');
+      // 班表載入後：清掉 PT 名單裡已被排班的人，並（若打卡已上傳）自動匯入未排班員工
+      cleanupPtListBySchedule();
+      if(PUNCHES && PUNCHES.rows && PUNCHES.rows.length){
+        autoImportPtList(true);
+      }
       maybeEnableAnalyze();
     })
     .catch(function(err){
@@ -1261,8 +1266,9 @@ function maybeEnableAnalyze(){
   document.getElementById('btn-analyze').disabled = !(SCHEDULE && PUNCHES && PUNCHES.rows && PUNCHES.rows.length);
   // PT 分析只需要打卡，不需要班表（PT = 打卡有但班表沒有的人）
   document.getElementById('btn-pt-analyze').disabled = !(PUNCHES && PUNCHES.rows && PUNCHES.rows.length);
-  // 打卡解析完成 → 自動匯入 PT 名單（不彈窗）
-  if(PUNCHES && PUNCHES.rows && PUNCHES.rows.length){
+  // 班表 + 打卡 都齊 → 自動匯入 PT 名單（在 loadSchedule 也會呼叫一次，
+  // 這裡是當「先載班表再上傳打卡」的順序也能觸發）
+  if(SCHEDULE && PUNCHES && PUNCHES.rows && PUNCHES.rows.length){
     autoImportPtList(true);
   }
 }
@@ -1691,8 +1697,26 @@ function delPtRow(btn){
   if(tr && tr.parentNode) tr.parentNode.removeChild(tr);
   savePtList();
 }
+// 班表載入後 → 把已被排班的人從 PT 名單移除（避免一個人同時當正職又當 PT）
+function cleanupPtListBySchedule(){
+  if(!SCHEDULE || !SCHEDULE.rows) return;
+  var schedNames = {};
+  SCHEDULE.rows.forEach(function(r){
+    var k = normalizeName(r.name);
+    if(k) schedNames[k] = true;
+  });
+  var current = readPtListFromDom();
+  var kept = current.filter(function(p){
+    return !schedNames[normalizeName(p.name)];
+  });
+  if(kept.length !== current.length){
+    localStorage.setItem(LS_KEY_PT_LIST, JSON.stringify(kept));
+    renderPtList();
+  }
+}
+
 // 從打卡資料自動匯入未排班員工到 PT 名單（不覆蓋已存在的人）
-//   silent=true 時：不彈視窗、不提示「沒新增」，給上傳時自動觸發用
+//   silent=true 時：不彈視窗、不提示「沒新增」，給自動觸發用
 function autoImportPtList(silent){
   if(!PUNCHES || !PUNCHES.rows.length){
     if(!silent) alert('請先上傳打卡 Excel/PDF 再匯入');
