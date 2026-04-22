@@ -755,11 +755,11 @@ function extractLinesFromItems(items){
  *   常見排版：
  *     考勤日期 2026-03-01 ~ 2026-03-31
  *     工號1 姓名 jack 部門 Not Set1
- *     1 2 3 4 5 6 7 8 9 10 11 ... 31      ← 日期欄位（共 31 欄）
- *     日 一 二 三 四 五 六 ...              ← 星期欄
+ *     1 2 3 4 5 6 7 8 9 10 11 ... 31      ← 日期欄位
  *     HH:MM                                 ← 打卡時間（縱向堆疊，X 座標對應到日期欄）
  *
- *   每個員工是一個區塊，時間以 X 座標對應到日期，Y 座標只用來切分員工區段。
+ *   重要：把多頁 items 合併成單一邏輯文檔（每頁 Y 軸往下偏移），
+ *         讓「表頭在 N 頁、時間延續到 N+1 頁」的員工也能被偵測到。
  */
 function parseAttendancePdfItems(pagesItems){
   var outRows = [];
@@ -767,92 +767,113 @@ function parseAttendancePdfItems(pagesItems){
   var year = new Date().getFullYear();
   var month = new Date().getMonth() + 1;
 
-  pagesItems.forEach(function(items){
-    if(!items || !items.length) return;
+  // 把多頁合併成一個虛擬大頁，每頁 Y 軸偏移
+  var Y_PAGE_GAP = 100000;
+  var items = [];
+  (pagesItems || []).forEach(function(pageItems, pageIdx){
+    if(!pageItems || !pageItems.length) return;
+    pageItems.forEach(function(it){
+      items.push({
+        x: it.x,
+        y: it.y - pageIdx * Y_PAGE_GAP, // 後續頁 Y 變很小（視為「在更下方」）
+        str: it.str,
+        width: it.width || 0
+      });
+    });
+  });
+  if(!items.length) return { rows: [], people: 0 };
 
-    // 偵測年月（考勤日期 YYYY-MM-DD ~ YYYY-MM-DD）
-    for(var i=0;i<items.length;i++){
-      var s = String(items[i].str || '');
-      var m = s.match(/(\d{4})-(\d{1,2})-\d{1,2}\s*[~～〜]/);
-      if(m){ year = Number(m[1]); month = Number(m[2]); break; }
-      // 也支援員工區塊表頭沒帶考勤日期、但旁邊有「YYYY-MM-DD」跟「YYYY-MM-DD」分開
-      m = s.match(/^(\d{4})-(\d{1,2})-\d{1,2}$/);
-      if(m){ year = Number(m[1]); month = Number(m[2]); }
+  // 偵測年月
+  for(var i=0; i<items.length; i++){
+    var s = String(items[i].str || '');
+    var m = s.match(/(\d{4})-(\d{1,2})-\d{1,2}\s*[~～〜]/);
+    if(m){ year = Number(m[1]); month = Number(m[2]); break; }
+    m = s.match(/^(\d{4})-(\d{1,2})-\d{1,2}$/);
+    if(m){ year = Number(m[1]); month = Number(m[2]); }
+  }
+
+  // 找員工表頭（用 Y±3pt 視窗聚合同列文字）
+  var reHeader = /工號[\s:：]*(\S+?)[\s:：]+姓名[\s:：]*(\S+?)[\s:：]+部門/;
+  var Y_TOLERANCE = 3;
+  var empHeaders = [];
+  var seenHeaderY = {};
+  items.forEach(function(ghItem){
+    if(!/工號/.test(String(ghItem.str || ''))) return;
+    var yKey = Math.round(ghItem.y);
+    if(seenHeaderY[yKey]) return;
+    var sameRow = items.filter(function(it){
+      return Math.abs(it.y - ghItem.y) <= Y_TOLERANCE;
+    });
+    sameRow.sort(function(a,b){ return a.x - b.x; });
+    var combined = sameRow.map(function(it){ return it.str; }).join(' ').replace(/\s+/g,' ');
+    var mm2 = combined.match(reHeader);
+    if(mm2){
+      seenHeaderY[yKey] = true;
+      empHeaders.push({ y: ghItem.y, workerId: mm2[1], name: mm2[2] });
+    }
+  });
+
+  // 由上往下排序（合併後 Y 越大越上）
+  empHeaders.sort(function(a,b){ return b.y - a.y; });
+  if(!empHeaders.length) return { rows: [], people: 0 };
+
+  // 逐個員工區塊
+  empHeaders.forEach(function(emp, ei){
+    var topY = emp.y;
+    var bottomY = (ei + 1 < empHeaders.length) ? empHeaders[ei+1].y : -Infinity;
+
+    var secItems = items.filter(function(it){
+      return it.y < topY - Y_TOLERANCE && it.y > bottomY + Y_TOLERANCE;
+    });
+    if(!secItems.length) return;
+
+    var colMap = findDayColumns(secItems);
+    if(!colMap.length){
+      // 找不到日期欄但仍有打卡時間 → 至少把員工列入（讓 PT 偵測能抓到他）
+      // 這種情況常見於跨頁的最後一個員工：時間在下一頁但沒有對應的日期列
+      var hasTime = secItems.some(function(it){
+        return /^\d{1,2}[:：]\d{2}$/.test(String(it.str||'').trim());
+      });
+      if(hasTime){
+        // 用月份 1 號當佔位日期，讓員工至少出現在 PUNCHES 裡
+        var placeholderDate = year + '-' + String(month).padStart(2,'0') + '-01';
+        secItems.forEach(function(it){
+          var s2 = String(it.str || '').trim();
+          var tm2 = s2.match(/^(\d{1,2})[:：](\d{2})$/);
+          if(!tm2) return;
+          var hh2 = Number(tm2[1]), mm22 = Number(tm2[2]);
+          if(hh2 < 0 || hh2 > 29 || mm22 < 0 || mm22 > 59) return;
+          var time2 = String(hh2).padStart(2,'0') + ':' + String(mm22).padStart(2,'0');
+          outRows.push({ name: emp.name, date: placeholderDate, time: time2 });
+          peopleSet[emp.name] = 1;
+        });
+      }
+      return;
     }
 
-    // 找出每個員工的表頭列（含「工號」「姓名」「部門」）
-    // 用 Y 視窗 ±3pt 聚合同一視覺列的 items；PDF 裡同一列的文字 Y 可能有微小差異，
-    // 若直接用 Math.round(y) 分組可能把「工號」與「姓名」/「部門」拆到不同群組而導致比對失敗。
-    // 支援格式：
-    //   「工號1 姓名 jack 部門 Not Set1」
-    //   「工號 ： 1 姓名 ： jack 部門 ： Not Set1」（含全形冒號、空格）
-    //   「工號:1 姓名:jack 部門:Not Set1」
-    var reHeader = /工號[\s:：]*(\S+?)[\s:：]+姓名[\s:：]*(\S+?)[\s:：]+部門/;
-    var Y_TOLERANCE = 3;
-    var empHeaders = [];
-    var seenHeaderY = {};
-    items.forEach(function(ghItem){
-      if(!/工號/.test(String(ghItem.str || ''))) return;
-      var yKey = Math.round(ghItem.y);
-      if(seenHeaderY[yKey]) return;
-      // 聚合 Y ±3pt 的所有 items 成為同一視覺列
-      var sameRow = items.filter(function(it){
-        return Math.abs(it.y - ghItem.y) <= Y_TOLERANCE;
-      });
-      sameRow.sort(function(a,b){ return a.x - b.x; });
-      var combined = sameRow.map(function(it){ return it.str; }).join(' ').replace(/\s+/g,' ');
-      var m = combined.match(reHeader);
-      if(m){
-        seenHeaderY[yKey] = true;
-        empHeaders.push({ y: ghItem.y, workerId: m[1], name: m[2] });
+    secItems.forEach(function(it){
+      var s3 = String(it.str || '').trim();
+      var tm = s3.match(/^(\d{1,2})[:：](\d{2})$/);
+      if(!tm) return;
+      var hh = Number(tm[1]), mmin = Number(tm[2]);
+      if(hh < 0 || hh > 29 || mmin < 0 || mmin > 59) return;
+
+      var tx = it.x + (it.width || 0) / 2;
+      var closest = null, minDist = Infinity;
+      for(var k=0; k<colMap.length; k++){
+        var d = Math.abs(colMap[k].x - tx);
+        if(d < minDist){ minDist = d; closest = colMap[k]; }
       }
-    });
+      if(!closest) return;
 
-    // 由上往下排序（PDF Y 越大越上）
-    empHeaders.sort(function(a,b){ return b.y - a.y; });
+      var day = closest.day;
+      var dayInMonth = new Date(year, month, 0).getDate();
+      if(day < 1 || day > dayInMonth) return;
 
-    if(!empHeaders.length) return;
-
-    // 逐個員工區塊
-    empHeaders.forEach(function(emp, ei){
-      var topY = emp.y;
-      var bottomY = (ei + 1 < empHeaders.length) ? empHeaders[ei+1].y : -Infinity;
-
-      // 本區段的所有 items（用 Y 視窗避開表頭本身）
-      var secItems = items.filter(function(it){
-        return it.y < topY - Y_TOLERANCE && it.y > bottomY + Y_TOLERANCE;
-      });
-      if(!secItems.length) return;
-
-      // 找日期欄 X 對應表
-      var colMap = findDayColumns(secItems);
-      if(!colMap.length) return;
-
-      // 把本區段裡 HH:MM 的時間 items，依 X 座標對應到最近的 day
-      secItems.forEach(function(it){
-        var s = String(it.str || '').trim();
-        var tm = s.match(/^(\d{1,2})[:：](\d{2})$/);
-        if(!tm) return;
-        var hh = Number(tm[1]), mm = Number(tm[2]);
-        if(hh < 0 || hh > 29 || mm < 0 || mm > 59) return;
-
-        var tx = it.x + (it.width || 0) / 2;
-        var closest = null, minDist = Infinity;
-        for(var k=0; k<colMap.length; k++){
-          var d = Math.abs(colMap[k].x - tx);
-          if(d < minDist){ minDist = d; closest = colMap[k]; }
-        }
-        if(!closest) return;
-
-        var day = closest.day;
-        var dayInMonth = new Date(year, month, 0).getDate();
-        if(day < 1 || day > dayInMonth) return;
-
-        var date = year + '-' + String(month).padStart(2,'0') + '-' + String(day).padStart(2,'0');
-        var time = String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
-        outRows.push({ name: emp.name, date: date, time: time });
-        peopleSet[emp.name] = 1;
-      });
+      var date = year + '-' + String(month).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+      var time = String(hh).padStart(2,'0') + ':' + String(mmin).padStart(2,'0');
+      outRows.push({ name: emp.name, date: date, time: time });
+      peopleSet[emp.name] = 1;
     });
   });
 
