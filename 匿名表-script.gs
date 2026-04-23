@@ -16,9 +16,19 @@
 var SURVEY_SHEET_ID = '';
 
 // ============================================
-// 🔑 主管密碼（改成你要的密碼！）
+// 🔑 主管密碼（每家店獨立，只能看自己店的資料）
 // ============================================
-var MANAGER_PASSWORD = 'shicheng2026';
+var STORE_PASSWORDS = {
+  'chudian-zhonghe':    'a90369287',  // 中和店
+  'chudian-yongchun':   'a94213054',  // 永春店
+  'chudian-xinzhuang':  'a60749791',  // 新莊店
+  'shicheng-zhongxiao': 'a61222042'   // 十城忠孝店
+};
+
+// 檢查密碼是否對應某家店
+function _verifyFor(password, store) {
+  return STORE_PASSWORDS[store] === String(password || '');
+}
 
 // ============================================
 // 📋 工作表名稱 / 欄位
@@ -104,10 +114,16 @@ function submitSurvey(payload) {
 
 
 // ============================================
-// 🔒 verifyPassword — 驗證主管密碼
+// 🔒 verifyPassword — 驗證主管密碼，回傳該密碼對應的店家
 // ============================================
 function verifyPassword(password) {
-  return { ok: String(password || '') === MANAGER_PASSWORD };
+  var pwd = String(password || '');
+  for (var storeId in STORE_PASSWORDS) {
+    if (STORE_PASSWORDS[storeId] === pwd) {
+      return { ok: true, store: storeId };
+    }
+  }
+  return { ok: false };
 }
 
 
@@ -116,8 +132,8 @@ function verifyPassword(password) {
 // ============================================
 function getSurveys(password, store, month) {
   try {
-    if (String(password || '') !== MANAGER_PASSWORD) return { ok: false, error: 'unauthorized' };
     if (VALID_STORES.indexOf(store) === -1) return { ok: false, error: '無效的店家：' + store };
+    if (!_verifyFor(password, store)) return { ok: false, error: 'unauthorized' };
 
     var sheet = getSurveySheet();
     var data = sheet.getDataRange().getValues();
@@ -170,8 +186,8 @@ function getPositions(store) {
 
 function setPositions(password, store, positions) {
   try {
-    if (String(password || '') !== MANAGER_PASSWORD) return { ok: false, error: 'unauthorized' };
     if (VALID_STORES.indexOf(store) === -1) return { ok: false, error: '無效的店家' };
+    if (!_verifyFor(password, store)) return { ok: false, error: 'unauthorized' };
     if (!positions || typeof positions !== 'object') return { ok: false, error: 'invalid positions' };
     PropertiesService.getScriptProperties().setProperty('positions_' + store, JSON.stringify(positions));
     return { ok: true, positions: positions };

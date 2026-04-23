@@ -126,6 +126,7 @@ h1{font-size:26px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 .mgr-toolbar .spacer{flex:1}
 .mgr-stat{font-size:13px;color:var(--ink-2)}
 .mgr-stat b{color:var(--ink);font-weight:700}
+.mgr-store-current{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:linear-gradient(135deg,#d1fae5 0%,#a7f3d0 100%);border-radius:8px;font-size:13px;color:#065f46;font-weight:600}
 
 .result-table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;margin-bottom:1.25rem}
 .result-table th, .result-table td{padding:10px 8px;text-align:center;border-bottom:1px solid var(--line)}
@@ -293,7 +294,7 @@ h1{font-size:26px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
         <div class="lock-icon">🔒</div>
         <div>
           <div class="mgr-title">主管專用 · 檢視填寫結果</div>
-          <div class="mgr-sub">請輸入主管密碼解鎖</div>
+          <div class="mgr-sub">輸入你的店家主管密碼，只會看到自己店的資料</div>
         </div>
       </div>
       <div class="pwd-row">
@@ -327,8 +328,7 @@ h1{font-size:26px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
       </div>
 
       <div class="mgr-toolbar">
-        <label for="mgr-store">店家：</label>
-        <select id="mgr-store" class="input"></select>
+        <span class="mgr-store-current">🔓 <b id="mgr-store-name">—</b></span>
         <label for="mgr-month">月份：</label>
         <select id="mgr-month" class="input"></select>
         <button id="btn-refresh" class="btn btn-ghost" type="button" style="padding:8px 14px;font-size:12.5px">🔄 重新整理</button>
@@ -650,11 +650,15 @@ function unlockManager(){
   btn.disabled = true; btn.textContent = '驗證中...';
 
   callGAS('verifyPassword', pwd).then(function(res){
-    if(res && res.ok){
+    if(res && res.ok && res.store){
       sessionStorage.setItem('cd_survey_mgr_pwd', pwd);
+      sessionStorage.setItem('cd_survey_mgr_store', res.store);
+      currentMgrStore = res.store;
+      var s = getStore(res.store);
+      $('mgr-store-name').textContent = s ? s.name : res.store;
       $('mgr-locked').style.display = 'none';
       $('mgr-unlocked').style.display = 'block';
-      toast('✅ 已解鎖', 'ok');
+      toast('✅ 已解鎖：' + (s ? s.name : res.store), 'ok');
       loadPositions();
       loadManagerResults();
     }else{
@@ -670,6 +674,7 @@ function unlockManager(){
 
 function lockManager(){
   sessionStorage.removeItem('cd_survey_mgr_pwd');
+  sessionStorage.removeItem('cd_survey_mgr_store');
   $('mgr-pwd').value = '';
   $('mgr-locked').style.display = 'block';
   $('mgr-unlocked').style.display = 'none';
@@ -900,11 +905,6 @@ document.addEventListener('DOMContentLoaded', function(){
   buildMonthOptions($('survey-month'), dm);
   buildMonthOptions($('mgr-month'), dm);
 
-  // 主管區店家下拉
-  $('mgr-store').innerHTML = STORES.map(function(s){
-    return '<option value="'+s.id+'"'+(s.id===currentMgrStore?' selected':'')+'>'+esc(s.name)+'</option>';
-  }).join('');
-
   // 送出 / 重填
   $('btn-submit').addEventListener('click', submitSurvey);
   $('btn-reset').addEventListener('click', function(){
@@ -915,11 +915,6 @@ document.addEventListener('DOMContentLoaded', function(){
   $('btn-unlock').addEventListener('click', unlockManager);
   $('mgr-pwd').addEventListener('keydown', function(e){ if(e.key==='Enter') unlockManager(); });
   $('btn-lock').addEventListener('click', lockManager);
-  $('mgr-store').addEventListener('change', function(e){
-    currentMgrStore = e.target.value;
-    loadPositions();
-    loadManagerResults();
-  });
   $('mgr-month').addEventListener('change', loadManagerResults);
   $('btn-refresh').addEventListener('click', loadManagerResults);
   $('btn-save-positions').addEventListener('click', savePositions);
