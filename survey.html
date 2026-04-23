@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<title>十城匿名表</title>
+<title>匿名表</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -40,6 +40,30 @@ h1{font-size:26px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 .subtitle .hl{color:var(--err);font-weight:600}
 
 .card{background:rgba(255,255,255,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.8);border-radius:18px;padding:1.5rem;margin-bottom:1.25rem;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -12px rgba(15,23,42,.08)}
+
+/* 店別選單（首頁） */
+.store-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.store-card{background:#fff;border:2px solid var(--line);border-radius:16px;padding:1.1rem 1rem;cursor:pointer;text-align:left;transition:all .2s;display:flex;flex-direction:column;gap:4px;font-family:inherit;color:inherit;position:relative;overflow:hidden}
+.store-card::after{content:"→";position:absolute;right:14px;bottom:12px;font-size:18px;color:var(--ink-3);transition:all .2s}
+.store-card:hover{transform:translateY(-3px);box-shadow:0 12px 28px -12px rgba(15,23,42,.18)}
+.store-card:hover::after{transform:translateX(4px);color:var(--ink)}
+.store-card.chudian{background:linear-gradient(135deg,#fff7ed 0%,#ffedd5 100%);border-color:#fed7aa}
+.store-card.chudian:hover{border-color:#f97316}
+.store-card.shicheng{background:linear-gradient(135deg,#ede9fe 0%,#ddd6fe 100%);border-color:#c4b5fd}
+.store-card.shicheng:hover{border-color:#8b5cf6}
+.store-card-top{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.store-card-emoji{font-size:26px;line-height:1}
+.store-card-brand{font-size:10.5px;color:var(--ink-3);letter-spacing:2px;font-weight:600}
+.store-card-name{font-size:16px;font-weight:700;color:var(--ink)}
+.store-card-emp{font-size:11.5px;color:var(--ink-2);margin-top:4px;line-height:1.5}
+
+/* 選完店切換 */
+.store-switch-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.store-switch-btn{background:rgba(255,255,255,.7);border:1px solid var(--line);color:var(--ink-2);padding:7px 14px;border-radius:999px;font-size:12.5px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px}
+.store-switch-btn:hover{background:#fff;color:var(--brand);border-color:var(--brand)}
+.current-store-tag{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:700;color:#fff;letter-spacing:1px}
+.current-store-tag.chudian{background:linear-gradient(135deg,#f97316,#ea580c)}
+.current-store-tag.shicheng{background:linear-gradient(135deg,#8b5cf6,#7c3aed)}
 
 .field{margin-bottom:1rem}
 .field:last-child{margin-bottom:0}
@@ -167,6 +191,7 @@ h1{font-size:26px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 
 @media(max-width:640px){
   .positions-grid{grid-template-columns:1fr}
+  .store-grid{grid-template-columns:1fr}
 }
 
 .comment-list{display:flex;flex-direction:column;gap:10px;margin-top:0.5rem}
@@ -204,38 +229,58 @@ h1{font-size:26px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 
   <div class="hero">
     <div class="hero-logo">📝</div>
-    <h1 id="page-title">十城匿名表</h1>
-    <p class="subtitle">此填單為<span class="hl">匿名</span>，可以隨心所欲地講出心裡話<br><span style="font-size:12px;color:var(--ink-3)">評分可選填：不熟悉某人某項表現，留白不評分即可</span></p>
+    <h1 id="page-title">匿名表</h1>
+    <p class="subtitle" id="page-sub">請選擇要填寫的店</p>
   </div>
 
-  <!-- ========== 月份選擇 ========== -->
-  <div class="card">
-    <div class="field" style="margin-bottom:0">
-      <label class="label">評分月份<span class="req">*</span></label>
-      <select id="survey-month" class="input"></select>
-      <p class="hint">請選擇這份評分要對應的月份</p>
+  <!-- ========== 店別選單 ========== -->
+  <div id="view-picker">
+    <div class="card">
+      <div class="store-grid" id="store-picker-grid"></div>
     </div>
   </div>
 
-  <!-- ========== 評分區 ========== -->
-  <div id="categories-host"></div>
-
-  <!-- ========== 文字意見 ========== -->
-  <div class="card">
-    <div class="field">
-      <label class="label" for="comment-coworker">對店裡哪幾位同仁有沒有話想說？<span class="req">*</span></label>
-      <p class="hint">說出優點或是缺點需要改善的地方都可以</p>
-      <textarea id="comment-coworker" class="textarea" placeholder="寫下你對同仁的想法..."></textarea>
+  <!-- ========== 填寫表單（選完店才顯示） ========== -->
+  <div id="view-form" style="display:none">
+    <div class="store-switch-bar">
+      <button class="store-switch-btn" type="button" onclick="goToPicker()">← 換店</button>
+      <span class="current-store-tag" id="current-store-tag"></span>
     </div>
-    <div class="field">
-      <label class="label" for="comment-company">對公司有沒有想說的呢？<span class="req">*</span></label>
-      <textarea id="comment-company" class="textarea" placeholder="寫下你對公司的想法..."></textarea>
-    </div>
-  </div>
 
-  <div class="submit-row">
-    <button id="btn-reset" class="btn btn-ghost" type="button">重填</button>
-    <button id="btn-submit" class="btn btn-primary" type="button">送出匿名表單</button>
+    <!-- 月份選擇 -->
+    <div class="card">
+      <div class="field" style="margin-bottom:0">
+        <label class="label">評分月份<span class="req">*</span></label>
+        <select id="survey-month" class="input"></select>
+        <p class="hint">請選擇這份評分要對應的月份</p>
+      </div>
+    </div>
+
+    <!-- 評分區（依選的店動態產生） -->
+    <div id="categories-host"></div>
+
+    <!-- 文字意見 -->
+    <div class="card">
+      <div class="field">
+        <label class="label" for="comment-coworker">對店裡哪幾位同仁有沒有話想說？<span class="req">*</span></label>
+        <p class="hint">說出優點或是缺點需要改善的地方都可以</p>
+        <textarea id="comment-coworker" class="textarea" placeholder="寫下你對同仁的想法..."></textarea>
+      </div>
+      <div class="field">
+        <label class="label" for="comment-company">對公司有沒有想說的呢？<span class="req">*</span></label>
+        <textarea id="comment-company" class="textarea" placeholder="寫下你對公司的想法..."></textarea>
+      </div>
+    </div>
+
+    <div class="submit-row">
+      <button id="btn-reset" class="btn btn-ghost" type="button">重填</button>
+      <button id="btn-submit" class="btn btn-primary" type="button">送出匿名表單</button>
+    </div>
+
+    <p style="text-align:center;font-size:11.5px;color:var(--ink-3);margin:0.5rem 0 0;line-height:1.7">
+      此填單為<span style="color:var(--err);font-weight:600">匿名</span>，可以隨心所欲地講出心裡話<br>
+      評分可選填：不熟悉某人某項表現，留白不評分即可
+    </p>
   </div>
 
   <!-- ========== 主管專區 ========== -->
@@ -282,7 +327,9 @@ h1{font-size:26px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
       </div>
 
       <div class="mgr-toolbar">
-        <label for="mgr-month">檢視月份：</label>
+        <label for="mgr-store">店家：</label>
+        <select id="mgr-store" class="input"></select>
+        <label for="mgr-month">月份：</label>
         <select id="mgr-month" class="input"></select>
         <button id="btn-refresh" class="btn btn-ghost" type="button" style="padding:8px 14px;font-size:12.5px">🔄 重新整理</button>
         <span class="spacer"></span>
@@ -326,11 +373,48 @@ var CATEGORIES = [
   { id:'shift',      name:'開收班',   desc:'效率、完整度' },
   { id:'clean',      name:'清潔',     desc:'洗碗速度、環境整潔、週清' }
 ];
-var EMPLOYEES = ['林梓彥','王謖','林哲民','陳柏維'];
+// 🏪 4 家店設定（id 必須跟後端 VALID_STORES 對應）
+var STORES = [
+  { id:'chudian-zhonghe',    name:'初殿中和店', brand:'chudian',  brandLabel:'CHUDIAN · 初殿',  emoji:'🍲' },
+  { id:'chudian-yongchun',   name:'初殿永春店', brand:'chudian',  brandLabel:'CHUDIAN · 初殿',  emoji:'🍲' },
+  { id:'chudian-xinzhuang',  name:'初殿新莊店', brand:'chudian',  brandLabel:'CHUDIAN · 初殿',  emoji:'🍲' },
+  { id:'shicheng-zhongxiao', name:'十城忠孝店', brand:'shicheng', brandLabel:'SHICHENG · 十城', emoji:'🍜' }
+];
+
+// 各店預設員工職位（後端是同一份；若主管改過，loadPositions 會用後端覆蓋）
+var STORE_DEFAULT_POSITIONS = {
+  'chudian-zhonghe': {
+    '李文少':'店長', '施偉祥':'副店長', '劉濡瑜':'正職', '褚心榆':'正職'
+  },
+  'chudian-yongchun': {
+    '謝其淇':'店長', '林韋翔':'副店長', '洪文祥':'正職', '呂直宸':'正職', '吳孟澤':'正職', '邱昊勳':'正職'
+  },
+  'chudian-xinzhuang': {
+    '蔡鈺豪':'店長', '蘇奕誠':'副店長', '李嘉真':'正職', '洪仕賢':'正職'
+  },
+  'shicheng-zhongxiao': {
+    '林梓彥':'店長', '王謖':'正職', '林哲民':'正職', '陳柏維':'正職'
+  }
+};
+
 var POSITION_OPTIONS = ['店長','副店長','正職','兼職'];
 var NO_BONUS_TITLES = ['店長','副店長'];
-// 主管解鎖後會從後端載入，預設先放空物件
-var CURRENT_POSITIONS = {};
+
+// 狀態
+var currentFormStore = null;              // 使用者在填表單時選的店
+var currentMgrStore  = STORES[0].id;      // 主管在檢視時選的店（預設中和店）
+var POSITIONS_BY_STORE = {};              // { storeId: { name: position } }
+
+function getStore(id){
+  for(var i=0;i<STORES.length;i++){ if(STORES[i].id===id) return STORES[i]; }
+  return null;
+}
+function getEmployees(storeId){
+  return Object.keys(STORE_DEFAULT_POSITIONS[storeId] || {});
+}
+function getPositionsFor(storeId){
+  return POSITIONS_BY_STORE[storeId] || STORE_DEFAULT_POSITIONS[storeId] || {};
+}
 
 // ============================================
 // 🛠️ 工具
@@ -374,10 +458,63 @@ function defaultMonth(){
 }
 
 // ============================================
+// 🏪 店別選單
+// ============================================
+function renderStorePicker(){
+  $('store-picker-grid').innerHTML = STORES.map(function(s){
+    var empList = getEmployees(s.id).join('、');
+    return '<button class="store-card '+s.brand+'" type="button" onclick="selectStore(\''+s.id+'\')">'
+      + '<div class="store-card-top">'
+      +   '<span class="store-card-emoji">'+s.emoji+'</span>'
+      +   '<span class="store-card-brand">'+esc(s.brandLabel)+'</span>'
+      + '</div>'
+      + '<div class="store-card-name">'+esc(s.name)+'</div>'
+      + '<div class="store-card-emp">'+esc(empList)+'</div>'
+      + '</button>';
+  }).join('');
+}
+
+function selectStore(storeId){
+  var s = getStore(storeId);
+  if(!s){ toast('⚠ 無效的店家', 'err'); return; }
+  currentFormStore = storeId;
+
+  // 更新標題列
+  $('page-title').textContent = '匿名表 · ' + s.name;
+  $('page-sub').innerHTML = '此填單為<span class="hl">匿名</span>，可以隨心所欲地講出心裡話';
+
+  // 更新 tag
+  var tag = $('current-store-tag');
+  tag.className = 'current-store-tag ' + s.brand;
+  tag.innerHTML = s.emoji + ' ' + esc(s.name);
+
+  // 切換畫面
+  $('view-picker').style.display = 'none';
+  $('view-form').style.display = 'block';
+
+  // 渲染評分區
+  renderCategories();
+
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+function goToPicker(){
+  currentFormStore = null;
+  $('view-picker').style.display = 'block';
+  $('view-form').style.display = 'none';
+  $('page-title').textContent = '匿名表';
+  $('page-sub').textContent = '請選擇要填寫的店';
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+
+// ============================================
 // 🧾 渲染題目
 // ============================================
 function renderCategories(){
   var host = $('categories-host');
+  if(!currentFormStore){ host.innerHTML = ''; return; }
+  var emps = getEmployees(currentFormStore);
   host.innerHTML = CATEGORIES.map(function(cat, idx){
     var catId = cat.id;
     var descHtml = cat.desc ? '<div class="cat-desc">'+esc(cat.desc)+'</div>' : '';
@@ -389,7 +526,7 @@ function renderCategories(){
       '<div class="rate-head">2</div>',
       '<div class="rate-head"><span class="worst">1</span></div>'
     ].join('');
-    var rows = EMPLOYEES.map(function(emp){
+    var rows = emps.map(function(emp){
       var cells = [5,4,3,2,1].map(function(v){
         var inputId = 'r_'+catId+'_'+emp+'_'+v;
         var name = 'r_'+catId+'_'+emp;
@@ -419,16 +556,18 @@ function renderCategories(){
 // ✉️ 收集表單
 // ============================================
 function collectForm(){
+  if(!currentFormStore) return { error:'請先選擇店家' };
   var month = $('survey-month').value;
   if(!month) return { error:'請選擇月份' };
 
+  var emps = getEmployees(currentFormStore);
   // 評分全部可選：沒打分的就不存（不會把 null 送出，減少資料雜訊）
   var ratings = {};
   for(var i=0;i<CATEGORIES.length;i++){
     var cat = CATEGORIES[i];
     ratings[cat.id] = {};
-    for(var j=0;j<EMPLOYEES.length;j++){
-      var emp = EMPLOYEES[j];
+    for(var j=0;j<emps.length;j++){
+      var emp = emps[j];
       var checked = document.querySelector('input[name="r_'+cat.id+'_'+emp+'"]:checked');
       if(checked){
         ratings[cat.id][emp] = Number(checked.value);
@@ -443,6 +582,7 @@ function collectForm(){
   if(!company)  return { error:'「對公司的話」必填' };
 
   return {
+    store: currentFormStore,
     month: month,
     ratings: ratings,
     coworkerComment: coworker,
@@ -535,12 +675,14 @@ function lockManager(){
   $('mgr-unlocked').style.display = 'none';
 }
 
-// ---- 職位設定 ----
+// ---- 職位設定（每家店獨立） ----
 function renderPositionsGrid(){
-  var html = EMPLOYEES.map(function(emp){
-    var cur = CURRENT_POSITIONS[emp] || '正職';
+  var emps = getEmployees(currentMgrStore);
+  var cur = getPositionsFor(currentMgrStore);
+  var html = emps.map(function(emp){
+    var pos = cur[emp] || '正職';
     var opts = POSITION_OPTIONS.map(function(p){
-      return '<option value="'+esc(p)+'"'+(p===cur?' selected':'')+'>'+esc(p)+'</option>';
+      return '<option value="'+esc(p)+'"'+(p===pos?' selected':'')+'>'+esc(p)+'</option>';
     }).join('');
     return '<div class="position-row">'
       + '<span class="pname">'+esc(emp)+'</span>'
@@ -551,8 +693,8 @@ function renderPositionsGrid(){
 }
 
 function loadPositions(){
-  callGAS('getPositions').then(function(res){
-    if(res && typeof res === 'object'){ CURRENT_POSITIONS = res; }
+  callGAS('getPositions', currentMgrStore).then(function(res){
+    if(res && typeof res === 'object'){ POSITIONS_BY_STORE[currentMgrStore] = res; }
     renderPositionsGrid();
   }).catch(function(err){
     console.warn('載入職位失敗', err);
@@ -569,9 +711,9 @@ function savePositions(){
   });
   var btn = $('btn-save-positions');
   btn.disabled = true; btn.textContent = '儲存中...';
-  callGAS('setPositions', pwd, newPos).then(function(res){
+  callGAS('setPositions', pwd, currentMgrStore, newPos).then(function(res){
     if(res && res.ok){
-      CURRENT_POSITIONS = res.positions || newPos;
+      POSITIONS_BY_STORE[currentMgrStore] = res.positions || newPos;
       toast('✅ 職位已儲存', 'ok');
       loadManagerResults(); // 重新套用獎金規則
     }else{
@@ -585,7 +727,8 @@ function savePositions(){
 }
 
 function isNoBonus(emp){
-  var title = CURRENT_POSITIONS[emp];
+  var cur = getPositionsFor(currentMgrStore);
+  var title = cur[emp];
   return NO_BONUS_TITLES.indexOf(title) !== -1;
 }
 
@@ -599,14 +742,14 @@ function loadManagerResults(){
   $('mgr-coworker-comments').innerHTML = '';
   $('mgr-company-comments').innerHTML = '';
 
-  callGAS('getSurveys', pwd, month).then(function(res){
+  callGAS('getSurveys', pwd, currentMgrStore, month).then(function(res){
     if(!res || !res.ok){
       if(res && res.error === 'unauthorized'){ lockManager(); toast('密碼已失效，請重新解鎖', 'err'); return; }
       toast('❌ 讀取失敗：'+(res && res.error || '未知錯誤'), 'err');
       $('mgr-results').innerHTML = '<div class="empty-state">讀取失敗</div>';
       return;
     }
-    if(res.positions){ CURRENT_POSITIONS = res.positions; renderPositionsGrid(); }
+    if(res.positions){ POSITIONS_BY_STORE[currentMgrStore] = res.positions; renderPositionsGrid(); }
     renderManagerResults(res.records || []);
   }).catch(function(err){
     toast('❌ '+err.message, 'err');
@@ -629,12 +772,14 @@ function renderManagerResults(records){
   var BONUS_AMOUNT    = 100;   // 每項獎金金額
 
   // 先算每個員工的獎金與得分分布，並渲染每項卡片
+  var emps = getEmployees(currentMgrStore);
+  var curPositions = getPositionsFor(currentMgrStore);
   var totalBonus = {};
   var bonusBreakdown = {}; // 記錄每個人拿到哪幾項獎金
-  EMPLOYEES.forEach(function(e){ totalBonus[e] = 0; bonusBreakdown[e] = []; });
+  emps.forEach(function(e){ totalBonus[e] = 0; bonusBreakdown[e] = []; });
 
   var catsHtml = CATEGORIES.map(function(cat, idx){
-    var cols = EMPLOYEES.map(function(emp){
+    var cols = emps.map(function(emp){
       var counts = {1:0, 2:0, 3:0, 4:0, 5:0};
       var sum = 0, cnt = 0;
       records.forEach(function(rec){
@@ -670,7 +815,7 @@ function renderManagerResults(records){
       }).join('');
 
       var avgText = avg !== null ? avg.toFixed(2) : '—';
-      var title = CURRENT_POSITIONS[emp] || '';
+      var title = curPositions[emp] || '';
       var titleCls = 'emp-title-badge' + (noBonus ? ' mgr' : '');
       var titleBadge = title ? '<span class="'+titleCls+'">'+esc(title)+'</span>' : '';
       var bonusBadge = isBonus ? '<span class="emp-bonus-badge">✨ +$'+BONUS_AMOUNT+'</span>' : '';
@@ -693,11 +838,11 @@ function renderManagerResults(records){
   }).join('');
 
   // 獎金總計卡
-  var bonusCardsHtml = EMPLOYEES.map(function(emp){
+  var bonusCardsHtml = emps.map(function(emp){
     var noBonus = isNoBonus(emp);
     var amt = totalBonus[emp];
     var items = bonusBreakdown[emp];
-    var title = CURRENT_POSITIONS[emp] || '';
+    var title = curPositions[emp] || '';
     var titleHtml = title ? '<span class="emp-title-badge'+(noBonus?' mgr':'')+'" style="margin-left:4px">'+esc(title)+'</span>' : '';
     var amtCls = amt > 0 ? 'bonus-amt' : 'bonus-amt zero';
     var breakdown;
@@ -747,28 +892,48 @@ function formatTs(iso){
 // 🚀 啟動
 // ============================================
 document.addEventListener('DOMContentLoaded', function(){
-  renderCategories();
+  // 店別選單
+  renderStorePicker();
+
+  // 月份選單
   var dm = defaultMonth();
   buildMonthOptions($('survey-month'), dm);
   buildMonthOptions($('mgr-month'), dm);
 
+  // 主管區店家下拉
+  $('mgr-store').innerHTML = STORES.map(function(s){
+    return '<option value="'+s.id+'"'+(s.id===currentMgrStore?' selected':'')+'>'+esc(s.name)+'</option>';
+  }).join('');
+
+  // 送出 / 重填
   $('btn-submit').addEventListener('click', submitSurvey);
   $('btn-reset').addEventListener('click', function(){
     if(confirm('確定要清空所有填寫內容嗎？')) resetForm();
   });
+
+  // 主管區事件
   $('btn-unlock').addEventListener('click', unlockManager);
   $('mgr-pwd').addEventListener('keydown', function(e){ if(e.key==='Enter') unlockManager(); });
   $('btn-lock').addEventListener('click', lockManager);
+  $('mgr-store').addEventListener('change', function(e){
+    currentMgrStore = e.target.value;
+    loadPositions();
+    loadManagerResults();
+  });
   $('mgr-month').addEventListener('change', loadManagerResults);
   $('btn-refresh').addEventListener('click', loadManagerResults);
   $('btn-save-positions').addEventListener('click', savePositions);
 
-  // 如果 sessionStorage 有舊密碼，嘗試自動解鎖
+  // 如果 sessionStorage 有舊密碼，保留但不自動解鎖
   var savedPwd = sessionStorage.getItem('cd_survey_mgr_pwd');
-  if(savedPwd){
-    $('mgr-pwd').value = savedPwd;
-    // 不自動解鎖，等用戶按按鈕（避免沒設 URL 時一直噴錯）
-  }
+  if(savedPwd){ $('mgr-pwd').value = savedPwd; }
+
+  // URL 參數支援：?store=xxx 直接進該店的填表畫面
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var s = params.get('store');
+    if(s && getStore(s)){ selectStore(s); }
+  } catch(e) {}
 
   // 如果不是從 Apps Script Web App 打開，顯示提醒
   if(typeof google === 'undefined' || !google.script || !google.script.run){
