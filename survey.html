@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>十城匿名表</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#8b5cf6;
+  --brand-dark:#7c3aed;
+  --accent:#f97316;
+  --ink:#0f172a;
+  --ink-2:#475569;
+  --ink-3:#94a3b8;
+  --line:#e2e8f0;
+  --bg:#f8fafc;
+  --ok:#10b981;
+  --warn:#f59e0b;
+  --err:#ef4444;
+}
+html,body{height:100%}
+body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;padding:1.25rem;
+  background:
+    radial-gradient(1000px 500px at 10% -10%, #ede9fe 0%, transparent 50%),
+    radial-gradient(800px 500px at 110% 10%, #fde4d3 0%, transparent 55%),
+    linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+}
+
+.stage{max-width:920px;margin:0 auto;padding:1.5rem 0}
+
+.back-link{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);text-decoration:none;font-size:13px;margin-bottom:1rem;padding:6px 12px;background:rgba(255,255,255,.7);border-radius:999px;border:1px solid var(--line);transition:all .2s}
+.back-link:hover{background:#fff;color:var(--brand)}
+
+.hero{text-align:center;margin-bottom:2rem}
+.hero-logo{width:72px;height:72px;margin:0 auto 1rem;border-radius:22px;background:linear-gradient(135deg,#fff 0%,#f1f5f9 100%);box-shadow:0 10px 30px -10px rgba(139,92,246,.4),0 0 0 1px rgba(15,23,42,.04);display:flex;align-items:center;justify-content:center;font-size:36px}
+h1{font-size:26px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;background:linear-gradient(135deg,var(--brand) 0%,var(--accent) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{font-size:13px;color:var(--ink-2);line-height:1.7}
+.subtitle .hl{color:var(--err);font-weight:600}
+
+.card{background:rgba(255,255,255,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.8);border-radius:18px;padding:1.5rem;margin-bottom:1.25rem;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -12px rgba(15,23,42,.08)}
+
+.field{margin-bottom:1rem}
+.field:last-child{margin-bottom:0}
+.label{display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.label .req{color:var(--err);margin-left:3px}
+.hint{font-size:12px;color:var(--ink-3);margin-top:4px;line-height:1.6}
+
+.input, .textarea, select.input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;color:var(--ink);background:#fff;transition:border-color .15s, box-shadow .15s}
+.input:focus, .textarea:focus, select.input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(139,92,246,.15)}
+.textarea{min-height:84px;resize:vertical;line-height:1.6}
+
+.cat-block{border:1px solid var(--line);border-radius:14px;padding:1rem 1rem 0.6rem;margin-bottom:1rem;background:#fff}
+.cat-head{margin-bottom:0.75rem}
+.cat-title{font-size:15px;font-weight:700;color:var(--ink)}
+.cat-desc{font-size:12px;color:var(--ink-3);margin-top:3px;line-height:1.55}
+
+.rate-grid{display:grid;grid-template-columns:72px repeat(5,1fr);gap:6px 4px;align-items:center}
+.rate-head{font-size:11px;color:var(--ink-3);text-align:center;padding:4px 0;font-weight:500}
+.rate-head:first-child{text-align:left}
+.rate-head .best{color:var(--ok);font-weight:700}
+.rate-head .worst{color:var(--err);font-weight:700}
+.rate-emp{font-size:13px;font-weight:600;color:var(--ink);padding:4px 0}
+.rate-cell{display:flex;justify-content:center;align-items:center;padding:6px 0}
+.rate-cell input[type=radio]{display:none}
+.rate-cell label{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:10px;border:1.5px solid var(--line);background:#fff;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink-2);transition:all .15s}
+.rate-cell label:hover{border-color:var(--brand);color:var(--brand)}
+.rate-cell input[type=radio]:checked + label{background:var(--brand);border-color:var(--brand);color:#fff;transform:scale(1.05);box-shadow:0 4px 10px -4px rgba(139,92,246,.6)}
+
+.submit-row{display:flex;gap:10px;justify-content:flex-end;margin-top:0.5rem}
+.btn{border:0;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;padding:11px 22px;border-radius:11px;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);color:#fff;box-shadow:0 4px 14px -4px rgba(139,92,246,.5)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px -4px rgba(139,92,246,.6)}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.btn-ghost{background:#fff;color:var(--ink-2);border:1px solid var(--line)}
+.btn-ghost:hover{background:#f8fafc;color:var(--ink)}
+.btn-danger{background:#fff;color:var(--err);border:1px solid #fecaca}
+.btn-danger:hover{background:#fef2f2}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;z-index:1000;opacity:0;transition:all .3s;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{background:var(--ok)}
+.toast.err{background:var(--err)}
+
+/* Manager section */
+.divider{margin:3rem 0 1.5rem;display:flex;align-items:center;gap:12px;color:var(--ink-3);font-size:12px;letter-spacing:2px}
+.divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
+
+.mgr-card{border:2px dashed #cbd5e1;background:rgba(255,255,255,.6)}
+.mgr-head{display:flex;align-items:center;gap:10px;margin-bottom:1rem}
+.mgr-head .lock-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#e0e7ff 0%,#c7d2fe 100%);display:flex;align-items:center;justify-content:center;font-size:18px}
+.mgr-title{font-size:15px;font-weight:700;color:var(--ink)}
+.mgr-sub{font-size:12px;color:var(--ink-3);margin-top:2px}
+
+.pwd-row{display:flex;gap:8px;align-items:stretch}
+.pwd-row .input{flex:1}
+
+.mgr-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--line)}
+.mgr-toolbar label{font-size:13px;color:var(--ink-2);font-weight:600}
+.mgr-toolbar select.input{width:auto;min-width:140px}
+.mgr-toolbar .spacer{flex:1}
+.mgr-stat{font-size:13px;color:var(--ink-2)}
+.mgr-stat b{color:var(--ink);font-weight:700}
+
+.result-table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;margin-bottom:1.25rem}
+.result-table th, .result-table td{padding:10px 8px;text-align:center;border-bottom:1px solid var(--line)}
+.result-table thead th{background:#f1f5f9;color:var(--ink-2);font-weight:600;font-size:12px;position:sticky;top:0}
+.result-table th:first-child, .result-table td:first-child{text-align:left;font-weight:600}
+.result-table tbody tr:hover{background:#f8fafc}
+.score-pill{display:inline-block;padding:2px 10px;border-radius:999px;font-weight:700;font-size:12.5px;min-width:40px}
+.score-5{background:#d1fae5;color:#065f46}
+.score-4{background:#dbeafe;color:#1e40af}
+.score-3{background:#fef3c7;color:#92400e}
+.score-2{background:#fed7aa;color:#9a3412}
+.score-1{background:#fee2e2;color:#991b1b}
+.score-none{background:#f1f5f9;color:var(--ink-3)}
+
+/* 獎金總計卡 */
+.bonus-summary{background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);border:1px solid #fcd34d;border-radius:14px;padding:14px 16px;margin-bottom:1rem}
+.bonus-title{font-size:13.5px;font-weight:700;color:#92400e;margin-bottom:10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.bonus-rule{font-size:11.5px;font-weight:500;color:#b45309;background:rgba(255,255,255,.6);padding:2px 8px;border-radius:999px}
+.bonus-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.bonus-card{background:#fff;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;align-items:center;gap:4px;border:1px solid rgba(245,158,11,.25)}
+.bonus-name{font-size:13px;font-weight:700;color:var(--ink)}
+.bonus-amt{font-size:22px;font-weight:800;color:#d97706;letter-spacing:-0.02em}
+.bonus-amt.zero{color:var(--ink-3);font-size:18px}
+.bonus-breakdown{font-size:10.5px;color:var(--ink-3);text-align:center;line-height:1.4;margin-top:2px}
+
+/* 每項分數分布卡 */
+.cat-result{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.cat-result-title{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.emp-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.emp-col{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fafafa}
+.emp-col.bonus{border-color:#fbbf24;background:#fffbeb;box-shadow:0 0 0 2px rgba(251,191,36,.15)}
+.emp-name{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.emp-bonus-badge{font-size:10px;background:linear-gradient(135deg,#f59e0b,#fbbf24);color:#fff;padding:2px 8px;border-radius:999px;font-weight:700;white-space:nowrap}
+.score-bar{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11.5px}
+.score-bar .lbl{width:30px;color:var(--ink-2);font-weight:600;font-size:11px}
+.score-bar .bar{flex:1;height:8px;background:#f1f5f9;border-radius:99px;overflow:hidden}
+.score-bar .bar-fill{height:100%;border-radius:99px;transition:width .3s}
+.score-bar.s5 .bar-fill{background:#10b981}
+.score-bar.s4 .bar-fill{background:#3b82f6}
+.score-bar.s3 .bar-fill{background:#f59e0b}
+.score-bar.s2 .bar-fill{background:#f97316}
+.score-bar.s1 .bar-fill{background:#ef4444}
+.score-bar .cnt{width:32px;text-align:right;color:var(--ink);font-weight:600;font-size:11.5px}
+.score-bar .cnt.zero{color:var(--ink-3);font-weight:400}
+.emp-avg{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--ink-2)}
+.emp-avg-val{font-weight:800;font-size:16px;color:var(--ink);letter-spacing:-0.02em}
+.emp-avg-val.bonus{color:#d97706}
+
+/* 職位設定卡 */
+.positions-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:1rem}
+.positions-head{margin-bottom:10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.positions-title{font-size:13.5px;font-weight:700;color:var(--ink)}
+.positions-sub{font-size:11.5px;color:var(--ink-3)}
+.positions-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:10px}
+.position-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f8fafc;border-radius:10px;border:1px solid var(--line)}
+.position-row .pname{font-size:13px;font-weight:600;color:var(--ink);flex:1}
+.position-row select{flex:0 0 92px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;font-family:inherit;background:#fff}
+.position-row select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 2px rgba(139,92,246,.15)}
+.positions-foot{display:flex;justify-content:flex-end}
+
+.emp-title-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:#e0e7ff;color:#4338ca;letter-spacing:0.5px}
+.emp-title-badge.mgr{background:#fee2e2;color:#991b1b}
+
+@media(max-width:640px){
+  .positions-grid{grid-template-columns:1fr}
+}
+
+.comment-list{display:flex;flex-direction:column;gap:10px;margin-top:0.5rem}
+.comment-item{padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:13.5px;line-height:1.7;color:var(--ink);white-space:pre-wrap}
+.comment-item .meta{font-size:11px;color:var(--ink-3);margin-top:6px;letter-spacing:1px}
+.empty-state{text-align:center;padding:2rem 1rem;color:var(--ink-3);font-size:13px}
+.section-title{font-size:14px;font-weight:700;color:var(--ink);margin:1.25rem 0 0.5rem;padding-bottom:4px;border-bottom:2px solid var(--line)}
+
+.wire-note{background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:12px 14px;border-radius:12px;font-size:12.5px;line-height:1.7;margin-bottom:1rem}
+.wire-note code{background:#fff;padding:1px 6px;border-radius:4px;font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:11.5px}
+
+@media(max-width:640px){
+  body{padding:0.75rem}
+  .card{padding:1.1rem;border-radius:14px}
+  .cat-block{padding:0.85rem 0.85rem 0.5rem}
+  .rate-grid{grid-template-columns:60px repeat(5,1fr);gap:4px 2px}
+  .rate-cell label{width:28px;height:28px;font-size:12px}
+  .rate-head{font-size:10px}
+  .rate-emp{font-size:12.5px}
+  h1{font-size:22px}
+  .result-table{font-size:12px}
+  .result-table th, .result-table td{padding:8px 4px}
+  .emp-row{grid-template-columns:1fr;gap:8px}
+  .bonus-grid{grid-template-columns:1fr;gap:8px}
+  .bonus-card{flex-direction:row;justify-content:space-between;align-items:center}
+}
+</style>
+</head>
+<body>
+<div class="stage">
+  <a href="home.html" class="back-link">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    回主選單
+  </a>
+
+  <div class="hero">
+    <div class="hero-logo">📝</div>
+    <h1 id="page-title">十城匿名表</h1>
+    <p class="subtitle">此填單為<span class="hl">匿名</span>，可以隨心所欲地講出心裡話<br><span style="font-size:12px;color:var(--ink-3)">評分可選填：不熟悉某人某項表現，留白不評分即可</span></p>
+  </div>
+
+  <!-- ========== 月份選擇 ========== -->
+  <div class="card">
+    <div class="field" style="margin-bottom:0">
+      <label class="label">評分月份<span class="req">*</span></label>
+      <select id="survey-month" class="input"></select>
+      <p class="hint">請選擇這份評分要對應的月份</p>
+    </div>
+  </div>
+
+  <!-- ========== 評分區 ========== -->
+  <div id="categories-host"></div>
+
+  <!-- ========== 文字意見 ========== -->
+  <div class="card">
+    <div class="field">
+      <label class="label" for="comment-coworker">對店裡哪幾位同仁有沒有話想說？<span class="req">*</span></label>
+      <p class="hint">說出優點或是缺點需要改善的地方都可以</p>
+      <textarea id="comment-coworker" class="textarea" placeholder="寫下你對同仁的想法..."></textarea>
+    </div>
+    <div class="field">
+      <label class="label" for="comment-company">對公司有沒有想說的呢？<span class="req">*</span></label>
+      <textarea id="comment-company" class="textarea" placeholder="寫下你對公司的想法..."></textarea>
+    </div>
+  </div>
+
+  <div class="submit-row">
+    <button id="btn-reset" class="btn btn-ghost" type="button">重填</button>
+    <button id="btn-submit" class="btn btn-primary" type="button">送出匿名表單</button>
+  </div>
+
+  <!-- ========== 主管專區 ========== -->
+  <div class="divider">MANAGER ONLY · 主管專區</div>
+
+  <div class="card mgr-card" id="mgr-card">
+    <!-- 上鎖畫面 -->
+    <div id="mgr-locked">
+      <div class="mgr-head">
+        <div class="lock-icon">🔒</div>
+        <div>
+          <div class="mgr-title">主管專用 · 檢視填寫結果</div>
+          <div class="mgr-sub">請輸入主管密碼解鎖</div>
+        </div>
+      </div>
+      <div class="pwd-row">
+        <input id="mgr-pwd" type="password" class="input" placeholder="主管密碼" autocomplete="current-password">
+        <button id="btn-unlock" class="btn btn-primary" type="button">解鎖</button>
+      </div>
+    </div>
+
+    <!-- 解鎖後畫面 -->
+    <div id="mgr-unlocked" style="display:none">
+      <div class="mgr-head">
+        <div class="lock-icon" style="background:linear-gradient(135deg,#d1fae5 0%,#a7f3d0 100%)">🔓</div>
+        <div>
+          <div class="mgr-title">主管檢視區</div>
+          <div class="mgr-sub">選擇月份查看該月所有匿名評分統計</div>
+        </div>
+        <div style="margin-left:auto">
+          <button id="btn-lock" class="btn btn-ghost" type="button" style="padding:8px 14px;font-size:12.5px">鎖回</button>
+        </div>
+      </div>
+
+      <div class="positions-card">
+        <div class="positions-head">
+          <span class="positions-title">👥 員工職位設定</span>
+          <span class="positions-sub">（店長 / 副店長 不列入獎金計算）</span>
+        </div>
+        <div class="positions-grid" id="positions-grid"></div>
+        <div class="positions-foot">
+          <button id="btn-save-positions" class="btn btn-primary" type="button" style="padding:8px 14px;font-size:12.5px">💾 儲存職位設定</button>
+        </div>
+      </div>
+
+      <div class="mgr-toolbar">
+        <label for="mgr-month">檢視月份：</label>
+        <select id="mgr-month" class="input"></select>
+        <button id="btn-refresh" class="btn btn-ghost" type="button" style="padding:8px 14px;font-size:12.5px">🔄 重新整理</button>
+        <span class="spacer"></span>
+        <span class="mgr-stat">本月共 <b id="mgr-count">0</b> 份匿名表單</span>
+      </div>
+
+      <div class="section-title">各項平均分數</div>
+      <div id="mgr-results"></div>
+
+      <div class="section-title">對同仁的話</div>
+      <div id="mgr-coworker-comments" class="comment-list"></div>
+
+      <div class="section-title">對公司的話</div>
+      <div id="mgr-company-comments" class="comment-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// ============================================
+// 📌 此檔案是 Apps Script Web App 的前端
+//     必須放在 Apps Script 專案裡（檔名 survey.html）
+//     透過 google.script.run 呼叫後端，不再需要外部 /exec 網址
+// ============================================
+
+// ============================================
+// 📋 題目定義
+// ============================================
+var CATEGORIES = [
+  { id:'service',    name:'服務' },
+  { id:'counter',    name:'櫃台',     desc:'小菜SOP、客訴處理、Key貨單、上傳小結確實' },
+  { id:'food',       name:'出餐品質', desc:'飯量、滷肉量、菜量、湯量、擺盤、隨時補足餐點量' },
+  { id:'efficiency', name:'做事效率' },
+  { id:'active',     name:'積極度',   desc:'自己找事做、不會壓線上班吃東西、抽煙頻率、沒事會主動幫其他人、備料齊全' },
+  { id:'teamwork',   name:'同事相處', desc:'少抱怨、會包容同事、互相幫忙' },
+  { id:'order',      name:'叫貨',     desc:'數量正確、速度' },
+  { id:'prep',       name:'備料',     desc:'完整度、效率、備到應有數量、事情優先順序安排' },
+  { id:'shift',      name:'開收班',   desc:'效率、完整度' },
+  { id:'clean',      name:'清潔',     desc:'洗碗速度、環境整潔、週清' }
+];
+var EMPLOYEES = ['林梓彥','王謖','林哲民','陳柏維'];
+var POSITION_OPTIONS = ['店長','副店長','正職','兼職'];
+var NO_BONUS_TITLES = ['店長','副店長'];
+// 主管解鎖後會從後端載入，預設先放空物件
+var CURRENT_POSITIONS = {};
+
+// ============================================
+// 🛠️ 工具
+// ============================================
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+function toast(msg, kind){
+  var t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (kind||'');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(function(){ t.className='toast'; }, 2800);
+}
+
+function ymLabel(ym){
+  var parts = ym.split('-');
+  return parts[0] + '年' + parseInt(parts[1],10) + '月';
+}
+
+function buildMonthOptions(selectEl, defaultYm){
+  var now = new Date();
+  var options = [];
+  // 過去 12 個月到未來 2 個月
+  for(var i=2; i>=-12; i--){
+    var d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    var ym = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    options.push(ym);
+  }
+  selectEl.innerHTML = options.map(function(ym){
+    return '<option value="'+ym+'"'+(ym===defaultYm?' selected':'')+'>'+ymLabel(ym)+'</option>';
+  }).join('');
+}
+
+function defaultMonth(){
+  // 預設是「上個月」— 這份表通常是月底填上個月的
+  var d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth()-1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+
+// ============================================
+// 🧾 渲染題目
+// ============================================
+function renderCategories(){
+  var host = $('categories-host');
+  host.innerHTML = CATEGORIES.map(function(cat, idx){
+    var catId = cat.id;
+    var descHtml = cat.desc ? '<div class="cat-desc">'+esc(cat.desc)+'</div>' : '';
+    var grid = [
+      '<div class="rate-head"></div>',
+      '<div class="rate-head"><span class="best">5</span><br><span style="font-size:10px">超棒</span></div>',
+      '<div class="rate-head">4</div>',
+      '<div class="rate-head">3<br><span style="font-size:10px">待加強</span></div>',
+      '<div class="rate-head">2</div>',
+      '<div class="rate-head"><span class="worst">1</span></div>'
+    ].join('');
+    var rows = EMPLOYEES.map(function(emp){
+      var cells = [5,4,3,2,1].map(function(v){
+        var inputId = 'r_'+catId+'_'+emp+'_'+v;
+        var name = 'r_'+catId+'_'+emp;
+        return '<div class="rate-cell">'
+          +'<input type="radio" id="'+inputId+'" name="'+name+'" value="'+v+'">'
+          +'<label for="'+inputId+'">'+v+'</label>'
+          +'</div>';
+      }).join('');
+      return '<div class="rate-emp">'+esc(emp)+'</div>' + cells;
+    }).join('');
+    return '<div class="cat-block">'
+      + '<div class="cat-head">'
+      +   '<div class="cat-title">'+(idx+1)+'. '+esc(cat.name)+'</div>'
+      +   descHtml
+      + '</div>'
+      + '<div class="rate-grid">'+grid+rows+'</div>'
+      + '</div>';
+  }).map(function(block, i){
+    // 每 3 個包一張 card
+    return block;
+  }).join('');
+  // 全部塞到一張大卡（多張卡也行，但直接一張比較簡單）
+  host.innerHTML = '<div class="card">' + host.innerHTML + '</div>';
+}
+
+// ============================================
+// ✉️ 收集表單
+// ============================================
+function collectForm(){
+  var month = $('survey-month').value;
+  if(!month) return { error:'請選擇月份' };
+
+  // 評分全部可選：沒打分的就不存（不會把 null 送出，減少資料雜訊）
+  var ratings = {};
+  for(var i=0;i<CATEGORIES.length;i++){
+    var cat = CATEGORIES[i];
+    ratings[cat.id] = {};
+    for(var j=0;j<EMPLOYEES.length;j++){
+      var emp = EMPLOYEES[j];
+      var checked = document.querySelector('input[name="r_'+cat.id+'_'+emp+'"]:checked');
+      if(checked){
+        ratings[cat.id][emp] = Number(checked.value);
+      }
+    }
+  }
+
+  var coworker = $('comment-coworker').value.trim();
+  var company  = $('comment-company').value.trim();
+
+  if(!coworker) return { error:'「對同仁的話」必填' };
+  if(!company)  return { error:'「對公司的話」必填' };
+
+  return {
+    month: month,
+    ratings: ratings,
+    coworkerComment: coworker,
+    companyComment: company,
+    submittedAt: new Date().toISOString()
+  };
+}
+
+// ============================================
+// ☁️ 傳送到雲端
+// ============================================
+// 把 google.script.run 包成 Promise，方便用 .then()/.catch()
+function callGAS(fn){
+  var args = [].slice.call(arguments, 1);
+  return new Promise(function(resolve, reject){
+    if(typeof google === 'undefined' || !google.script || !google.script.run){
+      reject(new Error('此頁必須從 Apps Script Web App 的 /exec 網址開啟，不能直接打開 .html 檔'));
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(function(err){ reject(new Error(err && err.message || String(err))); })
+      [fn].apply(google.script.run, args);
+  });
+}
+
+function submitSurvey(){
+  var data = collectForm();
+  if(data.error){ toast('⚠ '+data.error, 'err'); return; }
+
+  var btn = $('btn-submit');
+  btn.disabled = true;
+  btn.textContent = '送出中...';
+
+  callGAS('submitSurvey', data).then(function(res){
+    if(res && res.ok){
+      toast('✅ 已匿名送出，謝謝你的回饋！', 'ok');
+      resetForm();
+    }else{
+      toast('❌ 送出失敗：'+(res && res.error || '未知錯誤'), 'err');
+    }
+  }).catch(function(err){
+    toast('❌ '+err.message, 'err');
+  }).finally(function(){
+    btn.disabled = false;
+    btn.textContent = '送出匿名表單';
+  });
+}
+
+function resetForm(){
+  document.querySelectorAll('input[type=radio]').forEach(function(r){ r.checked = false; });
+  $('comment-coworker').value = '';
+  $('comment-company').value = '';
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+// ============================================
+// 🔒 主管專區
+// ============================================
+function unlockManager(){
+  var pwd = $('mgr-pwd').value.trim();
+  if(!pwd){ toast('請輸入密碼', 'err'); return; }
+
+  var btn = $('btn-unlock');
+  btn.disabled = true; btn.textContent = '驗證中...';
+
+  callGAS('verifyPassword', pwd).then(function(res){
+    if(res && res.ok){
+      sessionStorage.setItem('cd_survey_mgr_pwd', pwd);
+      $('mgr-locked').style.display = 'none';
+      $('mgr-unlocked').style.display = 'block';
+      toast('✅ 已解鎖', 'ok');
+      loadPositions();
+      loadManagerResults();
+    }else{
+      toast('❌ 密碼錯誤', 'err');
+      $('mgr-pwd').value = '';
+    }
+  }).catch(function(err){
+    toast('❌ '+err.message, 'err');
+  }).finally(function(){
+    btn.disabled = false; btn.textContent = '解鎖';
+  });
+}
+
+function lockManager(){
+  sessionStorage.removeItem('cd_survey_mgr_pwd');
+  $('mgr-pwd').value = '';
+  $('mgr-locked').style.display = 'block';
+  $('mgr-unlocked').style.display = 'none';
+}
+
+// ---- 職位設定 ----
+function renderPositionsGrid(){
+  var html = EMPLOYEES.map(function(emp){
+    var cur = CURRENT_POSITIONS[emp] || '正職';
+    var opts = POSITION_OPTIONS.map(function(p){
+      return '<option value="'+esc(p)+'"'+(p===cur?' selected':'')+'>'+esc(p)+'</option>';
+    }).join('');
+    return '<div class="position-row">'
+      + '<span class="pname">'+esc(emp)+'</span>'
+      + '<select data-emp="'+esc(emp)+'">'+opts+'</select>'
+      + '</div>';
+  }).join('');
+  $('positions-grid').innerHTML = html;
+}
+
+function loadPositions(){
+  callGAS('getPositions').then(function(res){
+    if(res && typeof res === 'object'){ CURRENT_POSITIONS = res; }
+    renderPositionsGrid();
+  }).catch(function(err){
+    console.warn('載入職位失敗', err);
+    renderPositionsGrid();
+  });
+}
+
+function savePositions(){
+  var pwd = sessionStorage.getItem('cd_survey_mgr_pwd');
+  if(!pwd){ toast('請先解鎖', 'err'); return; }
+  var newPos = {};
+  document.querySelectorAll('#positions-grid select').forEach(function(sel){
+    newPos[sel.getAttribute('data-emp')] = sel.value;
+  });
+  var btn = $('btn-save-positions');
+  btn.disabled = true; btn.textContent = '儲存中...';
+  callGAS('setPositions', pwd, newPos).then(function(res){
+    if(res && res.ok){
+      CURRENT_POSITIONS = res.positions || newPos;
+      toast('✅ 職位已儲存', 'ok');
+      loadManagerResults(); // 重新套用獎金規則
+    }else{
+      toast('❌ 儲存失敗：'+(res && res.error || '未知錯誤'), 'err');
+    }
+  }).catch(function(err){
+    toast('❌ '+err.message, 'err');
+  }).finally(function(){
+    btn.disabled = false; btn.textContent = '💾 儲存職位設定';
+  });
+}
+
+function isNoBonus(emp){
+  var title = CURRENT_POSITIONS[emp];
+  return NO_BONUS_TITLES.indexOf(title) !== -1;
+}
+
+function loadManagerResults(){
+  var pwd = sessionStorage.getItem('cd_survey_mgr_pwd');
+  if(!pwd){ lockManager(); return; }
+
+  var month = $('mgr-month').value;
+  $('mgr-count').textContent = '...';
+  $('mgr-results').innerHTML = '<div class="empty-state">讀取中...</div>';
+  $('mgr-coworker-comments').innerHTML = '';
+  $('mgr-company-comments').innerHTML = '';
+
+  callGAS('getSurveys', pwd, month).then(function(res){
+    if(!res || !res.ok){
+      if(res && res.error === 'unauthorized'){ lockManager(); toast('密碼已失效，請重新解鎖', 'err'); return; }
+      toast('❌ 讀取失敗：'+(res && res.error || '未知錯誤'), 'err');
+      $('mgr-results').innerHTML = '<div class="empty-state">讀取失敗</div>';
+      return;
+    }
+    if(res.positions){ CURRENT_POSITIONS = res.positions; renderPositionsGrid(); }
+    renderManagerResults(res.records || []);
+  }).catch(function(err){
+    toast('❌ '+err.message, 'err');
+    $('mgr-results').innerHTML = '<div class="empty-state">讀取失敗</div>';
+  });
+}
+
+function renderManagerResults(records){
+  $('mgr-count').textContent = records.length;
+
+  if(records.length === 0){
+    $('mgr-results').innerHTML = '<div class="empty-state">此月份尚無填寫紀錄</div>';
+    $('mgr-coworker-comments').innerHTML = '<div class="empty-state">—</div>';
+    $('mgr-company-comments').innerHTML = '<div class="empty-state">—</div>';
+    return;
+  }
+
+  // 獎金規則
+  var BONUS_THRESHOLD = 4.5;   // 平均「大於等於」4.5
+  var BONUS_AMOUNT    = 100;   // 每項獎金金額
+
+  // 先算每個員工的獎金與得分分布，並渲染每項卡片
+  var totalBonus = {};
+  var bonusBreakdown = {}; // 記錄每個人拿到哪幾項獎金
+  EMPLOYEES.forEach(function(e){ totalBonus[e] = 0; bonusBreakdown[e] = []; });
+
+  var catsHtml = CATEGORIES.map(function(cat, idx){
+    var cols = EMPLOYEES.map(function(emp){
+      var counts = {1:0, 2:0, 3:0, 4:0, 5:0};
+      var sum = 0, cnt = 0;
+      records.forEach(function(rec){
+        var v = rec.ratings && rec.ratings[cat.id] && rec.ratings[cat.id][emp];
+        if(typeof v === 'number' && counts[v] !== undefined){
+          counts[v]++;
+          sum += v;
+          cnt++;
+        }
+      });
+
+      var avg = cnt > 0 ? sum/cnt : null;
+      var reachedThreshold = (avg !== null && avg >= BONUS_THRESHOLD);
+      var noBonus = isNoBonus(emp);
+      var isBonus = reachedThreshold && !noBonus;
+      if(isBonus){
+        totalBonus[emp] += BONUS_AMOUNT;
+        bonusBreakdown[emp].push(cat.name);
+      }
+
+      // 找最大值當 bar 的 100%（至少 1 避免除 0）
+      var max = Math.max(counts[1], counts[2], counts[3], counts[4], counts[5], 1);
+
+      var bars = [5,4,3,2,1].map(function(score){
+        var c = counts[score];
+        var pct = (c / max * 100).toFixed(0);
+        var cntCls = c === 0 ? 'cnt zero' : 'cnt';
+        return '<div class="score-bar s'+score+'">'
+          + '<span class="lbl">'+score+'分</span>'
+          + '<span class="bar"><span class="bar-fill" style="width:'+(c>0?pct:0)+'%"></span></span>'
+          + '<span class="'+cntCls+'">'+c+' 人</span>'
+          + '</div>';
+      }).join('');
+
+      var avgText = avg !== null ? avg.toFixed(2) : '—';
+      var title = CURRENT_POSITIONS[emp] || '';
+      var titleCls = 'emp-title-badge' + (noBonus ? ' mgr' : '');
+      var titleBadge = title ? '<span class="'+titleCls+'">'+esc(title)+'</span>' : '';
+      var bonusBadge = isBonus ? '<span class="emp-bonus-badge">✨ +$'+BONUS_AMOUNT+'</span>' : '';
+      // 達標但因職位不領：顯示提示
+      var skipBadge = (reachedThreshold && noBonus) ? '<span class="emp-bonus-badge" style="background:#e5e7eb;color:#6b7280">達標但不列入獎金</span>' : '';
+      var colCls = 'emp-col' + (isBonus ? ' bonus' : '');
+      var avgCls = 'emp-avg-val' + (isBonus ? ' bonus' : '');
+
+      return '<div class="'+colCls+'">'
+        + '<div class="emp-name"><span>'+esc(emp)+' '+titleBadge+'</span>'+bonusBadge+skipBadge+'</div>'
+        + bars
+        + '<div class="emp-avg"><span>平均（共 '+cnt+' 票）</span><span class="'+avgCls+'">'+avgText+'</span></div>'
+        + '</div>';
+    }).join('');
+
+    return '<div class="cat-result">'
+      + '<div class="cat-result-title">'+(idx+1)+'. '+esc(cat.name)+(cat.desc?' <span style="font-size:11px;font-weight:400;color:var(--ink-3)">('+esc(cat.desc)+')</span>':'')+'</div>'
+      + '<div class="emp-row">'+cols+'</div>'
+      + '</div>';
+  }).join('');
+
+  // 獎金總計卡
+  var bonusCardsHtml = EMPLOYEES.map(function(emp){
+    var noBonus = isNoBonus(emp);
+    var amt = totalBonus[emp];
+    var items = bonusBreakdown[emp];
+    var title = CURRENT_POSITIONS[emp] || '';
+    var titleHtml = title ? '<span class="emp-title-badge'+(noBonus?' mgr':'')+'" style="margin-left:4px">'+esc(title)+'</span>' : '';
+    var amtCls = amt > 0 ? 'bonus-amt' : 'bonus-amt zero';
+    var breakdown;
+    if(noBonus){
+      breakdown = '<span class="bonus-breakdown">'+esc(title)+'不列入獎金</span>';
+    }else if(items.length > 0){
+      breakdown = '<span class="bonus-breakdown">'+items.map(esc).join('、')+'</span>';
+    }else{
+      breakdown = '<span class="bonus-breakdown">本月無項目達標</span>';
+    }
+    return '<div class="bonus-card">'
+      + '<span class="bonus-name">'+esc(emp)+titleHtml+'</span>'
+      + '<span class="'+amtCls+'">'+(amt > 0 ? '$'+amt : '$0')+'</span>'
+      + breakdown
+      + '</div>';
+  }).join('');
+
+  var bonusSection = '<div class="bonus-summary">'
+    + '<div class="bonus-title">💰 本月獎金統計 <span class="bonus-rule">每項平均 &ge; '+BONUS_THRESHOLD+' 可領 $'+BONUS_AMOUNT+'（店長 / 副店長除外）</span></div>'
+    + '<div class="bonus-grid">'+bonusCardsHtml+'</div>'
+    + '</div>';
+
+  $('mgr-results').innerHTML = bonusSection + catsHtml;
+
+  // 同仁評論
+  var coworkerHtml = records.filter(function(r){ return r.coworkerComment; }).map(function(r, i){
+    return '<div class="comment-item">'+esc(r.coworkerComment)+'<div class="meta">#'+(i+1)+' · '+formatTs(r.submittedAt)+'</div></div>';
+  }).join('');
+  $('mgr-coworker-comments').innerHTML = coworkerHtml || '<div class="empty-state">無</div>';
+
+  // 公司評論
+  var companyHtml = records.filter(function(r){ return r.companyComment; }).map(function(r, i){
+    return '<div class="comment-item">'+esc(r.companyComment)+'<div class="meta">#'+(i+1)+' · '+formatTs(r.submittedAt)+'</div></div>';
+  }).join('');
+  $('mgr-company-comments').innerHTML = companyHtml || '<div class="empty-state">無</div>';
+}
+
+function formatTs(iso){
+  if(!iso) return '';
+  var d = new Date(iso);
+  if(isNaN(d)) return iso;
+  return d.getFullYear()+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')
+    +' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+
+// ============================================
+// 🚀 啟動
+// ============================================
+document.addEventListener('DOMContentLoaded', function(){
+  renderCategories();
+  var dm = defaultMonth();
+  buildMonthOptions($('survey-month'), dm);
+  buildMonthOptions($('mgr-month'), dm);
+
+  $('btn-submit').addEventListener('click', submitSurvey);
+  $('btn-reset').addEventListener('click', function(){
+    if(confirm('確定要清空所有填寫內容嗎？')) resetForm();
+  });
+  $('btn-unlock').addEventListener('click', unlockManager);
+  $('mgr-pwd').addEventListener('keydown', function(e){ if(e.key==='Enter') unlockManager(); });
+  $('btn-lock').addEventListener('click', lockManager);
+  $('mgr-month').addEventListener('change', loadManagerResults);
+  $('btn-refresh').addEventListener('click', loadManagerResults);
+  $('btn-save-positions').addEventListener('click', savePositions);
+
+  // 如果 sessionStorage 有舊密碼，嘗試自動解鎖
+  var savedPwd = sessionStorage.getItem('cd_survey_mgr_pwd');
+  if(savedPwd){
+    $('mgr-pwd').value = savedPwd;
+    // 不自動解鎖，等用戶按按鈕（避免沒設 URL 時一直噴錯）
+  }
+
+  // 如果不是從 Apps Script Web App 打開，顯示提醒
+  if(typeof google === 'undefined' || !google.script || !google.script.run){
+    var note = document.createElement('div');
+    note.className = 'wire-note';
+    note.innerHTML = '⚠️ <b>請從 Apps Script Web App 網址開啟</b>：此檔案需放在 Apps Script 專案內，部署後用 <code>/exec</code> 網址開啟才能運作。直接打開 .html 檔無法送出資料。';
+    document.querySelector('.stage').insertBefore(note, document.querySelector('.hero').nextSibling);
+  }
+});
+</script>
+</body>
+</html>

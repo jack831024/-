@@ -30,3 +30,6 @@ config.local.js
 
 # Claude Code 工作目錄（worktree、agent state）
 .claude/
+
+# clasp 工作區（內容是根目錄 survey.html / 十城匿名表-script.gs 的副本）
+gas-survey/
