@@ -885,9 +885,11 @@ function handleFiles(input, key){
   var btn = document.getElementById('btn-' + key);
   if(btn) btn.disabled = imgs[key].length === 0;
   // 自動觸發 AI 識別（只在有新增檔案時）
+  // ⚠️ 對於會累加到 store[key] 陣列的 'w' / 'd'，一定要只送「新上傳」的檔案給 AI，
+  // 否則舊圖片會被重新辨識再 push 一次，造成金額重複
   if(newFiles.length > 0 && hasApiKey()){
     if(key === 'summary') analyzeSummary();
-    else if(key === 'w' || key === 'd') analyzeReceipts(key);
+    else if(key === 'w' || key === 'd') analyzeReceipts(key, newFiles);
     else if(key === 'refund') analyzeRefund();
     else if(key === 'cancel') analyzeCancel();
   }
@@ -1068,16 +1070,20 @@ async function analyzePayFile(key, file){
   }
 }
 
-async function analyzeReceipts(key){
+async function analyzeReceipts(key, filesToAnalyze){
   if(!hasApiKey()) return;
+  // 預設只分析「新上傳」的那幾張，避免舊圖片被重複辨識
+  // 若外部沒傳 filesToAnalyze（如手動重跑），才退回分析 imgs[key] 全部
+  var targets = filesToAnalyze || imgs[key];
+  if(!targets || targets.length === 0) return;
   var line = document.getElementById('ai-status-' + key);
   var spin = document.getElementById('spin-' + key);
   var btxt = document.getElementById('btxt-' + key);
   line.style.display = 'flex'; line.className = 'ai-status-line';
-  spin.className = 'spinner on'; btxt.textContent = 'AI 辨識中...';
+  spin.className = 'spinner on'; btxt.textContent = 'AI 辨識中（' + targets.length + ' 張新圖）...';
   try{
     var prompt = '每張圖片讀取合計金額與來源名稱，只回傳 JSON 陣列（不要 markdown、不要說明）：[{"desc":"來源","amt":金額}]';
-    var raw = await geminiCall(imgs[key], prompt);
+    var raw = await geminiCall(targets, prompt);
     console.log(key + ' Gemini 回應：', raw);
     var parsed = parseJson(raw);
     if(!Array.isArray(parsed)) parsed = [parsed];
