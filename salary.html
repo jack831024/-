@@ -315,7 +315,7 @@ var STORE_NAME = sessionStorage.getItem('cd_store_name') || '（未選店）';
 document.getElementById('store-name').textContent = STORE_NAME;
 
 var BASE_SALARY = 26000;       // 正職/主管 底薪
-var FIXED_OT = 10000;          // 固定加班費
+// 固定加班費已改為依「店 × 職級」決定，見 STORE_CONFIG 裡的 fixedOT
 
 // ============================================
 // 各店員工設定（姓名、預設職級、勞健保、職務加給基礎）
@@ -333,8 +333,10 @@ var STORE_CONFIG = {
       { id:'zh_pt2', name:'江竑緯', nickname:'竑偉' },
       { id:'zh_pt3', name:'黃威倫', nickname:'阿倫' }
     ],
-    headBonus: 20000,
-    deputyBonus: 10000,
+    // 火鍋店：店長 10000/20000、副店長 5000/15000、正職 0/10000
+    headBonus: 10000, headFixedOT: 20000,
+    deputyBonus: 5000, deputyFixedOT: 15000,
+    regularFixedOT: 10000,
     defaultInsurance: {
       zh1: 6500, zh2: -1930, zh3: -1930, zh4: -1930,
       zh_pt1: -735, zh_pt2: -735, zh_pt3: -277
@@ -350,8 +352,10 @@ var STORE_CONFIG = {
       { id:'yc6', name:'邱昊勳', defaultRole:'regular' }
     ],
     pt: [],
-    headBonus: 20000,
-    deputyBonus: 10000,
+    // 火鍋店：店長 10000/20000、副店長 5000/15000、正職 0/10000
+    headBonus: 10000, headFixedOT: 20000,
+    deputyBonus: 5000, deputyFixedOT: 15000,
+    regularFixedOT: 10000,
     defaultInsurance: {}
   },
   'chudian-xinzhuang': {
@@ -365,8 +369,10 @@ var STORE_CONFIG = {
       { id:'xz_pt1', name:'林詩縈' },
       { id:'xz_pt2', name:'洪晟育' }
     ],
-    headBonus: 20000,
-    deputyBonus: 10000,
+    // 火鍋店：店長 10000/20000、副店長 5000/15000、正職 0/10000
+    headBonus: 10000, headFixedOT: 20000,
+    deputyBonus: 5000, deputyFixedOT: 15000,
+    regularFixedOT: 10000,
     defaultInsurance: {}
   },
   'shicheng-zhongxiao': {
@@ -377,8 +383,10 @@ var STORE_CONFIG = {
       { id:'sc4', name:'陳柏維', defaultRole:'regular' }
     ],
     pt: [],
-    headBonus: 10000,   // 十城特殊：店長加給 10000
-    deputyBonus: 5000,  // 十城特殊：副店長加給 5000
+    // 十城店：店長 5000/15000、副店長 2500/12500、正職 0/10000
+    headBonus: 5000, headFixedOT: 15000,
+    deputyBonus: 2500, deputyFixedOT: 12500,
+    regularFixedOT: 10000,
     defaultInsurance: {}
   }
 };
@@ -387,6 +395,12 @@ var STORE_CONFIG = {
 var CFG = STORE_CONFIG[STORE] || STORE_CONFIG['chudian-zhonghe'];
 var HEAD_BONUS = CFG.headBonus;
 var DEPUTY_BONUS = CFG.deputyBonus;
+// 固定加班費（依職級）
+function fixedOTForRole(role){
+  if(role === 'head')   return CFG.headFixedOT   || 10000;
+  if(role === 'deputy') return CFG.deputyFixedOT || 10000;
+  return CFG.regularFixedOT || 10000;
+}
 // role 標記只用來區分 PT / 非 PT（「主管 vs 正職」改以最上面的「員工職級設定」為準）
 var EMPLOYEES = CFG.employees.slice();
 var PT_EMPLOYEES = (CFG.pt || []).map(function(e){ return Object.assign({ role:'pt' }, e); });
@@ -812,6 +826,7 @@ function calcEmp(e){
   var b_s6 = sup ? 0 : (STATE.s6[id]|0);
   var b_s7 = sup ? s7SupAmt(!!STATE.s7[id]) : s7RegAmt(!!STATE.s7[id]);
   var insurance = STATE.insurance[id] | 0;
+  var fixedOT = fixedOTForRole(role);
 
   // 月薪（含全勤+考核+Google+營業額；正職再含小結+開會+評分表）
   var monthPay = BASE_SALARY + b_s2 + b_s3 + b_s4 + b_s5;
@@ -844,7 +859,7 @@ function calcEmp(e){
   var personalDeduct = personalDays * otBase / 30;
 
   // 總額
-  var total = monthPay + FIXED_OT + doubleWage + otPay - sickDeduct - personalDeduct;
+  var total = monthPay + fixedOT + doubleWage + otPay - sickDeduct - personalDeduct;
   if(sup){
     total += rolePay;
   }
@@ -858,7 +873,7 @@ function calcEmp(e){
     b_s1: b_s1, b_s2: b_s2, b_s3: b_s3, b_s4: b_s4, b_s5: b_s5, b_s6: b_s6, b_s7: b_s7,
     monthPay: monthPay,
     rolePay: rolePay, roleBase: roleBase(role),
-    fixedOT: FIXED_OT,
+    fixedOT: fixedOT,
     dtDays: dtDays, doubleWage: doubleWage,
     otHours: otHours, otPay: otPay,
     sickDays: sickDays, sickDeduct: sickDeduct,
