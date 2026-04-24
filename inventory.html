@@ -952,21 +952,29 @@ function addRow(){
 var _autoSaveTimer = null;
 var _autoSaving = false;
 
-// 把自動儲存狀態顯示在右上角 saved-tag 的小文字
+// 同步狀態直接顯示在右上角「重新同步」按鈕
+function nowHMS(){
+  var d = new Date();
+  return String(d.getHours()).padStart(2,'0')+':'+
+         String(d.getMinutes()).padStart(2,'0')+':'+
+         String(d.getSeconds()).padStart(2,'0');
+}
 function setAutoSaveStatus(state){
-  var tag = document.getElementById('saved-tag');
-  if(!tag) return;
+  var btn = document.getElementById('resync-btn');
+  if(!btn) return;
   var map = {
-    idle:   { color:'#94a3b8', text:'' },  // 待機時不顯示，避免干擾
-    typing: { color:'#92400e', text:'✏️ 編輯中...' },
-    saving: { color:'#1e40af', text:'💾 儲存中...' },
-    saved:  { color:'#047857', text:'✓ 已自動儲存' },
-    cloud:  { color:'#1e40af', text:'☁️ 已同步雲端' },
-    error:  { color:'#b91c1c', text:'⚠️ 雲端同步失敗（本機已存）' }
+    idle:    { text:'🔄 重新同步',            bg:'', fg:'', bd:'' },
+    typing:  { text:'🔄 重新同步',            bg:'', fg:'', bd:'' },  // 打字中不變化，避免閃爍
+    saving:  { text:'🔵 ⟲ 同步中…',          bg:'rgba(59,130,246,.12)', fg:'#1e40af', bd:'#93c5fd' },
+    saved:   { text:'🟢 ✓ 已同步 '+nowHMS(), bg:'rgba(16,185,129,.12)', fg:'#047857', bd:'#6ee7b7' },
+    cloud:   { text:'🟢 ✓ 已同步 '+nowHMS(), bg:'rgba(16,185,129,.12)', fg:'#047857', bd:'#6ee7b7' },
+    error:   { text:'🔴 ❌ 同步失敗',         bg:'rgba(220,38,38,.1)',   fg:'#b91c1c', bd:'#fca5a5' }
   };
   var s = map[state] || map.idle;
-  tag.style.color = s.color;
-  tag.textContent = s.text;
+  btn.innerHTML = s.text;
+  btn.style.background = s.bg || '';
+  btn.style.color = s.fg || '';
+  btn.style.borderColor = s.bd || '';
 }
 
 function autoSave(){
@@ -986,10 +994,7 @@ async function doAutoSave(){
     var hasCloud = !!url;
     await saveInv({ silent: true });
     setAutoSaveStatus(hasCloud ? 'cloud' : 'saved');
-    // 2.5 秒後回到 idle（文字消失）
-    setTimeout(function(){
-      if(!_autoSaveTimer) setAutoSaveStatus('idle');
-    }, 2500);
+    // 「🟢 ✓ 已同步 HH:MM:SS」保留顯示，下一次同步才覆蓋（讓使用者看得到最後同步時間）
   }catch(e){
     console.warn('自動儲存失敗', e);
     setAutoSaveStatus('error');
@@ -1002,27 +1007,16 @@ async function doAutoSave(){
 // 強制把目前 items[] 推雲端、並重新從雲端拉歷史，相當於一次完整同步
 async function manualResync(){
   if(!currentVendor){ alert('請先選擇廠商'); return; }
-  var btn = document.getElementById('resync-btn');
-  var oldText = btn ? btn.innerHTML : '';
-  if(btn){
-    btn.innerHTML = '⏳ 同步中...';
-    btn.disabled = true;
-  }
+  setAutoSaveStatus('saving');
   try{
     if(items.length > 0){
       await saveInv({ silent: true });
     }
     await loadHistory();  // 把歷史資料重新拉一次
     setAutoSaveStatus('cloud');
-    setTimeout(function(){ setAutoSaveStatus('idle'); }, 2500);
   }catch(e){
     console.warn('重新同步失敗', e);
     setAutoSaveStatus('error');
-  }finally{
-    if(btn){
-      btn.innerHTML = oldText || '🔄 重新同步';
-      btn.disabled = false;
-    }
   }
 }
 

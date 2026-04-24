@@ -211,7 +211,6 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
         <option value="">— 選擇過往紀錄 —</option>
       </select>
     </div>
-    <span class="saved-tag" id="autosave-status" style="color:#64748b;text-align:right;min-height:16px;font-weight:500">✅ 自動儲存已開啟（改動即存）</span>
     <span class="saved-tag" id="saved-tag">—</span>
     <span class="saved-tag" id="sync-badge" style="margin-top:2px">—</span>
   </div>
@@ -1943,20 +1942,29 @@ var _autoSaveTimer = null;
 var _autoSaving = false;
 var _loadingRecord = false;  // applyData 時設為 true，避免載入觸發 autoSave
 
+function nowHMS(){
+  var d = new Date();
+  return String(d.getHours()).padStart(2,'0')+':'+
+         String(d.getMinutes()).padStart(2,'0')+':'+
+         String(d.getSeconds()).padStart(2,'0');
+}
+// 同步狀態直接顯示在右上角「🔄 重新同步」按鈕
 function setAutoSaveStatus(state){
-  var el = document.getElementById('autosave-status');
-  if(!el) return;
+  var btn = document.getElementById('resync-btn');
+  if(!btn) return;
   var map = {
-    idle:   { c:'#64748b', t:'✅ 自動儲存已開啟（改動即存）' },
-    typing: { c:'#92400e', t:'✏️ 編輯中...' },
-    saving: { c:'#1e40af', t:'💾 儲存中...' },
-    saved:  { c:'#047857', t:'✓ 已自動儲存' },
-    cloud:  { c:'#1e40af', t:'☁️ 已同步雲端' },
-    error:  { c:'#b91c1c', t:'⚠️ 雲端同步失敗（本機已存）' }
+    idle:    { text:'🔄 重新同步',            bg:'', fg:'', bd:'' },
+    typing:  { text:'🔄 重新同步',            bg:'', fg:'', bd:'' },  // 打字中不變，避免閃爍
+    saving:  { text:'🔵 ⟲ 同步中…',          bg:'rgba(59,130,246,.12)', fg:'#1e40af', bd:'#93c5fd' },
+    saved:   { text:'🟢 ✓ 已同步 '+nowHMS(), bg:'rgba(16,185,129,.12)', fg:'#047857', bd:'#6ee7b7' },
+    cloud:   { text:'🟢 ✓ 已同步 '+nowHMS(), bg:'rgba(16,185,129,.12)', fg:'#047857', bd:'#6ee7b7' },
+    error:   { text:'🔴 ❌ 同步失敗',         bg:'rgba(220,38,38,.1)',   fg:'#b91c1c', bd:'#fca5a5' }
   };
   var s = map[state] || map.idle;
-  el.style.color = s.c;
-  el.textContent = s.t;
+  btn.innerHTML = s.text;
+  btn.style.background = s.bg || '';
+  btn.style.color = s.fg || '';
+  btn.style.borderColor = s.bd || '';
 }
 
 function autoSaveNow(){
@@ -1986,7 +1994,7 @@ async function doAutoSave(){
     var hasCloud = !!localStorage.getItem('cd_sync_url');
     await saveRecord({ silent: true, skipImages: true });
     setAutoSaveStatus(hasCloud ? 'cloud' : 'saved');
-    setTimeout(function(){ if(!_autoSaveTimer) setAutoSaveStatus('idle'); }, 2500);
+    // 「🟢 ✓ 已同步 HH:MM:SS」保留顯示到下次同步，讓使用者看得到最後同步時間
   }catch(e){
     console.warn('自動儲存失敗', e);
     setAutoSaveStatus('error');
@@ -1997,18 +2005,13 @@ async function doAutoSave(){
 
 // 重新同步（強制把圖片也一起重傳 + 重拉雲端）
 async function manualResync(){
-  var btn = document.getElementById('resync-btn');
-  var oldText = btn ? btn.innerHTML : '';
-  if(btn){ btn.innerHTML = '⏳ 同步中...'; btn.style.pointerEvents = 'none'; }
+  setAutoSaveStatus('saving');
   try{
     await saveRecord({ silent: true });  // 不 skipImages，強制重推圖片
     setAutoSaveStatus('cloud');
-    setTimeout(function(){ setAutoSaveStatus('idle'); }, 2500);
   }catch(e){
     console.warn('手動同步失敗', e);
     setAutoSaveStatus('error');
-  }finally{
-    if(btn){ btn.innerHTML = oldText || '🔄 重新同步'; btn.style.pointerEvents = ''; }
   }
 }
 
