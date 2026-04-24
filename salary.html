@@ -1348,12 +1348,13 @@ function goBack(){
 // ============================================
 // ☁ 雲端同步（Google Apps Script）
 // ============================================
-// 每家店獨立 /exec 網址；若某店內建是空字串就走 localStorage 設定
+// 4 家店共用同一個 /exec（後端依 store 欄位分流、資料寫進同一份試算表）
+var SALARY_SYNC_URL = 'https://script.google.com/macros/s/AKfycbykQ-2CnEFLxy9Qs3o_9kqzOk2E9aIr-ODnY0wx8OS9SWGIAFGJu0Nmss2GqjQcbtNL/exec';
 var BUILTIN_SALARY_URLS = {
-  'chudian-zhonghe':    '',
-  'chudian-yongchun':   '',
-  'chudian-xinzhuang':  '',
-  'shicheng-zhongxiao': ''
+  'chudian-zhonghe':    SALARY_SYNC_URL,
+  'chudian-yongchun':   SALARY_SYNC_URL,
+  'chudian-xinzhuang':  SALARY_SYNC_URL,
+  'shicheng-zhongxiao': SALARY_SYNC_URL
 };
 var LS_SALARY_SYNC_URL = 'cd_salary_sync_url';  // 使用者自行貼上的（優先於內建）
 

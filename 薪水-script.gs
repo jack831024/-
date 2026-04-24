@@ -20,9 +20,10 @@
 
 
 // ============================================
-// 📌 設定：要存到哪份試算表（留空則用綁定的）
+// 📌 設定：要存到哪份試算表
+//   https://docs.google.com/spreadsheets/d/1XgosJ52UraLAb9f0zdK9MLDSByvEJKSd5L9DfxejHKI/edit
 // ============================================
-var SALARY_SHEET_ID = '';
+var SALARY_SHEET_ID = '1XgosJ52UraLAb9f0zdK9MLDSByvEJKSd5L9DfxejHKI';
 
 // ============================================
 // 🔑 各店密碼（跟 index.html 一致）
