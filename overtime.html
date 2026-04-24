@@ -398,6 +398,83 @@ var BUILTIN_OT_URLS = {
   }
 })();
 
+// ============================================
+// ⭐ 內建各店「班表中文名 → 打卡英文名」對照表
+// 班表寫中文（蔡鈺豪），打卡記錄是英文（hao），這裡硬寫一張對照表自動配對。
+// 沒在這張表裡的中文名 → 找不到對應打卡 → 該員工會被當缺卡（這是預期行為）
+// 沒在這張表裡的英文名 → 走 PT 流程（被視為兼職）
+// 之後人員異動，改這裡推 GitHub 即可。
+// ============================================
+var NAME_MAP_BY_STORE = {
+  'chudian-zhonghe': {
+    '施偉祥': 'xiang',
+    '劉濡瑜': 'lu',
+    '李文少': 'bob',
+    '褚心榆': 'chu',
+    '江竑緯': 'wallen',
+    '潘立軒': 'pan',
+    '黃威倫': 'wei'
+  },
+  'chudian-yongchun': {
+    '謝其淇': 'chi',
+    '林韋翔': 'sean',
+    '洪文祥': 'billy',
+    '呂直宸': 'chihlu',
+    '吳孟澤': 'ben'
+    // 邱昊勳: 對應未知，暫不對照
+  },
+  'chudian-xinzhuang': {
+    '蔡鈺豪': 'hao',
+    '蘇奕誠': 'su',
+    '李嘉真': 'jen',
+    '洪仕賢': 'simon',
+    // 洪晟育: 打卡記錄無對應
+    '林詩縈': 'abby'
+  },
+  'shicheng-zhongxiao': {
+    // 待補
+  }
+};
+
+// 預先建立 normalize 後的對照（提升查找效能；同時也做反向 set 給 PT 篩選用）
+var NAME_MAP_NORMALIZED = {};      // 班表 → 打卡：{ store: { normSchedKey: normPunchKey } }
+var MAPPED_PUNCH_KEYS  = {};       // PT 篩選用：{ store: { normPunchKey: true } }
+(function buildNameMap(){
+  Object.keys(NAME_MAP_BY_STORE).forEach(function(store){
+    NAME_MAP_NORMALIZED[store] = {};
+    MAPPED_PUNCH_KEYS[store]   = {};
+    var raw = NAME_MAP_BY_STORE[store];
+    Object.keys(raw).forEach(function(zh){
+      var en = raw[zh];
+      if(!en) return;
+      var nz = String(zh).trim().toLowerCase();
+      var ne = String(en).trim().toLowerCase()
+                 .replace(/^[\d\s\-_#]+/, '')
+                 .replace(/[\s\-_#]*\d+\s*$/, '')
+                 .trim();
+      if(nz && ne){
+        NAME_MAP_NORMALIZED[store][nz] = ne;
+        MAPPED_PUNCH_KEYS[store][ne]   = true;
+      }
+    });
+  });
+})();
+
+// 給班表姓名 → 對應到打卡 key（normalize 後）；找不到回傳原本 normalize 結果
+function resolvePunchKeyByName(schedName){
+  var nz = String(schedName||'').trim().toLowerCase();
+  var m = NAME_MAP_NORMALIZED[STORE];
+  if(m && m[nz]) return m[nz];
+  return normalizeName(schedName);
+}
+
+// 給打卡英文名 → 是否屬於某位班表員工（已被內建對照標為 FT）
+function isPunchMappedToSchedule(punchName){
+  var s = MAPPED_PUNCH_KEYS[STORE];
+  if(!s) return false;
+  return !!s[normalizeName(punchName)];
+}
+
 // 狀態
 var SCHEDULE = null;   // { year, month, rows: [{name, days:{1:'早',2:'中',...}}] }
 var PUNCHES  = null;   // { rows: [{name, date:'YYYY-MM-DD', time:'HH:mm'}], filename }
@@ -1312,8 +1389,9 @@ function runAnalysis(){
       var shift = shiftMap[code];
       // 未定義的班別代碼 → 仍記一筆，標成 unknown
       var date = y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-      var k = normalizeName(name)+'|'+date;
-      var punches = (punchMap[k]||[]).slice().sort();
+      // 用內建的「班表中文名 → 打卡英文名」對照查打卡
+      var pk = resolvePunchKeyByName(name);
+      var punches = (punchMap[pk+'|'+date]||[]).slice().sort();
       // 永遠把打卡合併到「應有 N 次」，每筆對應一個排定時段（取最有利於員工的時間）
       // 員工忘記是否打過卡而連按兩下，會被自動合併避免假加班
       var requiredCount = Number(shift && shift.punches) || 2;
@@ -1747,7 +1825,9 @@ function cleanupPtListBySchedule(){
   });
   var current = readPtListFromDom();
   var kept = current.filter(function(p){
-    return !schedNames[normalizeName(p.name)];
+    var k = normalizeName(p.name);
+    // 已直接在班表 / 已被內建對照標為 FT → 從 PT 名單移除
+    return !schedNames[k] && !isPunchMappedToSchedule(p.name);
   });
   if(kept.length !== current.length){
     localStorage.setItem(LS_KEY_PT_LIST, JSON.stringify(kept));
@@ -1778,6 +1858,7 @@ function autoImportPtList(silent){
     var k = normalizeName(p.name);
     if(!k || schedNames[k] || existing[k] || found[k]) return;
     if(!isEnglishName(p.name)) return; // 只收英文名（中文名對不上 = FT 命名差異，不算 PT）
+    if(isPunchMappedToSchedule(p.name)) return; // 已被內建對照標為 FT，不算 PT
     found[k] = p.name;
   });
   var added = 0;
@@ -1868,6 +1949,8 @@ function runPtAnalysis(){
     if(schedNames[k]) return;
     // 只算英文名（中文名對不上 = FT 命名差異，不該歸入 PT）
     if(!isEnglishName(p.name)) return;
+    // 已被內建「中文 → 英文」對照表標為 FT 員工 → 不算 PT
+    if(isPunchMappedToSchedule(p.name)) return;
     var key = p.name + '|' + p.date;
     if(!groups[key]) groups[key] = { name:p.name, date:p.date, punches:[] };
     groups[key].punches.push(p.time);
