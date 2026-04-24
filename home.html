@@ -154,7 +154,19 @@ h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 </div>
 
 <script>
+// 加班費進入密碼（共用一組，通過後 4 家店都可選）
+var OVERTIME_PASSWORD = 'chudian';
+
 function goFlow(flow){
+  if(flow === 'overtime' && sessionStorage.getItem('cd_overtime_auth') !== '1'){
+    var pw = prompt('請輸入加班費系統密碼：');
+    if(pw === null) return;
+    if(String(pw).trim() !== OVERTIME_PASSWORD){
+      alert('❌ 密碼錯誤');
+      return;
+    }
+    sessionStorage.setItem('cd_overtime_auth', '1');
+  }
   sessionStorage.setItem('cd_flow', flow);
   sessionStorage.removeItem('cd_store');
   sessionStorage.removeItem('cd_store_name');

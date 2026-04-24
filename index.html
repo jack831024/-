@@ -122,6 +122,12 @@ h1{font-size:24px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 // 顯示目前流程（由主頁帶入）
 (function(){
   var flow = sessionStorage.getItem('cd_flow');
+  // 加班費流程需先通過密碼（在主頁輸入）才能進來
+  if(flow === 'overtime' && sessionStorage.getItem('cd_overtime_auth') !== '1'){
+    alert('請從主頁重新進入並輸入加班費系統密碼');
+    window.location.href = 'home.html';
+    return;
+  }
   var el = document.getElementById('flow-indicator');
   if(!flow){ return; }
   var map = {

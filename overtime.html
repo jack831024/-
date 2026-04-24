@@ -370,6 +370,14 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
 // ============================================
 // 初始化 / 設定
 // ============================================
+// 授權檢查：加班費流程需從主頁輸入密碼後才能進入
+(function checkAuth(){
+  if(sessionStorage.getItem('cd_overtime_auth') !== '1'){
+    alert('請從主頁重新進入並輸入加班費系統密碼');
+    window.location.href = 'home.html';
+  }
+})();
+
 var STORE = sessionStorage.getItem('cd_store') || '';
 var STORE_NAME = sessionStorage.getItem('cd_store_name') || '（未選店）';
 document.getElementById('store-name').textContent = STORE_NAME;
