@@ -244,12 +244,9 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
   <div class="section">
     <h3>
       <span class="step-num">6</span><span class="icon">💵</span>營業額獎金
-      <span class="hint">自動從該店小結報表抓取</span>
+      <span class="hint">自動從該店小結報表計算（A 班 × 該店獎金 %）</span>
     </h3>
-    <div style="margin-bottom:8px">
-      <button class="btn btn-ghost btn-sm" onclick="importSalesBonus()">🔄 重新從小結報表抓取</button>
-      <span id="sales-import-status" style="margin-left:8px;font-size:11.5px;color:var(--ink-3)"></span>
-    </div>
+    <div id="sales-import-status" style="font-size:11.5px;color:var(--ink-3);margin-bottom:8px"></div>
     <table class="grid">
       <thead><tr><th>員工</th><th style="width:160px">營業額獎金</th></tr></thead>
       <tbody id="tbody-s5"></tbody>
@@ -317,16 +314,24 @@ document.getElementById('store-name').textContent = STORE_NAME;
 var BASE_SALARY = 26000;       // 正職/主管 底薪
 // 固定加班費已改為依「店 × 職級」決定，見 STORE_CONFIG 裡的 fixedOT
 
+// 各店營業額獎金 % （須與 daily-summary.html 的 BONUS_RATES 一致）
+var SALES_BONUS_RATES = {
+  'chudian-zhonghe':    0.0165,
+  'chudian-yongchun':   0.02,
+  'chudian-xinzhuang':  0.0175,
+  'shicheng-zhongxiao': 0.025
+};
+
 // ============================================
 // 各店員工設定（姓名、預設職級、勞健保、職務加給基礎）
 // ============================================
 var STORE_CONFIG = {
   'chudian-zhonghe': {
     employees: [
-      { id:'zh1', name:'李文少', defaultRole:'head',    nickname:'李哥' },
-      { id:'zh2', name:'施偉祥', defaultRole:'deputy',  nickname:'阿翔' },
-      { id:'zh3', name:'劉濡瑜', defaultRole:'regular', nickname:'濡瑜' },
-      { id:'zh4', name:'褚心榆', defaultRole:'regular', nickname:'心榆' }
+      { id:'zh1', name:'李文少', defaultRole:'head',    nickname:'李哥',   salesAlias:'李文少' },
+      { id:'zh2', name:'施偉祥', defaultRole:'deputy',  nickname:'阿翔',   salesAlias:'施偉祥' },
+      { id:'zh3', name:'劉濡瑜', defaultRole:'regular', nickname:'濡瑜',   salesAlias:'劉濡瑜' },
+      { id:'zh4', name:'褚心榆', defaultRole:'regular', nickname:'心榆',   salesAlias:'褚心榆' }
     ],
     pt: [
       { id:'zh_pt1', name:'潘立軒', nickname:'小潘' },
@@ -344,12 +349,12 @@ var STORE_CONFIG = {
   },
   'chudian-yongchun': {
     employees: [
-      { id:'yc1', name:'謝其淇', defaultRole:'head' },
-      { id:'yc2', name:'林韋翔', defaultRole:'deputy' },
-      { id:'yc3', name:'洪文祥', defaultRole:'regular' },
-      { id:'yc4', name:'呂直宸', defaultRole:'regular' },
-      { id:'yc5', name:'吳孟澤', defaultRole:'regular' },
-      { id:'yc6', name:'邱昊勳', defaultRole:'regular' }
+      { id:'yc1', name:'謝其淇', defaultRole:'head',    salesAlias:'77' },
+      { id:'yc2', name:'林韋翔', defaultRole:'deputy',  salesAlias:'林韋翔' },
+      { id:'yc3', name:'洪文祥', defaultRole:'regular', salesAlias:'洪' },
+      { id:'yc4', name:'呂直宸', defaultRole:'regular', salesAlias:'宸' },
+      { id:'yc5', name:'吳孟澤', defaultRole:'regular', salesAlias:'小澤' },
+      { id:'yc6', name:'邱昊勳', defaultRole:'regular', salesAlias:'小邱' }
     ],
     pt: [],
     // 火鍋店：店長 10000/20000、副店長 5000/15000、正職 0/10000
@@ -360,10 +365,10 @@ var STORE_CONFIG = {
   },
   'chudian-xinzhuang': {
     employees: [
-      { id:'xz1', name:'蔡鈺豪', defaultRole:'head' },
-      { id:'xz2', name:'蘇奕誠', defaultRole:'deputy' },
-      { id:'xz3', name:'李嘉真', defaultRole:'regular' },
-      { id:'xz4', name:'洪仕賢', defaultRole:'regular' }
+      { id:'xz1', name:'蔡鈺豪', defaultRole:'head',    salesAlias:'蔡鈺豪' },
+      { id:'xz2', name:'蘇奕誠', defaultRole:'deputy',  salesAlias:'蘇奕誠' },
+      { id:'xz3', name:'李嘉真', defaultRole:'regular', salesAlias:'李嘉真' },
+      { id:'xz4', name:'洪仕賢', defaultRole:'regular', salesAlias:'洪仕賢' }
     ],
     pt: [
       { id:'xz_pt1', name:'林詩縈' },
@@ -377,10 +382,10 @@ var STORE_CONFIG = {
   },
   'shicheng-zhongxiao': {
     employees: [
-      { id:'sc1', name:'林梓彥', defaultRole:'head' },
-      { id:'sc2', name:'王謖',   defaultRole:'regular' },
-      { id:'sc3', name:'林哲民', defaultRole:'regular' },
-      { id:'sc4', name:'陳柏維', defaultRole:'regular' }
+      { id:'sc1', name:'林梓彥', defaultRole:'head',    salesAlias:'梓彥' },
+      { id:'sc2', name:'王謖',   defaultRole:'regular', salesAlias:'王謖' },
+      { id:'sc3', name:'林哲民', defaultRole:'regular', salesAlias:'阿哲' },
+      { id:'sc4', name:'陳柏維', defaultRole:'regular', salesAlias:'麥克' }
     ],
     pt: [],
     // 十城店：店長 5000/15000、副店長 2500/12500、正職 0/10000
@@ -1064,44 +1069,89 @@ function doImportOvertime(showToast){
 function importFromOvertime(){ doImportOvertime(true); }
 
 // ============================================
-// 從小結報表匯入（營業額獎金）
+// 從小結報表自動計算營業額獎金（直接讀 cd_records_<store>）
 // ============================================
 function doImportSalesBonus(showToast){
   var ym = getSelectedYM();
-  var key = 'cd_sales_bonus_' + (STORE || 'nostore') + '_' + ym;
+  var rate = SALES_BONUS_RATES[STORE] || 0;
   var status = document.getElementById('sales-import-status');
-  try {
-    var raw = localStorage.getItem(key);
-    if(!raw){
-      if(status) status.textContent = '⚠ 小結報表尚未計算本月獎金（仍可手動填）';
-      if(showToast) toast('找不到小結資料：請先進入小結報表瀏覽本月', 'err');
-      return 0;
-    }
-    var data = JSON.parse(raw);
-    var emps = data.employees || {};
-    var matched = 0;
-    ALL_EMPLOYEES.forEach(function(e){
-      var hit = emps[e.name];
-      if(hit === undefined) hit = emps[e.nickname||''];
-      if(typeof hit === 'number'){
-        STATE.s5[e.id] = Math.round(hit);
-        matched++;
-      }
-    });
-    renderS5();
-    renderDetail();
-    if(status){
-      var ts = data.savedAt ? new Date(data.savedAt).toLocaleString('zh-TW') : '';
-      status.textContent = '✅ 已匯入 '+matched+' 位員工'+(ts?'（'+ts+' 產出）':'');
-    }
-    if(showToast) toast('營業額獎金匯入完成：'+matched+' 位', 'ok');
-    return matched;
-  } catch(err){
-    if(showToast) toast('匯入失敗：'+err.message, 'err');
+
+  // 清空所有員工的營業額獎金，避免切月時殘留
+  ALL_EMPLOYEES.forEach(function(e){ STATE.s5[e.id] = 0; });
+
+  if(!STORE){
+    if(status) status.textContent = '⚠ 尚未選店';
     return 0;
   }
+
+  // 1) 首選：直接讀 cd_records_<store>，當場算本月每人 A 班獎金
+  var totalsBySource = {}; // 小結裡的 A 班姓名 → 累計獎金
+  var hasRecords = false;
+  try {
+    var raw = localStorage.getItem('cd_records_' + STORE);
+    if(raw){
+      var records = JSON.parse(raw) || {};
+      Object.keys(records).forEach(function(d){
+        if(d.substring(0, 7) !== ym) return;
+        var inp = ((records[d]||{}).data || {}).inputs || {};
+        var net = parseFloat(inp['b-net']) || 0;
+        if(!net) return;
+        var person = inp['i-shift-a'];
+        if(!person) return;
+        hasRecords = true;
+        totalsBySource[person] = (totalsBySource[person] || 0) + net * rate;
+      });
+    }
+  } catch(e){ console.warn('read records fail', e); }
+
+  // 2) 備援：若 cd_records 沒本月資料，改讀小結頁另存的 cd_sales_bonus
+  if(!hasRecords){
+    try {
+      var raw2 = localStorage.getItem('cd_sales_bonus_' + STORE + '_' + ym);
+      if(raw2){
+        var fb = JSON.parse(raw2);
+        if(fb && fb.employees){
+          Object.keys(fb.employees).forEach(function(n){
+            totalsBySource[n] = fb.employees[n];
+          });
+          hasRecords = true;
+        }
+      }
+    } catch(e){ /* ignore */ }
+  }
+
+  // 對應到薪水頁員工（salesAlias / name / nickname 都試）
+  var matched = 0, totalAssigned = 0, unassigned = [];
+  Object.keys(totalsBySource).forEach(function(src){
+    var amt = Math.round(totalsBySource[src] || 0);
+    var hit = ALL_EMPLOYEES.find(function(e){
+      return src === e.salesAlias || src === e.name || src === e.nickname;
+    });
+    if(hit){
+      STATE.s5[hit.id] = (STATE.s5[hit.id] || 0) + amt;
+      matched++;
+      totalAssigned += amt;
+    } else if(amt) {
+      unassigned.push(src + '(' + amt + ')');
+    }
+  });
+
+  renderS5();
+  renderDetail();
+
+  if(status){
+    if(!hasRecords){
+      status.textContent = '⚠ 本店本月尚無小結資料（獎金維持 0，可手動填）';
+    } else {
+      var pct = (rate*100).toFixed(2).replace(/\.?0+$/, '');
+      var parts = ['✅ 已自動帶入（獎金率 '+pct+'%・本月共發放 NT$ '+totalAssigned.toLocaleString()+'）'];
+      if(unassigned.length) parts.push('未對應到：' + unassigned.join('、'));
+      status.textContent = parts.join(' · ');
+    }
+  }
+  if(showToast) toast(hasRecords ? ('營業額獎金已計算，共 '+matched+' 人') : '本店本月無小結資料', hasRecords ? 'ok' : 'err');
+  return matched;
 }
-function importSalesBonus(){ doImportSalesBonus(true); }
 
 // ============================================
 // 從匿名表匯入（評分表獎金）
