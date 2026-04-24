@@ -514,6 +514,27 @@ var STAFF_LISTS = {
   'chudian-xinzhuang':  ['蔡鈺豪','李嘉真','洪仕賢','蘇奕誠'],                        // 新莊店
   'shicheng-zhongxiao': ['林哲民','林梓彥','王謖','陳柏維']                           // 十城忠孝店
 };
+
+// 舊暱稱 → 新全名（讓歷史紀錄自動對應到新姓名，獎金才不會被歸到「未指定」）
+var STAFF_ALIASES = {
+  // 永春店
+  '77':   '謝其淇',
+  '洪':   '洪文祥',
+  '宸':   '呂直宸',
+  '小澤': '吳孟澤',
+  '小邱': '邱昊勳',
+  // 十城忠孝店
+  '阿哲': '林哲民',
+  '梓彥': '林梓彥',
+  '麥克': '陳柏維'
+};
+
+// 把任何姓名字串正規化：舊暱稱 → 新全名；其他維持原樣
+function canonicalStaffName(name){
+  var s = String(name || '').trim();
+  if(!s) return '';
+  return STAFF_ALIASES[s] || s;
+}
 var CURRENT_STAFF_LIST = STAFF_LISTS[STORE_ID] || [];
 
 // 🗓️ 排班表快取（進頁面時抓一次就全放這）
@@ -529,7 +550,10 @@ function findAShiftFromCache(dateStr){
   for(var name in day){
     if(!day.hasOwnProperty(name)) continue;
     var v = String(day[name]).trim().toUpperCase();
-    if(v === 'A' || v === 'Ａ' || v === 'A班' || v === 'Ａ班') return name;
+    if(v === 'A' || v === 'Ａ' || v === 'A班' || v === 'Ａ班'){
+      // 若排班表還是舊暱稱，這裡自動轉成新姓名
+      return canonicalStaffName(name);
+    }
   }
   return null;
 }
@@ -1433,11 +1457,25 @@ async function loadSchedule(){
     });
     var data = await res.json();
     SCHEDULE_CACHE   = data.schedule || {};
-    SCHEDULE_HEADERS = (data.headers || []).filter(function(h){ return h && String(h).trim(); });
+    // 排班表 headers 和每日打卡 key 若還是舊暱稱，這裡先全部轉成新姓名
+    SCHEDULE_HEADERS = (data.headers || [])
+      .filter(function(h){ return h && String(h).trim(); })
+      .map(canonicalStaffName);
+    // SCHEDULE_CACHE 的每個日期裡，key 也要轉
+    var normalizedCache = {};
+    Object.keys(SCHEDULE_CACHE).forEach(function(d){
+      var day = SCHEDULE_CACHE[d] || {};
+      var newDay = {};
+      Object.keys(day).forEach(function(k){
+        newDay[canonicalStaffName(k)] = day[k];
+      });
+      normalizedCache[d] = newDay;
+    });
+    SCHEDULE_CACHE = normalizedCache;
     SCHEDULE_LOADED  = true;
-    // 排班表表頭有任何員工不在 STAFF_LISTS 裡，自動合併進去
+    // 排班表表頭有任何員工不在 STAFF_LISTS 裡，自動合併進去（已正規化）
     SCHEDULE_HEADERS.forEach(function(n){
-      if(CURRENT_STAFF_LIST.indexOf(n) < 0) CURRENT_STAFF_LIST.push(n);
+      if(n && CURRENT_STAFF_LIST.indexOf(n) < 0) CURRENT_STAFF_LIST.push(n);
     });
     if(statusEl) statusEl.textContent = '✓ 排班表載入完成（' + Object.keys(SCHEDULE_CACHE).length + ' 天）';
     return true;
@@ -1551,7 +1589,8 @@ function recalcStaffBonus(){
     var inp = (records[d].data || {}).inputs || {};
     var net = parseFloat(inp['b-net']) || 0;
     if(!net) return;
-    var person = inp['i-shift-a'];
+    // ⭐ 舊紀錄裡的暱稱（77、洪、宸…）→ 轉成新姓名，才比對得上 CURRENT_STAFF_LIST
+    var person = canonicalStaffName(inp['i-shift-a']);
     var bonus = net * rate;
     pool += bonus;
     var entry = { date: d, net: net, bonus: bonus, person: person || '' };
@@ -1567,7 +1606,7 @@ function recalcStaffBonus(){
   // 加上今天畫面上的
   if(dateStr && (!ym || dateStr.substring(0, 7) === ym)){
     var todayNet = parseFloat(document.getElementById('b-net').value) || 0;
-    var todayA = document.getElementById('i-shift-a').value;
+    var todayA = canonicalStaffName(document.getElementById('i-shift-a').value);
     if(todayNet){
       var todayBonus = todayNet * rate;
       pool += todayBonus;
