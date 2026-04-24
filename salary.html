@@ -648,6 +648,15 @@ function renderSummaryTable(){
     + '<td class="amount-cell">'+fmtPlain(totalGross)+'</td>'
     + '<td class="sum-total">'+fmtPlain(totalReal)+'</td>'
     + '</tr>';
+
+  // 把人事成本合計同步到一個簡單 key，讓盤點表的月度成本分析讀取
+  // key 格式：cd_hr_total_<門市>_<YYYY-MM> = 合計金額（整數）
+  try {
+    var ym = getSelectedYM();
+    if(STORE && ym){
+      localStorage.setItem('cd_hr_total_' + STORE + '_' + ym, String(Math.round(totalReal)));
+    }
+  } catch(e){ console.warn('sync hr total fail', e); }
 }
 
 function opt(val, label, selected){

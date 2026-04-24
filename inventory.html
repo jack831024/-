@@ -1675,9 +1675,13 @@ function saveBizInputs(){
   var picker = document.getElementById('month-picker');
   if(!picker) return;
   var yearMonth = picker.value;
-  var hrCost = Number(document.getElementById('biz-hr-input').value) || 0;
+  var hrEl = document.getElementById('biz-hr-input');
+  // 人事成本若來自薪資系統同步（readonly），不覆寫
+  if(!hrEl.readOnly){
+    var hrCost = Number(hrEl.value) || 0;
+    localStorage.setItem('cd_biz_hr_'+STORE_ID+'_'+yearMonth, String(hrCost));
+  }
   var rent = Number(document.getElementById('biz-rent-input').value) || 0;
-  localStorage.setItem('cd_biz_hr_'+STORE_ID+'_'+yearMonth, String(hrCost));
   localStorage.setItem('cd_biz_rent_'+STORE_ID, String(rent));
   renderBusinessSummary();
 }
@@ -1691,11 +1695,44 @@ var DEFAULT_RENTS = {
 };
 
 function loadBizInputs(yearMonth){
-  var hrCost = localStorage.getItem('cd_biz_hr_'+STORE_ID+'_'+yearMonth) || '';
+  // 人事成本：優先從薪資系統同步的總和讀取，沒有才讓使用者手動輸入
+  var hrEl = document.getElementById('biz-hr-input');
+  var hrSynced = localStorage.getItem('cd_hr_total_'+STORE_ID+'_'+yearMonth);
+  if(hrSynced !== null && hrSynced !== ''){
+    hrEl.value = hrSynced;
+    hrEl.readOnly = true;
+    hrEl.style.background = 'rgba(139,92,246,.08)';
+    hrEl.style.cursor = 'not-allowed';
+    hrEl.title = '來自薪資系統 · 各別明細合計';
+  }else{
+    var hrManual = localStorage.getItem('cd_biz_hr_'+STORE_ID+'_'+yearMonth) || '';
+    hrEl.value = hrManual;
+    hrEl.readOnly = false;
+    hrEl.style.background = '';
+    hrEl.style.cursor = '';
+    hrEl.title = '';
+  }
+  // 在人事卡片下方動態顯示「薪資系統同步」提示
+  var hrHintEl = document.getElementById('biz-hr-source-hint');
+  if(!hrHintEl){
+    // 首次建立提示列
+    var hrCard = document.querySelector('.biz-card.hr');
+    if(hrCard){
+      hrHintEl = document.createElement('div');
+      hrHintEl.id = 'biz-hr-source-hint';
+      hrHintEl.style.cssText = 'font-size:11px;margin-top:4px;color:#7c3aed;font-weight:500';
+      hrCard.appendChild(hrHintEl);
+    }
+  }
+  if(hrHintEl){
+    hrHintEl.innerHTML = (hrSynced !== null && hrSynced !== '')
+      ? '🔗 已連動薪資系統「各別明細」合計（請到薪資系統修改）'
+      : '💡 尚未連動薪資系統，請先到薪資系統儲存該月資料';
+  }
+
   var defaultRent = DEFAULT_RENTS[STORE_ID] || 45000;
   var rent = localStorage.getItem('cd_biz_rent_'+STORE_ID);
   if(rent === null) rent = String(defaultRent);
-  document.getElementById('biz-hr-input').value = hrCost;
   document.getElementById('biz-rent-input').value = rent;
   // 動態 placeholder 顯示該店預設值
   document.getElementById('biz-rent-input').placeholder = '預設 ' + defaultRent.toLocaleString();
