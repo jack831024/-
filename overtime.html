@@ -1417,9 +1417,34 @@ function runAnalysis(){
   renderSummary();
   renderDiagnostics(y, m);
   renderResults();
+  persistSalarySummary(y, m);
   document.getElementById('btn-export').disabled = !results.length;
   document.getElementById('filter-chips').style.display = 'flex';
   document.getElementById('summary-grid').style.display = 'grid';
+}
+
+// 把分析結果以「每人一筆」的方式寫進 localStorage，供 salary.html 匯入
+function persistSalarySummary(y, m){
+  if(!ANALYSIS || !ANALYSIS.length) return;
+  var ym = y + '-' + String(m).padStart(2,'0');
+  var byEmp = {};
+  ANALYSIS.forEach(function(r){
+    var n = r.name;
+    if(!byEmp[n]) byEmp[n] = { overtimeMin:0, lateDays:0, missDays:0 };
+    byEmp[n].overtimeMin += (r.overtimeMin || 0);
+    if(r.lateMin > 0) byEmp[n].lateDays += 1;
+    if(r.missing) byEmp[n].missDays += 1;
+  });
+  var payload = {
+    ym: ym,
+    store: STORE || 'nostore',
+    storeName: STORE_NAME,
+    savedAt: new Date().toISOString(),
+    employees: byEmp
+  };
+  try {
+    localStorage.setItem('cd_ot_summary_' + (STORE || 'nostore') + '_' + ym, JSON.stringify(payload));
+  } catch(e){ console.warn('persistSalarySummary fail', e); }
 }
 
 // 診斷：檢查班表月份 vs 打卡月份 / 班表姓名 vs 打卡姓名 不一致之處

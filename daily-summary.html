@@ -1660,6 +1660,23 @@ function recalcStaffBonus(){
     }
     detailEl.innerHTML = parts.join('') || '<div style="text-align:center;color:#aaa;padding:12px">本月暫無紀錄</div>';
   }
+
+  // 寫一份「每位員工本月營業額獎金」供 salary.html 自動抓取
+  try {
+    if(ym){
+      var payload = {
+        ym: ym,
+        store: STORE_ID || 'nostore',
+        storeName: STORE_NAME || '',
+        rate: rate,
+        totalPool: pool,
+        savedAt: new Date().toISOString(),
+        employees: {}
+      };
+      CURRENT_STAFF_LIST.forEach(function(n){ payload.employees[n] = Math.round(totals[n] || 0); });
+      localStorage.setItem('cd_sales_bonus_' + (STORE_ID || 'nostore') + '_' + ym, JSON.stringify(payload));
+    }
+  } catch(e){ console.warn('persistSalesBonus fail', e); }
 }
 
 // 切換顯示 / 隱藏每日明細

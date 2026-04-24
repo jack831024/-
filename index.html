@@ -160,7 +160,8 @@ function selectStore(id, name){
   sessionStorage.setItem('cd_store_name', name);
   var pageMap = {
     inventory: 'inventory.html',
-    overtime:  'overtime.html'
+    overtime:  'overtime.html',
+    salary:    'salary.html'
   };
   window.location.href = pageMap[flow] || 'daily-summary.html';
 }

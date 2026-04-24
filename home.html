@@ -76,11 +76,19 @@ h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 .menu-card.survey:hover .icon-wrap{background:linear-gradient(135deg,#8b5cf6 0%,#a78bfa 100%);color:#fff;transform:scale(1.05)}
 .menu-card.survey .mgo{color:#8b5cf6}
 
+.menu-card.salary .icon-wrap{background:linear-gradient(135deg,#fce7f3 0%,#fbcfe8 100%);color:#db2777}
+.menu-card.salary::after{background:linear-gradient(90deg,#ec4899,#f472b6)}
+.menu-card.salary:hover .icon-wrap{background:linear-gradient(135deg,#ec4899 0%,#f472b6 100%);color:#fff;transform:scale(1.05)}
+.menu-card.salary .mgo{color:#db2777}
+
 .footer{text-align:center;font-size:11px;color:var(--ink-3);letter-spacing:1px;margin-top:1rem}
 .footer .year{font-weight:600;color:var(--ink-2)}
 
 @media(max-width:1100px){
   .menu-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(min-width:901px){
+  .menu-grid{grid-template-columns:repeat(4,1fr)}
 }
 @media(max-width:560px){
   body{padding:1rem}
@@ -131,6 +139,13 @@ h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
       <span class="icon-wrap">📝</span>
       <span class="mtitle">匿名表</span>
       <span class="mdesc">員工匿名評分與回饋，<br>4 家店分別統計獎金</span>
+      <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+    </button>
+    <button class="menu-card salary" onclick="goFlow('salary')">
+      <span class="num">05</span>
+      <span class="icon-wrap">🧾</span>
+      <span class="mtitle">薪水計算</span>
+      <span class="mdesc">各項獎金彙整、勞健保與加給，<br>自動算出每位員工實領</span>
       <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
     </button>
   </div>

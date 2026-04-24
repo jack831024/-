@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>薪水計算</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#8b5cf6;
+  --brand-dark:#7c3aed;
+  --brand-light:#ede9fe;
+  --ink:#0f172a;
+  --ink-2:#475569;
+  --ink-3:#94a3b8;
+  --line:#e2e8f0;
+  --danger:#dc2626;
+  --ok:#10b981;
+  --warn:#f59e0b;
+  --info:#3b82f6;
+}
+html,body{height:100%}
+body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;padding:1rem;
+  background:
+    radial-gradient(1000px 500px at 10% -10%, #ede9fe 0%, transparent 50%),
+    radial-gradient(800px 500px at 110% 10%, #fce7f3 0%, transparent 55%),
+    linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+}
+
+.topbar{max-width:1000px;margin:0 auto 14px;display:flex;align-items:center;gap:10px;padding:4px;flex-wrap:wrap}
+.back-btn{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.8);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);transition:all .2s;box-shadow:0 4px 12px -4px rgba(15,23,42,.08);flex-shrink:0}
+.back-btn:hover{background:#fff;color:var(--brand);transform:translateX(-2px)}
+.back-btn svg{width:17px;height:17px}
+.store-chip{display:flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;background:rgba(255,255,255,.8);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);border-radius:999px;font-size:13px;color:var(--ink);font-weight:600;box-shadow:0 4px 12px -4px rgba(15,23,42,.06)}
+.store-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--brand),#a78bfa);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px}
+.spacer{flex:1}
+.month-picker{padding:8px 12px;font-size:14px;border:1.5px solid var(--line);border-radius:10px;background:rgba(255,255,255,.9);cursor:pointer;color:var(--ink);font-family:inherit;font-weight:600;outline:none;transition:all .18s}
+.month-picker:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(139,92,246,.12)}
+
+.wrap{max-width:1000px;margin:0 auto;padding:0 0 3rem}
+
+.hero-card{background:linear-gradient(135deg,#f5f3ff 0%,#ede9fe 100%);border:1px solid rgba(139,92,246,.18);border-radius:20px;padding:1.25rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(139,92,246,.06),0 8px 24px -12px rgba(139,92,246,.2)}
+.hero-icon{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--brand) 0%,#a78bfa 100%);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 8px 20px -8px rgba(139,92,246,.5);flex-shrink:0}
+.hero-text h1{font-size:20px;font-weight:700;letter-spacing:-0.02em;margin-bottom:3px}
+.hero-text p{font-size:12.5px;color:var(--ink-2)}
+
+.section{background:rgba(255,255,255,.82);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.9);border-radius:18px;padding:1.1rem 1.25rem;margin-bottom:14px;box-shadow:0 1px 2px rgba(15,23,42,.03),0 6px 18px -10px rgba(15,23,42,.08)}
+h3{font-size:13px;font-weight:700;color:var(--ink-2);margin-bottom:12px;display:flex;align-items:center;gap:6px;letter-spacing:0.01em;flex-wrap:wrap}
+h3 .icon{font-size:15px}
+h3 .step-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--brand);color:#fff;font-size:11px;font-weight:700;margin-right:4px}
+h3 .hint{font-size:11px;color:var(--ink-3);font-weight:500;margin-left:auto;letter-spacing:0}
+
+.sub-label{font-size:11.5px;font-weight:700;color:var(--brand-dark);background:var(--brand-light);padding:3px 10px;border-radius:999px;margin:10px 0 6px;display:inline-block}
+
+table.grid{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+table.grid th{text-align:left;padding:8px 8px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:1px;border-bottom:1.5px solid var(--line)}
+table.grid td{padding:7px 8px;border-bottom:1px solid rgba(226,232,240,.6);vertical-align:middle}
+table.grid tr:last-child td{border-bottom:none}
+table.grid .c-name{font-weight:600;color:var(--ink);width:130px}
+table.grid .c-num{font-family:ui-monospace,"SF Mono",Menlo,monospace;text-align:right;font-variant-numeric:tabular-nums}
+table.grid select,table.grid input[type=number],table.grid input[type=text]{
+  padding:6px 10px;border:1.5px solid var(--line);border-radius:8px;background:rgba(255,255,255,.9);font-family:inherit;font-size:13px;color:var(--ink);outline:none;transition:all .15s;width:100%;max-width:180px
+}
+table.grid select:focus,table.grid input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(139,92,246,.12)}
+table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono",Menlo,monospace;max-width:110px}
+.bonus-cell{font-weight:700;color:var(--ok)}
+.bonus-cell.neg{color:var(--danger)}
+.bonus-cell.zero{color:var(--ink-3)}
+
+.btn{padding:9px 16px;font-size:13.5px;border:none;border-radius:10px;cursor:pointer;font-family:inherit;font-weight:600;transition:all .18s;display:inline-flex;align-items:center;gap:7px}
+.btn-primary{background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);color:#fff;box-shadow:0 6px 16px -6px rgba(139,92,246,.45)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 10px 22px -6px rgba(139,92,246,.55)}
+.btn-ghost{background:rgba(255,255,255,.7);border:1.5px solid var(--line);color:var(--ink-2)}
+.btn-ghost:hover{background:#fff;border-color:var(--brand);color:var(--brand)}
+.btn-sm{padding:6px 11px;font-size:12px;border-radius:8px}
+
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);padding:12px 22px;border-radius:12px;background:var(--ink);color:#fff;font-size:13px;font-weight:600;opacity:0;transition:all .28s;pointer-events:none;z-index:100;box-shadow:0 10px 30px -10px rgba(15,23,42,.4)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--danger)}
+.toast.ok{background:var(--ok)}
+
+/* 個別明細卡 */
+.emp-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.emp-tab{padding:8px 14px;border-radius:999px;font-size:12.5px;font-weight:600;background:rgba(255,255,255,.7);border:1.5px solid var(--line);cursor:pointer;color:var(--ink-2);transition:all .15s;font-family:inherit}
+.emp-tab:hover{color:var(--brand);border-color:var(--brand-light)}
+.emp-tab.active{background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);color:#fff;border-color:transparent;box-shadow:0 4px 12px -4px rgba(139,92,246,.4)}
+.emp-tab .role{font-size:10px;opacity:.7;margin-left:5px}
+
+.payroll{background:linear-gradient(180deg,#fff 0%,#fafaff 100%);border:1px solid var(--line);border-radius:14px;padding:1rem 1.2rem;margin-top:6px}
+.payroll .ptitle{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:12px;display:flex;align-items:center;gap:8px;padding-bottom:10px;border-bottom:1.5px solid var(--line)}
+.payroll .ptitle .tag-role{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--brand-light);color:var(--brand-dark)}
+.payroll .ptitle .tag-role.pt{background:#fef3c7;color:#a16207}
+.payroll .ptitle .tag-role.sup{background:#fce7f3;color:#be185d}
+
+.pay-row{display:grid;grid-template-columns:1fr auto;gap:10px;padding:7px 0;border-bottom:1px dashed rgba(226,232,240,.7);font-size:13.5px;align-items:center}
+.pay-row.total{border-top:2px solid var(--line);border-bottom:none;margin-top:8px;padding-top:12px;font-weight:700;font-size:14.5px}
+.pay-row.final{border-top:2px solid var(--brand);border-bottom:none;margin-top:6px;padding-top:12px;font-size:17px;font-weight:700;color:var(--brand-dark)}
+.pay-row .label{color:var(--ink-2);display:flex;align-items:center;gap:8px}
+.pay-row .label .toggle-btn{background:rgba(139,92,246,.08);border:none;color:var(--brand);cursor:pointer;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:4px}
+.pay-row .label .toggle-btn:hover{background:var(--brand-light)}
+.pay-row .label .toggle-btn .arrow{display:inline-block;transition:transform .18s}
+.pay-row .label .toggle-btn.open .arrow{transform:rotate(180deg)}
+.pay-row .amount{font-family:ui-monospace,"SF Mono",Menlo,monospace;text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.pay-row .amount.neg{color:var(--danger)}
+.pay-row .amount.pos{color:var(--ok)}
+.breakdown{background:rgba(139,92,246,.05);border-left:3px solid var(--brand);border-radius:0 8px 8px 0;padding:8px 14px;margin:0 0 6px;font-size:12.5px;display:none}
+.breakdown.open{display:block}
+.breakdown .bd-row{display:flex;justify-content:space-between;padding:4px 0;color:var(--ink-2)}
+.breakdown .bd-row span.val{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-weight:600}
+.breakdown .bd-row span.val.pos{color:var(--ok)}
+.breakdown .bd-row span.val.zero{color:var(--ink-3)}
+.pay-row input[type=number]{width:110px;padding:5px 9px;border:1.5px solid var(--line);border-radius:7px;background:#fff;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:12.5px;text-align:right;outline:none}
+.pay-row input[type=number]:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(139,92,246,.1)}
+.pay-row select{padding:5px 9px;border:1.5px solid var(--line);border-radius:7px;background:#fff;font-family:inherit;font-size:12.5px;outline:none}
+.pay-row select:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(139,92,246,.1)}
+.pay-sub{background:rgba(139,92,246,.04);border-radius:8px;padding:8px 12px;margin:6px 0;font-size:11.5px;color:var(--ink-2);line-height:1.65}
+.pay-sub b{color:var(--brand-dark)}
+
+.inline-input-row{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 2px}
+.inline-input-row label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2);font-weight:600}
+.inline-input-row input[type=number]{width:70px;padding:5px 9px;border:1.5px solid var(--line);border-radius:7px;background:#fff;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:12.5px;text-align:right;outline:none}
+.inline-input-row input:focus{border-color:var(--brand)}
+
+.note-area{width:100%;margin-top:10px;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit;font-size:13px;color:var(--ink);outline:none;resize:vertical;min-height:60px;background:#fff}
+.note-area:focus{border-color:var(--brand)}
+
+.action-bar{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+
+@media print{
+  body{background:#fff;padding:0}
+  .topbar,.btn,.action-bar,.emp-tabs{display:none !important}
+  .section{break-inside:avoid;box-shadow:none;border:1px solid #ddd}
+  .payroll{box-shadow:none}
+}
+
+@media(max-width:720px){
+  .pay-row{gap:6px}
+  table.grid{font-size:12px}
+  table.grid th,table.grid td{padding:6px 5px}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="goBack()" aria-label="返回">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+  </button>
+  <div class="store-chip">
+    <span class="store-avatar">🏪</span>
+    <span id="store-name">（未選店）</span>
+  </div>
+  <span class="spacer"></span>
+  <select class="month-picker" id="month-picker" aria-label="選擇月份"></select>
+  <button class="btn btn-ghost btn-sm" onclick="saveAll()">💾 儲存</button>
+  <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 列印</button>
+</div>
+
+<div class="wrap">
+
+  <div class="hero-card">
+    <div class="hero-icon">💰</div>
+    <div class="hero-text">
+      <h1>薪水計算</h1>
+      <p>設定各項獎金 → 自動算出每位員工的實領金額</p>
+    </div>
+  </div>
+
+  <!-- 0. 員工職級設定 -->
+  <div class="section">
+    <h3><span class="step-num">1</span><span class="icon">👔</span>員工職級設定<span class="hint">決定各區獎金規則與職務加給</span></h3>
+    <table class="grid">
+      <thead>
+        <tr><th>員工</th><th style="width:180px">職級</th><th style="width:160px">職務加給基礎</th></tr>
+      </thead>
+      <tbody id="tbody-role"></tbody>
+    </table>
+  </div>
+
+  <!-- 1. 打卡/小結/回收獎金 -->
+  <div class="section">
+    <h3><span class="step-num">2</span><span class="icon">📋</span>打卡／小結／回收 獎金<span class="hint">主管扣款、正職獎金</span></h3>
+
+    <div class="sub-label">主管階 · 最高失誤 5 次 · 每次職務加給扣 100</div>
+    <table class="grid">
+      <thead><tr><th>員工</th><th style="width:200px">缺失次數</th><th style="width:100px">扣款</th></tr></thead>
+      <tbody id="tbody-s1-sup"></tbody>
+    </table>
+
+    <div class="sub-label">正職 · 最高失誤 4 次 · 0/1/2/3/4 次 → 200/150/100/50/0</div>
+    <table class="grid">
+      <thead><tr><th>員工</th><th style="width:200px">缺失次數</th><th style="width:100px">獎金</th></tr></thead>
+      <tbody id="tbody-s1-reg"></tbody>
+    </table>
+  </div>
+
+  <!-- 2. 全勤獎勵金 -->
+  <div class="section">
+    <h3>
+      <span class="step-num">3</span><span class="icon">🏆</span>全勤獎勵金
+      <span class="hint">0/1/2/3 天 → 2500/2000/1000/0</span>
+    </h3>
+    <div style="margin-bottom:8px">
+      <button class="btn btn-ghost btn-sm" onclick="importFromOvertime()">🔄 從加班費系統匯入遲到／加班</button>
+      <span id="import-status" style="margin-left:8px;font-size:11.5px;color:var(--ink-3)"></span>
+    </div>
+    <table class="grid">
+      <thead>
+        <tr>
+          <th>員工</th>
+          <th style="width:80px">病假(天)</th>
+          <th style="width:80px">事假(天)</th>
+          <th style="width:80px">遲到(天)</th>
+          <th style="width:80px">合計</th>
+          <th style="width:90px">獎金</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-s2"></tbody>
+    </table>
+  </div>
+
+  <!-- 3. Google 評論獎金 -->
+  <div class="section">
+    <h3><span class="step-num">4</span><span class="icon">⭐</span>Google 評論獎金<span class="hint">0 則 1500・每 1 則 -500</span></h3>
+    <table class="grid">
+      <thead><tr><th>員工</th><th style="width:160px">負評則數</th><th style="width:100px">獎金</th></tr></thead>
+      <tbody id="tbody-s3"></tbody>
+    </table>
+  </div>
+
+  <!-- 4. 考核獎金 -->
+  <div class="section">
+    <h3><span class="step-num">5</span><span class="icon">📝</span>考核獎金<span class="hint">3/6/8/10 站 → 1500/3000/4000/5000</span></h3>
+    <table class="grid">
+      <thead><tr><th>員工</th><th style="width:160px">考核站數</th><th style="width:100px">獎金</th></tr></thead>
+      <tbody id="tbody-s4"></tbody>
+    </table>
+  </div>
+
+  <!-- 5. 營業額獎金 -->
+  <div class="section">
+    <h3>
+      <span class="step-num">6</span><span class="icon">💵</span>營業額獎金
+      <span class="hint">自動從該店小結報表抓取</span>
+    </h3>
+    <div style="margin-bottom:8px">
+      <button class="btn btn-ghost btn-sm" onclick="importSalesBonus()">🔄 重新從小結報表抓取</button>
+      <span id="sales-import-status" style="margin-left:8px;font-size:11.5px;color:var(--ink-3)"></span>
+    </div>
+    <table class="grid">
+      <thead><tr><th>員工</th><th style="width:160px">營業額獎金</th></tr></thead>
+      <tbody id="tbody-s5"></tbody>
+    </table>
+  </div>
+
+  <!-- 6. 評分表獎金 -->
+  <div class="section">
+    <h3><span class="step-num">7</span><span class="icon">📊</span>評分表獎金<span class="hint">正職專屬</span></h3>
+    <table class="grid">
+      <thead><tr><th>員工</th><th style="width:160px">獎金</th></tr></thead>
+      <tbody id="tbody-s6"></tbody>
+    </table>
+  </div>
+
+  <!-- 7. 開會獎金 -->
+  <div class="section">
+    <h3><span class="step-num">8</span><span class="icon">🗣️</span>開會獎金</h3>
+
+    <div class="sub-label">主管階 · 有提出 0 / 沒提出 -500</div>
+    <table class="grid">
+      <thead><tr><th>員工</th><th style="width:200px">結果</th><th style="width:100px">金額</th></tr></thead>
+      <tbody id="tbody-s7-sup"></tbody>
+    </table>
+
+    <div class="sub-label">正職 · 有提出 +200 / 沒提出 0</div>
+    <table class="grid">
+      <thead><tr><th>員工</th><th style="width:200px">結果</th><th style="width:100px">金額</th></tr></thead>
+      <tbody id="tbody-s7-reg"></tbody>
+    </table>
+  </div>
+
+  <!-- 勞健保 -->
+  <div class="section">
+    <h3><span class="step-num">9</span><span class="icon">🏥</span>勞健保</h3>
+    <table class="grid">
+      <thead><tr><th>員工</th><th style="width:160px">金額(+加/-扣)</th></tr></thead>
+      <tbody id="tbody-insurance"></tbody>
+    </table>
+  </div>
+
+  <!-- 各別明細 -->
+  <div class="section">
+    <h3><span class="step-num">10</span><span class="icon">📑</span>各別明細<span class="hint">選員工查看完整薪資</span></h3>
+    <div class="emp-tabs" id="emp-tabs"></div>
+    <div id="emp-detail"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================
+// 設定
+// ============================================
+var STORE = sessionStorage.getItem('cd_store') || '';
+var STORE_NAME = sessionStorage.getItem('cd_store_name') || '（未選店）';
+document.getElementById('store-name').textContent = STORE_NAME;
+
+var BASE_SALARY = 26000;       // 正職/主管 底薪
+var FIXED_OT = 10000;          // 固定加班費
+var HEAD_BONUS = 20000;        // 店長加給基礎
+var DEPUTY_BONUS = 10000;      // 副店長加給基礎
+
+// 正職 + 主管階 員工（有完整明細）
+var EMPLOYEES = [
+  { id:'lee',     name:'李文少', role:'sup', defaultRole:'head',   nickname:'李哥' },
+  { id:'shih',    name:'施偉祥', role:'sup', defaultRole:'deputy', nickname:'阿翔' },
+  { id:'liu',     name:'劉濡瑜', role:'reg', defaultRole:'regular',nickname:'濡瑜' },
+  { id:'chu',     name:'褚心榆', role:'reg', defaultRole:'regular',nickname:'心榆' }
+];
+// PT 員工（只出現在勞健保+個別明細 簡化版）
+var PT_EMPLOYEES = [
+  { id:'pan',   name:'小潘', role:'pt' },
+  { id:'hong',  name:'竑偉', role:'pt' },
+  { id:'lun',   name:'阿倫', role:'pt' }
+];
+var ALL_EMPLOYEES = EMPLOYEES.concat(PT_EMPLOYEES);
+
+// 預設勞健保
+var DEFAULT_INSURANCE = {
+  lee: 6500, shih: -1930, liu: -1930, chu: -1930,
+  pan: -735, hong: -735, lun: -277
+};
+
+// 獎金對照表
+function s1SupDeduct(n){ return -Math.max(0, Math.min(5, n|0)) * 100; } // 0~-500
+function s1RegBonus(n){
+  var map = [200, 150, 100, 50, 0];
+  var i = Math.max(0, Math.min(4, n|0));
+  return map[i];
+}
+function s2Bonus(days){
+  // 0/1/2/3+ → 2500/2000/1000/0
+  if(days <= 0) return 2500;
+  if(days === 1) return 2000;
+  if(days === 2) return 1000;
+  return 0;
+}
+function s3Bonus(n){
+  // 最多 3 則（再多也不扣）
+  var capped = Math.min(3, Math.max(0, n|0));
+  return 1500 - capped*500;
+}
+function s4Bonus(n){
+  if(n >= 10) return 5000;
+  if(n >= 8)  return 4000;
+  if(n >= 6)  return 3000;
+  if(n >= 3)  return 1500;
+  return 0;
+}
+function s7SupAmt(yes){ return yes ? 0 : -500; }
+function s7RegAmt(yes){ return yes ? 200 : 0; }
+function roleBase(role){
+  if(role === 'head') return HEAD_BONUS;
+  if(role === 'deputy') return DEPUTY_BONUS;
+  return 0;
+}
+function roleLabel(role){
+  return role==='head'?'店長':role==='deputy'?'副店長':role==='regular'?'正職':role==='pt'?'PT':'';
+}
+// 目前該員工是主管嗎？（依頂端的「員工職級設定」）
+function isSup(empId){
+  var r = STATE && STATE.roles && STATE.roles[empId];
+  return r === 'head' || r === 'deputy';
+}
+// 該員工是 PT 嗎（PT 在 EMPLOYEES 不會出現，只在 PT_EMPLOYEES）
+function isPT(emp){ return emp.role === 'pt'; }
+
+// ============================================
+// State
+// ============================================
+var STATE = null; // 當前月份資料
+
+function blankState(){
+  var s = {
+    ym: getSelectedYM(),
+    store: STORE,
+    // 每位員工一個 slot
+    s1: {},            // {empId: 缺失次數}
+    s2: {},            // {empId: {sick,personal,late}}
+    s3: {},            // {empId: 負評則數}
+    s4: {},            // {empId: 站數}
+    s5: {},            // {empId: 營業額獎金金額}
+    s6: {},            // {empId: 評分表金額}
+    s7: {},            // {empId: 有提出 boolean}
+    insurance: {},     // {empId: 金額}
+    roles: {},         // {empId: role}
+    detail: {},        // {empId: {dtDays,otHours,sickDays,personalDays,latePunch}}
+    activeEmp: EMPLOYEES[0].id,
+    notes: {}          // {empId: 備註字串}
+  };
+  ALL_EMPLOYEES.forEach(function(e){
+    s.s1[e.id] = 0;
+    s.s2[e.id] = { sick:0, personal:0, late:0 };
+    s.s3[e.id] = 0;
+    s.s4[e.id] = 10;
+    s.s5[e.id] = 0;
+    s.s6[e.id] = 0;
+    s.s7[e.id] = true; // 預設「有提出」
+    s.insurance[e.id] = DEFAULT_INSURANCE[e.id] || 0;
+    s.roles[e.id] = e.defaultRole || e.role || 'regular';
+    s.detail[e.id] = { dtDays:0, otHours:0, sickDays:0, personalDays:0 };
+    s.notes[e.id] = '';
+  });
+  return s;
+}
+
+function stateKey(ym){
+  return 'cd_salary_' + (STORE || 'nostore') + '_' + ym;
+}
+
+function loadState(){
+  var ym = getSelectedYM();
+  try {
+    var raw = localStorage.getItem(stateKey(ym));
+    if(raw){
+      var obj = JSON.parse(raw);
+      // 補齊缺項（避免新增員工後 key 缺失）
+      var def = blankState();
+      ['s1','s2','s3','s4','s5','s6','s7','insurance','roles','detail','notes'].forEach(function(k){
+        obj[k] = Object.assign({}, def[k], obj[k] || {});
+      });
+      if(!obj.activeEmp) obj.activeEmp = EMPLOYEES[0].id;
+      STATE = obj;
+      return;
+    }
+  } catch(e){ console.warn('load state fail', e); }
+  STATE = blankState();
+}
+
+function saveAll(){
+  if(!STATE) return;
+  STATE.ym = getSelectedYM();
+  STATE.store = STORE;
+  try {
+    localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE));
+    toast('已儲存', 'ok');
+  } catch(e){
+    toast('儲存失敗：' + e.message, 'err');
+  }
+}
+
+// 切月份時自動儲存 + 重載
+function onMonthChange(){
+  // 先存掉當前的
+  if(STATE){
+    try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+  }
+  loadState();
+  render();
+  // 換月後自動重抓兩邊資料
+  doImportOvertime(false);
+  doImportSalesBonus(false);
+}
+
+// ============================================
+// 月份選單
+// ============================================
+(function initMonth(){
+  var sel = document.getElementById('month-picker');
+  var now = new Date();
+  var y = now.getFullYear();
+  var items = [];
+  for(var m=1; m<=12; m++){
+    items.push('<option value="'+m+'">'+y+'年 '+m+'月</option>');
+  }
+  sel.innerHTML = items.join('');
+  sel.value = String(now.getMonth() + 1);
+  sel.addEventListener('change', onMonthChange);
+})();
+
+function getSelectedYM(){
+  var m = Number(document.getElementById('month-picker').value) || (new Date().getMonth() + 1);
+  var y = new Date().getFullYear();
+  return y + '-' + String(m).padStart(2, '0');
+}
+
+// ============================================
+// 渲染
+// ============================================
+function render(){
+  renderS1();
+  renderS2();
+  renderS3();
+  renderS4();
+  renderS5();
+  renderS6();
+  renderS7();
+  renderInsurance();
+  renderRoles();
+  renderEmpTabs();
+  renderDetail();
+}
+
+function opt(val, label, selected){
+  return '<option value="'+val+'"'+(String(selected)===String(val)?' selected':'')+'>'+label+'</option>';
+}
+
+function fmt(n){
+  if(n === 0) return '0';
+  var s = Math.round(n).toLocaleString();
+  return n > 0 ? '+' + s : s;
+}
+function fmtPlain(n){
+  return Math.round(n).toLocaleString();
+}
+
+function amtClass(n){
+  if(n > 0) return 'bonus-cell';
+  if(n < 0) return 'bonus-cell neg';
+  return 'bonus-cell zero';
+}
+
+// 1. 小結/回收
+function renderS1(){
+  var sup = document.getElementById('tbody-s1-sup');
+  var reg = document.getElementById('tbody-s1-reg');
+  var hs=[], hr=[];
+  EMPLOYEES.forEach(function(e){
+    var n = STATE.s1[e.id] | 0;
+    if(isSup(e.id)){
+      // 依目前職級決定次數上限（主管 5 次）
+      if(n > 5) n = 5;
+      var sel = '<select onchange="onS1Change(\''+e.id+'\', this.value)">';
+      for(var i=0; i<=5; i++) sel += opt(i, i+' 次', n);
+      sel += '</select>';
+      var amt = s1SupDeduct(n);
+      hs.push('<tr><td class="c-name">'+e.name+'</td><td>'+sel+'</td><td class="c-num '+amtClass(amt)+'">'+fmt(amt)+'</td></tr>');
+    } else {
+      if(n > 4) n = 4;
+      var sel2 = '<select onchange="onS1Change(\''+e.id+'\', this.value)">';
+      for(var j=0; j<=4; j++) sel2 += opt(j, j+' 次', n);
+      sel2 += '</select>';
+      var amt2 = s1RegBonus(n);
+      hr.push('<tr><td class="c-name">'+e.name+'</td><td>'+sel2+'</td><td class="c-num '+amtClass(amt2)+'">'+fmt(amt2)+'</td></tr>');
+    }
+  });
+  sup.innerHTML = hs.join('') || '<tr><td colspan="3" style="color:var(--ink-3);text-align:center;padding:10px">本月無主管階</td></tr>';
+  reg.innerHTML = hr.join('') || '<tr><td colspan="3" style="color:var(--ink-3);text-align:center;padding:10px">本月無正職</td></tr>';
+}
+function onS1Change(id, v){
+  STATE.s1[id] = v|0;
+  renderS1();
+  renderDetail();
+}
+
+// 2. 全勤
+function renderS2(){
+  var tb = document.getElementById('tbody-s2');
+  var rows = EMPLOYEES.map(function(e){
+    var o = STATE.s2[e.id];
+    var total = (o.sick|0) + (o.personal|0) + (o.late|0);
+    var amt = s2Bonus(total);
+    return '<tr>'
+      + '<td class="c-name">'+e.name+'</td>'
+      + '<td><input type="number" min="0" step="1" value="'+(o.sick|0)+'" onchange="onS2Change(\''+e.id+'\',\'sick\',this.value)"></td>'
+      + '<td><input type="number" min="0" step="1" value="'+(o.personal|0)+'" onchange="onS2Change(\''+e.id+'\',\'personal\',this.value)"></td>'
+      + '<td><input type="number" min="0" step="1" value="'+(o.late|0)+'" onchange="onS2Change(\''+e.id+'\',\'late\',this.value)"></td>'
+      + '<td class="c-num">'+total+' 天</td>'
+      + '<td class="c-num '+amtClass(amt)+'">'+fmt(amt)+'</td>'
+      + '</tr>';
+  });
+  tb.innerHTML = rows.join('');
+}
+function onS2Change(id, field, v){
+  STATE.s2[id][field] = Math.max(0, v|0);
+  // 同步到明細的對應欄位（病假/事假）
+  if(field === 'sick') STATE.detail[id].sickDays = STATE.s2[id].sick;
+  if(field === 'personal') STATE.detail[id].personalDays = STATE.s2[id].personal;
+  renderS2();
+  renderDetail();
+}
+
+// 3. Google
+function renderS3(){
+  var tb = document.getElementById('tbody-s3');
+  var rows = EMPLOYEES.map(function(e){
+    var n = STATE.s3[e.id] | 0;
+    var sel = '<select onchange="onS3Change(\''+e.id+'\',this.value)">';
+    for(var i=0; i<=3; i++) sel += opt(i, i+' 則', n);
+    sel += '</select>';
+    var amt = s3Bonus(n);
+    return '<tr><td class="c-name">'+e.name+'</td><td>'+sel+'</td><td class="c-num '+amtClass(amt)+'">'+fmt(amt)+'</td></tr>';
+  });
+  tb.innerHTML = rows.join('');
+}
+function onS3Change(id, v){ STATE.s3[id] = v|0; renderS3(); renderDetail(); }
+
+// 4. 考核
+function renderS4(){
+  var tb = document.getElementById('tbody-s4');
+  var opts = [
+    { v: 0,  l: '0 站' },
+    { v: 3,  l: '3 站 (1500)' },
+    { v: 6,  l: '6 站 (3000)' },
+    { v: 8,  l: '8 站 (4000)' },
+    { v: 10, l: '10 站 (5000)' }
+  ];
+  var rows = EMPLOYEES.map(function(e){
+    var n = STATE.s4[e.id] | 0;
+    var sel = '<select onchange="onS4Change(\''+e.id+'\',this.value)">';
+    opts.forEach(function(o){ sel += opt(o.v, o.l, n); });
+    sel += '</select>';
+    var amt = s4Bonus(n);
+    return '<tr><td class="c-name">'+e.name+'</td><td>'+sel+'</td><td class="c-num '+amtClass(amt)+'">'+fmt(amt)+'</td></tr>';
+  });
+  tb.innerHTML = rows.join('');
+}
+function onS4Change(id, v){ STATE.s4[id] = v|0; renderS4(); renderDetail(); }
+
+// 5. 營業額
+function renderS5(){
+  var tb = document.getElementById('tbody-s5');
+  var rows = EMPLOYEES.map(function(e){
+    var v = STATE.s5[e.id] | 0;
+    return '<tr><td class="c-name">'+e.name+'</td>'
+      + '<td><input type="number" step="1" value="'+v+'" onchange="onS5Change(\''+e.id+'\',this.value)"></td>'
+      + '</tr>';
+  });
+  tb.innerHTML = rows.join('');
+}
+function onS5Change(id, v){ STATE.s5[id] = v|0; renderDetail(); }
+
+// 6. 評分表（正職專屬）
+function renderS6(){
+  var tb = document.getElementById('tbody-s6');
+  var rows = EMPLOYEES.filter(function(e){ return !isSup(e.id); }).map(function(e){
+    var v = STATE.s6[e.id] | 0;
+    return '<tr><td class="c-name">'+e.name+'</td>'
+      + '<td><input type="number" step="1" value="'+v+'" onchange="onS6Change(\''+e.id+'\',this.value)"></td>'
+      + '</tr>';
+  });
+  tb.innerHTML = rows.join('') || '<tr><td colspan="2" style="color:var(--ink-3);text-align:center;padding:10px">本月無正職</td></tr>';
+}
+function onS6Change(id, v){ STATE.s6[id] = v|0; renderDetail(); }
+
+// 7. 開會
+function renderS7(){
+  var sup = document.getElementById('tbody-s7-sup');
+  var reg = document.getElementById('tbody-s7-reg');
+  var hs=[], hr=[];
+  EMPLOYEES.forEach(function(e){
+    var yes = !!STATE.s7[e.id];
+    var sel = '<select onchange="onS7Change(\''+e.id+'\',this.value)">'
+      + '<option value="1"'+(yes?' selected':'')+'>有提出</option>'
+      + '<option value="0"'+(!yes?' selected':'')+'>沒提出</option>'
+      + '</select>';
+    if(isSup(e.id)){
+      var amt = s7SupAmt(yes);
+      hs.push('<tr><td class="c-name">'+e.name+' <span style="color:#94a3b8;font-size:11px">('+(e.nickname||'')+')</span></td><td>'+sel+'</td><td class="c-num '+amtClass(amt)+'">'+fmt(amt)+'</td></tr>');
+    } else {
+      var amt2 = s7RegAmt(yes);
+      hr.push('<tr><td class="c-name">'+e.name+' <span style="color:#94a3b8;font-size:11px">('+(e.nickname||'')+')</span></td><td>'+sel+'</td><td class="c-num '+amtClass(amt2)+'">'+fmt(amt2)+'</td></tr>');
+    }
+  });
+  sup.innerHTML = hs.join('') || '<tr><td colspan="3" style="color:var(--ink-3);text-align:center;padding:10px">本月無主管階</td></tr>';
+  reg.innerHTML = hr.join('') || '<tr><td colspan="3" style="color:var(--ink-3);text-align:center;padding:10px">本月無正職</td></tr>';
+}
+function onS7Change(id, v){ STATE.s7[id] = (v === '1'); renderS7(); renderDetail(); }
+
+// 勞健保
+function renderInsurance(){
+  var tb = document.getElementById('tbody-insurance');
+  var rows = ALL_EMPLOYEES.map(function(e){
+    var v = STATE.insurance[e.id] | 0;
+    var r = isPT(e) ? 'pt' : (STATE.roles[e.id] || e.defaultRole);
+    return '<tr><td class="c-name">'+e.name+' <span style="color:#94a3b8;font-size:11px">('+roleLabel(r)+')</span></td>'
+      + '<td><input type="number" step="1" value="'+v+'" onchange="onInsChange(\''+e.id+'\',this.value)"></td>'
+      + '</tr>';
+  });
+  tb.innerHTML = rows.join('');
+}
+function onInsChange(id, v){ STATE.insurance[id] = v|0; renderDetail(); }
+
+// 職級（最上面那一區）
+function renderRoles(){
+  var tb = document.getElementById('tbody-role');
+  var rows = EMPLOYEES.map(function(e){
+    var r = STATE.roles[e.id] || e.defaultRole;
+    var sel = '<select onchange="onRoleChange(\''+e.id+'\',this.value)">'
+      + opt('head', '店長', r)
+      + opt('deputy', '副店長', r)
+      + opt('regular', '正職', r)
+      + '</select>';
+    return '<tr><td class="c-name">'+e.name+'</td><td>'+sel+'</td>'
+      + '<td class="c-num">'+fmtPlain(roleBase(r))+'</td></tr>';
+  });
+  tb.innerHTML = rows.join('');
+}
+function onRoleChange(id, v){
+  STATE.roles[id] = v;
+  // 職級改變 → 幾乎所有分區要重畫
+  renderRoles();
+  renderS1();
+  renderS6();
+  renderS7();
+  renderInsurance();
+  renderEmpTabs();
+  renderDetail();
+}
+
+// 員工 Tabs
+function renderEmpTabs(){
+  var tabs = document.getElementById('emp-tabs');
+  var html = ALL_EMPLOYEES.map(function(e){
+    var cls = 'emp-tab' + (STATE.activeEmp === e.id ? ' active' : '');
+    var role = isPT(e) ? 'PT' : roleLabel(STATE.roles[e.id] || e.defaultRole);
+    return '<button class="'+cls+'" onclick="switchEmp(\''+e.id+'\')">'+e.name+'<span class="role">'+role+'</span></button>';
+  });
+  tabs.innerHTML = html.join('');
+}
+function switchEmp(id){ STATE.activeEmp = id; renderEmpTabs(); renderDetail(); }
+
+// ============================================
+// 個別明細（最重要）
+// ============================================
+function calcEmp(e){
+  var id = e.id;
+  var role = STATE.roles[id] || e.defaultRole || e.role;
+
+  // PT 簡化：只顯示加班費 + 勞健保
+  if(isPT(e)){
+    var det = STATE.detail[id] || {};
+    var insurance = STATE.insurance[id] | 0;
+    return {
+      pt: true, role:'pt',
+      insurance: insurance,
+      otHours: det.otHours | 0,
+      note: STATE.notes[id] || ''
+    };
+  }
+
+  var sup = isSup(id);
+  // 各獎金
+  var b_s1 = sup ? s1SupDeduct(STATE.s1[id]|0) : s1RegBonus(STATE.s1[id]|0);
+  var b_s2 = s2Bonus((STATE.s2[id].sick|0)+(STATE.s2[id].personal|0)+(STATE.s2[id].late|0));
+  var b_s3 = s3Bonus(STATE.s3[id]|0);
+  var b_s4 = s4Bonus(STATE.s4[id]|0);
+  var b_s5 = STATE.s5[id] | 0;
+  var b_s6 = sup ? 0 : (STATE.s6[id]|0);
+  var b_s7 = sup ? s7SupAmt(!!STATE.s7[id]) : s7RegAmt(!!STATE.s7[id]);
+  var insurance = STATE.insurance[id] | 0;
+
+  // 月薪（含全勤+考核+Google+營業額；正職再含小結+開會+評分表）
+  var monthPay = BASE_SALARY + b_s2 + b_s3 + b_s4 + b_s5;
+  if(!sup){
+    monthPay += b_s1 + b_s7 + b_s6; // 正職：小結/回收、開會、評分表 都併入月薪
+  }
+
+  // 職務加給（主管：基礎 - 開會扣 - 小結扣；正職：0）
+  // 用戶規格：職務加給 = 店長/副店長 - 開會獎金 - 小結/回收獎金
+  // 這邊 b_s7 和 b_s1 對主管都是 0 或負值，所以實際是 加 = 基礎 + b_s7 + b_s1
+  var rolePay = 0;
+  if(sup){
+    rolePay = roleBase(role) + b_s7 + b_s1; // b_s7 / b_s1 對 sup 是 ≤0
+  }
+
+  // 加班/請假計算基數 = 底薪 26000 + 固定加班 10000 = 36000
+  var baseForOT = BASE_SALARY + FIXED_OT;
+  var dtDays = STATE.detail[id].dtDays || 0;
+  var otHours = STATE.detail[id].otHours || 0;
+  var sickDays = STATE.detail[id].sickDays || 0;
+  var personalDays = STATE.detail[id].personalDays || 0;
+
+  // 新公式：
+  //  正職  雙薪 = 月薪 / 30 × 天；加班費 = 月薪 / 30 / 8 × 1.34 × 時數
+  //  主管  雙薪 = (月薪 + 職務加給) / 30 × 天；加班費 = (月薪 + 職務加給) / 30 / 8 × 1.34 × 時數
+  //  事假/病假 仍以 (底薪 + 固定加班費) 為基數（如需改成月薪制再告知）
+  var otBase = monthPay + (sup ? rolePay : 0);
+  var doubleWage = dtDays * otBase / 30;
+  var otPay = otHours * otBase / 30 / 8 * 1.34;
+  var sickDeduct = sickDays * baseForOT / 30 / 2;
+  var personalDeduct = personalDays * baseForOT / 30;
+
+  // 總額
+  var total = monthPay + FIXED_OT + doubleWage + otPay - sickDeduct - personalDeduct;
+  if(sup){
+    total += rolePay;
+  }
+  // 正職：小結/開會/評分表 已全部併入 monthPay，這裡不再加
+
+  var realPay = total + insurance;
+
+  return {
+    role: role, isSup: sup,
+    baseSalary: BASE_SALARY,
+    b_s1: b_s1, b_s2: b_s2, b_s3: b_s3, b_s4: b_s4, b_s5: b_s5, b_s6: b_s6, b_s7: b_s7,
+    monthPay: monthPay,
+    rolePay: rolePay, roleBase: roleBase(role),
+    fixedOT: FIXED_OT,
+    dtDays: dtDays, doubleWage: doubleWage,
+    otHours: otHours, otPay: otPay,
+    sickDays: sickDays, sickDeduct: sickDeduct,
+    personalDays: personalDays, personalDeduct: personalDeduct,
+    insurance: insurance,
+    total: total, realPay: realPay,
+    note: STATE.notes[id] || ''
+  };
+}
+
+function payRow(label, amount, opts){
+  opts = opts || {};
+  var cls = amount < 0 ? 'neg' : (amount > 0 ? 'pos' : '');
+  if(opts.noColor) cls = '';
+  var rowCls = 'pay-row' + (opts.rowCls ? ' '+opts.rowCls : '');
+  var labelHtml = label;
+  if(opts.toggleId){
+    labelHtml = label + ' <button type="button" class="toggle-btn" id="'+opts.toggleId+'-btn" onclick="toggleBreakdown(\''+opts.toggleId+'\')">明細 <span class="arrow">▾</span></button>';
+  }
+  var html = '<div class="'+rowCls+'">'
+    + '<div class="label">'+labelHtml+'</div>'
+    + '<div class="amount '+cls+'">'+(amount >= 0 ? '' : '-')+fmtPlain(Math.abs(amount))+'</div>'
+    + '</div>';
+  if(opts.breakdownHtml){
+    html += '<div class="breakdown" id="'+opts.toggleId+'">'+opts.breakdownHtml+'</div>';
+  }
+  return html;
+}
+
+function toggleBreakdown(id){
+  var box = document.getElementById(id);
+  var btn = document.getElementById(id+'-btn');
+  if(!box) return;
+  var open = box.classList.toggle('open');
+  if(btn) btn.classList.toggle('open', open);
+}
+
+function bdRow(label, val){
+  var cls = val > 0 ? 'pos' : (val === 0 ? 'zero' : 'neg');
+  var sign = val > 0 ? '+' : (val < 0 ? '-' : '');
+  return '<div class="bd-row"><span>'+label+'</span><span class="val '+cls+'">'+sign+fmtPlain(Math.abs(val))+'</span></div>';
+}
+
+function renderDetail(){
+  var box = document.getElementById('emp-detail');
+  var emp = ALL_EMPLOYEES.find(function(x){ return x.id === STATE.activeEmp; });
+  if(!emp){ box.innerHTML = ''; return; }
+
+  var c = calcEmp(emp);
+  var html = [];
+
+  if(isPT(emp)){
+    html.push('<div class="payroll">');
+    html.push('<div class="ptitle">'+getYMLabel()+'_'+emp.name+'<span class="tag-role pt">PT</span></div>');
+    html.push('<div class="pay-sub">PT 目前只顯示<b>加班費</b>與<b>勞健保</b>。完整時薪計算請至「加班費計算」系統。</div>');
+    html.push('<div class="inline-input-row">');
+    html.push('<label>加班時數 <input type="number" min="0" step="0.5" value="'+(c.otHours||0)+'" onchange="onDtChange(\''+emp.id+'\',\'otHours\',this.value)"></label>');
+    html.push('</div>');
+    html.push(payRow('勞健保', c.insurance));
+    html.push('<textarea class="note-area" placeholder="加班日期時數 / 其他備註..." onchange="onNoteChange(\''+emp.id+'\',this.value)">'+(c.note||'')+'</textarea>');
+    html.push('</div>');
+    box.innerHTML = html.join('');
+    return;
+  }
+
+  var roleTag = c.isSup
+    ? '<span class="tag-role sup">'+roleLabel(c.role)+'</span>'
+    : '<span class="tag-role">正職</span>';
+
+  html.push('<div class="payroll">');
+  html.push('<div class="ptitle">'+getYMLabel()+'_'+emp.name+roleTag+'</div>');
+
+  // 加班/請假 輸入區
+  html.push('<div class="pay-sub"><b>加班／請假填寫</b>（病/事假與「全勤獎勵金」同步；雙薪天數、加班時數可手填或由加班費系統匯入）</div>');
+  html.push('<div class="inline-input-row">');
+  html.push('<label>雙薪天數 <input type="number" min="0" step="1" value="'+c.dtDays+'" onchange="onDtChange(\''+emp.id+'\',\'dtDays\',this.value)"></label>');
+  html.push('<label>加班時數 <input type="number" min="0" step="0.5" value="'+c.otHours+'" onchange="onDtChange(\''+emp.id+'\',\'otHours\',this.value)"></label>');
+  html.push('<label>病假(天) <input type="number" min="0" step="0.5" value="'+c.sickDays+'" onchange="onDtChange(\''+emp.id+'\',\'sickDays\',this.value)"></label>');
+  html.push('<label>事假(天) <input type="number" min="0" step="0.5" value="'+c.personalDays+'" onchange="onDtChange(\''+emp.id+'\',\'personalDays\',this.value)"></label>');
+  html.push('</div>');
+
+  // 主項：月薪（含各獎金）— 可展開明細（不含底薪 26000 這一列）
+  var bd = bdRow('全勤獎勵金', c.b_s2)
+    + bdRow('考核獎金', c.b_s4)
+    + bdRow('Google 評論獎金', c.b_s3)
+    + bdRow('營業額獎金', c.b_s5);
+  if(!c.isSup){
+    bd += bdRow('小結／回收獎金', c.b_s1)
+       +  bdRow('開會獎金', c.b_s7)
+       +  bdRow('評分表獎金', c.b_s6);
+  }
+  html.push(payRow('月薪', c.monthPay, { toggleId:'bd-month-'+emp.id, breakdownHtml: bd }));
+
+  // 職務加給（主管）— 也給個折疊
+  if(c.isSup){
+    var bdRole = bdRow(roleLabel(c.role)+' 加給', c.roleBase)
+      + bdRow('開會', c.b_s7)
+      + bdRow('小結／回收', c.b_s1);
+    html.push(payRow('職務加給', c.rolePay, { toggleId:'bd-role-'+emp.id, breakdownHtml: bdRole }));
+  }
+
+  // 固定加班
+  html.push(payRow('固定加班費', c.fixedOT));
+
+  // 雙薪
+  html.push(payRow('雙薪', c.doubleWage));
+
+  // 延長加班費
+  html.push(payRow('延長加班費', c.otPay));
+
+  // 扣款
+  html.push(payRow('事假', -c.personalDeduct));
+  html.push(payRow('病假', -c.sickDeduct));
+
+  // 總額
+  html.push(payRow('總額', c.total, {rowCls:'total'}));
+
+  // 勞健保
+  html.push(payRow('勞健保', c.insurance));
+
+  // 實領
+  html.push(payRow('實領', c.realPay, {rowCls:'final'}));
+
+  // 備註
+  html.push('<textarea class="note-area" placeholder="加班日期時數 / 其他備註..." onchange="onNoteChange(\''+emp.id+'\',this.value)">'+(c.note||'')+'</textarea>');
+
+  html.push('</div>');
+  box.innerHTML = html.join('');
+}
+
+function onDtChange(id, field, v){
+  if(!STATE.detail[id]) STATE.detail[id] = {};
+  STATE.detail[id][field] = parseFloat(v) || 0;
+  // 同步病/事假回全勤獎勵金區
+  if(field === 'sickDays'){ STATE.s2[id].sick = STATE.detail[id].sickDays; renderS2(); }
+  if(field === 'personalDays'){ STATE.s2[id].personal = STATE.detail[id].personalDays; renderS2(); }
+  renderDetail();
+}
+function onNoteChange(id, v){ STATE.notes[id] = v; }
+
+function getYMLabel(){
+  var ym = getSelectedYM();
+  var parts = ym.split('-');
+  return parts[0]+'年'+Number(parts[1])+'月薪水';
+}
+
+// ============================================
+// 從加班費系統匯入（遲到天數 / 加班時數）
+// ============================================
+function doImportOvertime(showToast){
+  var ym = getSelectedYM();
+  var key = 'cd_ot_summary_' + (STORE || 'nostore') + '_' + ym;
+  var status = document.getElementById('import-status');
+  try {
+    var raw = localStorage.getItem(key);
+    if(!raw){
+      if(status) status.textContent = '⚠ 尚未在加班費系統產出本月結果（仍可手動填）';
+      if(showToast) toast('找不到加班費資料：請先到加班費系統分析本月', 'err');
+      return 0;
+    }
+    var data = JSON.parse(raw);
+    var emps = data.employees || {};
+    var matched = 0;
+    ALL_EMPLOYEES.forEach(function(e){
+      var hit = emps[e.name] || emps[e.nickname||''] || null;
+      if(!hit) return;
+      if(typeof hit.overtimeMin === 'number'){
+        STATE.detail[e.id].otHours = Math.round(hit.overtimeMin / 60 * 10) / 10;
+      }
+      if(typeof hit.lateDays === 'number'){
+        STATE.s2[e.id].late = hit.lateDays;
+      }
+      matched++;
+    });
+    renderS2();
+    renderDetail();
+    if(status){
+      var ts = data.savedAt ? new Date(data.savedAt).toLocaleString('zh-TW') : '';
+      status.textContent = '✅ 已匯入 '+matched+' 位員工'+(ts?'（'+ts+' 產出）':'')+' · 可手動調整';
+    }
+    if(showToast) toast('加班費匯入完成：'+matched+' 位', 'ok');
+    return matched;
+  } catch(err){
+    if(showToast) toast('匯入失敗：'+err.message, 'err');
+    return 0;
+  }
+}
+function importFromOvertime(){ doImportOvertime(true); }
+
+// ============================================
+// 從小結報表匯入（營業額獎金）
+// ============================================
+function doImportSalesBonus(showToast){
+  var ym = getSelectedYM();
+  var key = 'cd_sales_bonus_' + (STORE || 'nostore') + '_' + ym;
+  var status = document.getElementById('sales-import-status');
+  try {
+    var raw = localStorage.getItem(key);
+    if(!raw){
+      if(status) status.textContent = '⚠ 小結報表尚未計算本月獎金（仍可手動填）';
+      if(showToast) toast('找不到小結資料：請先進入小結報表瀏覽本月', 'err');
+      return 0;
+    }
+    var data = JSON.parse(raw);
+    var emps = data.employees || {};
+    var matched = 0;
+    ALL_EMPLOYEES.forEach(function(e){
+      var hit = emps[e.name];
+      if(hit === undefined) hit = emps[e.nickname||''];
+      if(typeof hit === 'number'){
+        STATE.s5[e.id] = Math.round(hit);
+        matched++;
+      }
+    });
+    renderS5();
+    renderDetail();
+    if(status){
+      var ts = data.savedAt ? new Date(data.savedAt).toLocaleString('zh-TW') : '';
+      status.textContent = '✅ 已匯入 '+matched+' 位員工'+(ts?'（'+ts+' 產出）':'');
+    }
+    if(showToast) toast('營業額獎金匯入完成：'+matched+' 位', 'ok');
+    return matched;
+  } catch(err){
+    if(showToast) toast('匯入失敗：'+err.message, 'err');
+    return 0;
+  }
+}
+function importSalesBonus(){ doImportSalesBonus(true); }
+
+// ============================================
+// Toast
+// ============================================
+function toast(msg, type){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' '+type : '');
+  clearTimeout(t._t);
+  t._t = setTimeout(function(){ t.className = 'toast'; }, 2200);
+}
+
+function goBack(){
+  window.location.href = 'home.html';
+}
+
+// ============================================
+// 啟動
+// ============================================
+loadState();
+render();
+// 初次載入也自動匯入一次（若沒資料會靜默略過）
+doImportOvertime(false);
+doImportSalesBonus(false);
+
+// 自動儲存（每 8 秒）
+setInterval(function(){
+  if(!STATE) return;
+  try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+}, 8000);
+
+</script>
+</body>
+</html>
