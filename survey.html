@@ -369,9 +369,10 @@ var BUILTIN_SURVEY_SYNC_URL = 'https://script.google.com/macros/s/AKfycbylKtlhC7
 function syncUrl(){ return localStorage.getItem('cd_survey_sync_url') || ''; }
 
 // ============================================
-// 📋 題目定義
+// 📋 題目定義（依店的 brand 選擇）
 // ============================================
-var CATEGORIES = [
+// 十城（滷肉飯）10 項
+var SHICHENG_CATEGORIES = [
   { id:'service',    name:'服務' },
   { id:'counter',    name:'櫃台',     desc:'小菜SOP、客訴處理、Key貨單、上傳小結確實' },
   { id:'food',       name:'出餐品質', desc:'飯量、滷肉量、菜量、湯量、擺盤、隨時補足餐點量' },
@@ -383,6 +384,25 @@ var CATEGORIES = [
   { id:'shift',      name:'開收班',   desc:'效率、完整度' },
   { id:'clean',      name:'清潔',     desc:'洗碗速度、環境整潔、週清' }
 ];
+
+// 初殿（火鍋）10 項
+var CHUDIAN_CATEGORIES = [
+  { id:'service',    name:'服務' },
+  { id:'duty',       name:'值班',             desc:'訂位安排、客訴處理、事情優先順序安排、Key貨單、上傳小結確實' },
+  { id:'meat',       name:'切肉、擺盤、品質' },
+  { id:'hall',       name:'外場巡視',         desc:'自助吧整潔及補料、廁所整潔、冷氣是否應對人數調整' },
+  { id:'efficiency', name:'做事效率' },
+  { id:'active',     name:'積極度',           desc:'自己找事做、不會壓線上班吃東西、抽煙頻率、沒事會主動幫其他人、備料齊全' },
+  { id:'teamwork',   name:'同事相處' },
+  { id:'sop',        name:'SOP正確',          desc:'備料、出湯、海鮮、服務' },
+  { id:'shift',      name:'開收班',           desc:'效率、完整度' },
+  { id:'clean',      name:'清潔',             desc:'環境整潔、週清' }
+];
+
+function getCategories(storeId){
+  var s = getStore(storeId);
+  return (s && s.brand === 'chudian') ? CHUDIAN_CATEGORIES : SHICHENG_CATEGORIES;
+}
 // 🏪 4 家店設定（id 必須跟後端 VALID_STORES 對應）
 var STORES = [
   { id:'chudian-zhonghe',    name:'初殿中和店', brand:'chudian',  brandLabel:'CHUDIAN · 初殿',  emoji:'🍲' },
@@ -527,7 +547,8 @@ function renderCategories(){
   var host = $('categories-host');
   if(!currentFormStore){ host.innerHTML = ''; return; }
   var emps = getEmployees(currentFormStore);
-  host.innerHTML = CATEGORIES.map(function(cat, idx){
+  var cats = getCategories(currentFormStore);
+  host.innerHTML = cats.map(function(cat, idx){
     var catId = cat.id;
     var descHtml = cat.desc ? '<div class="cat-desc">'+esc(cat.desc)+'</div>' : '';
     var grid = [
@@ -578,10 +599,11 @@ function collectForm(){
   if(!month) return { error:'請選擇月份' };
 
   var emps = getEmployees(currentFormStore);
+  var cats = getCategories(currentFormStore);
   // 評分全部可選：沒打分的就不存（不會把 null 送出，減少資料雜訊）
   var ratings = {};
-  for(var i=0;i<CATEGORIES.length;i++){
-    var cat = CATEGORIES[i];
+  for(var i=0;i<cats.length;i++){
+    var cat = cats[i];
     ratings[cat.id] = {};
     for(var j=0;j<emps.length;j++){
       var emp = emps[j];
@@ -793,12 +815,13 @@ function renderManagerResults(records){
 
   // 先算每個員工的獎金與得分分布，並渲染每項卡片
   var emps = getEmployees(currentMgrStore);
+  var cats = getCategories(currentMgrStore);
   var curPositions = getPositionsFor(currentMgrStore);
   var totalBonus = {};
   var bonusBreakdown = {}; // 記錄每個人拿到哪幾項獎金
   emps.forEach(function(e){ totalBonus[e] = 0; bonusBreakdown[e] = []; });
 
-  var catsHtml = CATEGORIES.map(function(cat, idx){
+  var catsHtml = cats.map(function(cat, idx){
     var cols = emps.map(function(emp){
       var counts = {1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0,10:0};
       var sum = 0, cnt = 0;
