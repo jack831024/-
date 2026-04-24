@@ -40,6 +40,15 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
 .month-picker{padding:8px 12px;font-size:14px;border:1.5px solid var(--line);border-radius:10px;background:rgba(255,255,255,.9);cursor:pointer;color:var(--ink);font-family:inherit;font-weight:600;outline:none;transition:all .18s}
 .month-picker:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(139,92,246,.12)}
 
+.sync-chip{padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;user-select:none}
+.sync-chip.ok{background:rgba(16,185,129,.12);color:#059669}
+.sync-chip.ok:hover{background:rgba(16,185,129,.2)}
+.sync-chip.off{background:rgba(148,163,184,.15);color:var(--ink-3)}
+.sync-chip.off:hover{background:rgba(148,163,184,.25)}
+.sync-chip.busy{background:rgba(59,130,246,.12);color:var(--info)}
+.sync-chip.err{background:rgba(220,38,38,.12);color:var(--danger)}
+.sync-chip.err:hover{background:rgba(220,38,38,.2)}
+
 .wrap{max-width:1000px;margin:0 auto;padding:0 0 3rem}
 
 .hero-card{background:linear-gradient(135deg,#f5f3ff 0%,#ede9fe 100%);border:1px solid rgba(139,92,246,.18);border-radius:20px;padding:1.25rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(139,92,246,.06),0 8px 24px -12px rgba(139,92,246,.2)}
@@ -164,8 +173,10 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
     <span id="store-name">（未選店）</span>
   </div>
   <span class="spacer"></span>
+  <span id="sync-chip" class="sync-chip off" title="點擊重新同步" onclick="syncNow()">☁ 未設定</span>
   <select class="month-picker" id="month-picker" aria-label="選擇月份"></select>
   <button class="btn btn-ghost btn-sm" onclick="saveAll()">💾 儲存</button>
+  <button class="btn btn-ghost btn-sm" onclick="openSyncSettings()" title="雲端同步設定">⚙️</button>
   <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 列印</button>
 </div>
 
@@ -549,17 +560,20 @@ function saveAll(){
   STATE.store = STORE;
   try {
     localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE));
-    toast('已儲存', 'ok');
+    toast('已儲存（本機）', 'ok');
   } catch(e){
     toast('儲存失敗：' + e.message, 'err');
   }
+  // 主動觸發一次雲端上推
+  pushToCloud(true);
 }
 
 // 切月份時自動儲存 + 重載
 function onMonthChange(){
-  // 先存掉當前的
+  // 先推當前的到雲端（靜默）
   if(STATE){
     try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+    pushToCloud(false);
   }
   loadState();
   render();
@@ -567,6 +581,8 @@ function onMonthChange(){
   doImportOvertime(false);
   doImportSalesBonus(false);
   doImportSurveyBonus(false);
+  // 嘗試從雲端拉最新
+  pullFromCloud(false);
 }
 
 // ============================================
@@ -1330,6 +1346,144 @@ function goBack(){
 }
 
 // ============================================
+// ☁ 雲端同步（Google Apps Script）
+// ============================================
+// 每家店獨立 /exec 網址；若某店內建是空字串就走 localStorage 設定
+var BUILTIN_SALARY_URLS = {
+  'chudian-zhonghe':    '',
+  'chudian-yongchun':   '',
+  'chudian-xinzhuang':  '',
+  'shicheng-zhongxiao': ''
+};
+var LS_SALARY_SYNC_URL = 'cd_salary_sync_url';  // 使用者自行貼上的（優先於內建）
+
+function getSyncUrl(){
+  return localStorage.getItem(LS_SALARY_SYNC_URL)
+      || BUILTIN_SALARY_URLS[STORE] || '';
+}
+
+function getStorePassword(){
+  // 沿用 index.html 的 STORE_PASSWORDS；這裡直接 hardcode 同一份
+  var pw = {
+    'chudian-zhonghe':    'a90369287',
+    'chudian-yongchun':   'a94213054',
+    'chudian-xinzhuang':  'a60749791',
+    'shicheng-zhongxiao': 'a61222042'
+  };
+  return pw[STORE] || '';
+}
+
+function setSyncChip(state, text, title){
+  var chip = document.getElementById('sync-chip');
+  if(!chip) return;
+  chip.className = 'sync-chip ' + state; // ok / off / busy / err
+  chip.textContent = text;
+  if(title) chip.title = title;
+}
+
+function callSalaryGAS(action, args){
+  var url = getSyncUrl();
+  if(!url) return Promise.reject(new Error('尚未設定雲端網址'));
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: action, args: args || [] })
+  }).then(function(r){ return r.json(); });
+}
+
+var _pushTimer = null;
+function pushToCloud(showToastWhenOk){
+  if(!STATE) return;
+  var url = getSyncUrl();
+  if(!url){ setSyncChip('off', '☁ 未設定', '點 ⚙️ 設定雲端網址'); return; }
+
+  // debounce：500ms 內多次呼叫合併一次
+  if(_pushTimer) clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(function(){
+    setSyncChip('busy', '☁ 同步中…', '');
+    var payload = JSON.parse(JSON.stringify(STATE)); // 純物件
+    callSalaryGAS('saveSalary', [getStorePassword(), STORE, getSelectedYM(), payload])
+      .then(function(res){
+        if(res && res.ok){
+          var t = res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : '';
+          setSyncChip('ok', '☁ 已同步', '最後同步：' + t);
+          if(showToastWhenOk) toast('已同步到雲端', 'ok');
+        } else {
+          setSyncChip('err', '☁ 失敗', (res && res.error) || '');
+          if(showToastWhenOk) toast('雲端同步失敗：'+((res&&res.error)||''), 'err');
+        }
+      })
+      .catch(function(err){
+        setSyncChip('err', '☁ 離線', err.message || '');
+      });
+  }, 500);
+}
+
+function pullFromCloud(showToast){
+  var url = getSyncUrl();
+  if(!url){ setSyncChip('off', '☁ 未設定', '點 ⚙️ 設定雲端網址'); return; }
+  setSyncChip('busy', '☁ 讀取中…', '');
+  callSalaryGAS('loadSalary', [getStorePassword(), STORE, getSelectedYM()])
+    .then(function(res){
+      if(!res || !res.ok){
+        setSyncChip('err', '☁ 讀取失敗', (res && res.error) || '');
+        if(showToast) toast('雲端讀取失敗：'+((res&&res.error)||''), 'err');
+        return;
+      }
+      if(!res.found){
+        // 本月雲端沒資料 → 如果本機有就 push 上去；否則維持空白狀態
+        setSyncChip('ok', '☁ 已連線（本月無雲端資料）', '第一次儲存會建立');
+        pushToCloud(false);
+        return;
+      }
+      // 雲端有資料 → 合併到 STATE（以雲端為主）
+      var cloud = res.state || {};
+      var def = blankState();
+      ['s1','s2','s3','s4','s5','s6','s7','insurance','roles','detail','notes','ptWage'].forEach(function(k){
+        cloud[k] = Object.assign({}, def[k], cloud[k] || {});
+      });
+      if(!cloud.activeEmp) cloud.activeEmp = EMPLOYEES[0].id;
+      cloud.ym = getSelectedYM();
+      cloud.store = STORE;
+      STATE = cloud;
+      try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+      render();
+      var t = res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : '';
+      setSyncChip('ok', '☁ 已同步', '從雲端讀取：' + t);
+      if(showToast) toast('已從雲端讀取（'+t+'）', 'ok');
+    })
+    .catch(function(err){
+      setSyncChip('err', '☁ 離線', err.message || '');
+      if(showToast) toast('連線失敗：'+err.message, 'err');
+    });
+}
+
+function syncNow(){
+  // 使用者點擊 sync chip：先 push 再 pull，確保兩邊一致
+  var url = getSyncUrl();
+  if(!url){ openSyncSettings(); return; }
+  pushToCloud(true);
+}
+
+function openSyncSettings(){
+  var current = getSyncUrl();
+  var hint = '貼上薪水 Apps Script 的 /exec 網址（部署後取得）\n'
+           + '留空清除，按取消不變。\n\n目前：' + (current || '（未設定）');
+  var v = prompt(hint, current || '');
+  if(v === null) return;
+  v = String(v).trim();
+  if(v){
+    if(!/^https?:\/\//.test(v)){ toast('網址格式不正確', 'err'); return; }
+    localStorage.setItem(LS_SALARY_SYNC_URL, v);
+    toast('已更新雲端網址', 'ok');
+  } else {
+    localStorage.removeItem(LS_SALARY_SYNC_URL);
+    toast('已清除雲端網址（改用內建）', 'ok');
+  }
+  pullFromCloud(false);
+}
+
+// ============================================
 // 啟動
 // ============================================
 loadState();
@@ -1338,11 +1492,15 @@ render();
 doImportOvertime(false);
 doImportSalesBonus(false);
 doImportSurveyBonus(false);
+// 啟動時從雲端拉最新（若有設定）→ 若雲端較新，會覆寫本地
+pullFromCloud(false);
 
-// 自動儲存（每 8 秒）
+// 自動儲存（每 8 秒：本機 + 推雲端）
 setInterval(function(){
   if(!STATE) return;
   try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+  // 推雲端也會 debounce，連續修改時不會打爆
+  pushToCloud(false);
 }, 8000);
 
 </script>
