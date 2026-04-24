@@ -353,10 +353,15 @@ h1{font-size:26px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 
 <script>
 // ============================================
-// 📌 此檔案是 Apps Script Web App 的前端
-//     必須放在 Apps Script 專案裡（檔名 survey.html）
-//     透過 google.script.run 呼叫後端，不再需要外部 /exec 網址
+// 📌 GAS API 網址（部署 匿名表-script.gs 後把 /exec 網址貼到下面）
 // ============================================
+var BUILTIN_SURVEY_SYNC_URL = 'https://script.google.com/macros/s/AKfycbylKtlhC7gA7B3REfis6dpI30DWbk-K8XduKi8q9O5yBUHOiUgmJNvRlqsbHDo6Uz3_/exec';
+
+(function initSyncUrl(){
+  if(BUILTIN_SURVEY_SYNC_URL) localStorage.setItem('cd_survey_sync_url', BUILTIN_SURVEY_SYNC_URL);
+})();
+
+function syncUrl(){ return localStorage.getItem('cd_survey_sync_url') || ''; }
 
 // ============================================
 // 📋 題目定義
@@ -594,19 +599,17 @@ function collectForm(){
 // ============================================
 // ☁️ 傳送到雲端
 // ============================================
-// 把 google.script.run 包成 Promise，方便用 .then()/.catch()
+// 呼叫 GAS API（用 fetch + text/plain 避免 CORS preflight）
+// 介面跟之前的 google.script.run 版一樣：callGAS(fn, ...args)
 function callGAS(fn){
   var args = [].slice.call(arguments, 1);
-  return new Promise(function(resolve, reject){
-    if(typeof google === 'undefined' || !google.script || !google.script.run){
-      reject(new Error('此頁必須從 Apps Script Web App 的 /exec 網址開啟，不能直接打開 .html 檔'));
-      return;
-    }
-    google.script.run
-      .withSuccessHandler(resolve)
-      .withFailureHandler(function(err){ reject(new Error(err && err.message || String(err))); })
-      [fn].apply(google.script.run, args);
-  });
+  var url = syncUrl();
+  if(!url) return Promise.reject(new Error('尚未設定 GAS API 網址'));
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: fn, args: args })
+  }).then(function(res){ return res.json(); });
 }
 
 function submitSurvey(){
@@ -930,11 +933,11 @@ document.addEventListener('DOMContentLoaded', function(){
     if(s && getStore(s)){ selectStore(s); }
   } catch(e) {}
 
-  // 如果不是從 Apps Script Web App 打開，顯示提醒
-  if(typeof google === 'undefined' || !google.script || !google.script.run){
+  // 如果尚未設定 GAS API 網址，頂端顯示提醒
+  if(!syncUrl()){
     var note = document.createElement('div');
     note.className = 'wire-note';
-    note.innerHTML = '⚠️ <b>請從 Apps Script Web App 網址開啟</b>：此檔案需放在 Apps Script 專案內，部署後用 <code>/exec</code> 網址開啟才能運作。直接打開 .html 檔無法送出資料。';
+    note.innerHTML = '⚠️ <b>尚未連接雲端</b>：請先部署 <code>匿名表-script.gs</code>，並把 <code>/exec</code> 網址填入此頁頂端的 <code>BUILTIN_SURVEY_SYNC_URL</code>。';
     document.querySelector('.stage').insertBefore(note, document.querySelector('.hero').nextSibling);
   }
 });

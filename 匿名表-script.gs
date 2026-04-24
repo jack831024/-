@@ -1,12 +1,11 @@
 // ============================================
-// 匿名表 Web App（4 家店共用同一個部署）
+// 匿名表 API 後端（前端 survey.html 放在 GitHub，透過 fetch 呼叫此 /exec）
 // ============================================
 // 部署步驟：
 //   1. 打開 https://script.google.com 開啟原本的專案
 //   2. 把此檔內容整份貼到 Code.gs 覆蓋
-//   3. 確認有一個 HTML 檔叫 survey（貼 survey.html 內容）
-//   4. 存檔 → 部署 → 管理部署 → 編輯 → 版本「新版本」→ 部署
-//      /exec 網址不變
+//   3. 存檔 → 部署 → 管理部署 → 編輯 → 版本「新版本」→ 部署
+//      /exec 網址不變（前端 survey.html 已寫入此網址）
 // ============================================
 
 
@@ -74,13 +73,41 @@ var VALID_STORES = Object.keys(STORE_DEFAULT_POSITIONS);
 
 
 // ============================================
-// 🌐 doGet — 產生網頁
+// 🌐 doGet — 回應 API 狀態（前端不走這個）
 // ============================================
 function doGet(e) {
-  return HtmlService.createHtmlOutputFromFile('survey')
-    .setTitle('匿名表')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  return ContentService
+    .createTextOutput(JSON.stringify({ ok: true, service: '匿名表 API', time: new Date().toISOString() }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+// ============================================
+// 📮 doPost — 統一入口，依 action 分派到對應函式
+// 前端 survey.html 用 fetch POST 過來：{ action:'xxx', args:[...] }
+// ============================================
+function doPost(e) {
+  try {
+    var body = JSON.parse(e.postData.contents);
+    var fn = body.action;
+    var args = body.args || [];
+
+    var res;
+    switch (fn) {
+      case 'submitSurvey':    res = submitSurvey(args[0]); break;
+      case 'verifyPassword':  res = verifyPassword(args[0]); break;
+      case 'getSurveys':      res = getSurveys(args[0], args[1], args[2]); break;
+      case 'getPositions':    res = getPositions(args[0]); break;
+      case 'setPositions':    res = setPositions(args[0], args[1], args[2]); break;
+      default: res = { ok: false, error: 'unknown action: ' + fn };
+    }
+
+    return ContentService.createTextOutput(JSON.stringify(res))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 

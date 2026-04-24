@@ -146,18 +146,8 @@ function goFlow(flow){
   window.location.href = 'index.html';
 }
 
-// ============================================
-// 📌 十城匿名表 Web App 網址
-// 部署 Apps Script 後把產出的 /exec 網址貼到下面引號裡
-// ============================================
-var SURVEY_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbylKtlhC7gA7B3REfis6dpI30DWbk-K8XduKi8q9O5yBUHOiUgmJNvRlqsbHDo6Uz3_/exec';
-
 function goSurvey(){
-  if(SURVEY_WEBAPP_URL){
-    window.location.href = SURVEY_WEBAPP_URL;
-  }else{
-    alert('尚未設定十城匿名表網址。\n\n請先部署 Apps Script Web App，把 /exec 網址填入 home.html 的 SURVEY_WEBAPP_URL。');
-  }
+  window.location.href = 'survey.html';
 }
 </script>
 </body>
