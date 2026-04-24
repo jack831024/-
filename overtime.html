@@ -130,6 +130,7 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
 .tag.miss{background:#e0e7ff;color:#4338ca}
 .tag.sick{background:#ffe4e6;color:#be123c}
 .tag.personal{background:#f3e8ff;color:#7e22ce}
+.tag.rest{background:#dbeafe;color:#1d4ed8}
 .tag.ok{background:#d1fae5;color:#065f46}
 
 .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
@@ -274,6 +275,7 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
         <button class="filter-chip" data-filter="miss">缺卡<span class="chip-count" id="cnt-miss">0</span></button>
         <button class="filter-chip" data-filter="sick">病假<span class="chip-count" id="cnt-sick">0</span></button>
         <button class="filter-chip" data-filter="personal">事假<span class="chip-count" id="cnt-personal">0</span></button>
+        <button class="filter-chip" data-filter="rest">休-1<span class="chip-count" id="cnt-rest">0</span></button>
       </div>
     </div>
     <div class="summary-grid" id="summary-grid" style="display:none">
@@ -283,6 +285,7 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
       <div class="sum-card miss"><div class="k">缺卡日數</div><div class="v" id="s-miss">0</div></div>
       <div class="sum-card" style="border-left:3px solid #f43f5e"><div class="k">病假</div><div class="v" id="s-sick">0<span class="u"> 天</span></div></div>
       <div class="sum-card" style="border-left:3px solid #a855f7"><div class="k">事假</div><div class="v" id="s-personal">0<span class="u"> 天</span></div></div>
+      <div class="sum-card" style="border-left:3px solid #1d4ed8"><div class="k">休-1</div><div class="v" id="s-rest">0<span class="u"> 天</span></div></div>
     </div>
     <div id="results-container">
       <div class="empty-state">
@@ -1398,14 +1401,16 @@ function runAnalysis(){
       if(!code) return;
       var date = y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
 
-      // 病假 / 事假：直接記錄，不做 OT/遲到/缺卡判定
+      // 病假 / 事假 / 休-1：直接記錄，不做 OT/遲到/缺卡判定
       var leaveType = null;
-      if(/^(病|病假|sick|Sick|S)$/.test(code)) leaveType = 'sick';
-      else if(/^(事|事假|personal|Personal|P)$/.test(code)) leaveType = 'personal';
+      var leaveLabel = '';
+      if(/^(病|病假|sick|Sick|S)$/.test(code)){ leaveType = 'sick'; leaveLabel = '病假'; }
+      else if(/^(事|事假|personal|Personal|P)$/.test(code)){ leaveType = 'personal'; leaveLabel = '事假'; }
+      else if(/^休[-－]?1$|^休1$|^休減$/.test(code)){ leaveType = 'rest'; leaveLabel = '休-1'; }
       if(leaveType){
         results.push({
           name:name, date:date, code:code,
-          shiftName: leaveType==='sick' ? '病假' : '事假',
+          shiftName: leaveLabel,
           expectShift:'', punches:[], punchesEff:[], required:0,
           overtimeMin:0, lateMin:0, missing:false,
           leaveType: leaveType,
@@ -1545,17 +1550,18 @@ function persistSalarySummary(y, m){
     ym = sample.substring(0, 7);
   }
 
-  // 正職 / 主管資料：含 overtime、late、miss、sick、personal
+  // 正職 / 主管資料：含 overtime、late、miss、sick、personal、rest(休-1)
   var byEmp = {};
   if(hasAnalysis){
     ANALYSIS.forEach(function(r){
       var n = r.name;
-      if(!byEmp[n]) byEmp[n] = { overtimeMin:0, lateDays:0, missDays:0, sickDays:0, personalDays:0 };
+      if(!byEmp[n]) byEmp[n] = { overtimeMin:0, lateDays:0, missDays:0, sickDays:0, personalDays:0, restDays:0 };
       byEmp[n].overtimeMin += (r.overtimeMin || 0);
       if(r.lateMin > 0) byEmp[n].lateDays += 1;
       if(r.missing) byEmp[n].missDays += 1;
       if(r.leaveType === 'sick')     byEmp[n].sickDays += 1;
       if(r.leaveType === 'personal') byEmp[n].personalDays += 1;
+      if(r.leaveType === 'rest')     byEmp[n].restDays += 1;
     });
   }
 
@@ -1737,7 +1743,7 @@ function isEnglishName(n){
 
 function renderSummary(){
   if(!ANALYSIS){ return; }
-  var pplSet = {}, otMin = 0, lateCnt = 0, missCnt = 0, sickCnt = 0, personalCnt = 0;
+  var pplSet = {}, otMin = 0, lateCnt = 0, missCnt = 0, sickCnt = 0, personalCnt = 0, restCnt = 0;
   ANALYSIS.forEach(function(r){
     pplSet[r.name] = 1;
     if(r.overtimeMin > 0){ otMin += r.overtimeMin; }
@@ -1745,6 +1751,7 @@ function renderSummary(){
     if(r.missing){ missCnt++; }
     if(r.leaveType === 'sick'){ sickCnt++; }
     else if(r.leaveType === 'personal'){ personalCnt++; }
+    else if(r.leaveType === 'rest'){ restCnt++; }
   });
   document.getElementById('s-ppl').textContent      = Object.keys(pplSet).length;
   document.getElementById('s-ot').innerHTML         = (otMin/60).toFixed(1)+'<span class="u"> 小時</span>';
@@ -1752,11 +1759,15 @@ function renderSummary(){
   document.getElementById('s-miss').textContent     = missCnt;
   document.getElementById('s-sick').innerHTML       = sickCnt+'<span class="u"> 天</span>';
   document.getElementById('s-personal').innerHTML   = personalCnt+'<span class="u"> 天</span>';
+  var restEl = document.getElementById('s-rest');
+  if(restEl) restEl.innerHTML = restCnt+'<span class="u"> 天</span>';
   document.getElementById('cnt-ot').textContent       = ' · '+(ANALYSIS.filter(function(x){return x.overtimeMin>0;}).length);
   document.getElementById('cnt-late').textContent     = ' · '+lateCnt;
   document.getElementById('cnt-miss').textContent     = ' · '+missCnt;
   document.getElementById('cnt-sick').textContent     = ' · '+sickCnt;
   document.getElementById('cnt-personal').textContent = ' · '+personalCnt;
+  var cntRest = document.getElementById('cnt-rest');
+  if(cntRest) cntRest.textContent = ' · '+restCnt;
 }
 
 function renderResults(){
@@ -1784,6 +1795,7 @@ function renderResults(){
       if(f === 'miss')     return '<span class="tag miss">缺卡</span>';
       if(f === 'sick')     return '<span class="tag sick">病假</span>';
       if(f === 'personal') return '<span class="tag personal">事假</span>';
+      if(f === 'rest')     return '<span class="tag rest">休-1</span>';
       return '<span class="tag ok">正常</span>';
     }).join(' ');
     html.push('<tr>',
