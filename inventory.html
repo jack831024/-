@@ -1665,12 +1665,23 @@ function saveBizInputs(){
   renderBusinessSummary();
 }
 
+// 各店房租預設值（使用者可在前端手動改，改過的值會存 localStorage 蓋過預設）
+var DEFAULT_RENTS = {
+  'chudian-zhonghe':    44000,
+  'chudian-yongchun':   45000,
+  'chudian-xinzhuang':  70000,
+  'shicheng-zhongxiao': 45000  // 十城未指定，暫用 45000，可手動調整
+};
+
 function loadBizInputs(yearMonth){
   var hrCost = localStorage.getItem('cd_biz_hr_'+STORE_ID+'_'+yearMonth) || '';
+  var defaultRent = DEFAULT_RENTS[STORE_ID] || 45000;
   var rent = localStorage.getItem('cd_biz_rent_'+STORE_ID);
-  if(rent === null) rent = '45000';
+  if(rent === null) rent = String(defaultRent);
   document.getElementById('biz-hr-input').value = hrCost;
   document.getElementById('biz-rent-input').value = rent;
+  // 動態 placeholder 顯示該店預設值
+  document.getElementById('biz-rent-input').placeholder = '預設 ' + defaultRent.toLocaleString();
 }
 
 // 月度成本與利潤分析的密碼鎖
