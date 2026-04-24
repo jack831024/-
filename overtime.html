@@ -437,6 +437,7 @@ var NAME_MAP_BY_STORE = {
 };
 
 // 預先建立 normalize 後的對照（提升查找效能；同時也做反向 set 給 PT 篩選用）
+// 使用 normalizeName 確保 key 一致性（也能處理「5. 謝其淇」這類前綴）
 var NAME_MAP_NORMALIZED = {};      // 班表 → 打卡：{ store: { normSchedKey: normPunchKey } }
 var MAPPED_PUNCH_KEYS  = {};       // PT 篩選用：{ store: { normPunchKey: true } }
 (function buildNameMap(){
@@ -447,11 +448,8 @@ var MAPPED_PUNCH_KEYS  = {};       // PT 篩選用：{ store: { normPunchKey: tr
     Object.keys(raw).forEach(function(zh){
       var en = raw[zh];
       if(!en) return;
-      var nz = String(zh).trim().toLowerCase();
-      var ne = String(en).trim().toLowerCase()
-                 .replace(/^[\d\s\-_#]+/, '')
-                 .replace(/[\s\-_#]*\d+\s*$/, '')
-                 .trim();
+      var nz = normalizeName(zh);
+      var ne = normalizeName(en);
       if(nz && ne){
         NAME_MAP_NORMALIZED[store][nz] = ne;
         MAPPED_PUNCH_KEYS[store][ne]   = true;
@@ -460,12 +458,12 @@ var MAPPED_PUNCH_KEYS  = {};       // PT 篩選用：{ store: { normPunchKey: tr
   });
 })();
 
-// 給班表姓名 → 對應到打卡 key（normalize 後）；找不到回傳原本 normalize 結果
+// 給班表姓名 → 對應到打卡 key（normalize 後）；找不到就用 normalize 結果
 function resolvePunchKeyByName(schedName){
-  var nz = String(schedName||'').trim().toLowerCase();
+  var nz = normalizeName(schedName);
   var m = NAME_MAP_NORMALIZED[STORE];
   if(m && m[nz]) return m[nz];
-  return normalizeName(schedName);
+  return nz;
 }
 
 // 給打卡英文名 → 是否屬於某位班表員工（已被內建對照標為 FT）
@@ -1644,8 +1642,13 @@ function normalizeName(n){
   return String(n||'')
     .trim()
     .toLowerCase()
-    .replace(/^[\d\s\-_#]+/, '')
-    .replace(/[\s\-_#]*\d+\s*$/, '')
+    // 剝掉前綴（員工編號 / 點 / 冒號 / 中文標點）：
+    //   '5. 謝其淇'  → '謝其淇'
+    //   '3wangsu'    → 'wangsu'
+    //   '1: 林韋翔'  → '林韋翔'
+    .replace(/^[\d\s\-_#.．。、:：]+/, '')
+    // 剝掉後綴員工編號：'張小明 001' → '張小明'
+    .replace(/[\s\-_#:：]*\d+\s*$/, '')
     .trim();
 }
 
