@@ -486,7 +486,7 @@ function blankState(){
     s.s7[e.id] = true; // 預設「有提出」
     s.insurance[e.id] = DEFAULT_INSURANCE[e.id] || 0;
     s.roles[e.id] = e.defaultRole || e.role || 'regular';
-    s.detail[e.id] = { dtDays:0, otHours:0, sickDays:0, personalDays:0 };
+    s.detail[e.id] = { dtDays:0, otHours:0, sickDays:0, personalDays:0, restDays:0 };
     s.notes[e.id] = '';
   });
   return s;
@@ -848,20 +848,22 @@ function calcEmp(e){
   var otHours = STATE.detail[id].otHours || 0;
   var sickDays = STATE.detail[id].sickDays || 0;
   var personalDays = STATE.detail[id].personalDays || 0;
+  var restDays = STATE.detail[id].restDays || 0;
 
   // 公式基數（正職：月薪；主管：月薪 + 職務加給）
   //  雙薪     = 基數 / 30 × 天
   //  延長加班費 = 基數 / 30 / 8 × 1.34 × 時數
-  //  事假     = 基數 / 30 × 天
-  //  病假     = 基數 / 30 / 2 × 天
+  //  事假 / 病假 / 休 = 基數 / 30 × 天（全部是一天扣一天）
   var otBase = monthPay + (sup ? rolePay : 0);
-  var doubleWage = dtDays * otBase / 30;
+  var perDay = otBase / 30;
+  var doubleWage = dtDays * perDay;
   var otPay = otHours * otBase / 30 / 8 * 1.34;
-  var sickDeduct = sickDays * otBase / 30 / 2;
-  var personalDeduct = personalDays * otBase / 30;
+  var sickDeduct = sickDays * perDay;
+  var personalDeduct = personalDays * perDay;
+  var restDeduct = restDays * perDay;
 
   // 總額
-  var total = monthPay + fixedOT + doubleWage + otPay - sickDeduct - personalDeduct;
+  var total = monthPay + fixedOT + doubleWage + otPay - sickDeduct - personalDeduct - restDeduct;
   if(sup){
     total += rolePay;
   }
@@ -880,6 +882,7 @@ function calcEmp(e){
     otHours: otHours, otPay: otPay,
     sickDays: sickDays, sickDeduct: sickDeduct,
     personalDays: personalDays, personalDeduct: personalDeduct,
+    restDays: restDays, restDeduct: restDeduct,
     insurance: insurance,
     total: total, realPay: realPay,
     note: STATE.notes[id] || ''
@@ -955,6 +958,7 @@ function renderDetail(){
   html.push('<label>加班時數 <input type="number" min="0" step="0.5" value="'+c.otHours+'" onchange="onDtChange(\''+emp.id+'\',\'otHours\',this.value)"></label>');
   html.push('<label>病假(天) <input type="number" min="0" step="0.5" value="'+c.sickDays+'" onchange="onDtChange(\''+emp.id+'\',\'sickDays\',this.value)"></label>');
   html.push('<label>事假(天) <input type="number" min="0" step="0.5" value="'+c.personalDays+'" onchange="onDtChange(\''+emp.id+'\',\'personalDays\',this.value)"></label>');
+  html.push('<label>休(天) <input type="number" min="0" step="0.5" value="'+c.restDays+'" onchange="onDtChange(\''+emp.id+'\',\'restDays\',this.value)"></label>');
   html.push('</div>');
 
   // 主項：月薪（含各獎金）— 可展開明細（不含底薪 26000 這一列）
@@ -989,6 +993,7 @@ function renderDetail(){
   // 扣款
   html.push(payRow('事假', -c.personalDeduct));
   html.push(payRow('病假', -c.sickDeduct));
+  html.push(payRow('休', -c.restDeduct));
 
   // 總額
   html.push(payRow('總額', c.total, {rowCls:'total'}));
