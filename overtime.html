@@ -539,6 +539,8 @@ function loadShifts(){
 function saveShifts(){
   var shifts = readShiftsFromDom();
   localStorage.setItem(LS_KEY_SHIFTS, JSON.stringify(shifts));
+  // 班別改動 → 觸發整頁自動同步（debounce）
+  if(typeof scheduleAutoSync === 'function') scheduleAutoSync();
 }
 
 function renderShifts(){
@@ -1847,30 +1849,37 @@ document.getElementById('filter-chips').addEventListener('click', function(e){
 // ============================================
 // 💾 把 FT + PT 分析結果 POST 到該店的 Apps Script，寫進班表試算表的
 //   「加班費-YYYY-MM」分頁。若後端未更新，會顯示「請先更新 Apps Script」錯誤。
-// 🔄 自動同步：analysis 跑完 1 秒後自動同步到雲端（debounce 避免重複呼叫）
+// 🔄 自動同步：整個頁面任何改動都會 debounce 後自動上傳到雲端
 var autoSyncTimer = null;
 function scheduleAutoSync(){
-  if(!ANALYSIS || !ANALYSIS.length) return;
+  if(!STORE) return; // 沒選店不用同步
+  // 至少要有一些資料（分析結果 / 班別 / PT 名單）才值得同步，避免空推
+  var hasAnything = (ANALYSIS && ANALYSIS.length) ||
+                    (PT_ANALYSIS && PT_ANALYSIS.length) ||
+                    (readPtListFromDom().length > 0) ||
+                    (readShiftsFromDom().length > 0);
+  if(!hasAnything) return;
   clearTimeout(autoSyncTimer);
-  autoSyncTimer = setTimeout(function(){ saveToCloud(true); }, 1000);
+  // debounce 2 秒（讓使用者連續改設定時只 push 最後一次）
+  autoSyncTimer = setTimeout(function(){ saveToCloud(true); }, 2000);
 }
 
 // silent=true 時：不彈 alert，狀態改用 sync-status chip 顯示（給自動同步用）
 function saveToCloud(silent){
-  if(!ANALYSIS || !ANALYSIS.length){
-    if(!silent) alert('請先完成「開始分析」再儲存');
-    return;
-  }
   var url = getSyncUrl();
   if(!url){
     if(!silent) alert('尚未設定該店的 Apps Script 網址');
-    setSyncStatus('err', '❌ 未設定雲端網址');
+    setSyncStatus('err', '未設定雲端網址', '請先到 ⚙️ 設定填入 Apps Script 網址');
+    return;
+  }
+  if(!STORE){
+    if(!silent) alert('尚未選擇門市');
     return;
   }
 
   var btn = document.getElementById('btn-save-cloud');
   btn.disabled = true;
-  setSyncStatus('info', '同步中…', '正在把分析結果上傳到雲端…');
+  setSyncStatus('info', '同步中…', '正在把整頁資料上傳到雲端…');
 
   var body = {
     action: 'saveAnalysis',
@@ -1878,6 +1887,10 @@ function saveToCloud(silent){
     month:  getSelectedYM(),
     ftRows: ANALYSIS || [],
     ptRows: PT_ANALYSIS || [],
+    // 整頁設定快照：班別定義、PT 名單（含時薪）、門檻
+    shifts: readShiftsFromDom(),
+    ptList: readPtListFromDom(),
+    thresholds: readThresh(),
     savedBy: sessionStorage.getItem('cd_user') || STORE_NAME || ''
   };
 
@@ -1980,6 +1993,8 @@ function loadPtList(){
 }
 function savePtList(){
   localStorage.setItem(LS_KEY_PT_LIST, JSON.stringify(readPtListFromDom()));
+  // PT 名單 / 時薪改動 → 觸發整頁自動同步
+  if(typeof scheduleAutoSync === 'function') scheduleAutoSync();
 }
 function readPtListFromDom(){
   var rows = document.querySelectorAll('#pt-list-tbody tr');

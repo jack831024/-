@@ -91,6 +91,9 @@ function saveAnalysis(params) {
   }
   var ftRows = Array.isArray(params.ftRows) ? params.ftRows : [];
   var ptRows = Array.isArray(params.ptRows) ? params.ptRows : [];
+  var shifts = Array.isArray(params.shifts) ? params.shifts : [];
+  var ptList = Array.isArray(params.ptList) ? params.ptList : [];
+  var thresholds = (params.thresholds && typeof params.thresholds === 'object') ? params.thresholds : {};
   var savedBy = params.savedBy || '';
   var savedAt = new Date();
 
@@ -171,8 +174,19 @@ function saveAnalysis(params) {
   sheet.getRange(metaRow + 1, 3).setValue('PT 筆數').setFontWeight('bold');
   sheet.getRange(metaRow + 1, 4).setValue(ptRows.length);
 
-  // 欄寬美化
-  sheet.autoResizeColumns(1, headers.length);
+  // 整頁設定快照（班別定義、PT 名單、門檻）
+  var cfgRow = metaRow + 3;
+  sheet.getRange(cfgRow, 1).setValue('— 設定快照 —')
+    .setFontWeight('bold').setBackground('#fef3c7');
+  sheet.getRange(cfgRow + 1, 1).setValue('班別定義').setFontWeight('bold');
+  sheet.getRange(cfgRow + 1, 2).setValue(JSON.stringify(shifts));
+  sheet.getRange(cfgRow + 2, 1).setValue('PT 名單').setFontWeight('bold');
+  sheet.getRange(cfgRow + 2, 2).setValue(JSON.stringify(ptList));
+  sheet.getRange(cfgRow + 3, 1).setValue('加班門檻').setFontWeight('bold');
+  sheet.getRange(cfgRow + 3, 2).setValue(JSON.stringify(thresholds));
+
+  // 欄寬美化（只拉第一欄到第四欄，避免 JSON 把欄位撐超寬）
+  sheet.autoResizeColumns(1, Math.min(4, headers.length));
 
   return {
     ok: true,
