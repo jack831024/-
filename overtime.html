@@ -1532,6 +1532,8 @@ function runAnalysis(){
   persistSalarySummary(y, m);
   document.getElementById('btn-export').disabled = !results.length;
   document.getElementById('btn-save-cloud').disabled = !results.length;
+  // FT 分析跑完 → 自動同步到雲端
+  scheduleAutoSync();
   document.getElementById('filter-chips').style.display = 'flex';
   document.getElementById('summary-grid').style.display = 'grid';
 }
@@ -1833,21 +1835,30 @@ document.getElementById('filter-chips').addEventListener('click', function(e){
 // ============================================
 // 💾 把 FT + PT 分析結果 POST 到該店的 Apps Script，寫進班表試算表的
 //   「加班費-YYYY-MM」分頁。若後端未更新，會顯示「請先更新 Apps Script」錯誤。
-function saveToCloud(){
+// 🔄 自動同步：analysis 跑完 1 秒後自動同步到雲端（debounce 避免重複呼叫）
+var autoSyncTimer = null;
+function scheduleAutoSync(){
+  if(!ANALYSIS || !ANALYSIS.length) return;
+  clearTimeout(autoSyncTimer);
+  autoSyncTimer = setTimeout(function(){ saveToCloud(true); }, 1000);
+}
+
+// silent=true 時：不彈 alert，狀態改用 sync-status chip 顯示（給自動同步用）
+function saveToCloud(silent){
   if(!ANALYSIS || !ANALYSIS.length){
-    alert('請先完成 Step 4「開始分析」再儲存');
+    if(!silent) alert('請先完成「開始分析」再儲存');
     return;
   }
   var url = getSyncUrl();
   if(!url){
-    alert('尚未設定該店的 Apps Script 網址');
+    if(!silent) alert('尚未設定該店的 Apps Script 網址');
+    setSyncStatus('err', '❌ 未設定雲端網址');
     return;
   }
 
   var btn = document.getElementById('btn-save-cloud');
-  var original = btn.textContent;
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> 儲存中...';
+  setSyncStatus('info', '同步中…');
 
   var body = {
     action: 'saveAnalysis',
@@ -1868,23 +1879,33 @@ function saveToCloud(){
       if(data.error){
         var msg = data.error;
         if(msg.indexOf('unknown action') >= 0){
-          msg = '後端 Apps Script 尚未更新到支援儲存功能的版本。\n\n'
-              + '請到該店 Apps Script → 更新成新版 加班費-script.gs → '
-              + '部署 → 管理部署 → ✏️ → 版本選「新版本」→ 部署';
+          msg = '後端 Apps Script 尚未更新到支援儲存功能的版本（需要重新部署新版）';
         }
         throw new Error(msg);
       }
-      alert('✅ 已儲存到雲端分頁：' + data.sheet +
-            '\n正職 ' + data.ftCount + ' 筆、PT ' + data.ptCount + ' 筆' +
-            '\n儲存時間：' + (data.savedAt || new Date().toISOString()).substring(0, 19).replace('T',' '));
+      var t = new Date();
+      var timeStr = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0') + ':' + String(t.getSeconds()).padStart(2,'0');
+      setSyncStatus('ok', '✓ 已同步 ' + timeStr + '（' + data.sheet + '，FT '+data.ftCount+'、PT '+data.ptCount+'）');
+      if(!silent){
+        alert('✅ 已儲存到雲端分頁：' + data.sheet +
+              '\n正職 ' + data.ftCount + ' 筆、PT ' + data.ptCount + ' 筆');
+      }
     })
     .catch(function(err){
-      alert('❌ 儲存失敗：\n' + (err.message || '未知錯誤'));
+      setSyncStatus('err', '❌ 同步失敗（按「重新同步」重試）');
+      if(!silent) alert('❌ 同步失敗：\n' + (err.message || '未知錯誤'));
+      else console.warn('自動同步失敗:', err);
     })
     .finally(function(){
       btn.disabled = !(ANALYSIS && ANALYSIS.length);
-      btn.textContent = original;
     });
+}
+
+function setSyncStatus(cls, text){
+  var el = document.getElementById('sync-status');
+  if(!el) return;
+  el.className = 'status-chip on ' + cls;
+  el.innerHTML = (cls === 'info' ? '<span class="spinner"></span>' : '') + ' ' + text;
 }
 
 function exportCsv(){
@@ -2229,6 +2250,8 @@ function runPtAnalysis(){
   persistSalarySummary(); // 也把 PT 的月度工資寫入供 salary.html 抓
   document.getElementById('btn-pt-export').disabled = !results.length;
   document.getElementById('pt-summary-grid').style.display = 'grid';
+  // PT 分析跑完 → 也觸發一次自動同步（這時 FT + PT 都有了）
+  scheduleAutoSync();
 }
 
 function renderPtSummary(){
