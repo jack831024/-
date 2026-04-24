@@ -373,9 +373,12 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
     </div>
   </div>
 
-  <!-- 動作列 -->
-  <div class="btn-row" id="action-row" style="display:none">
-    <button class="primary" onclick="saveInv()">💾 儲存此廠商</button>
+  <!-- 自動儲存狀態（不需按鈕，改動即存）-->
+  <div id="action-row" style="display:none;margin-top:10px">
+    <div id="autosave-indicator" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border-radius:12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);color:#047857;font-size:13px;font-weight:600;transition:all .2s">
+      <span id="autosave-icon">✅</span>
+      <span id="autosave-text">自動儲存已開啟</span>
+    </div>
   </div>
   <span class="saved-tag" id="saved-tag"></span>
 
@@ -877,7 +880,8 @@ async function doAnalyze(){
     updateSummary();
 
     stat.className = 'ai-status ok on';
-    stat.innerHTML = '✓ 辨識完成，新增 ' + arr.length + ' 筆品項';
+    stat.innerHTML = '✓ 辨識完成，新增 ' + arr.length + ' 筆品項（已自動儲存）';
+    autoSave();  // AI 辨識完立刻自動存
   }catch(e){
     console.error(e);
     stat.className = 'ai-status err on';
@@ -928,12 +932,14 @@ function upd(idx, field, val){
   if(field === 'price' || field === 'qty') items[idx][field] = Number(val) || 0;
   else items[idx][field] = val;
   updateSummary();
+  autoSave();
 }
 
 function delRow(idx){
   items.splice(idx, 1);
   renderTable();
   updateSummary();
+  autoSave();
 }
 
 function addRow(){
@@ -941,6 +947,63 @@ function addRow(){
   items.push({ name:'', price:0, qty:0, unit:defaultUnit, date: document.getElementById('inv-date').value, _new:true });
   renderTable();
   updateSummary();
+  // 新增一列通常先讓使用者填完再自動存，不立刻觸發（避免存空資料）
+}
+
+// =============================================================
+// 自動儲存（debounce 600ms：使用者連續編輯時不會每鍵都打雲端）
+// =============================================================
+var _autoSaveTimer = null;
+var _autoSaving = false;
+
+function setAutoSaveStatus(state){
+  var ind = document.getElementById('autosave-indicator');
+  var ico = document.getElementById('autosave-icon');
+  var txt = document.getElementById('autosave-text');
+  if(!ind) return;
+  var map = {
+    idle:   { bg:'rgba(16,185,129,.08)', bd:'rgba(16,185,129,.2)',  color:'#047857', icon:'✅', text:'自動儲存已開啟' },
+    typing: { bg:'rgba(245,158,11,.08)', bd:'rgba(245,158,11,.3)',  color:'#92400e', icon:'✏️', text:'編輯中...' },
+    saving: { bg:'rgba(59,130,246,.08)', bd:'rgba(59,130,246,.25)', color:'#1e40af', icon:'💾', text:'儲存中...' },
+    saved:  { bg:'rgba(16,185,129,.1)',  bd:'rgba(16,185,129,.3)',  color:'#047857', icon:'✓',  text:'已自動儲存' },
+    cloud:  { bg:'rgba(59,130,246,.1)',  bd:'rgba(59,130,246,.3)',  color:'#1e40af', icon:'☁️', text:'已同步雲端' },
+    error:  { bg:'rgba(220,38,38,.08)',  bd:'rgba(220,38,38,.3)',   color:'#b91c1c', icon:'⚠️', text:'雲端同步失敗（本機已存）' }
+  };
+  var s = map[state] || map.idle;
+  ind.style.background = s.bg;
+  ind.style.borderColor = s.bd;
+  ind.style.color = s.color;
+  ico.textContent = s.icon;
+  txt.textContent = s.text;
+}
+
+function autoSave(){
+  if(!currentVendor) return;
+  if(items.length === 0) return; // 空資料不主動存
+  setAutoSaveStatus('typing');
+  if(_autoSaveTimer) clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(doAutoSave, 600);
+}
+
+async function doAutoSave(){
+  if(_autoSaving) return;
+  _autoSaving = true;
+  setAutoSaveStatus('saving');
+  try{
+    var url = localStorage.getItem('cd_inv_sync_url');
+    var hasCloud = !!url;
+    await saveInv({ silent: true });
+    setAutoSaveStatus(hasCloud ? 'cloud' : 'saved');
+    // 2.5 秒後回到 idle
+    setTimeout(function(){
+      if(!_autoSaveTimer) setAutoSaveStatus('idle');
+    }, 2500);
+  }catch(e){
+    console.warn('自動儲存失敗', e);
+    setAutoSaveStatus('error');
+  }finally{
+    _autoSaving = false;
+  }
 }
 
 function updateSummary(){
@@ -1003,9 +1066,11 @@ function loadVendorData(){
 // 2. 把 items[] 按 item.date 分組（通常都是 editDate，但若 AI 偵測到跨日就會分到其他 key）
 // 3. 每個日期分別存到自己的 key
 // 4. 雲端也按日期分別 upsert
-async function saveInv(){
-  if(!currentVendor){ alert('請先選擇廠商'); return; }
-  if(items.length === 0){ alert('尚無品項可儲存'); return; }
+async function saveInv(opts){
+  opts = opts || {};
+  var silent = !!opts.silent;  // 自動儲存時 true：不跳 alert、不打擾使用者
+  if(!currentVendor){ if(!silent) alert('請先選擇廠商'); return; }
+  if(items.length === 0){ if(!silent) alert('尚無品項可儲存'); return; }
   var editDate = document.getElementById('inv-date').value;
   var savedAt = new Date().toISOString();
 
@@ -1109,7 +1174,7 @@ async function saveInv(){
     }catch(e){ console.warn('雲端同步整體失敗', e); }
   }
 
-  alert('✅ ['+currentVendor+'] 已儲存 '+items.length+' 筆品項');
+  if(!silent) alert('✅ ['+currentVendor+'] 已儲存 '+items.length+' 筆品項');
   loadHistory();
 }
 
