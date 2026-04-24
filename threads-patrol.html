@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Threads 海巡助手 · 初殿鍋物</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#3b82f6;
+  --accent:#f97316;
+  --ok:#10b981;
+  --warn:#f59e0b;
+  --danger:#ef4444;
+  --ink:#0f172a;
+  --ink-2:#475569;
+  --ink-3:#94a3b8;
+  --line:#e2e8f0;
+  --bg:#f8fafc;
+}
+html,body{height:100%}
+body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;padding:1.25rem;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #dbeafe 0%, transparent 50%),
+    radial-gradient(900px 500px at 110% 10%, #fde4d3 0%, transparent 55%),
+    linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+}
+
+.wrap{max-width:1100px;margin:0 auto}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:1rem;flex-wrap:wrap}
+.back{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(255,255,255,.7);border:1px solid var(--line);border-radius:999px;color:var(--ink-2);text-decoration:none;font-size:13px;font-weight:600;cursor:pointer}
+.back:hover{background:#fff}
+h1{font-size:22px;font-weight:800;letter-spacing:-0.02em;display:flex;align-items:center;gap:8px}
+.title-dot{width:8px;height:8px;border-radius:50%;background:var(--brand);box-shadow:0 0 10px var(--brand)}
+
+.warn-banner{background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fcd34d;border-radius:14px;padding:12px 16px;margin-bottom:1rem;font-size:13px;color:#78350f;line-height:1.6}
+.warn-banner b{color:#92400e}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+
+.card{background:rgba(255,255,255,.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.9);border-radius:18px;padding:1.25rem;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -12px rgba(15,23,42,.08);margin-bottom:1rem}
+.card h2{font-size:15px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;color:var(--ink)}
+.card h2 .ico{font-size:18px}
+.hint{font-size:12px;color:var(--ink-3);line-height:1.6;margin-bottom:10px}
+
+/* 關鍵字 */
+.kw-input-row{display:flex;gap:8px;margin-bottom:10px}
+.kw-input-row input{flex:1;padding:8px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;background:#fff}
+.kw-input-row input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.btn{padding:8px 14px;border:none;border-radius:10px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-primary{background:var(--brand);color:#fff}
+.btn-primary:hover{background:#2563eb}
+.btn-primary:disabled{background:#cbd5e1;cursor:not-allowed}
+.btn-ghost{background:#fff;color:var(--ink-2);border:1px solid var(--line)}
+.btn-ghost:hover{background:#f1f5f9}
+.btn-danger{background:#fee2e2;color:#b91c1c}
+.btn-danger:hover{background:#fecaca}
+.btn-ok{background:var(--ok);color:#fff}
+.btn-ok:hover{background:#059669}
+
+.kw-list{display:flex;flex-wrap:wrap;gap:6px}
+.kw-tag{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:999px;background:#eff6ff;color:#1e40af;font-size:13px;font-weight:500;border:1px solid #bfdbfe}
+.kw-tag .go{cursor:pointer;padding:2px 4px;border-radius:4px;text-decoration:none;color:inherit}
+.kw-tag .go:hover{background:#dbeafe}
+.kw-tag .del{cursor:pointer;color:#94a3b8;font-size:15px;line-height:1;padding:0 2px;border-radius:3px}
+.kw-tag .del:hover{color:var(--danger);background:#fee2e2}
+
+/* 產生器 */
+textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;background:#fff;resize:vertical;line-height:1.5}
+textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.url-input{flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit;background:#fff}
+.url-input:focus{outline:none;border-color:var(--brand)}
+select{padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit;background:#fff;cursor:pointer}
+
+.style-pills{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.pill{padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:12.5px;color:var(--ink-2);cursor:pointer;transition:all .15s}
+.pill.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+.pill:hover:not(.active){background:#f1f5f9}
+
+.generate-row{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
+
+/* 結果 */
+.reply-item{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;position:relative}
+.reply-item.high{border-color:#fca5a5;background:#fef2f2}
+.reply-item.med{border-color:#fcd34d;background:#fffbeb}
+.reply-meta{display:flex;gap:8px;align-items:center;margin-bottom:8px;font-size:11.5px;flex-wrap:wrap}
+.tone-badge{padding:2px 8px;border-radius:999px;background:#e0e7ff;color:#4338ca;font-weight:600}
+.risk-badge{padding:2px 8px;border-radius:999px;font-weight:600}
+.risk-low{background:#d1fae5;color:#065f46}
+.risk-med{background:#fef3c7;color:#92400e}
+.risk-high{background:#fee2e2;color:#991b1b}
+.reply-text{font-size:14px;line-height:1.65;color:var(--ink);white-space:pre-wrap;margin-bottom:10px}
+.reply-actions{display:flex;gap:6px;flex-wrap:wrap}
+
+.loader{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 歷史 */
+.history-item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;background:#fff;border:1px solid var(--line);border-radius:10px;margin-bottom:6px;font-size:13px}
+.history-item .hurl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-2)}
+.history-item .hdate{font-size:11px;color:var(--ink-3);white-space:nowrap}
+.history-empty{text-align:center;padding:20px;color:var(--ink-3);font-size:13px;background:#fff;border:1px dashed var(--line);border-radius:10px}
+
+/* UGC */
+.ugc-form{display:grid;gap:8px;margin-bottom:10px}
+.ugc-form input,.ugc-form textarea{padding:8px 12px;border:1px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit;background:#fff}
+.ugc-list{display:grid;gap:8px}
+.ugc-item{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.ugc-item .utop{display:flex;justify-content:space-between;gap:8px;margin-bottom:4px;font-size:12px;color:var(--ink-3)}
+.ugc-item .uurl{color:var(--brand);text-decoration:none;word-break:break-all;font-size:13px;font-weight:500}
+.ugc-item .uurl:hover{text-decoration:underline}
+.ugc-item .unote{font-size:12.5px;color:var(--ink-2);margin-top:4px;line-height:1.5}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:500;opacity:0;transition:all .25s;pointer-events:none;z-index:9999}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.sync-badge{padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;user-select:none;transition:all .2s;white-space:nowrap;border:1px solid transparent}
+.sync-badge.idle{background:#d1fae5;color:#065f46;border-color:#a7f3d0}
+.sync-badge.idle:hover{background:#a7f3d0}
+.sync-badge.syncing{background:#dbeafe;color:#1e40af;border-color:#bfdbfe}
+.sync-badge.error{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+.sync-badge.offline{background:#f1f5f9;color:#64748b;border-color:#cbd5e1}
+
+.status-row{display:flex;gap:8px;font-size:12px;color:var(--ink-3);margin-top:8px;align-items:center;flex-wrap:wrap}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.status-dot.ok{background:var(--ok)}
+.status-dot.off{background:#cbd5e1}
+
+details{margin-top:10px}
+summary{cursor:pointer;font-size:12.5px;color:var(--ink-2);padding:6px 0;font-weight:600;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--ink-3)}
+details[open] summary::before{content:"▾ "}
+.settings-box{padding:10px;background:#f8fafc;border-radius:10px;margin-top:6px}
+.settings-box input{width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:12px;font-family:monospace;background:#fff;margin-bottom:6px}
+.settings-box label{font-size:12px;color:var(--ink-2);display:block;margin-bottom:4px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <a class="back" href="home.html">← 返回主頁</a>
+  <h1><span class="title-dot"></span>Threads 海巡助手</h1>
+  <span id="syncBadge" class="sync-badge idle" onclick="forceSyncNow()" title="點擊手動重新同步">🟢 ✓ 已同步</span>
+</header>
+
+<div class="warn-banner">
+  <b>⚠️ 合規提醒：</b>本工具不會自動送出留言，只幫你找目標貼文 + 產生回覆草稿。請你親自登入 Threads 貼上。避免一天內在大量陌生貼文留明顯業配，那是 Meta 判定 inauthentic behavior 的主要訊號。留言要真心回應對方內容，初殿鍋物的提及要自然、不是每一則都要提。
+</div>
+
+<div class="grid">
+
+  <!-- 左：關鍵字海巡 -->
+  <div class="card">
+    <h2><span class="ico">🔎</span>關鍵字海巡</h2>
+    <p class="hint">點關鍵字 → 新分頁開 Threads 搜尋頁（依「最新」排序）。找到值得回的貼文，複製連結和內文，貼到右邊的產生器。</p>
+
+    <div class="kw-input-row">
+      <input id="kwInput" placeholder="新增關鍵字，例如：台中火鍋" />
+      <button class="btn btn-primary" onclick="addKw()">新增</button>
+    </div>
+
+    <div class="kw-list" id="kwList"></div>
+
+    <details>
+      <summary>重置成預設清單</summary>
+      <div class="settings-box">
+        <p style="font-size:12px;color:var(--ink-2);margin-bottom:8px;line-height:1.5">會清空你目前的關鍵字，換成內建的火鍋 / 聚餐 / 台中美食 等預設組合。</p>
+        <button class="btn btn-ghost" onclick="resetKwToDefault()">重置</button>
+      </div>
+    </details>
+  </div>
+
+  <!-- 右：留言靈感產生器 -->
+  <div class="card">
+    <h2><span class="ico">💬</span>留言靈感產生器</h2>
+    <p class="hint">把對方貼文內容貼進來，選風格，按「產生」。<b>模板版</b>不用 API、變化少；<b>Gemini 版</b>會針對貼文量身回覆，自然很多。</p>
+
+    <textarea id="postContent" rows="4" placeholder="貼上對方的貼文內容（越完整越好，AI 才能回得貼切）"></textarea>
+
+    <div class="row">
+      <input class="url-input" id="postUrl" placeholder="貼文連結（選填，留過言後會記錄）" />
+    </div>
+
+    <div class="style-pills" id="stylePills">
+      <span class="pill active" data-style="friendly">朋友口吻</span>
+      <span class="pill" data-style="curious">好奇詢問</span>
+      <span class="pill" data-style="empathy">感同身受</span>
+      <span class="pill" data-style="foodie">吃貨共鳴</span>
+    </div>
+
+    <div class="generate-row">
+      <select id="engine">
+        <option value="gemini">引擎：Gemini（推薦）</option>
+        <option value="template">引擎：模板（不用 API）</option>
+      </select>
+      <button class="btn btn-primary" id="genBtn" onclick="generateReplies()">產生 4 則</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('postContent').value='';document.getElementById('postUrl').value='';document.getElementById('results').innerHTML='';">清空</button>
+    </div>
+
+    <div class="status-row">
+      <span class="status-dot" id="proxyDot"></span>
+      <span id="proxyStatus">檢查 Gemini 代理設定中…</span>
+    </div>
+
+    <div id="results" style="margin-top:14px"></div>
+  </div>
+
+</div>
+
+<!-- 已海巡過的連結 -->
+<div class="card">
+  <h2><span class="ico">✅</span>已留言記錄</h2>
+  <p class="hint">避免同一則貼文重複留言（很容易被鎖）。每次按「已貼」會把連結加到這裡。</p>
+  <div id="historyList"></div>
+  <div style="margin-top:8px;display:flex;gap:8px">
+    <button class="btn btn-ghost" onclick="exportHistory()">匯出 CSV</button>
+    <button class="btn btn-danger" onclick="clearHistory()">清空紀錄</button>
+  </div>
+</div>
+
+<!-- UGC -->
+<div class="card">
+  <h2><span class="ico">📸</span>UGC 蒐集（顧客提到初殿鍋物的貼文）</h2>
+  <p class="hint">看到有人 tag 或提到初殿鍋物，貼連結進來存檔。方便之後聯絡合作或轉發。</p>
+  <div class="ugc-form">
+    <input id="ugcUrl" placeholder="Threads / IG 貼文連結" />
+    <input id="ugcAuthor" placeholder="作者帳號（選填）" />
+    <textarea id="ugcNote" rows="2" placeholder="備註（選填，例如：看起來是 KOL / 負評要處理 / 可邀請合作）"></textarea>
+    <button class="btn btn-ok" onclick="addUgc()">儲存</button>
+  </div>
+  <div class="ugc-list" id="ugcList"></div>
+</div>
+
+<!-- 設定 -->
+<div class="card">
+  <details>
+    <summary>⚙️ 進階設定（Apps Script 代理網址）</summary>
+    <div class="settings-box">
+      <label>Apps Script Web App 網址（Threads 頁專用，獨立於小結報表）</label>
+      <input id="proxyUrlInput" placeholder="https://script.google.com/macros/s/.../exec" />
+      <button class="btn btn-primary" onclick="saveProxy()">儲存並拉雲端</button>
+      <button class="btn btn-ghost" onclick="testProxy()">測試連線</button>
+      <button class="btn btn-ghost" onclick="pullFromCloud()">從雲端拉回</button>
+      <p style="font-size:12px;color:var(--ink-3);margin-top:8px;line-height:1.5">
+        <b>部署步驟：</b>Apps Script → 部署 → 新增部署 → 類型「Web 應用程式」 → 執行身分「我」 → 存取權「所有人」 → 部署 → 複製網址貼這裡。<br>
+        <b>金鑰：</b>左側齒輪「專案設定」→ 指令碼屬性 → 新增 <code>GEMINI_API_KEY</code> = 你的 AIzaSy... 金鑰。<br>
+        程式碼在 <code>threads海巡-script.gs</code>（整份貼到 Apps Script 編輯器）。
+      </p>
+    </div>
+  </details>
+</div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================
+// 設定 & 常數
+// ============================
+var BRAND = '初殿鍋物';
+var DEFAULT_KEYWORDS = [
+  '火鍋','鍋物','台中美食','聚餐','約會餐廳','母親節聚餐',
+  '和牛','肉盤','美食推薦','台中火鍋','朋友聚會','慶生餐廳'
+];
+var LS = {
+  KW:    'tp_keywords',
+  HIST:  'tp_history',
+  UGC:   'tp_ugc',
+  SYNC:  'tp_sync_url',    // Threads 頁專用，和小結報表分開
+};
+
+function el(id){return document.getElementById(id)}
+function toast(msg){
+  var t=el('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(window.__toastT);
+  window.__toastT=setTimeout(function(){t.classList.remove('show')}, 1800);
+}
+
+// ============================
+// 雲端同步
+// ============================
+function setSyncBadge(state, text){
+  var b = el('syncBadge');
+  b.classList.remove('idle','syncing','error','offline');
+  b.classList.add(state);
+  b.textContent = text;
+}
+function updateSyncBadgeDefault(){
+  if(!getProxyUrl()) setSyncBadge('offline', '⚪ 離線模式（未設定雲端）');
+  else setSyncBadge('idle', '🟢 ✓ 已同步');
+}
+
+async function cloudPost(action, payload){
+  var url = getProxyUrl();
+  if(!url) throw new Error('未設定 Apps Script 網址');
+  var body = Object.assign({action: action}, payload || {});
+  var r = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify(body)
+  });
+  var data = await r.json();
+  if(data.error){
+    var msg = typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error));
+    throw new Error(msg);
+  }
+  return data;
+}
+
+async function cloudGet(){
+  var url = getProxyUrl();
+  if(!url) throw new Error('未設定 Apps Script 網址');
+  var r = await fetch(url, { method: 'GET' });
+  var data = await r.json();
+  if(data.error){
+    var msg = typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error));
+    throw new Error(msg);
+  }
+  return data;
+}
+
+// 彙整同步：把本地全部狀態上傳
+async function syncAllUp(){
+  if(!getProxyUrl()) return;
+  setSyncBadge('syncing', '🔵 同步中…');
+  try{
+    await cloudPost('saveKeywords', { keywords: loadKw() });
+    await cloudPost('replaceHistory', { history: loadHistory() });
+    await cloudPost('replaceUgc', { ugc: loadUgc() });
+    setSyncBadge('idle', '🟢 ✓ 已同步');
+  } catch(e){
+    setSyncBadge('error', '🔴 同步失敗');
+    console.warn('syncAllUp 失敗：', e);
+  }
+}
+
+// 從雲端拉回覆蓋本地
+async function pullFromCloud(){
+  if(!getProxyUrl()) return;
+  setSyncBadge('syncing', '🔵 載入中…');
+  try{
+    var d = await cloudGet();
+    if(d.keywords && d.keywords.length) saveKw(d.keywords);
+    if(d.history)  localStorage.setItem(LS.HIST, JSON.stringify(d.history));
+    if(d.ugc)      localStorage.setItem(LS.UGC,  JSON.stringify(d.ugc));
+    renderKw(); renderHistory(); renderUgc();
+    setSyncBadge('idle', '🟢 ✓ 已同步');
+  } catch(e){
+    setSyncBadge('error', '🔴 載入失敗');
+    console.warn('pullFromCloud 失敗：', e);
+  }
+}
+
+// 去抖動的自動上傳（避免連打）
+var __syncTimer = null;
+function queueSync(){
+  if(!getProxyUrl()) return;
+  setSyncBadge('syncing', '🔵 待同步…');
+  clearTimeout(__syncTimer);
+  __syncTimer = setTimeout(syncAllUp, 800);
+}
+
+function forceSyncNow(){
+  if(!getProxyUrl()){
+    toast('請先在進階設定填入 Apps Script 網址');
+    return;
+  }
+  syncAllUp();
+}
+
+// ============================
+// 關鍵字
+// ============================
+function loadKw(){
+  try{
+    var raw = localStorage.getItem(LS.KW);
+    if(!raw) return DEFAULT_KEYWORDS.slice();
+    var arr = JSON.parse(raw);
+    return Array.isArray(arr) && arr.length ? arr : DEFAULT_KEYWORDS.slice();
+  }catch(e){ return DEFAULT_KEYWORDS.slice() }
+}
+function saveKw(list){ localStorage.setItem(LS.KW, JSON.stringify(list)) }
+
+function renderKw(){
+  var list = loadKw();
+  var html = list.map(function(kw){
+    var url = 'https://www.threads.net/search?q=' + encodeURIComponent(kw) + '&serp_type=default&filter=recent';
+    return '<span class="kw-tag">' +
+      '<a class="go" href="'+url+'" target="_blank" rel="noopener">'+escapeHtml(kw)+'</a>' +
+      '<span class="del" onclick="removeKw(\''+escapeJs(kw)+'\')" title="刪除">×</span>' +
+    '</span>';
+  }).join('');
+  el('kwList').innerHTML = html || '<p class="hint">還沒有關鍵字，按上方「新增」或「重置」</p>';
+}
+
+function addKw(){
+  var v = el('kwInput').value.trim();
+  if(!v) return;
+  var list = loadKw();
+  if(list.indexOf(v) >= 0){ toast('已經有了'); return; }
+  list.push(v);
+  saveKw(list);
+  el('kwInput').value = '';
+  renderKw();
+  queueSync();
+  toast('已新增：'+v);
+}
+function removeKw(kw){
+  var list = loadKw().filter(function(x){return x !== kw});
+  saveKw(list);
+  renderKw();
+  queueSync();
+}
+function resetKwToDefault(){
+  if(!confirm('確定要重置關鍵字嗎？目前的清單會被覆蓋。')) return;
+  saveKw(DEFAULT_KEYWORDS.slice());
+  renderKw();
+  queueSync();
+  toast('已重置');
+}
+el('kwInput').addEventListener('keydown', function(e){ if(e.key==='Enter') addKw() });
+
+// ============================
+// 產生器：模板版
+// ============================
+var TEMPLATES = {
+  friendly: [
+    '這家看起來好好吃 🥹 最近也好多人推 {brand}，不知道你會比較喜歡哪種風格的火鍋～',
+    '感覺氣氛很棒欸！我上次跟朋友聚餐是去 {brand}，下次換這家試試',
+    '天啊這畫面太誘人了😋 最近聚餐都在 {brand}，被朋友拉去吃了兩次'
+  ],
+  curious: [
+    '看起來超讚！請問你們幾個人吃、大概多少錢呀？最近也在找聚餐地點（考慮 {brand} 或這家）',
+    '好奇這家平日會不會很滿？我朋友一直想去 {brand}，但我想先看看其他選擇',
+    '這份量看起來很可以欸～ 有沒有什麼推薦的？最近也要聚餐'
+  ],
+  empathy: [
+    '整天上班就是靠這種一餐撐下去的啊🔥 我上次壓力大就是跑去 {brand} 吃爆',
+    '真的！工作累就是要好好吃一頓 🥹 最近迷上火鍋，{brand} 那家我已經吃三次了',
+    '懂！吃飽才有力氣面對明天 想找時間也去這家'
+  ],
+  foodie: [
+    '這肉盤也太浮誇🤤 如果你是肉控，{brand} 的肉盤也是那種會讓人驚呼的等級',
+    '湯頭看起來很濃郁！最近爬文看到 {brand} 也蠻多人在討論，想排看看',
+    '這擺盤很用心欸 想吃😤 最近朋友一直推 {brand}，有機會一起揪'
+  ]
+};
+
+function genTemplate(style){
+  var pool = TEMPLATES[style] || TEMPLATES.friendly;
+  var shuffled = pool.slice().sort(function(){return Math.random()-0.5});
+  return shuffled.slice(0, 4).map(function(t, i){
+    return {
+      tone: style,
+      text: t.replace(/\{brand\}/g, BRAND),
+      risk: i===0 ? '低' : (i===1 ? '中' : '中'),
+      note: '模板版'
+    };
+  });
+}
+
+// ============================
+// 產生器：Gemini 版（走 Apps Script 代理）
+// ============================
+function getProxyUrl(){ return localStorage.getItem(LS.SYNC) || '' }
+
+async function genGemini(postText, style){
+  var proxy = getProxyUrl();
+  if(!proxy) throw new Error('尚未設定 Apps Script 代理網址（請展開底部「進階設定」）');
+
+  var styleMap = {
+    friendly: '朋友間的輕鬆口吻，不刻意',
+    curious: '好奇詢問、像在打聽資訊，像一般人想去吃',
+    empathy: '對貼文作者表達共鳴、感同身受',
+    foodie: '吃貨看到美食的興奮感，專業一點點但不做作'
+  };
+  var styleDesc = styleMap[style] || styleMap.friendly;
+
+  var prompt =
+    '你是在幫一家叫「' + BRAND + '」的火鍋店做「軟性口碑」。' +
+    '我會給你一則 Threads 上的美食貼文，請你產生 4 則「不同寫法」的回覆留言，讓我可以挑一則去留言。\n\n' +
+    '目標：\n' +
+    '1. 80% 字數是真心回應對方貼文（讓對方感覺被看見，不是被打廣告）\n' +
+    '2. 20% 字數自然提到「' + BRAND + '」（可以是親身經驗、朋友推薦、最近聽說…）\n' +
+    '3. 有 1 則完全不提「' + BRAND + '」，只真誠回應對方（最安全的那則，用來維持帳號自然度）\n\n' +
+    '風格：' + styleDesc + '\n\n' +
+    '規範：\n' +
+    '- 用繁體中文、台灣用語、Threads 口吻\n' +
+    '- 可以有 1-2 個 emoji，不要超過\n' +
+    '- 每則 30-80 字，不要像業配\n' +
+    '- 不要用「強力推薦」「必吃」「CP值超高」這種廣告詞\n' +
+    '- 不要每則都用同樣開頭\n\n' +
+    '對方貼文內容：\n"""\n' + postText + '\n"""\n\n' +
+    '請回傳 JSON 格式（不要加 markdown 代碼框，只回純 JSON）：\n' +
+    '{\n' +
+    '  "replies": [\n' +
+    '    {"tone": "風格描述", "text": "留言內容", "risk": "低/中/高", "note": "為什麼選這個寫法"}\n' +
+    '  ]\n' +
+    '}';
+
+  var r = await fetch(proxy, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify({
+      action: 'geminiProxy',
+      model: 'gemini-2.5-flash',
+      parts: [{ text: prompt }],
+      generationConfig: { temperature: 0.9, topP: 0.95 }
+    })
+  });
+  var wrap = await r.json();
+  if(wrap.error){
+    var errMsg = typeof wrap.error === 'string' ? wrap.error : (wrap.error.message || JSON.stringify(wrap.error));
+    throw new Error(errMsg);
+  }
+  var d = wrap.data || {};
+  if(!d.candidates || !d.candidates.length) throw new Error('Gemini 沒有回應（可能被安全過濾器擋下）');
+  var text = d.candidates[0].content && d.candidates[0].content.parts && d.candidates[0].content.parts[0].text;
+  if(!text) throw new Error('Gemini 回應為空');
+
+  // 嘗試抽出 JSON
+  var jsonText = text.trim();
+  var m = jsonText.match(/\{[\s\S]*\}/);
+  if(m) jsonText = m[0];
+  var parsed;
+  try{ parsed = JSON.parse(jsonText) }
+  catch(e){ throw new Error('無法解析 Gemini 回應：' + text.slice(0,100)) }
+
+  if(!parsed.replies || !Array.isArray(parsed.replies)) throw new Error('Gemini 回應格式不對');
+  return parsed.replies;
+}
+
+// ============================
+// 產生按鈕
+// ============================
+var CURRENT_STYLE = 'friendly';
+document.querySelectorAll('#stylePills .pill').forEach(function(p){
+  p.addEventListener('click', function(){
+    document.querySelectorAll('#stylePills .pill').forEach(function(x){x.classList.remove('active')});
+    p.classList.add('active');
+    CURRENT_STYLE = p.dataset.style;
+  });
+});
+
+async function generateReplies(){
+  var postText = el('postContent').value.trim();
+  var engine = el('engine').value;
+
+  if(engine === 'gemini' && !postText){
+    toast('請先貼上對方的貼文內容');
+    return;
+  }
+
+  var btn = el('genBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loader"></span>產生中…';
+  el('results').innerHTML = '';
+
+  try{
+    var replies;
+    if(engine === 'gemini'){
+      replies = await genGemini(postText, CURRENT_STYLE);
+    } else {
+      replies = genTemplate(CURRENT_STYLE);
+    }
+    renderReplies(replies);
+  } catch(e){
+    el('results').innerHTML = '<div class="reply-item high"><div class="reply-meta"><span class="risk-badge risk-high">錯誤</span></div><div class="reply-text">'+escapeHtml(e.message)+'</div></div>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '產生 4 則';
+  }
+}
+
+function renderReplies(list){
+  if(!list.length){ el('results').innerHTML = '<p class="hint">沒產生結果</p>'; return; }
+  var html = list.map(function(r, idx){
+    var riskCls = r.risk === '高' ? 'risk-high' : (r.risk === '中' ? 'risk-med' : 'risk-low');
+    var cardCls = r.risk === '高' ? 'high' : (r.risk === '中' ? 'med' : '');
+    return '<div class="reply-item '+cardCls+'">' +
+      '<div class="reply-meta">' +
+        '<span class="tone-badge">'+escapeHtml(r.tone||'')+'</span>' +
+        '<span class="risk-badge '+riskCls+'">業配感 '+escapeHtml(r.risk||'低')+'</span>' +
+        (r.note ? '<span style="color:#94a3b8">· '+escapeHtml(r.note)+'</span>' : '') +
+      '</div>' +
+      '<div class="reply-text" id="reply_'+idx+'">'+escapeHtml(r.text)+'</div>' +
+      '<div class="reply-actions">' +
+        '<button class="btn btn-primary" onclick="copyReply('+idx+')">📋 複製</button>' +
+        '<button class="btn btn-ok" onclick="markPosted('+idx+')">✓ 已貼（記錄連結）</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  el('results').innerHTML = html;
+  window.__lastReplies = list;
+}
+
+function copyReply(idx){
+  var r = (window.__lastReplies||[])[idx];
+  if(!r) return;
+  navigator.clipboard.writeText(r.text).then(function(){
+    toast('已複製，請到 Threads 貼上');
+  }).catch(function(){
+    toast('複製失敗，請手動選取');
+  });
+}
+
+function markPosted(idx){
+  var r = (window.__lastReplies||[])[idx];
+  var url = el('postUrl').value.trim();
+  if(!url){
+    if(!confirm('沒填貼文連結，還是要記錄嗎？（沒連結會無法避免重複海巡）')) return;
+  }
+  addHistory({
+    url: url || '(未填連結)',
+    text: r ? r.text : '',
+    date: new Date().toISOString()
+  });
+  toast('已記錄');
+}
+
+// ============================
+// 歷史
+// ============================
+function loadHistory(){
+  try{ return JSON.parse(localStorage.getItem(LS.HIST) || '[]') }catch(e){ return [] }
+}
+function saveHistory(list){ localStorage.setItem(LS.HIST, JSON.stringify(list)) }
+function addHistory(item){
+  var list = loadHistory();
+  list.unshift(item);
+  if(list.length > 500) list.length = 500;
+  saveHistory(list);
+  renderHistory();
+  queueSync();
+}
+function renderHistory(){
+  var list = loadHistory();
+  if(!list.length){
+    el('historyList').innerHTML = '<div class="history-empty">還沒有任何留言紀錄</div>';
+    return;
+  }
+  el('historyList').innerHTML = list.slice(0, 50).map(function(h){
+    var d = new Date(h.date);
+    var dateStr = d.toLocaleDateString('zh-TW') + ' ' + d.toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit'});
+    var urlCell = h.url && h.url.startsWith('http')
+      ? '<a class="hurl" href="'+escapeHtml(h.url)+'" target="_blank" rel="noopener">'+escapeHtml(h.url)+'</a>'
+      : '<span class="hurl">'+escapeHtml(h.url||'')+'</span>';
+    return '<div class="history-item">'+urlCell+'<span class="hdate">'+dateStr+'</span></div>';
+  }).join('') + (list.length > 50 ? '<div class="hint" style="margin-top:6px">只顯示最近 50 則（共 '+list.length+' 則）</div>' : '');
+}
+function clearHistory(){
+  if(!confirm('確定要清空所有留言紀錄嗎？（不能還原）')) return;
+  saveHistory([]);
+  renderHistory();
+  queueSync();
+  toast('已清空');
+}
+function exportHistory(){
+  var list = loadHistory();
+  if(!list.length){ toast('沒有資料可匯出'); return; }
+  var csv = '\ufeff日期,連結,留言內容\n' + list.map(function(h){
+    return [h.date, h.url, (h.text||'').replace(/\n/g,' ')].map(function(c){
+      return '"'+String(c||'').replace(/"/g,'""')+'"';
+    }).join(',');
+  }).join('\n');
+  var blob = new Blob([csv], {type:'text/csv'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'threads-patrol-history-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  toast('已匯出');
+}
+
+// ============================
+// UGC
+// ============================
+function loadUgc(){
+  try{ return JSON.parse(localStorage.getItem(LS.UGC) || '[]') }catch(e){ return [] }
+}
+function saveUgc(list){ localStorage.setItem(LS.UGC, JSON.stringify(list)) }
+function addUgc(){
+  var url = el('ugcUrl').value.trim();
+  if(!url){ toast('請填連結'); return; }
+  var list = loadUgc();
+  list.unshift({
+    url: url,
+    author: el('ugcAuthor').value.trim(),
+    note: el('ugcNote').value.trim(),
+    date: new Date().toISOString()
+  });
+  saveUgc(list);
+  el('ugcUrl').value = '';
+  el('ugcAuthor').value = '';
+  el('ugcNote').value = '';
+  renderUgc();
+  queueSync();
+  toast('已儲存');
+}
+function removeUgc(idx){
+  if(!confirm('刪除這筆 UGC 紀錄？')) return;
+  var list = loadUgc();
+  list.splice(idx, 1);
+  saveUgc(list);
+  renderUgc();
+  queueSync();
+}
+function renderUgc(){
+  var list = loadUgc();
+  if(!list.length){
+    el('ugcList').innerHTML = '<div class="history-empty">還沒有 UGC 紀錄</div>';
+    return;
+  }
+  el('ugcList').innerHTML = list.map(function(u, idx){
+    var d = new Date(u.date);
+    var dateStr = d.toLocaleDateString('zh-TW');
+    return '<div class="ugc-item">' +
+      '<div class="utop">' +
+        '<span>'+(u.author?escapeHtml(u.author):'(未填作者)')+'</span>' +
+        '<span>'+dateStr+' · <a href="javascript:void(0)" onclick="removeUgc('+idx+')" style="color:#ef4444">刪除</a></span>' +
+      '</div>' +
+      '<a class="uurl" href="'+escapeHtml(u.url)+'" target="_blank" rel="noopener">'+escapeHtml(u.url)+'</a>' +
+      (u.note ? '<div class="unote">'+escapeHtml(u.note)+'</div>' : '') +
+    '</div>';
+  }).join('');
+}
+
+// ============================
+// 代理設定
+// ============================
+function updateProxyStatus(){
+  var u = getProxyUrl();
+  if(u){
+    el('proxyDot').className = 'status-dot ok';
+    el('proxyStatus').textContent = 'Gemini 代理：已設定（可使用 Gemini 產生）';
+    el('proxyUrlInput').value = u;
+  } else {
+    el('proxyDot').className = 'status-dot off';
+    el('proxyStatus').textContent = 'Gemini 代理：未設定（Gemini 引擎無法使用，只能用模板版）';
+  }
+}
+async function saveProxy(){
+  var v = el('proxyUrlInput').value.trim();
+  if(v && !/^https:\/\/script\.google\.com\//.test(v)){
+    if(!confirm('這個網址看起來不像 Apps Script URL，確定要儲存嗎？')) return;
+  }
+  localStorage.setItem(LS.SYNC, v);
+  updateProxyStatus();
+  updateSyncBadgeDefault();
+  if(!v) return;
+
+  // 聰明合併：先看雲端有沒有資料
+  setSyncBadge('syncing', '🔵 比對雲端…');
+  try{
+    var d = await cloudGet();
+    var cloudHasData = (d.keywords && d.keywords.length) || (d.history && d.history.length) || (d.ugc && d.ugc.length);
+    var localHist = loadHistory();
+    var localUgc  = loadUgc();
+    var localHasData = localHist.length || localUgc.length;
+
+    if(cloudHasData && !localHasData){
+      // 雲端有、本地沒 → 拉下來
+      if(d.keywords && d.keywords.length) saveKw(d.keywords);
+      if(d.history) localStorage.setItem(LS.HIST, JSON.stringify(d.history));
+      if(d.ugc)     localStorage.setItem(LS.UGC,  JSON.stringify(d.ugc));
+      renderKw(); renderHistory(); renderUgc();
+      toast('已從雲端載入資料');
+    } else if(!cloudHasData && localHasData){
+      // 本地有、雲端沒 → 推上去
+      await syncAllUp();
+      toast('已把本地資料推送到雲端');
+      return;
+    } else if(cloudHasData && localHasData){
+      // 兩邊都有 → 問使用者
+      var choice = confirm('⚠️ 本地和雲端都有資料\n\n確定 = 以雲端資料覆蓋本地（之後會用這份）\n取消 = 以本地資料覆蓋雲端（把你這台的推上去）');
+      if(choice){
+        if(d.keywords && d.keywords.length) saveKw(d.keywords);
+        if(d.history) localStorage.setItem(LS.HIST, JSON.stringify(d.history));
+        if(d.ugc)     localStorage.setItem(LS.UGC,  JSON.stringify(d.ugc));
+        renderKw(); renderHistory(); renderUgc();
+        toast('已以雲端覆蓋本地');
+      } else {
+        await syncAllUp();
+        toast('已以本地覆蓋雲端');
+        return;
+      }
+    } else {
+      toast('已連線（雲端空白、本地空白）');
+    }
+    setSyncBadge('idle', '🟢 ✓ 已同步');
+  } catch(e){
+    setSyncBadge('error', '🔴 連線失敗');
+    alert('連線失敗：' + e.message + '\n\n請檢查：\n1. 網址正確（包含 /exec 結尾）\n2. Apps Script 已部署為 Web App\n3. 存取權限設為「所有人」');
+  }
+}
+async function testProxy(){
+  var u = getProxyUrl();
+  if(!u){ toast('還沒設定網址'); return; }
+  toast('測試中…');
+  try{
+    var r = await fetch(u, {
+      method: 'POST',
+      headers: {'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({
+        action: 'geminiProxy',
+        model: 'gemini-2.5-flash',
+        parts: [{text: '請回覆「測試成功」四個字'}],
+        generationConfig: { temperature: 0 }
+      })
+    });
+    var wrap = await r.json();
+    if(wrap.error){ throw new Error(typeof wrap.error==='string'?wrap.error:(wrap.error.message||JSON.stringify(wrap.error))) }
+    var text = wrap.data && wrap.data.candidates && wrap.data.candidates[0] && wrap.data.candidates[0].content && wrap.data.candidates[0].content.parts[0].text;
+    alert('✅ 代理 OK\nGemini 回覆：' + (text||'(空)'));
+  } catch(e){
+    alert('❌ 代理失敗：' + e.message);
+  }
+}
+
+// ============================
+// Helpers
+// ============================
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function escapeJs(s){
+  return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+
+// ============================
+// Init
+// ============================
+renderKw();
+renderHistory();
+renderUgc();
+updateProxyStatus();
+updateSyncBadgeDefault();
+// 有設代理就自動拉雲端最新資料覆蓋本地
+if(getProxyUrl()) pullFromCloud();
+</script>
+</body>
+</html>

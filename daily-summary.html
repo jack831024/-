@@ -916,6 +916,8 @@ function handleFiles(input, key){
   renderThumbs(key);
   var btn = document.getElementById('btn-' + key);
   if(btn) btn.disabled = imgs[key].length === 0;
+  // ⭐ 標記有新圖片未上傳，下次 auto-save 會帶圖片同步
+  if(newFiles.length > 0) _imagesDirty = true;
   // 自動觸發 AI 識別（只在有新增檔案時）
   // ⚠️ 對於會累加到 store[key] 陣列的 'w' / 'd'，一定要只送「新上傳」的檔案給 AI，
   // 否則舊圖片會被重新辨識再 push 一次，造成金額重複
@@ -961,6 +963,7 @@ function handlePayFile(input, key){
   var file = input.files[0];
   if(!file) return;
   imgs[key] = [file];
+  _imagesDirty = true;  // ⭐ 新支付截圖，下次 auto-save 要帶圖
   var t = document.getElementById('thumbs-' + key);
   t.innerHTML = '';
   var img = document.createElement('img');
@@ -1185,6 +1188,7 @@ async function handleDepositFile(input){
   var file = input.files[0];
   if(!file) return;
   imgs.deposit = [file];
+  _imagesDirty = true;  // ⭐ 新存款截圖，下次 auto-save 要帶圖
   var t = document.getElementById('thumbs-deposit');
   t.innerHTML = '';
   var img = document.createElement('img');
@@ -1943,6 +1947,7 @@ async function saveRecord(opts){
 var _autoSaveTimer = null;
 var _autoSaving = false;
 var _loadingRecord = false;  // applyData 時設為 true，避免載入觸發 autoSave
+var _imagesDirty = false;    // 有新上傳的圖片 → 下次 autoSave 要帶圖（上雲 Drive）
 
 function nowHMS(){
   var d = new Date();
@@ -1995,7 +2000,10 @@ async function doAutoSave(){
   setAutoSaveStatus('saving');
   try{
     var hasCloud = !!localStorage.getItem('cd_sync_url');
-    await saveRecord({ silent: true, skipImages: true });
+    // ⭐ 有新圖片就帶圖一起上；純文字編輯才 skipImages 省頻寬
+    var needImages = _imagesDirty;
+    await saveRecord({ silent: true, skipImages: !needImages });
+    if(needImages) _imagesDirty = false;  // 成功上傳後清旗標
     setAutoSaveStatus(hasCloud ? 'cloud' : 'saved');
     // 「🟢 ✓ 已同步 HH:MM:SS」保留顯示到下次同步，讓使用者看得到最後同步時間
   }catch(e){
@@ -2011,6 +2019,7 @@ async function manualResync(){
   setAutoSaveStatus('saving');
   try{
     await saveRecord({ silent: true });  // 不 skipImages，強制重推圖片
+    _imagesDirty = false;  // 重推成功，清旗標
     setAutoSaveStatus('cloud');
   }catch(e){
     console.warn('手動同步失敗', e);
