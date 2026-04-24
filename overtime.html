@@ -183,6 +183,8 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
     <span id="store-name">—</span>
   </div>
   <div class="spacer"></div>
+  <span class="status-chip" id="sync-status"></span>
+  <button class="settings-btn" id="btn-save-cloud" onclick="saveToCloud(false)" disabled title="分析完成後會自動儲存到雲端；按此可手動重新同步">🔄 重新同步</button>
   <button class="settings-btn" onclick="openSettings()">⚙️ 設定</button>
 </div>
 
@@ -267,8 +269,6 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
     <div class="analysis-toolbar">
       <button class="btn btn-primary" id="btn-analyze" onclick="runAnalysis()" disabled>🧮 開始分析</button>
       <button class="btn btn-ghost" id="btn-export" onclick="exportCsv()" disabled>⬇️ 匯出 CSV</button>
-      <button class="btn btn-ghost" id="btn-save-cloud" onclick="saveToCloud(false)" disabled title="分析完成後會自動儲存到雲端；按此可手動重新同步">🔄 重新同步</button>
-      <span class="status-chip" id="sync-status"></span>
       <div class="spacer"></div>
       <div class="filter-chips" id="filter-chips" style="display:none">
         <button class="filter-chip active" data-filter="all">全部</button>
