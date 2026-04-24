@@ -37,8 +37,13 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
 .store-chip{display:flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;background:rgba(255,255,255,.8);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);border-radius:999px;font-size:13px;color:var(--ink);font-weight:600;box-shadow:0 4px 12px -4px rgba(15,23,42,.06)}
 .store-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--brand),#34d399);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px}
 .spacer{flex:1}
-.settings-btn{padding:8px 14px;border-radius:10px;background:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.9);font-size:12px;font-weight:600;color:var(--ink-2);cursor:pointer;font-family:inherit;transition:all .18s}
-.settings-btn:hover{background:#fff;color:var(--brand)}
+.settings-btn{padding:8px 14px;border-radius:10px;background:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.9);font-size:12px;font-weight:600;color:var(--ink-2);cursor:pointer;font-family:inherit;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
+.settings-btn:hover:not(:disabled){background:#fff;color:var(--brand)}
+.settings-btn:disabled{opacity:.6;cursor:not-allowed}
+/* 同步按鈕依狀態變色 */
+.sync-btn.sync-info{background:#dbeafe;border-color:#93c5fd;color:#1e40af}
+.sync-btn.sync-ok{background:#d1fae5;border-color:#86efac;color:#065f46}
+.sync-btn.sync-err{background:#fee2e2;border-color:#fca5a5;color:#b91c1c}
 
 .wrap{max-width:900px;margin:0 auto;padding:0 0 3rem}
 
@@ -183,8 +188,7 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
     <span id="store-name">—</span>
   </div>
   <div class="spacer"></div>
-  <span class="status-chip" id="sync-status"></span>
-  <button class="settings-btn" id="btn-save-cloud" onclick="saveToCloud(false)" disabled title="分析完成後會自動儲存到雲端；按此可手動重新同步">🔄 重新同步</button>
+  <button class="settings-btn sync-btn" id="btn-save-cloud" onclick="saveToCloud(false)" disabled title="分析完成後會自動儲存到雲端；按此可手動重新同步">🔄 重新同步</button>
   <button class="settings-btn" onclick="openSettings()">⚙️ 設定</button>
 </div>
 
@@ -1858,7 +1862,7 @@ function saveToCloud(silent){
 
   var btn = document.getElementById('btn-save-cloud');
   btn.disabled = true;
-  setSyncStatus('info', '同步中…');
+  setSyncStatus('info', '同步中…', '正在把分析結果上傳到雲端…');
 
   var body = {
     action: 'saveAnalysis',
@@ -1885,14 +1889,15 @@ function saveToCloud(silent){
       }
       var t = new Date();
       var timeStr = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0') + ':' + String(t.getSeconds()).padStart(2,'0');
-      setSyncStatus('ok', '✓ 已同步 ' + timeStr + '（' + data.sheet + '，FT '+data.ftCount+'、PT '+data.ptCount+'）');
+      setSyncStatus('ok', '已同步 ' + timeStr,
+        '工作表：' + data.sheet + '　FT '+data.ftCount+' 筆、PT '+data.ptCount+' 筆');
       if(!silent){
         alert('✅ 已儲存到雲端分頁：' + data.sheet +
               '\n正職 ' + data.ftCount + ' 筆、PT ' + data.ptCount + ' 筆');
       }
     })
     .catch(function(err){
-      setSyncStatus('err', '❌ 同步失敗（按「重新同步」重試）');
+      setSyncStatus('err', '同步失敗', '點此重新同步：' + (err.message || '未知錯誤'));
       if(!silent) alert('❌ 同步失敗：\n' + (err.message || '未知錯誤'));
       else console.warn('自動同步失敗:', err);
     })
@@ -1901,11 +1906,22 @@ function saveToCloud(silent){
     });
 }
 
-function setSyncStatus(cls, text){
-  var el = document.getElementById('sync-status');
-  if(!el) return;
-  el.className = 'status-chip on ' + cls;
-  el.innerHTML = (cls === 'info' ? '<span class="spinner"></span>' : '') + ' ' + text;
+// 同步狀態直接寫到按鈕文字上
+//   cls 可為：'info'（同步中）/ 'ok'（成功）/ 'err'（失敗）/ ''（閒置）
+function setSyncStatus(cls, text, tooltip){
+  var btn = document.getElementById('btn-save-cloud');
+  if(!btn) return;
+  // 移除所有 sync- 狀態類
+  btn.className = btn.className.replace(/\s*sync-(info|ok|err)/g, '').trim();
+  if(cls){
+    btn.className += ' sync-' + cls;
+  }
+  var icon = cls === 'info' ? '🔵 ⟲' :
+             cls === 'ok'   ? '🟢 ✓' :
+             cls === 'err'  ? '🔴 ❌' :
+             '🔄';
+  btn.innerHTML = icon + ' ' + (text || '重新同步');
+  if(tooltip) btn.title = tooltip;
 }
 
 function exportCsv(){
