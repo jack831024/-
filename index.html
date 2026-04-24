@@ -134,11 +134,12 @@ h1{font-size:24px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 })();
 
 // 各店密碼（客戶端驗證，防一般員工誤入，不是高強度安全）
+// ⚠️ 這是「進入門市（小結報表用）」的密碼，與盤點表「月度成本分析」解鎖密碼分開
 var STORE_PASSWORDS = {
-  'chudian-zhonghe':    'a90369287',
-  'chudian-yongchun':   'a94213054',
-  'chudian-xinzhuang':  'a60749791',
-  'shicheng-zhongxiao': 'a61222042'
+  'chudian-zhonghe':    '90369287',
+  'chudian-yongchun':   '94213054',
+  'chudian-xinzhuang':  '60749791',
+  'shicheng-zhongxiao': '61222042'
 };
 
 function selectStore(id, name){
