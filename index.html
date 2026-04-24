@@ -142,14 +142,25 @@ var STORE_PASSWORDS = {
   'shicheng-zhongxiao': '61222042'
 };
 
+// 薪資系統獨立密碼（有 a 前綴，與小結/加班費的入門密碼區隔）
+var SALARY_PASSWORDS = {
+  'chudian-zhonghe':    'a90369287',
+  'chudian-yongchun':   'a94213054',
+  'chudian-xinzhuang':  'a60749791',
+  'shicheng-zhongxiao': 'a61222042'
+};
+
 function selectStore(id, name){
   var flow = sessionStorage.getItem('cd_flow');
   // 盤點表、加班費流程：免密碼、免登入
   var freeFlows = { inventory:1, overtime:1 };
   if(!freeFlows[flow]){
-    var expected = STORE_PASSWORDS[id];
+    var expected = (flow === 'salary')
+      ? SALARY_PASSWORDS[id]
+      : STORE_PASSWORDS[id];
     if(expected){
-      var input = prompt('請輸入【' + name + '】密碼：');
+      var promptLabel = (flow === 'salary') ? '【'+name+'】薪資系統密碼：' : '請輸入【'+name+'】密碼：';
+      var input = prompt(promptLabel);
       if(input === null) return;
       if(String(input).trim() !== expected){
         alert('❌ 密碼錯誤');
