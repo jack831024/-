@@ -559,6 +559,8 @@ var STORE_NAME = sessionStorage.getItem('cd_store_name');
 
   // 預設日期為今天
   document.getElementById('inv-date').value = todayDate();
+  // 初始化「🔄 重新同步」按鈕為綠色「已同步」
+  setTimeout(function(){ if(typeof setAutoSaveStatus === 'function') setAutoSaveStatus('idle'); }, 0);
 })();
 
 // ============================================
@@ -962,12 +964,13 @@ function nowHMS(){
 function setAutoSaveStatus(state){
   var btn = document.getElementById('resync-btn');
   if(!btn) return;
+  var green = { bg:'rgba(16,185,129,.12)', fg:'#047857', bd:'#6ee7b7' };
   var map = {
-    idle:    { text:'🔄 重新同步',            bg:'', fg:'', bd:'' },
-    typing:  { text:'🔄 重新同步',            bg:'', fg:'', bd:'' },  // 打字中不變化，避免閃爍
+    idle:    { text:'🟢 ✓ 已同步',            bg:green.bg, fg:green.fg, bd:green.bd },
+    typing:  { text:'🟢 ✓ 已同步',            bg:green.bg, fg:green.fg, bd:green.bd },  // 打字中保留綠色，避免閃爍
     saving:  { text:'🔵 ⟲ 同步中…',          bg:'rgba(59,130,246,.12)', fg:'#1e40af', bd:'#93c5fd' },
-    saved:   { text:'🟢 ✓ 已同步 '+nowHMS(), bg:'rgba(16,185,129,.12)', fg:'#047857', bd:'#6ee7b7' },
-    cloud:   { text:'🟢 ✓ 已同步 '+nowHMS(), bg:'rgba(16,185,129,.12)', fg:'#047857', bd:'#6ee7b7' },
+    saved:   { text:'🟢 ✓ 已同步 '+nowHMS(), bg:green.bg, fg:green.fg, bd:green.bd },
+    cloud:   { text:'🟢 ✓ 已同步 '+nowHMS(), bg:green.bg, fg:green.fg, bd:green.bd },
     error:   { text:'🔴 ❌ 同步失敗',         bg:'rgba(220,38,38,.1)',   fg:'#b91c1c', bd:'#fca5a5' }
   };
   var s = map[state] || map.idle;
