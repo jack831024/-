@@ -769,22 +769,21 @@ function calcEmp(e){
     rolePay = roleBase(role) + b_s7 + b_s1; // b_s7 / b_s1 對 sup 是 ≤0
   }
 
-  // 加班/請假計算基數 = 底薪 26000 + 固定加班 10000 = 36000
-  var baseForOT = BASE_SALARY + FIXED_OT;
   var dtDays = STATE.detail[id].dtDays || 0;
   var otHours = STATE.detail[id].otHours || 0;
   var sickDays = STATE.detail[id].sickDays || 0;
   var personalDays = STATE.detail[id].personalDays || 0;
 
-  // 新公式：
-  //  正職  雙薪 = 月薪 / 30 × 天；加班費 = 月薪 / 30 / 8 × 1.34 × 時數
-  //  主管  雙薪 = (月薪 + 職務加給) / 30 × 天；加班費 = (月薪 + 職務加給) / 30 / 8 × 1.34 × 時數
-  //  事假/病假 仍以 (底薪 + 固定加班費) 為基數（如需改成月薪制再告知）
+  // 公式基數（正職：月薪；主管：月薪 + 職務加給）
+  //  雙薪     = 基數 / 30 × 天
+  //  延長加班費 = 基數 / 30 / 8 × 1.34 × 時數
+  //  事假     = 基數 / 30 × 天
+  //  病假     = 基數 / 30 / 2 × 天
   var otBase = monthPay + (sup ? rolePay : 0);
   var doubleWage = dtDays * otBase / 30;
   var otPay = otHours * otBase / 30 / 8 * 1.34;
-  var sickDeduct = sickDays * baseForOT / 30 / 2;
-  var personalDeduct = personalDays * baseForOT / 30;
+  var sickDeduct = sickDays * otBase / 30 / 2;
+  var personalDeduct = personalDays * otBase / 30;
 
   // 總額
   var total = monthPay + FIXED_OT + doubleWage + otPay - sickDeduct - personalDeduct;
