@@ -312,29 +312,79 @@ document.getElementById('store-name').textContent = STORE_NAME;
 
 var BASE_SALARY = 26000;       // 正職/主管 底薪
 var FIXED_OT = 10000;          // 固定加班費
-var HEAD_BONUS = 20000;        // 店長加給基礎
-var DEPUTY_BONUS = 10000;      // 副店長加給基礎
 
-// 正職 + 主管階 員工（有完整明細）
-var EMPLOYEES = [
-  { id:'lee',     name:'李文少', role:'sup', defaultRole:'head',   nickname:'李哥' },
-  { id:'shih',    name:'施偉祥', role:'sup', defaultRole:'deputy', nickname:'阿翔' },
-  { id:'liu',     name:'劉濡瑜', role:'reg', defaultRole:'regular',nickname:'濡瑜' },
-  { id:'chu',     name:'褚心榆', role:'reg', defaultRole:'regular',nickname:'心榆' }
-];
-// PT 員工（只出現在勞健保+個別明細 簡化版）
-var PT_EMPLOYEES = [
-  { id:'pan',   name:'小潘', role:'pt' },
-  { id:'hong',  name:'竑偉', role:'pt' },
-  { id:'lun',   name:'阿倫', role:'pt' }
-];
-var ALL_EMPLOYEES = EMPLOYEES.concat(PT_EMPLOYEES);
-
-// 預設勞健保
-var DEFAULT_INSURANCE = {
-  lee: 6500, shih: -1930, liu: -1930, chu: -1930,
-  pan: -735, hong: -735, lun: -277
+// ============================================
+// 各店員工設定（姓名、預設職級、勞健保、職務加給基礎）
+// ============================================
+var STORE_CONFIG = {
+  'chudian-zhonghe': {
+    employees: [
+      { id:'zh1', name:'李文少', defaultRole:'head',    nickname:'李哥' },
+      { id:'zh2', name:'施偉祥', defaultRole:'deputy',  nickname:'阿翔' },
+      { id:'zh3', name:'劉濡瑜', defaultRole:'regular', nickname:'濡瑜' },
+      { id:'zh4', name:'褚心榆', defaultRole:'regular', nickname:'心榆' }
+    ],
+    pt: [
+      { id:'zh_pt1', name:'小潘' },
+      { id:'zh_pt2', name:'竑偉' },
+      { id:'zh_pt3', name:'阿倫' }
+    ],
+    headBonus: 20000,
+    deputyBonus: 10000,
+    defaultInsurance: {
+      zh1: 6500, zh2: -1930, zh3: -1930, zh4: -1930,
+      zh_pt1: -735, zh_pt2: -735, zh_pt3: -277
+    }
+  },
+  'chudian-yongchun': {
+    employees: [
+      { id:'yc1', name:'謝其淇', defaultRole:'head' },
+      { id:'yc2', name:'林韋翔', defaultRole:'deputy' },
+      { id:'yc3', name:'洪文祥', defaultRole:'regular' },
+      { id:'yc4', name:'呂直宸', defaultRole:'regular' },
+      { id:'yc5', name:'吳孟澤', defaultRole:'regular' },
+      { id:'yc6', name:'邱昊勳', defaultRole:'regular' }
+    ],
+    pt: [],
+    headBonus: 20000,
+    deputyBonus: 10000,
+    defaultInsurance: {}
+  },
+  'chudian-xinzhuang': {
+    employees: [
+      { id:'xz1', name:'蔡鈺豪', defaultRole:'head' },
+      { id:'xz2', name:'蘇奕誠', defaultRole:'deputy' },
+      { id:'xz3', name:'李嘉真', defaultRole:'regular' },
+      { id:'xz4', name:'洪仕賢', defaultRole:'regular' }
+    ],
+    pt: [],
+    headBonus: 20000,
+    deputyBonus: 10000,
+    defaultInsurance: {}
+  },
+  'shicheng-zhongxiao': {
+    employees: [
+      { id:'sc1', name:'林梓彥', defaultRole:'head' },
+      { id:'sc2', name:'王謖',   defaultRole:'regular' },
+      { id:'sc3', name:'林哲民', defaultRole:'regular' },
+      { id:'sc4', name:'陳柏維', defaultRole:'regular' }
+    ],
+    pt: [],
+    headBonus: 10000,   // 十城特殊：店長加給 10000
+    deputyBonus: 5000,  // 十城特殊：副店長加給 5000
+    defaultInsurance: {}
+  }
 };
+
+// 取得目前店的設定（若未選店 → fallback 中和）
+var CFG = STORE_CONFIG[STORE] || STORE_CONFIG['chudian-zhonghe'];
+var HEAD_BONUS = CFG.headBonus;
+var DEPUTY_BONUS = CFG.deputyBonus;
+// role 標記只用來區分 PT / 非 PT（「主管 vs 正職」改以最上面的「員工職級設定」為準）
+var EMPLOYEES = CFG.employees.slice();
+var PT_EMPLOYEES = (CFG.pt || []).map(function(e){ return Object.assign({ role:'pt' }, e); });
+var ALL_EMPLOYEES = EMPLOYEES.concat(PT_EMPLOYEES);
+var DEFAULT_INSURANCE = CFG.defaultInsurance || {};
 
 // 獎金對照表
 function s1SupDeduct(n){ return -Math.max(0, Math.min(5, n|0)) * 100; } // 0~-500
