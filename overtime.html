@@ -630,8 +630,12 @@ function loadSchedule(){
       SCHEDULE = data;
       renderSchedulePreview();
       setStatus('sched-status','ok','✅ 已載入 '+(data.rows||[]).length+' 位員工');
-      // 班表載入後：清掉 PT 名單裡已被排班的人，並（若打卡已上傳）自動匯入未排班員工
+      // 班表載入後：
+      //   1) 清掉 PT 名單裡已被排班成 FT 的人
+      //   2) 自動把「班表 PT 列（時間非代碼）」的人加進 PT 名單
+      //   3) 若打卡已上傳，再把打卡有但班表沒有的英文名加入
       cleanupPtListBySchedule();
+      autoAddPtFromSchedule();
       if(PUNCHES && PUNCHES.rows && PUNCHES.rows.length){
         autoImportPtList(true);
       }
@@ -1378,6 +1382,8 @@ function runAnalysis(){
   SCHEDULE.rows.forEach(function(row){
     var name = String(row.name||'').trim();
     if(!name) return;
+    // 班表 cell 是時間非代碼 → PT，跳過 FT 分析（留給 Step 5 PT 工時計算處理）
+    if(isScheduleRowPT(row)) return;
     var days = row.days || {};
     Object.keys(days).forEach(function(dStr){
       var d = Number(dStr);
@@ -1819,18 +1825,60 @@ function delPtRow(btn){
   savePtList();
 }
 // 班表載入後 → 把已被排班的人從 PT 名單移除（避免一個人同時當正職又當 PT）
+// 判斷班表中某列是否為 PT：
+//   FT 列：cell 是 ABC 代碼（A/B/C/早/中/晚 等）
+//   PT 列：cell 是時間（11:00-15:00 / 11-15 / 1500 等含數字的格式）
+//   「休/特/休假」視為中性，不影響判定
+//   全部 cell 都是「時間 + 中性」、且至少有一個時間 → PT
+function isScheduleRowPT(row){
+  if(!row || !row.days) return false;
+  var timeCount = 0, codeCount = 0;
+  Object.keys(row.days).forEach(function(d){
+    var cell = String(row.days[d] || '').trim();
+    if(!cell) return;
+    if(/^(休|特|無|休假|x|X|Ｘ|公|假)$/.test(cell)) return; // 中性，不算數
+    if(/\d/.test(cell)) timeCount++;
+    else codeCount++;
+  });
+  return timeCount > 0 && codeCount === 0;
+}
+
+// 班表上有時間（PT 列）的員工 → 自動加進 PT 名單
+function autoAddPtFromSchedule(){
+  if(!SCHEDULE || !SCHEDULE.rows) return 0;
+  var existing = {};
+  readPtListFromDom().forEach(function(p){
+    existing[normalizeName(p.name)] = true;
+  });
+  var added = 0;
+  SCHEDULE.rows.forEach(function(r){
+    var name = String(r.name || '').trim();
+    if(!name) return;
+    var k = normalizeName(name);
+    if(existing[k]) return;
+    if(!isScheduleRowPT(r)) return;
+    addPtRow(name, '');
+    existing[k] = true;
+    added++;
+  });
+  if(added > 0) savePtList();
+  return added;
+}
+
 function cleanupPtListBySchedule(){
   if(!SCHEDULE || !SCHEDULE.rows) return;
-  var schedNames = {};
+  // 只把「FT 列」的人視為班表員工（PT 列保留為 PT）
+  var ftNames = {};
   SCHEDULE.rows.forEach(function(r){
+    if(isScheduleRowPT(r)) return;
     var k = normalizeName(r.name);
-    if(k) schedNames[k] = true;
+    if(k) ftNames[k] = true;
   });
   var current = readPtListFromDom();
   var kept = current.filter(function(p){
     var k = normalizeName(p.name);
-    // 已直接在班表 / 已被內建對照標為 FT → 從 PT 名單移除
-    return !schedNames[k] && !isPunchMappedToSchedule(p.name);
+    // 已被列入 FT / 內建對照標為 FT → 從 PT 名單移除
+    return !ftNames[k] && !isPunchMappedToSchedule(p.name);
   });
   if(kept.length !== current.length){
     localStorage.setItem(LS_KEY_PT_LIST, JSON.stringify(kept));
@@ -1845,11 +1893,13 @@ function autoImportPtList(silent){
     if(!silent) alert('請先上傳打卡 Excel/PDF 再匯入');
     return 0;
   }
-  var schedNames = {};
+  // 只把「FT 列」視為班表 FT（PT 列員工要列入 PT 名單，不該被排除）
+  var ftNames = {};
   if(SCHEDULE && SCHEDULE.rows){
     SCHEDULE.rows.forEach(function(r){
+      if(isScheduleRowPT(r)) return;
       var k = normalizeName(r.name);
-      if(k) schedNames[k] = true;
+      if(k) ftNames[k] = true;
     });
   }
   var existing = {};
@@ -1859,7 +1909,7 @@ function autoImportPtList(silent){
   var found = {};
   PUNCHES.rows.forEach(function(p){
     var k = normalizeName(p.name);
-    if(!k || schedNames[k] || existing[k] || found[k]) return;
+    if(!k || ftNames[k] || existing[k] || found[k]) return;
     if(!isEnglishName(p.name)) return; // 只收英文名（中文名對不上 = FT 命名差異，不算 PT）
     if(isPunchMappedToSchedule(p.name)) return; // 已被內建對照標為 FT，不算 PT
     found[k] = p.name;
@@ -1934,12 +1984,15 @@ function runPtAnalysis(){
     if(!go) return;
   }
 
-  // 班表姓名集合（normalize）
-  var schedNames = {};
+  // 班表姓名集合：FT vs PT 分開（schedule PT 仍算 PT，要保留處理）
+  var ftNames = {};
+  var schedPtNames = {};
   if(SCHEDULE && SCHEDULE.rows){
     SCHEDULE.rows.forEach(function(r){
       var k = normalizeName(r.name);
-      if(k) schedNames[k] = true;
+      if(!k) return;
+      if(isScheduleRowPT(r)) schedPtNames[k] = r.name;
+      else ftNames[k] = true;
     });
   }
 
@@ -1948,10 +2001,10 @@ function runPtAnalysis(){
   PUNCHES.rows.forEach(function(p){
     var k = normalizeName(p.name);
     if(!k) return;
-    // 已在班表的人不算 PT
-    if(schedNames[k]) return;
-    // 只算英文名（中文名對不上 = FT 命名差異，不該歸入 PT）
-    if(!isEnglishName(p.name)) return;
+    // 已在 FT 班表的人不算 PT（schedule PT 不會在 ftNames 裡，會通過）
+    if(ftNames[k]) return;
+    // 中文名打卡 → 必須是「班表 PT 列」的人才處理（避免 FT 中文名打不上對照被誤分）
+    if(!isEnglishName(p.name) && !schedPtNames[k]) return;
     // 已被內建「中文 → 英文」對照表標為 FT 員工 → 不算 PT
     if(isPunchMappedToSchedule(p.name)) return;
     var key = p.name + '|' + p.date;
