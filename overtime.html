@@ -188,7 +188,7 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
     <span id="store-name">—</span>
   </div>
   <div class="spacer"></div>
-  <button class="settings-btn sync-btn" id="btn-save-cloud" onclick="saveToCloud(false)" disabled title="分析完成後會自動儲存到雲端；按此可手動重新同步">🔄 重新同步</button>
+  <button class="settings-btn sync-btn sync-ok" id="btn-save-cloud" onclick="saveToCloud(false)" disabled title="分析完成後會自動儲存到雲端；按此可手動重新同步">🟢 ✓ 已同步</button>
   <button class="settings-btn" onclick="openSettings()">⚙️ 設定</button>
 </div>
 
@@ -1907,20 +1907,20 @@ function saveToCloud(silent){
 }
 
 // 同步狀態直接寫到按鈕文字上
-//   cls 可為：'info'（同步中）/ 'ok'（成功）/ 'err'（失敗）/ ''（閒置）
+//   cls 可為：'info'（同步中）/ 'ok'（待機 / 已同步）/ 'err'（失敗）
+//   沒傳 cls 視為待機 = 已同步（綠色）
 function setSyncStatus(cls, text, tooltip){
   var btn = document.getElementById('btn-save-cloud');
   if(!btn) return;
-  // 移除所有 sync- 狀態類
+  // 預設是 ok（綠色待機狀態）
+  if(!cls) cls = 'ok';
   btn.className = btn.className.replace(/\s*sync-(info|ok|err)/g, '').trim();
-  if(cls){
-    btn.className += ' sync-' + cls;
-  }
+  btn.className += ' sync-' + cls;
   var icon = cls === 'info' ? '🔵 ⟲' :
              cls === 'ok'   ? '🟢 ✓' :
              cls === 'err'  ? '🔴 ❌' :
-             '🔄';
-  btn.innerHTML = icon + ' ' + (text || '重新同步');
+             '🟢 ✓';
+  btn.innerHTML = icon + ' ' + (text || '已同步');
   if(tooltip) btn.title = tooltip;
 }
 
