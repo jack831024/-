@@ -835,19 +835,25 @@ function renderManagerResults(records){
       return { emp:emp, counts:counts, cnt:cnt, avg:cnt>0?sum/cnt:null };
     });
 
-    // 2. 決定獎金得主：非主管、有被評分的人中最高分（同分平分 $200）
-    var eligible = stats.filter(function(s){ return !isNoBonus(s.emp) && s.avg !== null; });
-    var winnerAmt = {}; // emp → 獎金金額
-    if(eligible.length > 0){
-      var maxAvg = eligible.reduce(function(m,s){ return Math.max(m, s.avg); }, -Infinity);
-      var winners = eligible.filter(function(s){ return s.avg === maxAvg; });
-      var perWinner = BONUS_POOL / winners.length;
+    // 2. 決定獎金得主：所有有被評分的人（包含主管）一起比最高分，同分平分 $200
+    //    主管的那份直接蒸發（主管不能領），不會轉給其他人
+    var rated = stats.filter(function(s){ return s.avg !== null; });
+    var winnerAmt = {}; // emp → 實領金額（主管為 0）
+    if(rated.length > 0){
+      var maxAvg = rated.reduce(function(m,s){ return Math.max(m, s.avg); }, -Infinity);
+      var winners = rated.filter(function(s){ return s.avg === maxAvg; });
+      var perShare = BONUS_POOL / winners.length;
       winners.forEach(function(w){
-        winnerAmt[w.emp] = perWinner;
-        totalBonus[w.emp] += perWinner;
-        var label = cat.name + ' $'+Math.round(perWinner)
-                  + (winners.length > 1 ? '('+winners.length+'人平分)' : '');
-        bonusBreakdown[w.emp].push(label);
+        if(isNoBonus(w.emp)){
+          // 主管：列入「最高分」但實領 0，那份蒸發
+          winnerAmt[w.emp] = 0;
+        } else {
+          winnerAmt[w.emp] = perShare;
+          totalBonus[w.emp] += perShare;
+          var label = cat.name + ' $'+Math.round(perShare)
+                    + (winners.length > 1 ? '('+winners.length+'人平分)' : '');
+          bonusBreakdown[w.emp].push(label);
+        }
       });
     }
 
@@ -876,9 +882,15 @@ function renderManagerResults(records){
       var title = curPositions[emp] || '';
       var titleCls = 'emp-title-badge' + (noBonus ? ' mgr' : '');
       var titleBadge = title ? '<span class="'+titleCls+'">'+esc(title)+'</span>' : '';
-      var bonusBadge = isWinner ? '<span class="emp-bonus-badge">✨ +$'+Math.round(winAmt)+'</span>' : '';
-      var colCls = 'emp-col' + (isWinner ? ' bonus' : '');
-      var avgCls = 'emp-avg-val' + (isWinner ? ' bonus' : '');
+      var paid = isWinner && winAmt > 0;        // 實領獎金
+      var tiedNoPay = isWinner && winAmt === 0; // 主管並列最高但不領
+      var bonusBadge = paid
+        ? '<span class="emp-bonus-badge">✨ +$'+Math.round(winAmt)+'</span>'
+        : (tiedNoPay
+            ? '<span class="emp-bonus-badge" style="background:#e5e7eb;color:#6b7280">最高分·不領</span>'
+            : '');
+      var colCls = 'emp-col' + (paid ? ' bonus' : '');
+      var avgCls = 'emp-avg-val' + (paid ? ' bonus' : '');
 
       return '<div class="'+colCls+'">'
         + '<div class="emp-name"><span>'+esc(emp)+' '+titleBadge+'</span>'+bonusBadge+'</div>'
@@ -917,7 +929,7 @@ function renderManagerResults(records){
   }).join('');
 
   var bonusSection = '<div class="bonus-summary">'
-    + '<div class="bonus-title">💰 本月獎金統計 <span class="bonus-rule">每項最高分領 $'+BONUS_POOL+'，同分者平分（店長 / 副店長除外）</span></div>'
+    + '<div class="bonus-title">💰 本月獎金統計 <span class="bonus-rule">每項最高分領 $'+BONUS_POOL+'，同分者平分；主管並列最高時那份蒸發不領</span></div>'
     + '<div class="bonus-grid">'+bonusCardsHtml+'</div>'
     + '</div>';
 
