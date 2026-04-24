@@ -193,6 +193,7 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
 .biz-card.vendor::before{background:linear-gradient(90deg,#f97316,#fb923c)}
 .biz-card.hr::before{background:linear-gradient(90deg,#8b5cf6,#a78bfa)}
 .biz-card.rent::before{background:linear-gradient(90deg,#ec4899,#f472b6)}
+.biz-card.marketing::before{background:linear-gradient(90deg,#eab308,#facc15)}
 .biz-card.profit::before{background:linear-gradient(90deg,#10b981,#34d399)}
 .biz-card.profit.loss::before{background:linear-gradient(90deg,#dc2626,#ef4444)}
 .biz-card.revenue{grid-column:span 2;background:linear-gradient(135deg,#dbeafe 0%,#eff6ff 100%)}
@@ -454,9 +455,16 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
           <div class="biz-hint"><span class="pct" id="biz-rent-pct">—</span> 佔營業額</div>
         </div>
 
+        <!-- 行銷（僅火鍋店/初殿顯示，營業額 × 10%） -->
+        <div class="biz-card marketing" id="biz-marketing-card" style="display:none">
+          <div class="biz-label"><span class="ico">📣</span>行銷（營業額 × 10%）</div>
+          <div class="biz-value" id="biz-marketing" style="color:#854d0e">NT$ 0</div>
+          <div class="biz-hint"><span class="pct" style="color:#854d0e">10%</span> 佔營業額（自動計算）</div>
+        </div>
+
         <!-- 利潤 -->
         <div class="biz-card profit">
-          <div class="biz-label"><span class="ico">💎</span>利潤（營業額 − 廠商 − 人事 − 房租）</div>
+          <div class="biz-label"><span class="ico">💎</span><span id="biz-profit-formula">利潤（營業額 − 廠商 − 人事 − 房租）</span></div>
           <div class="biz-value" id="biz-profit">NT$ 0</div>
           <div class="biz-hint"><span class="pct" id="biz-profit-pct">—</span> 佔營業額</div>
         </div>
@@ -1810,8 +1818,26 @@ function renderBusinessSummary(){
   document.getElementById('biz-hr-pct').textContent = pctOf(hrCost, revenue);
   document.getElementById('biz-rent-pct').textContent = pctOf(rent, revenue);
 
+  // 4.5) 行銷（火鍋店/初殿才有：營業額 × 10%；十城不扣）
+  var isHotpot = STORE_ID.indexOf('chudian') === 0;
+  var marketing = isHotpot ? revenue * 0.10 : 0;
+  var mCard = document.getElementById('biz-marketing-card');
+  if(mCard){
+    mCard.style.display = isHotpot ? '' : 'none';
+    if(isHotpot){
+      document.getElementById('biz-marketing').textContent = fmtNT(marketing);
+    }
+  }
+  // 利潤公式文字也跟著變
+  var formulaEl = document.getElementById('biz-profit-formula');
+  if(formulaEl){
+    formulaEl.textContent = isHotpot
+      ? '利潤（營業額 − 廠商 − 人事 − 房租 − 行銷）'
+      : '利潤（營業額 − 廠商 − 人事 − 房租）';
+  }
+
   // 5) 利潤
-  var profit = revenue - vendorGrandTotal - hrCost - rent;
+  var profit = revenue - vendorGrandTotal - hrCost - rent - marketing;
   document.getElementById('biz-profit').textContent = fmtNT(profit);
   document.getElementById('biz-profit-pct').textContent = pctOf(profit, revenue);
   var profitCard = document.querySelector('.biz-card.profit');
