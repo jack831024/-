@@ -150,6 +150,7 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
     <div class="user-avatar" id="u-avatar">🏪</div>
     <span class="user-name" id="u-name">—</span>
   </div>
+  <a class="logout-link" id="resync-btn" onclick="manualResync()" title="重新同步：強制把當日資料推上雲端、重新拉歷史">🔄 重新同步</a>
   <a class="logout-link" onclick="switchStore()">🏪 切換門市</a>
   <a class="logout-link" onclick="openSettings()">⚙️ 設定</a>
   <span class="spacer"></span>
@@ -210,9 +211,7 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
         <option value="">— 選擇過往紀錄 —</option>
       </select>
     </div>
-    <div class="btn-row">
-      <button class="primary" onclick="saveRecord()" style="width:100%">💾 儲存（自動同步雲端）</button>
-    </div>
+    <span class="saved-tag" id="autosave-status" style="color:#64748b;text-align:right;min-height:16px;font-weight:500">✅ 自動儲存已開啟（改動即存）</span>
     <span class="saved-tag" id="saved-tag">—</span>
     <span class="saved-tag" id="sync-badge" style="margin-top:2px">—</span>
   </div>
@@ -1061,9 +1060,10 @@ async function analyzeSummary(){
     });
     console.log('[analyzeSummary] 已填入：', filled, '；AI 沒抓到：', missing, '；跳過：', skipped);
     recalc(); recalcNextDay(); onOpeningChange();
+    if(typeof autoSaveNow === 'function') autoSaveNow();
     line.className = 'ai-status-line done';
     spin.className = 'spinner';
-    btxt.textContent = '✓ 讀取完成';
+    btxt.textContent = '✓ 讀取完成（已自動儲存）';
   } catch(e){
     console.error(e);
     line.className = 'ai-status-line err';
@@ -1125,9 +1125,10 @@ async function analyzeReceipts(key, filesToAnalyze){
       }
     });
     renderAll(); recalc();
+    if(typeof autoSaveNow === 'function') autoSaveNow();
     line.className = 'ai-status-line done';
     spin.className = 'spinner';
-    btxt.textContent = '✓ 辨識完成';
+    btxt.textContent = '✓ 辨識完成（已自動儲存）';
   } catch(e){
     console.error(e);
     line.className = 'ai-status-line err';
@@ -1321,11 +1322,13 @@ function addItem(key){
   document.getElementById(key + '-desc').value = '';
   document.getElementById(key + '-amt').value = '';
   renderAll(); recalc();
+  if(typeof autoSaveNow === 'function') autoSaveNow();
 }
 
 function removeItem(key, i){
   store[key].splice(i, 1);
   renderAll(); recalc();
+  if(typeof autoSaveNow === 'function') autoSaveNow();
 }
 
 function renderList(key){
@@ -1854,6 +1857,7 @@ function collectData(){
 }
 
 function applyData(data){
+  _loadingRecord = true;  // 載入中：抑制 autoSave
   INPUT_IDS.forEach(function(id){
     var el = document.getElementById(id);
     if(el) el.value = (data.inputs && data.inputs[id] != null) ? data.inputs[id] : '';
@@ -1863,6 +1867,8 @@ function applyData(data){
   var nd = document.getElementById('no-deposit');
   if(nd){ nd.checked = !!(data && data.noDeposit); toggleDeposit(); }
   renderAll();
+  // 短暫延遲後才解除抑制（等所有同步事件跑完）
+  setTimeout(function(){ _loadingRecord = false; }, 100);
   recalc();
   recalcNextDay();
 }
@@ -1882,15 +1888,22 @@ function clearFields(){
   if(td) td.innerHTML = '';
 }
 
-async function saveRecord(){
+async function saveRecord(opts){
+  opts = opts || {};
+  var silent = !!opts.silent;
+  var skipImages = !!opts.skipImages;  // 自動儲存時不重壓圖節省效能
   var date = document.getElementById('record-date').value;
-  if(!date){ alert('請先選擇日期'); return; }
+  if(!date){ if(!silent) alert('請先選擇日期'); return; }
   var records = getAllRecords();
   var rec = {
     data: collectData(),
     savedAt: new Date().toISOString(),
     savedBy: ''
   };
+  // 保留既有的 imageFileId（自動儲存不重傳圖片）
+  if(skipImages && records[date] && records[date].imageFileId){
+    rec.imageFileId = records[date].imageFileId;
+  }
   records[date] = rec;
   setAllRecords(records);
   renderHistoryList();
@@ -1899,23 +1912,103 @@ async function saveRecord(){
 
   var syncUrl = localStorage.getItem('cd_sync_url');
   if(syncUrl){
-    setSyncBadge('⏳ 壓縮圖片中...');
+    if(!silent) setSyncBadge('⏳ 壓縮圖片中...');
     var images = null;
-    try{ images = await collectImagesForUpload(); } catch(e){ console.warn('壓縮出錯：', e); }
+    if(!skipImages){
+      try{ images = await collectImagesForUpload(); } catch(e){ console.warn('壓縮出錯：', e); }
+    }
     var imgCount = 0;
     if(images){ Object.keys(images).forEach(function(k){ imgCount += images[k].length; }); }
-    setSyncBadge('⏳ 同步中...' + (imgCount ? '（含 ' + imgCount + ' 張圖）' : ''));
+    if(!silent) setSyncBadge('⏳ 同步中...' + (imgCount ? '（含 ' + imgCount + ' 張圖）' : ''));
     try{
       var res = await cloudSave(date, rec, images);
       if(res.fileId){ rec.imageFileId = res.fileId; records[date] = rec; setAllRecords(records); }
       setSyncBadge('☁️ 已同步' + (imgCount ? '（' + imgCount + ' 張圖）' : ''));
-      alert('已儲存 ' + date + ' 的紀錄' + (imgCount ? '（含 ' + imgCount + ' 張圖）' : '') + '\n已同步到雲端');
+      if(!silent) alert('已儲存 ' + date + ' 的紀錄' + (imgCount ? '（含 ' + imgCount + ' 張圖）' : '') + '\n已同步到雲端');
     } catch(e){
       setSyncBadge('⚠️ 同步失敗');
-      alert('已儲存到本機，但雲端同步失敗：' + e.message);
+      if(!silent) alert('已儲存到本機，但雲端同步失敗：' + e.message);
+      if(silent) throw e;  // 讓自動儲存的呼叫者能看到錯誤
     }
   } else {
-    alert('已儲存 ' + date + ' 的紀錄（僅本機，未開啟雲端同步）');
+    if(!silent) alert('已儲存 ' + date + ' 的紀錄（僅本機，未開啟雲端同步）');
+  }
+}
+
+// =========================================================
+// 自動儲存：任何欄位改動 → debounce 800ms → 自動存
+// 圖片類不重傳（太耗頻寬），只同步欄位；圖片由各自 analyze 流程處理
+// =========================================================
+var _autoSaveTimer = null;
+var _autoSaving = false;
+var _loadingRecord = false;  // applyData 時設為 true，避免載入觸發 autoSave
+
+function setAutoSaveStatus(state){
+  var el = document.getElementById('autosave-status');
+  if(!el) return;
+  var map = {
+    idle:   { c:'#64748b', t:'✅ 自動儲存已開啟（改動即存）' },
+    typing: { c:'#92400e', t:'✏️ 編輯中...' },
+    saving: { c:'#1e40af', t:'💾 儲存中...' },
+    saved:  { c:'#047857', t:'✓ 已自動儲存' },
+    cloud:  { c:'#1e40af', t:'☁️ 已同步雲端' },
+    error:  { c:'#b91c1c', t:'⚠️ 雲端同步失敗（本機已存）' }
+  };
+  var s = map[state] || map.idle;
+  el.style.color = s.c;
+  el.textContent = s.t;
+}
+
+function autoSaveNow(){
+  if(_loadingRecord) return;  // 剛載入舊紀錄時不要自動存一次
+  var date = document.getElementById('record-date');
+  if(!date || !date.value) return;
+  setAutoSaveStatus('typing');
+  if(_autoSaveTimer) clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(doAutoSave, 800);
+}
+
+// 全域 input / change 監聽：任何 INPUT_IDS 欄位改動都觸發 autoSave
+document.addEventListener('input', function(e){
+  var t = e.target; if(!t || !t.id) return;
+  if(INPUT_IDS.indexOf(t.id) >= 0) autoSaveNow();
+});
+document.addEventListener('change', function(e){
+  var t = e.target; if(!t || !t.id) return;
+  if(INPUT_IDS.indexOf(t.id) >= 0 || t.id === 'no-deposit' || t.id === 'i-shift-a') autoSaveNow();
+});
+
+async function doAutoSave(){
+  if(_autoSaving) return;
+  _autoSaving = true;
+  setAutoSaveStatus('saving');
+  try{
+    var hasCloud = !!localStorage.getItem('cd_sync_url');
+    await saveRecord({ silent: true, skipImages: true });
+    setAutoSaveStatus(hasCloud ? 'cloud' : 'saved');
+    setTimeout(function(){ if(!_autoSaveTimer) setAutoSaveStatus('idle'); }, 2500);
+  }catch(e){
+    console.warn('自動儲存失敗', e);
+    setAutoSaveStatus('error');
+  }finally{
+    _autoSaving = false;
+  }
+}
+
+// 重新同步（強制把圖片也一起重傳 + 重拉雲端）
+async function manualResync(){
+  var btn = document.getElementById('resync-btn');
+  var oldText = btn ? btn.innerHTML : '';
+  if(btn){ btn.innerHTML = '⏳ 同步中...'; btn.style.pointerEvents = 'none'; }
+  try{
+    await saveRecord({ silent: true });  // 不 skipImages，強制重推圖片
+    setAutoSaveStatus('cloud');
+    setTimeout(function(){ setAutoSaveStatus('idle'); }, 2500);
+  }catch(e){
+    console.warn('手動同步失敗', e);
+    setAutoSaveStatus('error');
+  }finally{
+    if(btn){ btn.innerHTML = oldText || '🔄 重新同步'; btn.style.pointerEvents = ''; }
   }
 }
 
