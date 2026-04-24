@@ -258,7 +258,11 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
 
   <!-- 6. 評分表獎金 -->
   <div class="section">
-    <h3><span class="step-num">7</span><span class="icon">📊</span>評分表獎金<span class="hint">正職專屬</span></h3>
+    <h3><span class="step-num">7</span><span class="icon">📊</span>評分表獎金<span class="hint">正職專屬，來自匿名表每項最高分 $200</span></h3>
+    <div style="margin-bottom:8px">
+      <button class="btn btn-ghost btn-sm" onclick="importSurveyBonus()">🔄 重新從匿名表抓取</button>
+      <span id="survey-import-status" style="margin-left:8px;font-size:11.5px;color:var(--ink-3)"></span>
+    </div>
     <table class="grid">
       <thead><tr><th>員工</th><th style="width:160px">獎金</th></tr></thead>
       <tbody id="tbody-s6"></tbody>
@@ -515,9 +519,10 @@ function onMonthChange(){
   }
   loadState();
   render();
-  // 換月後自動重抓兩邊資料
+  // 換月後自動重抓三邊資料
   doImportOvertime(false);
   doImportSalesBonus(false);
+  doImportSurveyBonus(false);
 }
 
 // ============================================
@@ -1084,6 +1089,46 @@ function doImportSalesBonus(showToast){
 function importSalesBonus(){ doImportSalesBonus(true); }
 
 // ============================================
+// 從匿名表匯入（評分表獎金）
+// ============================================
+function doImportSurveyBonus(showToast){
+  var ym = getSelectedYM();
+  var key = 'cd_survey_bonus_' + (STORE || 'nostore') + '_' + ym;
+  var status = document.getElementById('survey-import-status');
+  try {
+    var raw = localStorage.getItem(key);
+    if(!raw){
+      if(status) status.textContent = '⚠ 匿名表尚未統計本月獎金（請店長進匿名表查看本月後重試）';
+      if(showToast) toast('找不到匿名表資料：請店長先進入匿名表查看本月', 'err');
+      return 0;
+    }
+    var data = JSON.parse(raw);
+    var emps = data.employees || {};
+    var matched = 0;
+    ALL_EMPLOYEES.forEach(function(e){
+      var hit = emps[e.name];
+      if(hit === undefined) hit = emps[e.nickname||''];
+      if(typeof hit === 'number'){
+        STATE.s6[e.id] = Math.round(hit);
+        matched++;
+      }
+    });
+    renderS6();
+    renderDetail();
+    if(status){
+      var ts = data.savedAt ? new Date(data.savedAt).toLocaleString('zh-TW') : '';
+      status.textContent = '✅ 已匯入 '+matched+' 位員工'+(ts?'（'+ts+' 產出）':'');
+    }
+    if(showToast) toast('評分表獎金匯入完成：'+matched+' 位', 'ok');
+    return matched;
+  } catch(err){
+    if(showToast) toast('匯入失敗：'+err.message, 'err');
+    return 0;
+  }
+}
+function importSurveyBonus(){ doImportSurveyBonus(true); }
+
+// ============================================
 // Toast
 // ============================================
 function toast(msg, type){
@@ -1106,6 +1151,7 @@ render();
 // 初次載入也自動匯入一次（若沒資料會靜默略過）
 doImportOvertime(false);
 doImportSalesBonus(false);
+doImportSurveyBonus(false);
 
 // 自動儲存（每 8 秒）
 setInterval(function(){

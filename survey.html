@@ -934,6 +934,22 @@ function renderManagerResults(records){
     return '<div class="comment-item">'+esc(r.companyComment)+'<div class="meta">#'+(i+1)+' · '+formatTs(r.submittedAt)+'</div></div>';
   }).join('');
   $('mgr-company-comments').innerHTML = companyHtml || '<div class="empty-state">無</div>';
+
+  // 寫一份「每位員工本月評分獎金」供 salary.html 自動抓取
+  try {
+    var ym = $('mgr-month').value;
+    if(ym && currentMgrStore){
+      var payload = {
+        ym: ym,
+        store: currentMgrStore,
+        savedAt: new Date().toISOString(),
+        recordsCount: records.length,
+        employees: {}
+      };
+      emps.forEach(function(n){ payload.employees[n] = Math.round(totalBonus[n] || 0); });
+      localStorage.setItem('cd_survey_bonus_' + currentMgrStore + '_' + ym, JSON.stringify(payload));
+    }
+  } catch(e){ console.warn('persistSurveyBonus fail', e); }
 }
 
 function formatTs(iso){
