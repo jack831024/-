@@ -95,6 +95,16 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
 .payroll .ptitle .tag-role.pt{background:#fef3c7;color:#a16207}
 .payroll .ptitle .tag-role.sup{background:#fce7f3;color:#be185d}
 
+/* 總薪水表格 */
+.payroll-summary tfoot td{border-top:2px solid var(--brand);background:linear-gradient(135deg,rgba(139,92,246,.04) 0%,rgba(139,92,246,.08) 100%);font-weight:700;padding:10px 8px}
+.payroll-summary .role-badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;background:var(--brand-light);color:var(--brand-dark)}
+.payroll-summary .role-badge.sup{background:#fce7f3;color:#be185d}
+.payroll-summary .role-badge.pt{background:#fef3c7;color:#a16207}
+.payroll-summary .amount-cell{font-family:ui-monospace,"SF Mono",Menlo,monospace;text-align:right;font-variant-numeric:tabular-nums}
+.payroll-summary .amount-cell.real{font-weight:700;color:var(--brand-dark)}
+.payroll-summary .sum-label{color:var(--ink)}
+.payroll-summary .sum-total{color:var(--brand-dark);font-size:15.5px;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+
 .pay-row{display:grid;grid-template-columns:1fr auto;gap:10px;padding:7px 0;border-bottom:1px dashed rgba(226,232,240,.7);font-size:13.5px;align-items:center}
 .pay-row.total{border-top:2px solid var(--line);border-bottom:none;margin-top:8px;padding-top:12px;font-weight:700;font-size:14.5px}
 .pay-row.final{border-top:2px solid var(--brand);border-bottom:none;margin-top:6px;padding-top:12px;font-size:17px;font-weight:700;color:var(--brand-dark)}
@@ -292,7 +302,24 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
   <!-- 各別明細 -->
   <div class="section">
     <h3><span class="step-num">10</span><span class="icon">📑</span>各別明細<span class="hint">選員工查看完整薪資</span></h3>
-    <div class="emp-tabs" id="emp-tabs"></div>
+
+    <!-- 總薪水表格 -->
+    <div class="sub-label">本月總薪水</div>
+    <table class="grid payroll-summary">
+      <thead>
+        <tr>
+          <th>員工</th>
+          <th style="width:90px">職級</th>
+          <th style="width:120px;text-align:right">月薪</th>
+          <th style="width:120px;text-align:right">總額</th>
+          <th style="width:130px;text-align:right">實領</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-summary"></tbody>
+      <tfoot id="tfoot-summary"></tfoot>
+    </table>
+
+    <div class="emp-tabs" id="emp-tabs" style="margin-top:14px"></div>
     <div id="emp-detail"></div>
   </div>
 
@@ -576,8 +603,50 @@ function render(){
   renderS7();
   renderInsurance();
   renderRoles();
+  renderSummaryTable();
   renderEmpTabs();
   renderDetail();
+}
+
+// 總薪水表格（所有員工的實領一覽 + 合計）
+function renderSummaryTable(){
+  var tb = document.getElementById('tbody-summary');
+  var tf = document.getElementById('tfoot-summary');
+  if(!tb) return;
+  var totalMonth = 0, totalGross = 0, totalReal = 0;
+  var rows = ALL_EMPLOYEES.map(function(e){
+    var c = calcEmp(e);
+    var roleCls = 'role-badge', roleText = '';
+    if(isPT(e)){
+      roleCls += ' pt'; roleText = 'PT';
+    } else if(c.isSup){
+      roleCls += ' sup'; roleText = roleLabel(c.role);
+    } else {
+      roleText = '正職';
+    }
+    var mp = c.pt ? 0 : (c.monthPay || 0);
+    var gross = c.pt ? (c.insurance || 0) : (c.total || 0);
+    var real = c.pt ? (c.insurance || 0) : (c.realPay || 0);
+    totalMonth += mp;
+    totalGross += gross;
+    totalReal  += real;
+
+    // PT 沒有月薪/總額概念，顯示「—」
+    return '<tr>'
+      + '<td class="c-name">'+e.name+'</td>'
+      + '<td><span class="'+roleCls+'">'+roleText+'</span></td>'
+      + '<td class="amount-cell">'+(c.pt ? '—' : fmtPlain(mp))+'</td>'
+      + '<td class="amount-cell">'+(c.pt ? '—' : fmtPlain(gross))+'</td>'
+      + '<td class="amount-cell real">'+fmtPlain(real)+'</td>'
+      + '</tr>';
+  });
+  tb.innerHTML = rows.join('');
+  tf.innerHTML = '<tr>'
+    + '<td colspan="2" class="sum-label">合計（'+ALL_EMPLOYEES.length+' 位）</td>'
+    + '<td class="amount-cell">'+fmtPlain(totalMonth)+'</td>'
+    + '<td class="amount-cell">'+fmtPlain(totalGross)+'</td>'
+    + '<td class="sum-total">'+fmtPlain(totalReal)+'</td>'
+    + '</tr>';
 }
 
 function opt(val, label, selected){
@@ -923,6 +992,8 @@ function bdRow(label, val){
 }
 
 function renderDetail(){
+  // 明細變動時，總表也要同步更新
+  renderSummaryTable();
   var box = document.getElementById('emp-detail');
   var emp = ALL_EMPLOYEES.find(function(x){ return x.id === STATE.activeEmp; });
   if(!emp){ box.innerHTML = ''; return; }
