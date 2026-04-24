@@ -264,6 +264,9 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
     <span id="u-store">—</span>
   </div>
   <span class="spacer"></span>
+  <button class="back-btn" id="resync-btn" onclick="manualResync()" title="重新同步：手動把目前資料再推一次到雲端、重新拉歷史" style="width:auto;padding:0 12px;font-size:12px;font-weight:500;gap:6px">
+    🔄 重新同步
+  </button>
   <button class="back-btn" onclick="openInvSettings()" title="設定雲端同步網址" style="width:auto;padding:0 12px;font-size:12px;font-weight:500;gap:6px">
     ⚙️ 設定
   </button>
@@ -373,14 +376,7 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
     </div>
   </div>
 
-  <!-- 自動儲存狀態（不需按鈕，改動即存）-->
-  <div id="action-row" style="display:none;margin-top:10px">
-    <div id="autosave-indicator" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border-radius:12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);color:#047857;font-size:13px;font-weight:600;transition:all .2s">
-      <span id="autosave-icon">✅</span>
-      <span id="autosave-text">自動儲存已開啟</span>
-    </div>
-  </div>
-  <span class="saved-tag" id="saved-tag"></span>
+  <span class="saved-tag" id="saved-tag" style="text-align:right;margin-top:6px;min-height:16px"></span>
 
   <!-- 月度盤點表 -->
   <div class="section" id="history-section" style="display:none">
@@ -397,7 +393,7 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
     <div style="font-size:11.5px;color:var(--ink-2);background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:10px;padding:9px 12px;margin-bottom:10px;line-height:1.6;display:flex;gap:6px;align-items:flex-start">
       <span>💡</span>
       <span>
-        <b>修正數字錯誤：</b>點擊月度表任一「日期欄頭」或「格子」，該日資料會載入至上方「品項明細」，修改後按「💾 儲存」覆蓋該日。<br>
+        <b>修正數字錯誤：</b>點擊月度表任一「日期欄頭」或「格子」，該日資料會載入至上方「品項明細」，直接改數字就會自動儲存覆蓋該日（不需按任何按鈕）。<br>
         <b>自動合併近似品項：</b>字元相似度 ≥ 33%（例「鴨肉丸」vs「上等縣肉丸」）會自動歸為同品項，該列會顯示綠色 <span style="display:inline-block;font-size:10px;padding:1px 6px;border-radius:999px;background:rgba(16,185,129,.15);color:#047857;font-weight:700">＋N</span> 徽章（懸停可看合併的別名）。<br>
         <b>手動合併品項：</b>點品項名稱（會顯示 ✎ 圖示）可重新命名，所有日期同名項目會一起合併並同步雲端。
       </span>
@@ -606,7 +602,7 @@ function selectVendor(name, btnEl){
   document.getElementById('date-section').style.display = 'block';
   document.getElementById('upload-section').style.display = 'block';
   document.getElementById('table-section').style.display = 'block';
-  document.getElementById('action-row').style.display = 'flex';
+  // action-row 已移除，改為 topbar 的「重新同步」按鈕
   document.getElementById('history-section').style.display = 'block';
   document.getElementById('analysis-section').style.display = 'block';
 
@@ -956,25 +952,21 @@ function addRow(){
 var _autoSaveTimer = null;
 var _autoSaving = false;
 
+// 把自動儲存狀態顯示在右上角 saved-tag 的小文字
 function setAutoSaveStatus(state){
-  var ind = document.getElementById('autosave-indicator');
-  var ico = document.getElementById('autosave-icon');
-  var txt = document.getElementById('autosave-text');
-  if(!ind) return;
+  var tag = document.getElementById('saved-tag');
+  if(!tag) return;
   var map = {
-    idle:   { bg:'rgba(16,185,129,.08)', bd:'rgba(16,185,129,.2)',  color:'#047857', icon:'✅', text:'自動儲存已開啟' },
-    typing: { bg:'rgba(245,158,11,.08)', bd:'rgba(245,158,11,.3)',  color:'#92400e', icon:'✏️', text:'編輯中...' },
-    saving: { bg:'rgba(59,130,246,.08)', bd:'rgba(59,130,246,.25)', color:'#1e40af', icon:'💾', text:'儲存中...' },
-    saved:  { bg:'rgba(16,185,129,.1)',  bd:'rgba(16,185,129,.3)',  color:'#047857', icon:'✓',  text:'已自動儲存' },
-    cloud:  { bg:'rgba(59,130,246,.1)',  bd:'rgba(59,130,246,.3)',  color:'#1e40af', icon:'☁️', text:'已同步雲端' },
-    error:  { bg:'rgba(220,38,38,.08)',  bd:'rgba(220,38,38,.3)',   color:'#b91c1c', icon:'⚠️', text:'雲端同步失敗（本機已存）' }
+    idle:   { color:'#94a3b8', text:'' },  // 待機時不顯示，避免干擾
+    typing: { color:'#92400e', text:'✏️ 編輯中...' },
+    saving: { color:'#1e40af', text:'💾 儲存中...' },
+    saved:  { color:'#047857', text:'✓ 已自動儲存' },
+    cloud:  { color:'#1e40af', text:'☁️ 已同步雲端' },
+    error:  { color:'#b91c1c', text:'⚠️ 雲端同步失敗（本機已存）' }
   };
   var s = map[state] || map.idle;
-  ind.style.background = s.bg;
-  ind.style.borderColor = s.bd;
-  ind.style.color = s.color;
-  ico.textContent = s.icon;
-  txt.textContent = s.text;
+  tag.style.color = s.color;
+  tag.textContent = s.text;
 }
 
 function autoSave(){
@@ -994,7 +986,7 @@ async function doAutoSave(){
     var hasCloud = !!url;
     await saveInv({ silent: true });
     setAutoSaveStatus(hasCloud ? 'cloud' : 'saved');
-    // 2.5 秒後回到 idle
+    // 2.5 秒後回到 idle（文字消失）
     setTimeout(function(){
       if(!_autoSaveTimer) setAutoSaveStatus('idle');
     }, 2500);
@@ -1003,6 +995,34 @@ async function doAutoSave(){
     setAutoSaveStatus('error');
   }finally{
     _autoSaving = false;
+  }
+}
+
+// 手動重新同步（右上「🔄 重新同步」按鈕）
+// 強制把目前 items[] 推雲端、並重新從雲端拉歷史，相當於一次完整同步
+async function manualResync(){
+  if(!currentVendor){ alert('請先選擇廠商'); return; }
+  var btn = document.getElementById('resync-btn');
+  var oldText = btn ? btn.innerHTML : '';
+  if(btn){
+    btn.innerHTML = '⏳ 同步中...';
+    btn.disabled = true;
+  }
+  try{
+    if(items.length > 0){
+      await saveInv({ silent: true });
+    }
+    await loadHistory();  // 把歷史資料重新拉一次
+    setAutoSaveStatus('cloud');
+    setTimeout(function(){ setAutoSaveStatus('idle'); }, 2500);
+  }catch(e){
+    console.warn('重新同步失敗', e);
+    setAutoSaveStatus('error');
+  }finally{
+    if(btn){
+      btn.innerHTML = oldText || '🔄 重新同步';
+      btn.disabled = false;
+    }
   }
 }
 
