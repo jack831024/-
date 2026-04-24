@@ -348,10 +348,13 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
     <div class="row sep" style="border-bottom:none"><span class="label">vs 小結代收</span><span class="status neutral" id="s-daishuo">—</span></div>
   </div>
   <div class="section">
-    <h3>存款憑證 <span class="ai-tag">AI 自動讀取</span></h3>
+    <h3>存款憑證 <span class="ai-tag">AI 自動讀取</span><span class="status err" id="deposit-status-tag" style="margin-left:auto;display:none">⚠️ 尚未處理</span></h3>
     <div class="deposit-check">
       <input type="checkbox" id="no-deposit" onchange="toggleDeposit()">
       <label for="no-deposit">今日不存錢</label>
+    </div>
+    <div id="deposit-warn" style="display:none;background:#fef2f2;border:1.5px solid #fca5a5;color:#b91c1c;padding:11px 14px;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:10px;line-height:1.5">
+      ⚠️ 存款異常：必須<b>勾選「今日不存錢」</b>，或<b>上傳存款照片</b>，才算完成
     </div>
     <div id="deposit-upload-area">
       <div class="upload-zone">
@@ -575,8 +578,11 @@ function findAShiftFromCache(dateStr){
       sel.appendChild(opt);
     });
   }
-  // 初始化「🔄 重新同步」按鈕為綠色「已同步」
-  setTimeout(function(){ if(typeof setAutoSaveStatus === 'function') setAutoSaveStatus('idle'); }, 0);
+  // 初始化「🔄 重新同步」按鈕為綠色「已同步」+ 存款狀態檢查
+  setTimeout(function(){
+    if(typeof setAutoSaveStatus === 'function') setAutoSaveStatus('idle');
+    if(typeof checkDepositStatus === 'function') checkDepositStatus();
+  }, 0);
 })();
 
 function switchStore(){
@@ -1195,6 +1201,7 @@ async function handleDepositFile(input){
   img.src = URL.createObjectURL(file);
   img.className = 'thumb';
   t.appendChild(img);
+  checkDepositStatus();  // ⭐ 有照片了，清除異常警告
   if(!hasApiKey()) return;
 
   // 顯示狀態列
@@ -1367,6 +1374,25 @@ function toggleDeposit(){
   area.style.opacity = noD ? '0.4' : '1';
   area.style.pointerEvents = noD ? 'none' : 'auto';
   recalcNextDay();
+  checkDepositStatus();
+}
+
+// 存款狀態檢查：必須「勾今日不存錢」或「有上傳照片」二擇一才算正常
+// 兩者都沒做 → 顯示紅色警告
+function checkDepositStatus(){
+  var noD = document.getElementById('no-deposit');
+  var isNoDeposit = noD && noD.checked;
+  var hasPhoto = (window.imgs && imgs.deposit && imgs.deposit.length > 0);
+  // 相容：如果圖已上雲端（applyData 載入舊紀錄），檢查縮圖節點是否存在
+  if(!hasPhoto){
+    var td = document.getElementById('thumbs-deposit');
+    if(td && td.querySelector('img')) hasPhoto = true;
+  }
+  var isNormal = isNoDeposit || hasPhoto;
+  var warn = document.getElementById('deposit-warn');
+  var tag = document.getElementById('deposit-status-tag');
+  if(warn) warn.style.display = isNormal ? 'none' : 'block';
+  if(tag) tag.style.display = isNormal ? 'none' : 'inline-block';
 }
 
 function recalcNextDay(){
@@ -2314,6 +2340,8 @@ async function applyImages(images){
     var btn = document.getElementById('btn-' + k);
     if(btn) btn.disabled = imgs[k].length === 0;
   }
+  // 圖片還原完成後重新檢查存款狀態（有圖片就不警告）
+  if(typeof checkDepositStatus === 'function') checkDepositStatus();
 }
 
 // ==== 雲端同步 ====

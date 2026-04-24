@@ -1,8 +1,10 @@
 // ============================================
 // 初殿鍋物 · Threads 海巡助手雲端同步
 // 把整個檔案內容複製貼到你新建的 Apps Script 專案
-// （專案綁定的試算表 ID: 1tyMh_O1UHF_k3u-1nJi0jgPjm9XMltEyweVaR01tedE）
 // ============================================
+
+// 對應的試算表 ID（獨立 Apps Script，用 openById）
+var SHEET_ID = '1tyMh_O1UHF_k3u-1nJi0jgPjm9XMltEyweVaR01tedE';
 
 // ============================================
 // 🔑 Gemini API 金鑰（放在「指令碼屬性」裡，不寫死在程式碼）
@@ -99,7 +101,7 @@ function doPost(e) {
 // 取得/建立 工作表
 // ============================================
 function getSheetByName(name, headers) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.openById(SHEET_ID);
   var sh = ss.getSheetByName(name);
   if (!sh) {
     sh = ss.insertSheet(name);
@@ -270,7 +272,7 @@ function callGeminiProxy(model, parts, clientGenConfig) {
       return { error: { code: 401, message: 'Apps Script「指令碼屬性」裡的 GEMINI_API_KEY 尚未設定或格式錯誤（應以 AIzaSy 開頭）' } };
     }
 
-    var chain = [model, 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
+    var chain = [model, 'gemini-2.5-flash', 'gemini-flash-latest'];
     var seen = {};
     chain = chain.filter(function(m){ if(!m) return false; if(seen[m]) return false; seen[m] = 1; return true; });
 
@@ -334,7 +336,7 @@ function json(obj) {
 // ⭐ 手動授權用（第一次跑一次就好）
 // ============================================
 function forceAuth() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.openById(SHEET_ID);
   Logger.log('試算表：' + ss.getName());
   getKwSheet();
   getHistSheet();
