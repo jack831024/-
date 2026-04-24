@@ -500,6 +500,7 @@ function blankState(){
     insurance: {},     // {empId: 金額}
     roles: {},         // {empId: role}
     detail: {},        // {empId: {dtDays,otHours,sickDays,personalDays,latePunch}}
+    ptWage: {},        // {empId: {hours,otHours,wage}} — 從加班費系統匯入的 PT 月度工資
     activeEmp: EMPLOYEES[0].id,
     notes: {}          // {empId: 備註字串}
   };
@@ -531,7 +532,7 @@ function loadState(){
       var obj = JSON.parse(raw);
       // 補齊缺項（避免新增員工後 key 缺失）
       var def = blankState();
-      ['s1','s2','s3','s4','s5','s6','s7','insurance','roles','detail','notes'].forEach(function(k){
+      ['s1','s2','s3','s4','s5','s6','s7','insurance','roles','detail','notes','ptWage'].forEach(function(k){
         obj[k] = Object.assign({}, def[k], obj[k] || {});
       });
       if(!obj.activeEmp) obj.activeEmp = EMPLOYEES[0].id;
@@ -624,19 +625,19 @@ function renderSummaryTable(){
     } else {
       roleText = '正職';
     }
-    var mp = c.pt ? 0 : (c.monthPay || 0);
-    var gross = c.pt ? (c.insurance || 0) : (c.total || 0);
-    var real = c.pt ? (c.insurance || 0) : (c.realPay || 0);
+    // PT：月薪欄顯示「當月總工資」(ptWage)，其餘欄位用 total / realPay
+    var mp = c.pt ? (c.ptWage || 0) : (c.monthPay || 0);
+    var gross = c.total || 0;
+    var real = c.realPay || 0;
     totalMonth += mp;
     totalGross += gross;
     totalReal  += real;
 
-    // PT 沒有月薪/總額概念，顯示「—」
     return '<tr>'
       + '<td class="c-name">'+e.name+'</td>'
       + '<td><span class="'+roleCls+'">'+roleText+'</span></td>'
-      + '<td class="amount-cell">'+(c.pt ? '—' : fmtPlain(mp))+'</td>'
-      + '<td class="amount-cell">'+(c.pt ? '—' : fmtPlain(gross))+'</td>'
+      + '<td class="amount-cell">'+fmtPlain(mp)+'</td>'
+      + '<td class="amount-cell">'+fmtPlain(gross)+'</td>'
       + '<td class="amount-cell real">'+fmtPlain(real)+'</td>'
       + '</tr>';
   });
@@ -875,14 +876,22 @@ function calcEmp(e){
   var id = e.id;
   var role = STATE.roles[id] || e.defaultRole || e.role;
 
-  // PT 簡化：只顯示加班費 + 勞健保
+  // PT 簡化：從加班費系統代入當月總工資；加班時、時薪可見
   if(isPT(e)){
     var det = STATE.detail[id] || {};
     var insurance = STATE.insurance[id] | 0;
+    var ptInfo = (STATE.ptWage && STATE.ptWage[id]) || { hours:0, otHours:0, wage:0 };
+    var ptWage = ptInfo.wage | 0;
     return {
       pt: true, role:'pt',
       insurance: insurance,
-      otHours: det.otHours | 0,
+      ptHours: ptInfo.hours || 0,
+      ptOtHours: ptInfo.otHours || 0,
+      ptWage: ptWage,
+      otHours: det.otHours || ptInfo.otHours || 0,
+      // PT 的「總額」＝當月總工資；實領 = 總工資 + 勞健保
+      total: ptWage,
+      realPay: ptWage + insurance,
       note: STATE.notes[id] || ''
     };
   }
@@ -1004,11 +1013,14 @@ function renderDetail(){
   if(isPT(emp)){
     html.push('<div class="payroll">');
     html.push('<div class="ptitle">'+getYMLabel()+'_'+emp.name+'<span class="tag-role pt">PT</span></div>');
-    html.push('<div class="pay-sub">PT 目前只顯示<b>加班費</b>與<b>勞健保</b>。完整時薪計算請至「加班費計算」系統。</div>');
-    html.push('<div class="inline-input-row">');
-    html.push('<label>加班時數 <input type="number" min="0" step="0.5" value="'+(c.otHours||0)+'" onchange="onDtChange(\''+emp.id+'\',\'otHours\',this.value)"></label>');
-    html.push('</div>');
+    var srcNote = (c.ptWage > 0)
+      ? '<b>當月總工資</b>自動從「加班費計算」彙整（總工時 '+(c.ptHours||0)+' 小時，含加班 '+(c.ptOtHours||0)+' 小時）'
+      : '<b>當月總工資</b>請先到加班費計算匯入打卡後自動帶入（目前：無資料）';
+    html.push('<div class="pay-sub">'+srcNote+'</div>');
+    html.push(payRow('當月總工資', c.ptWage));
+    html.push(payRow('總額', c.total, {rowCls:'total'}));
     html.push(payRow('勞健保', c.insurance));
+    html.push(payRow('實領', c.realPay, {rowCls:'final'}));
     html.push('<textarea class="note-area" placeholder="加班日期時數 / 其他備註..." onchange="onNoteChange(\''+emp.id+'\',this.value)">'+(c.note||'')+'</textarea>');
     html.push('</div>');
     box.innerHTML = html.join('');
@@ -1099,7 +1111,7 @@ function getYMLabel(){
 }
 
 // ============================================
-// 從加班費系統匯入（遲到天數 / 加班時數）
+// 從加班費系統匯入（正職：遲到/加班/事假/病假；PT：月工資/工時）
 // ============================================
 function doImportOvertime(showToast){
   var ym = getSelectedYM();
@@ -1113,16 +1125,39 @@ function doImportOvertime(showToast){
       return 0;
     }
     var data = JSON.parse(raw);
-    var emps = data.employees || {};
+    var empsReg = data.employees || {};
+    var empsPT  = data.pt || {};
     var matched = 0;
+
     ALL_EMPLOYEES.forEach(function(e){
-      var hit = emps[e.name] || emps[e.nickname||''] || null;
+      if(isPT(e)){
+        var hitPT = empsPT[e.name] || empsPT[e.nickname||''] || null;
+        if(!hitPT) return;
+        // 寫入 PT 月度工資快取（STATE.ptWage）+ 加班時數
+        if(!STATE.ptWage) STATE.ptWage = {};
+        STATE.ptWage[e.id] = {
+          hours:   hitPT.hours   || 0,
+          otHours: hitPT.otHours || 0,
+          wage:    hitPT.wage    || 0
+        };
+        STATE.detail[e.id].otHours = hitPT.otHours || 0;
+        matched++;
+        return;
+      }
+      // 正職/主管：讀 overtime / late / sick / personal
+      var hit = empsReg[e.name] || empsReg[e.nickname||''] || null;
       if(!hit) return;
       if(typeof hit.overtimeMin === 'number'){
         STATE.detail[e.id].otHours = Math.round(hit.overtimeMin / 60 * 10) / 10;
       }
-      if(typeof hit.lateDays === 'number'){
-        STATE.s2[e.id].late = hit.lateDays;
+      if(typeof hit.lateDays === 'number')    STATE.s2[e.id].late     = hit.lateDays;
+      if(typeof hit.sickDays === 'number'){
+        STATE.s2[e.id].sick = hit.sickDays;
+        STATE.detail[e.id].sickDays = hit.sickDays;
+      }
+      if(typeof hit.personalDays === 'number'){
+        STATE.s2[e.id].personal = hit.personalDays;
+        STATE.detail[e.id].personalDays = hit.personalDays;
       }
       matched++;
     });

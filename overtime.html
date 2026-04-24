@@ -1530,23 +1530,69 @@ function runAnalysis(){
 
 // 把分析結果以「每人一筆」的方式寫進 localStorage，供 salary.html 匯入
 function persistSalarySummary(y, m){
-  if(!ANALYSIS || !ANALYSIS.length) return;
-  var ym = y + '-' + String(m).padStart(2,'0');
+  // ANALYSIS 或 PT_ANALYSIS 任一有資料都值得存；取較早產出的 ym 當主
+  var hasAnalysis = ANALYSIS && ANALYSIS.length;
+  var hasPT = (typeof PT_ANALYSIS !== 'undefined' && PT_ANALYSIS && PT_ANALYSIS.length);
+  if(!hasAnalysis && !hasPT) return;
+
+  var ym;
+  if(y && m) ym = y + '-' + String(m).padStart(2,'0');
+  else {
+    // 從現有資料推測 ym（取第一筆日期的年月）
+    var sample = (hasAnalysis && ANALYSIS[0] && ANALYSIS[0].date)
+              || (hasPT && PT_ANALYSIS[0] && PT_ANALYSIS[0].date);
+    if(!sample) return;
+    ym = sample.substring(0, 7);
+  }
+
+  // 正職 / 主管資料：含 overtime、late、miss、sick、personal
   var byEmp = {};
-  ANALYSIS.forEach(function(r){
-    var n = r.name;
-    if(!byEmp[n]) byEmp[n] = { overtimeMin:0, lateDays:0, missDays:0 };
-    byEmp[n].overtimeMin += (r.overtimeMin || 0);
-    if(r.lateMin > 0) byEmp[n].lateDays += 1;
-    if(r.missing) byEmp[n].missDays += 1;
-  });
+  if(hasAnalysis){
+    ANALYSIS.forEach(function(r){
+      var n = r.name;
+      if(!byEmp[n]) byEmp[n] = { overtimeMin:0, lateDays:0, missDays:0, sickDays:0, personalDays:0 };
+      byEmp[n].overtimeMin += (r.overtimeMin || 0);
+      if(r.lateMin > 0) byEmp[n].lateDays += 1;
+      if(r.missing) byEmp[n].missDays += 1;
+      if(r.leaveType === 'sick')     byEmp[n].sickDays += 1;
+      if(r.leaveType === 'personal') byEmp[n].personalDays += 1;
+    });
+  }
+
+  // PT 資料：依人彙總 當月總工時 / 加班時 / 總工資
+  var byPT = {};
+  if(hasPT){
+    PT_ANALYSIS.forEach(function(r){
+      var n = r.name;
+      if(!byPT[n]) byPT[n] = { hours:0, otHours:0, wage:0, hourlyWage: r.hourlyWage || 0 };
+      byPT[n].hours   += (r.hours || 0);
+      byPT[n].otHours += (r.otHours || 0);
+      byPT[n].wage    += (r.wage || 0);
+    });
+    // 四捨五入避免小數點雜訊
+    Object.keys(byPT).forEach(function(n){
+      byPT[n].hours   = Math.round(byPT[n].hours * 10) / 10;
+      byPT[n].otHours = Math.round(byPT[n].otHours * 10) / 10;
+      byPT[n].wage    = Math.round(byPT[n].wage);
+    });
+  }
+
+  // 合併舊資料（如果兩個 flow 分別寫入時不互蓋）
+  var existing = {};
+  try {
+    var rawOld = localStorage.getItem('cd_ot_summary_' + (STORE || 'nostore') + '_' + ym);
+    if(rawOld) existing = JSON.parse(rawOld) || {};
+  } catch(e){}
+
   var payload = {
     ym: ym,
     store: STORE || 'nostore',
     storeName: STORE_NAME,
     savedAt: new Date().toISOString(),
-    employees: byEmp
+    employees: hasAnalysis ? byEmp : (existing.employees || {}),
+    pt:        hasPT       ? byPT  : (existing.pt || {})
   };
+
   try {
     localStorage.setItem('cd_ot_summary_' + (STORE || 'nostore') + '_' + ym, JSON.stringify(payload));
   } catch(e){ console.warn('persistSalarySummary fail', e); }
@@ -2109,6 +2155,7 @@ function runPtAnalysis(){
   PT_ANALYSIS = results;
   renderPtSummary();
   renderPtResults();
+  persistSalarySummary(); // 也把 PT 的月度工資寫入供 salary.html 抓
   document.getElementById('btn-pt-export').disabled = !results.length;
   document.getElementById('pt-summary-grid').style.display = 'grid';
 }
