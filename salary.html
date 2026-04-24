@@ -256,10 +256,7 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
   <!-- 6. 評分表獎金 -->
   <div class="section">
     <h3><span class="step-num">7</span><span class="icon">📊</span>評分表獎金<span class="hint">正職專屬，來自匿名表每項最高分 $200</span></h3>
-    <div style="margin-bottom:8px">
-      <button class="btn btn-ghost btn-sm" onclick="importSurveyBonus()">🔄 重新從匿名表抓取</button>
-      <span id="survey-import-status" style="margin-left:8px;font-size:11.5px;color:var(--ink-3)"></span>
-    </div>
+    <div id="survey-import-status" style="font-size:11.5px;color:var(--ink-3);margin-bottom:8px"></div>
     <table class="grid">
       <thead><tr><th>員工</th><th style="width:160px">獎金</th></tr></thead>
       <tbody id="tbody-s6"></tbody>
