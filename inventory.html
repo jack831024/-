@@ -1067,6 +1067,9 @@ async function saveInv(){
   var t = new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
   document.getElementById('saved-tag').textContent = '✓ 已儲存於 '+t+'（本機）';
 
+  // ⚡ localStorage 剛寫完就立刻更新月度表 + 廠商成本，不等雲端
+  try{ renderBusinessSummary(); }catch(e){}
+
   // Step 3: 雲端同步 — 每個日期各自 upsert；editDate 若沒品項了，送空陣列以清除該日雲端資料
   var url = localStorage.getItem('cd_inv_sync_url');
   if(url){
@@ -1217,7 +1220,14 @@ async function loadHistory(){
   var allRecords = localRecords.slice();
   var src = 'local';
 
-  // 若有設定雲端 URL，也從雲端拉
+  // ⚡ 立即用本機資料先渲染一次，讓「所有廠商成本」馬上反映變化
+  //    雲端資料回來後會再覆蓋刷新
+  srcChip.className = 'src-chip ' + src;
+  srcChip.textContent = '本機';
+  renderHistoryTable(box, stat, allRecords);
+  renderBusinessSummary();
+
+  // 若有設定雲端 URL，再從雲端拉補齊
   var url = localStorage.getItem('cd_inv_sync_url');
   if(url){
     try{
@@ -1243,15 +1253,14 @@ async function loadHistory(){
         Object.keys(cloudMap).forEach(function(k){ merged[k] = cloudMap[k]; });
         allRecords = Object.keys(merged).map(function(k){ return merged[k]; });
         src = 'cloud';
+
+        srcChip.className = 'src-chip ' + src;
+        srcChip.textContent = '雲端 + 本機';
+        renderHistoryTable(box, stat, allRecords);
+        renderBusinessSummary();
       }
     }catch(e){ console.warn('雲端讀取失敗', e); }
   }
-
-  srcChip.className = 'src-chip ' + src;
-  srcChip.textContent = src === 'cloud' ? '雲端 + 本機' : '本機';
-
-  renderHistoryTable(box, stat, allRecords);
-  renderBusinessSummary();
 }
 
 function scanLocalInventory(){
