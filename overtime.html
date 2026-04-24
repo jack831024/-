@@ -2000,15 +2000,13 @@ function runPtAnalysis(){
     return;
   }
   savePtList();
-  var otHours    = PT_OT_HOURS;
-  var otMult     = PT_OT_MULT;
-  var snap15     = PT_SNAP15;
-  var wageByName = getPtWageMap(); // { normalizedName: wage }
+  var otHours = PT_OT_HOURS;
+  var otMult  = PT_OT_MULT;
+  var snap15  = PT_SNAP15;
 
-  // 檢查是否有 PT 沒填時薪，列出來提示
+  // 檢查是否有 PT 沒填時薪
   var missingWage = readPtListFromDom().filter(function(p){
-    var w = Number(p.wage) || 0;
-    return p.name && w <= 0;
+    return p.name && !(Number(p.wage) > 0);
   });
   if(missingWage.length){
     var go = confirm('⚠️ 以下 ' + missingWage.length + ' 位 PT 還沒填時薪：\n\n  '
@@ -2017,67 +2015,89 @@ function runPtAnalysis(){
     if(!go) return;
   }
 
-  // 班表姓名集合：FT vs PT 分開（schedule PT 仍算 PT，要保留處理）
-  var ftNames = {};
-  var schedPtNames = {};
-  if(SCHEDULE && SCHEDULE.rows){
-    SCHEDULE.rows.forEach(function(r){
-      var k = normalizeName(r.name);
-      if(!k) return;
-      if(isScheduleRowPT(r)) schedPtNames[k] = r.name;
-      else ftNames[k] = true;
-    });
-  }
-
-  // 打卡按 (姓名, 日期) 分組
-  var groups = {};
+  // 建立打卡索引：{ normalizedName: { 'YYYY-MM-DD': [times...] } }
+  var punchIdx = {};
   PUNCHES.rows.forEach(function(p){
     var k = normalizeName(p.name);
     if(!k) return;
-    // 已在 FT 班表的人不算 PT（schedule PT 不會在 ftNames 裡，會通過）
-    if(ftNames[k]) return;
-    // 中文名打卡 → 必須是「班表 PT 列」的人才處理（避免 FT 中文名打不上對照被誤分）
-    if(!isEnglishName(p.name) && !schedPtNames[k]) return;
-    // 已被內建「中文 → 英文」對照表標為 FT 員工 → 不算 PT
-    if(isPunchMappedToSchedule(p.name)) return;
-    var key = p.name + '|' + p.date;
-    if(!groups[key]) groups[key] = { name:p.name, date:p.date, punches:[] };
-    groups[key].punches.push(p.time);
+    if(!punchIdx[k]) punchIdx[k] = {};
+    if(!punchIdx[k][p.date]) punchIdx[k][p.date] = [];
+    punchIdx[k][p.date].push(p.time);
   });
 
-  // 沒有任何 PT 候選
-  var keys = Object.keys(groups);
-  if(!keys.length){
+  // 以 PT 名單為主（包含班表 PT 列 + 打卡 orphan），逐人找打卡算工時
+  var ptList = readPtListFromDom();
+  if(!ptList.length){
     document.getElementById('pt-results-container').innerHTML =
-      '<div class="empty-state"><span class="big">✨</span><div>沒有找到 PT 員工。<br>'
-      + '<span style="font-size:11.5px;color:#94a3b8">PT = 打卡資料中有出現、但班表中沒有的人。'
-      + (SCHEDULE ? '' : '<br>（目前未載入班表，所有打卡的人都會被視為已排班員工，請先載入班表再分析 PT）')
+      '<div class="empty-state"><span class="big">✨</span><div>PT 名單是空的。<br>'
+      + '<span style="font-size:11.5px;color:#94a3b8">'
+      + '載入班表時系統會自動偵測「cell 是時間非 ABC」的員工並加入 PT 名單。<br>'
+      + '也可以手動按「+ 手動新增 PT」新增。'
       + '</span></div></div>';
     document.getElementById('pt-summary-grid').style.display = 'none';
     return;
   }
 
-  var results = keys.map(function(k){
-    var g = groups[k];
-    var sortedPunches = g.punches.slice().sort();
-    var workMin = calcWorkMin(sortedPunches, snap15);
-    var hours   = workMin / 60;
-    var thHours = otHours;
-    var normalH = Math.min(hours, thHours);
-    var otH     = Math.max(0, hours - thHours);
-    var personWage = wageByName[normalizeName(g.name)] || 0; // 沒填時薪 → 0
-    var pay     = normalH * personWage + otH * personWage * otMult;
-    return {
-      name: g.name,
-      date: g.date,
-      punches: sortedPunches,
-      workMin: workMin,
-      hours: hours,
-      normalHours: normalH,
-      otHours: otH,
-      hourlyWage: personWage,
-      wage: pay
-    };
+  var results = [];
+  ptList.forEach(function(pt){
+    var ptName = String(pt.name || '').trim();
+    if(!ptName) return;
+    var personWage = Number(pt.wage) || 0;
+
+    // 找對應的打卡 key：先試原名 normalize、再試 NAME_MAP 對照後的英文名
+    var keysToTry = [];
+    var nz = normalizeName(ptName);
+    if(nz) keysToTry.push(nz);
+    var mapped = resolvePunchKeyByName(ptName);
+    if(mapped && keysToTry.indexOf(mapped) < 0) keysToTry.push(mapped);
+
+    // 合併所有 key 的打卡（通常只會命中一個）
+    var datePunches = {};
+    keysToTry.forEach(function(k){
+      var idx = punchIdx[k];
+      if(!idx) return;
+      Object.keys(idx).forEach(function(date){
+        if(!datePunches[date]) datePunches[date] = [];
+        datePunches[date] = datePunches[date].concat(idx[date]);
+      });
+    });
+
+    // 沒找到打卡 → 記一筆 0 小時讓 PT 仍出現在結果（顯示為「無打卡」）
+    if(Object.keys(datePunches).length === 0){
+      results.push({
+        name: ptName,
+        date: '—',
+        punches: [],
+        workMin: 0,
+        hours: 0,
+        normalHours: 0,
+        otHours: 0,
+        hourlyWage: personWage,
+        wage: 0,
+        note: '無對應打卡'
+      });
+      return;
+    }
+
+    Object.keys(datePunches).forEach(function(date){
+      var sortedPunches = datePunches[date].slice().sort();
+      var workMin = calcWorkMin(sortedPunches, snap15);
+      var hours   = workMin / 60;
+      var normalH = Math.min(hours, otHours);
+      var otH     = Math.max(0, hours - otHours);
+      var pay     = normalH * personWage + otH * personWage * otMult;
+      results.push({
+        name: ptName,
+        date: date,
+        punches: sortedPunches,
+        workMin: workMin,
+        hours: hours,
+        normalHours: normalH,
+        otHours: otH,
+        hourlyWage: personWage,
+        wage: pay
+      });
+    });
   });
 
   results.sort(function(a,b){
