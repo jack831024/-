@@ -65,6 +65,10 @@ h1{font-size:26px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 .current-store-tag.chudian{background:linear-gradient(135deg,#f97316,#ea580c)}
 .current-store-tag.shicheng{background:linear-gradient(135deg,#8b5cf6,#7c3aed)}
 
+/* 選完店進入填表畫面時，隱藏底部的主管專用區（僅在首頁顯示） */
+body.view-form-active .divider,
+body.view-form-active #mgr-card{display:none}
+
 .field{margin-bottom:1rem}
 .field:last-child{margin-bottom:0}
 .label{display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px}
@@ -80,15 +84,15 @@ h1{font-size:26px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 .cat-title{font-size:15px;font-weight:700;color:var(--ink)}
 .cat-desc{font-size:12px;color:var(--ink-3);margin-top:3px;line-height:1.55}
 
-.rate-grid{display:grid;grid-template-columns:72px repeat(5,1fr);gap:6px 4px;align-items:center}
-.rate-head{font-size:11px;color:var(--ink-3);text-align:center;padding:4px 0;font-weight:500}
+.rate-grid{display:grid;grid-template-columns:58px repeat(10,1fr);gap:5px 2px;align-items:center}
+.rate-head{font-size:10.5px;color:var(--ink-3);text-align:center;padding:3px 0;font-weight:500;line-height:1.2}
 .rate-head:first-child{text-align:left}
 .rate-head .best{color:var(--ok);font-weight:700}
 .rate-head .worst{color:var(--err);font-weight:700}
-.rate-emp{font-size:13px;font-weight:600;color:var(--ink);padding:4px 0}
-.rate-cell{display:flex;justify-content:center;align-items:center;padding:6px 0}
+.rate-emp{font-size:12.5px;font-weight:600;color:var(--ink);padding:4px 0}
+.rate-cell{display:flex;justify-content:center;align-items:center;padding:5px 0}
 .rate-cell input[type=radio]{display:none}
-.rate-cell label{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:10px;border:1.5px solid var(--line);background:#fff;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink-2);transition:all .15s}
+.rate-cell label{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;border:1.5px solid var(--line);background:#fff;cursor:pointer;font-size:11.5px;font-weight:600;color:var(--ink-2);transition:all .15s}
 .rate-cell label:hover{border-color:var(--brand);color:var(--brand)}
 .rate-cell input[type=radio]:checked + label{background:var(--brand);border-color:var(--brand);color:#fff;transform:scale(1.05);box-shadow:0 4px 10px -4px rgba(139,92,246,.6)}
 
@@ -164,11 +168,11 @@ h1{font-size:26px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 .score-bar .lbl{width:30px;color:var(--ink-2);font-weight:600;font-size:11px}
 .score-bar .bar{flex:1;height:8px;background:#f1f5f9;border-radius:99px;overflow:hidden}
 .score-bar .bar-fill{height:100%;border-radius:99px;transition:width .3s}
-.score-bar.s5 .bar-fill{background:#10b981}
-.score-bar.s4 .bar-fill{background:#3b82f6}
-.score-bar.s3 .bar-fill{background:#f59e0b}
-.score-bar.s2 .bar-fill{background:#f97316}
-.score-bar.s1 .bar-fill{background:#ef4444}
+.score-bar.s10 .bar-fill,.score-bar.s9 .bar-fill{background:#10b981}
+.score-bar.s8 .bar-fill,.score-bar.s7 .bar-fill{background:#3b82f6}
+.score-bar.s6 .bar-fill,.score-bar.s5 .bar-fill{background:#f59e0b}
+.score-bar.s4 .bar-fill,.score-bar.s3 .bar-fill{background:#f97316}
+.score-bar.s2 .bar-fill,.score-bar.s1 .bar-fill{background:#ef4444}
 .score-bar .cnt{width:32px;text-align:right;color:var(--ink);font-weight:600;font-size:11.5px}
 .score-bar .cnt.zero{color:var(--ink-3);font-weight:400}
 .emp-avg{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--ink-2)}
@@ -208,10 +212,11 @@ h1{font-size:26px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
   body{padding:0.75rem}
   .card{padding:1.1rem;border-radius:14px}
   .cat-block{padding:0.85rem 0.85rem 0.5rem}
-  .rate-grid{grid-template-columns:60px repeat(5,1fr);gap:4px 2px}
-  .rate-cell label{width:28px;height:28px;font-size:12px}
-  .rate-head{font-size:10px}
-  .rate-emp{font-size:12.5px}
+  .rate-grid{grid-template-columns:42px repeat(10,1fr);gap:3px 1px}
+  .rate-cell label{width:22px;height:22px;font-size:10.5px;border-radius:6px}
+  .rate-head{font-size:9.5px;padding:2px 0}
+  .rate-emp{font-size:11.5px;padding:2px 0}
+  .rate-cell{padding:3px 0}
   h1{font-size:22px}
   .result-table{font-size:12px}
   .result-table th, .result-table td{padding:8px 4px}
@@ -496,6 +501,7 @@ function selectStore(storeId){
   // 切換畫面
   $('view-picker').style.display = 'none';
   $('view-form').style.display = 'block';
+  document.body.classList.add('view-form-active'); // 隱藏底部主管區
 
   // 渲染評分區
   renderCategories();
@@ -507,6 +513,7 @@ function goToPicker(){
   currentFormStore = null;
   $('view-picker').style.display = 'block';
   $('view-form').style.display = 'none';
+  document.body.classList.remove('view-form-active'); // 恢復主管區
   $('page-title').textContent = '匿名表';
   $('page-sub').textContent = '請選擇要填寫的店';
   window.scrollTo({ top:0, behavior:'smooth' });
@@ -525,14 +532,19 @@ function renderCategories(){
     var descHtml = cat.desc ? '<div class="cat-desc">'+esc(cat.desc)+'</div>' : '';
     var grid = [
       '<div class="rate-head"></div>',
-      '<div class="rate-head"><span class="best">5</span><br><span style="font-size:10px">超棒</span></div>',
+      '<div class="rate-head"><span class="best">10</span></div>',
+      '<div class="rate-head">9</div>',
+      '<div class="rate-head">8</div>',
+      '<div class="rate-head">7</div>',
+      '<div class="rate-head">6</div>',
+      '<div class="rate-head">5</div>',
       '<div class="rate-head">4</div>',
-      '<div class="rate-head">3<br><span style="font-size:10px">待加強</span></div>',
+      '<div class="rate-head">3</div>',
       '<div class="rate-head">2</div>',
       '<div class="rate-head"><span class="worst">1</span></div>'
     ].join('');
     var rows = emps.map(function(emp){
-      var cells = [5,4,3,2,1].map(function(v){
+      var cells = [10,9,8,7,6,5,4,3,2,1].map(function(v){
         var inputId = 'r_'+catId+'_'+emp+'_'+v;
         var name = 'r_'+catId+'_'+emp;
         return '<div class="rate-cell">'
@@ -776,7 +788,7 @@ function renderManagerResults(records){
   }
 
   // 獎金規則
-  var BONUS_THRESHOLD = 4.5;   // 平均「大於等於」4.5
+  var BONUS_THRESHOLD = 9.0;   // 平均「大於等於」9（10 分制）
   var BONUS_AMOUNT    = 100;   // 每項獎金金額
 
   // 先算每個員工的獎金與得分分布，並渲染每項卡片
@@ -788,7 +800,7 @@ function renderManagerResults(records){
 
   var catsHtml = CATEGORIES.map(function(cat, idx){
     var cols = emps.map(function(emp){
-      var counts = {1:0, 2:0, 3:0, 4:0, 5:0};
+      var counts = {1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0,10:0};
       var sum = 0, cnt = 0;
       records.forEach(function(rec){
         var v = rec.ratings && rec.ratings[cat.id] && rec.ratings[cat.id][emp];
@@ -809,9 +821,9 @@ function renderManagerResults(records){
       }
 
       // 找最大值當 bar 的 100%（至少 1 避免除 0）
-      var max = Math.max(counts[1], counts[2], counts[3], counts[4], counts[5], 1);
+      var max = Math.max(counts[1],counts[2],counts[3],counts[4],counts[5],counts[6],counts[7],counts[8],counts[9],counts[10],1);
 
-      var bars = [5,4,3,2,1].map(function(score){
+      var bars = [10,9,8,7,6,5,4,3,2,1].map(function(score){
         var c = counts[score];
         var pct = (c / max * 100).toFixed(0);
         var cntCls = c === 0 ? 'cnt zero' : 'cnt';
