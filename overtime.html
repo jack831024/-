@@ -128,6 +128,8 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
 .tag.ot{background:#fef3c7;color:#b45309}
 .tag.late{background:#fee2e2;color:#b91c1c}
 .tag.miss{background:#e0e7ff;color:#4338ca}
+.tag.sick{background:#ffe4e6;color:#be123c}
+.tag.personal{background:#f3e8ff;color:#7e22ce}
 .tag.ok{background:#d1fae5;color:#065f46}
 
 .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
@@ -270,6 +272,8 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
         <button class="filter-chip" data-filter="ot">加班<span class="chip-count" id="cnt-ot">0</span></button>
         <button class="filter-chip" data-filter="late">遲到<span class="chip-count" id="cnt-late">0</span></button>
         <button class="filter-chip" data-filter="miss">缺卡<span class="chip-count" id="cnt-miss">0</span></button>
+        <button class="filter-chip" data-filter="sick">病假<span class="chip-count" id="cnt-sick">0</span></button>
+        <button class="filter-chip" data-filter="personal">事假<span class="chip-count" id="cnt-personal">0</span></button>
       </div>
     </div>
     <div class="summary-grid" id="summary-grid" style="display:none">
@@ -277,6 +281,8 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
       <div class="sum-card ot"><div class="k">加班總時數</div><div class="v" id="s-ot">0<span class="u"> 小時</span></div></div>
       <div class="sum-card late"><div class="k">遲到次數</div><div class="v" id="s-late">0</div></div>
       <div class="sum-card miss"><div class="k">缺卡日數</div><div class="v" id="s-miss">0</div></div>
+      <div class="sum-card" style="border-left:3px solid #f43f5e"><div class="k">病假</div><div class="v" id="s-sick">0<span class="u"> 天</span></div></div>
+      <div class="sum-card" style="border-left:3px solid #a855f7"><div class="k">事假</div><div class="v" id="s-personal">0<span class="u"> 天</span></div></div>
     </div>
     <div id="results-container">
       <div class="empty-state">
@@ -1390,9 +1396,26 @@ function runAnalysis(){
       if(!d) return;
       var code = String(days[dStr]||'').trim();
       if(!code) return;
+      var date = y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+
+      // 病假 / 事假：直接記錄，不做 OT/遲到/缺卡判定
+      var leaveType = null;
+      if(/^(病|病假|sick|Sick|S)$/.test(code)) leaveType = 'sick';
+      else if(/^(事|事假|personal|Personal|P)$/.test(code)) leaveType = 'personal';
+      if(leaveType){
+        results.push({
+          name:name, date:date, code:code,
+          shiftName: leaveType==='sick' ? '病假' : '事假',
+          expectShift:'', punches:[], punchesEff:[], required:0,
+          overtimeMin:0, lateMin:0, missing:false,
+          leaveType: leaveType,
+          flags: [leaveType], note:''
+        });
+        return;
+      }
+
       var shift = shiftMap[code];
       // 未定義的班別代碼 → 仍記一筆，標成 unknown
-      var date = y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
       // 用內建的「班表中文名 → 打卡英文名」對照查打卡
       var pk = resolvePunchKeyByName(name);
       var punches = (punchMap[pk+'|'+date]||[]).slice().sort();
@@ -1668,21 +1691,26 @@ function isEnglishName(n){
 
 function renderSummary(){
   if(!ANALYSIS){ return; }
-  var pplSet = {}, otMin = 0, lateCnt = 0, missCnt = 0;
-  var cOt=0, cLate=0, cMiss=0;
+  var pplSet = {}, otMin = 0, lateCnt = 0, missCnt = 0, sickCnt = 0, personalCnt = 0;
   ANALYSIS.forEach(function(r){
     pplSet[r.name] = 1;
-    if(r.overtimeMin > 0){ otMin += r.overtimeMin; cOt++; }
-    if(r.lateMin > 0){ lateCnt++; cLate++; }
-    if(r.missing){ missCnt++; cMiss++; }
+    if(r.overtimeMin > 0){ otMin += r.overtimeMin; }
+    if(r.lateMin > 0){ lateCnt++; }
+    if(r.missing){ missCnt++; }
+    if(r.leaveType === 'sick'){ sickCnt++; }
+    else if(r.leaveType === 'personal'){ personalCnt++; }
   });
-  document.getElementById('s-ppl').textContent  = Object.keys(pplSet).length;
-  document.getElementById('s-ot').innerHTML     = (otMin/60).toFixed(1)+'<span class="u"> 小時</span>';
-  document.getElementById('s-late').textContent = lateCnt;
-  document.getElementById('s-miss').textContent = missCnt;
-  document.getElementById('cnt-ot').textContent   = ' · '+cOt;
-  document.getElementById('cnt-late').textContent = ' · '+cLate;
-  document.getElementById('cnt-miss').textContent = ' · '+cMiss;
+  document.getElementById('s-ppl').textContent      = Object.keys(pplSet).length;
+  document.getElementById('s-ot').innerHTML         = (otMin/60).toFixed(1)+'<span class="u"> 小時</span>';
+  document.getElementById('s-late').textContent     = lateCnt;
+  document.getElementById('s-miss').textContent     = missCnt;
+  document.getElementById('s-sick').innerHTML       = sickCnt+'<span class="u"> 天</span>';
+  document.getElementById('s-personal').innerHTML   = personalCnt+'<span class="u"> 天</span>';
+  document.getElementById('cnt-ot').textContent       = ' · '+(ANALYSIS.filter(function(x){return x.overtimeMin>0;}).length);
+  document.getElementById('cnt-late').textContent     = ' · '+lateCnt;
+  document.getElementById('cnt-miss').textContent     = ' · '+missCnt;
+  document.getElementById('cnt-sick').textContent     = ' · '+sickCnt;
+  document.getElementById('cnt-personal').textContent = ' · '+personalCnt;
 }
 
 function renderResults(){
@@ -1705,9 +1733,11 @@ function renderResults(){
     '<th>打卡</th><th>遲到</th><th>加班</th><th>標記</th></tr></thead><tbody>'];
   filtered.forEach(function(r){
     var tags = r.flags.map(function(f){
-      if(f === 'ot')   return '<span class="tag ot">加班</span>';
-      if(f === 'late') return '<span class="tag late">遲到</span>';
-      if(f === 'miss') return '<span class="tag miss">缺卡</span>';
+      if(f === 'ot')       return '<span class="tag ot">加班</span>';
+      if(f === 'late')     return '<span class="tag late">遲到</span>';
+      if(f === 'miss')     return '<span class="tag miss">缺卡</span>';
+      if(f === 'sick')     return '<span class="tag sick">病假</span>';
+      if(f === 'personal') return '<span class="tag personal">事假</span>';
       return '<span class="tag ok">正常</span>';
     }).join(' ');
     html.push('<tr>',
@@ -1742,14 +1772,17 @@ document.getElementById('filter-chips').addEventListener('click', function(e){
 // ============================================
 function exportCsv(){
   if(!ANALYSIS || !ANALYSIS.length) return;
-  var headers = ['日期','姓名','班別代碼','班別名稱','應時段','打卡次數','打卡時間','遲到(分)','加班(分)','缺卡','備註'];
+  var headers = ['日期','姓名','班別代碼','班別名稱','應時段','打卡次數','打卡時間','遲到(分)','加班(分)','缺卡','病假','事假','備註'];
   var lines = [headers.join(',')];
   ANALYSIS.forEach(function(r){
     var cells = [
       r.date, r.name, r.code, r.shiftName||'', r.expectShift||'',
       r.punches.length+'/'+(r.required||0),
       '"'+r.punches.join(' / ')+'"',
-      r.lateMin||0, r.overtimeMin||0, r.missing?'Y':'', r.note||''
+      r.lateMin||0, r.overtimeMin||0, r.missing?'Y':'',
+      r.leaveType==='sick' ? 'Y' : '',
+      r.leaveType==='personal' ? 'Y' : '',
+      r.note||''
     ];
     lines.push(cells.join(','));
   });
