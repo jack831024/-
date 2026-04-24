@@ -267,6 +267,7 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
     <div class="analysis-toolbar">
       <button class="btn btn-primary" id="btn-analyze" onclick="runAnalysis()" disabled>🧮 開始分析</button>
       <button class="btn btn-ghost" id="btn-export" onclick="exportCsv()" disabled>⬇️ 匯出 CSV</button>
+      <button class="btn btn-ghost" id="btn-save-cloud" onclick="saveToCloud()" disabled title="把 FT + PT 分析結果寫進班表試算表的「加班費-YYYY-MM」分頁">💾 儲存到雲端</button>
       <div class="spacer"></div>
       <div class="filter-chips" id="filter-chips" style="display:none">
         <button class="filter-chip active" data-filter="all">全部</button>
@@ -1529,6 +1530,7 @@ function runAnalysis(){
   renderResults();
   persistSalarySummary(y, m);
   document.getElementById('btn-export').disabled = !results.length;
+  document.getElementById('btn-save-cloud').disabled = !results.length;
   document.getElementById('filter-chips').style.display = 'flex';
   document.getElementById('summary-grid').style.display = 'grid';
 }
@@ -1828,6 +1830,62 @@ document.getElementById('filter-chips').addEventListener('click', function(e){
 // ============================================
 // 匯出 CSV
 // ============================================
+// 💾 把 FT + PT 分析結果 POST 到該店的 Apps Script，寫進班表試算表的
+//   「加班費-YYYY-MM」分頁。若後端未更新，會顯示「請先更新 Apps Script」錯誤。
+function saveToCloud(){
+  if(!ANALYSIS || !ANALYSIS.length){
+    alert('請先完成 Step 4「開始分析」再儲存');
+    return;
+  }
+  var url = getSyncUrl();
+  if(!url){
+    alert('尚未設定該店的 Apps Script 網址');
+    return;
+  }
+
+  var btn = document.getElementById('btn-save-cloud');
+  var original = btn.textContent;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 儲存中...';
+
+  var body = {
+    action: 'saveAnalysis',
+    store:  STORE,
+    month:  getSelectedYM(),
+    ftRows: ANALYSIS || [],
+    ptRows: PT_ANALYSIS || [],
+    savedBy: sessionStorage.getItem('cd_user') || STORE_NAME || ''
+  };
+
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body)
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(data.error){
+        var msg = data.error;
+        if(msg.indexOf('unknown action') >= 0){
+          msg = '後端 Apps Script 尚未更新到支援儲存功能的版本。\n\n'
+              + '請到該店 Apps Script → 更新成新版 加班費-script.gs → '
+              + '部署 → 管理部署 → ✏️ → 版本選「新版本」→ 部署';
+        }
+        throw new Error(msg);
+      }
+      alert('✅ 已儲存到雲端分頁：' + data.sheet +
+            '\n正職 ' + data.ftCount + ' 筆、PT ' + data.ptCount + ' 筆' +
+            '\n儲存時間：' + (data.savedAt || new Date().toISOString()).substring(0, 19).replace('T',' '));
+    })
+    .catch(function(err){
+      alert('❌ 儲存失敗：\n' + (err.message || '未知錯誤'));
+    })
+    .finally(function(){
+      btn.disabled = !(ANALYSIS && ANALYSIS.length);
+      btn.textContent = original;
+    });
+}
+
 function exportCsv(){
   if(!ANALYSIS || !ANALYSIS.length) return;
   var headers = ['日期','姓名','班別代碼','班別名稱','應時段','打卡次數','打卡時間','遲到(分)','加班(分)','缺卡','病假','事假','備註'];

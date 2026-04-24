@@ -69,10 +69,118 @@ function doPost(e) {
     if (body.action === 'getSchedule') {
       return json(getSchedule(body));
     }
+    if (body.action === 'saveAnalysis') {
+      return json(saveAnalysis(body));
+    }
     return json({ error: 'unknown action: ' + body.action });
   } catch (err) {
     return json({ error: String(err) });
   }
+}
+
+// ============================================
+// 💾 儲存加班費分析結果到雲端 Sheet
+//   會在班表試算表裡建立（或覆蓋）一個分頁「加班費-YYYY-MM」
+//   params: { store, month, ftRows, ptRows, savedBy }
+// ============================================
+function saveAnalysis(params) {
+  var store = params.store || '';
+  var month = params.month || '';  // 'YYYY-MM'
+  if (!/^\d{4}-\d{2}$/.test(month)) {
+    return { error: 'month 格式錯誤，需為 YYYY-MM' };
+  }
+  var ftRows = Array.isArray(params.ftRows) ? params.ftRows : [];
+  var ptRows = Array.isArray(params.ptRows) ? params.ptRows : [];
+  var savedBy = params.savedBy || '';
+  var savedAt = new Date();
+
+  var ss = SCHEDULE_SHEET_ID
+    ? SpreadsheetApp.openById(SCHEDULE_SHEET_ID)
+    : SpreadsheetApp.getActiveSpreadsheet();
+
+  // 分頁名稱「加班費-2026-04」。若已存在則覆蓋（避免累積舊資料）
+  var sheetName = '加班費-' + month;
+  var sheet = ss.getSheetByName(sheetName);
+  if (sheet) ss.deleteSheet(sheet);
+  sheet = ss.insertSheet(sheetName);
+
+  // 表頭
+  var headers = ['類型','日期','姓名','班別代碼','班別名稱','應時段','打卡時間','打卡次數',
+                 '遲到(分)','加班(分)','缺卡','病假','事假','工時(小時)','一般時數','加班時數','時薪','工資','備註'];
+  sheet.appendRow(headers);
+  sheet.setFrozenRows(1);
+  sheet.getRange(1, 1, 1, headers.length)
+    .setBackground('#dbeafe').setFontWeight('bold').setHorizontalAlignment('center');
+
+  var rows = [];
+
+  // FT 區塊
+  ftRows.forEach(function(r){
+    rows.push([
+      '正職',
+      r.date || '',
+      r.name || '',
+      r.code || '',
+      r.shiftName || '',
+      r.expectShift || '',
+      (r.punches || []).join(' / '),
+      (r.punches || []).length + '/' + (r.required || 0),
+      Number(r.lateMin) || 0,
+      Number(r.overtimeMin) || 0,
+      r.missing ? 'Y' : '',
+      r.leaveType === 'sick' ? 'Y' : '',
+      r.leaveType === 'personal' ? 'Y' : '',
+      '', '', '', '', '',
+      r.note || ''
+    ]);
+  });
+
+  // PT 區塊
+  ptRows.forEach(function(r){
+    rows.push([
+      'PT',
+      r.date || '',
+      r.name || '',
+      '', '', '',
+      (r.punches || []).join(' / '),
+      (r.punches || []).length + '',
+      '', '', '', '', '',
+      Number(r.hours || 0).toFixed(2),
+      Number(r.normalHours || 0).toFixed(2),
+      Number(r.otHours || 0).toFixed(2),
+      Number(r.hourlyWage) || 0,
+      Math.round(Number(r.wage) || 0),
+      r.note || ''
+    ]);
+  });
+
+  if (rows.length > 0) {
+    sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
+    // 日期欄位設為文字，避免 Google Sheets 自動轉 Date
+    sheet.getRange(2, 2, rows.length, 1).setNumberFormat('@');
+  }
+
+  // 底部加 meta 資料
+  var metaRow = rows.length + 3;
+  sheet.getRange(metaRow, 1).setValue('儲存時間').setFontWeight('bold');
+  sheet.getRange(metaRow, 2).setValue(savedAt.toISOString());
+  sheet.getRange(metaRow, 3).setValue('儲存者').setFontWeight('bold');
+  sheet.getRange(metaRow, 4).setValue(savedBy);
+  sheet.getRange(metaRow + 1, 1).setValue('正職筆數').setFontWeight('bold');
+  sheet.getRange(metaRow + 1, 2).setValue(ftRows.length);
+  sheet.getRange(metaRow + 1, 3).setValue('PT 筆數').setFontWeight('bold');
+  sheet.getRange(metaRow + 1, 4).setValue(ptRows.length);
+
+  // 欄寬美化
+  sheet.autoResizeColumns(1, headers.length);
+
+  return {
+    ok: true,
+    sheet: sheetName,
+    ftCount: ftRows.length,
+    ptCount: ptRows.length,
+    savedAt: savedAt.toISOString()
+  };
 }
 
 // ============================================
