@@ -300,9 +300,28 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
     </table>
   </div>
 
+  <!-- 9. 其他獎金/懲罰（自由新增） -->
+  <div class="section">
+    <h3><span class="step-num">9</span><span class="icon">🎁</span>其他獎金／懲罰<span class="hint">手動新增，正數加薪、負數扣薪</span></h3>
+    <table class="grid">
+      <thead>
+        <tr>
+          <th>員工</th>
+          <th>說明</th>
+          <th style="width:140px">金額</th>
+          <th style="width:50px"></th>
+        </tr>
+      </thead>
+      <tbody id="tbody-other"></tbody>
+    </table>
+    <div class="add-other-row" style="margin-top:10px">
+      <button class="btn btn-ghost btn-sm" onclick="addOtherBonus()">＋ 新增一項</button>
+    </div>
+  </div>
+
   <!-- 勞健保 -->
   <div class="section">
-    <h3><span class="step-num">9</span><span class="icon">🏥</span>勞健保</h3>
+    <h3><span class="step-num">10</span><span class="icon">🏥</span>勞健保</h3>
     <table class="grid">
       <thead><tr><th>員工</th><th style="width:160px">金額(+加/-扣)</th></tr></thead>
       <tbody id="tbody-insurance"></tbody>
@@ -311,7 +330,7 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
 
   <!-- 各別明細 -->
   <div class="section">
-    <h3><span class="step-num">10</span><span class="icon">📑</span>各別明細<span class="hint">選員工查看完整薪資</span></h3>
+    <h3><span class="step-num">11</span><span class="icon">📑</span>各別明細<span class="hint">選員工查看完整薪資</span></h3>
 
     <!-- 總薪水表格 -->
     <div class="sub-label">本月總薪水</div>
@@ -511,6 +530,7 @@ function blankState(){
     roles: {},         // {empId: role}
     detail: {},        // {empId: {dtDays,otHours,sickDays,personalDays,latePunch}}
     ptWage: {},        // {empId: {hours,otHours,wage}} — 從加班費系統匯入的 PT 月度工資
+    otherBonuses: {},  // {entryId: {empId, label, amount}}
     activeEmp: EMPLOYEES[0].id,
     notes: {}          // {empId: 備註字串}
   };
@@ -527,6 +547,14 @@ function blankState(){
     s.detail[e.id] = { dtDays:0, otHours:0, sickDays:0, personalDays:0, restDays:0 };
     s.notes[e.id] = '';
   });
+
+  // 永春店預設：林韋翔 / 洪文祥 / 呂直宸 各 1500 其他獎金
+  if(STORE === 'chudian-yongchun'){
+    [['yc2', '其他獎金'], ['yc3', '其他獎金'], ['yc4', '其他獎金']].forEach(function(p){
+      var id = 'ob_default_' + p[0];
+      s.otherBonuses[id] = { empId: p[0], label: p[1], amount: 1500 };
+    });
+  }
   return s;
 }
 
@@ -542,7 +570,7 @@ function loadState(){
       var obj = JSON.parse(raw);
       // 補齊缺項（避免新增員工後 key 缺失）
       var def = blankState();
-      ['s1','s2','s3','s4','s5','s6','s7','insurance','roles','detail','notes','ptWage'].forEach(function(k){
+      ['s1','s2','s3','s4','s5','s6','s7','insurance','roles','detail','notes','ptWage','otherBonuses'].forEach(function(k){
         obj[k] = Object.assign({}, def[k], obj[k] || {});
       });
       if(!obj.activeEmp) obj.activeEmp = EMPLOYEES[0].id;
@@ -617,6 +645,7 @@ function render(){
   renderS5();
   renderS6();
   renderS7();
+  renderOtherBonus();
   renderInsurance();
   renderRoles();
   renderSummaryTable();
@@ -840,6 +869,59 @@ function renderS7(){
 }
 function onS7Change(id, v){ STATE.s7[id] = (v === '1'); renderS7(); renderDetail(); }
 
+// 9. 其他獎金 / 懲罰
+function renderOtherBonus(){
+  var tb = document.getElementById('tbody-other');
+  if(!tb) return;
+  var entries = STATE.otherBonuses || {};
+  var ids = Object.keys(entries);
+  if(!ids.length){
+    tb.innerHTML = '<tr><td colspan="4" style="color:var(--ink-3);text-align:center;padding:14px">尚無項目，按下方「＋ 新增一項」</td></tr>';
+    return;
+  }
+  // 員工下拉選項
+  var empOpts = ALL_EMPLOYEES.map(function(e){ return '<option value="'+e.id+'">'+e.name+'</option>'; }).join('');
+  var rows = ids.map(function(eid){
+    var ent = entries[eid] || {};
+    var sel = '<select onchange="onOtherChange(\''+eid+'\',\'empId\',this.value)">'
+      + ALL_EMPLOYEES.map(function(e){
+          return '<option value="'+e.id+'"'+(e.id===ent.empId?' selected':'')+'>'+e.name+'</option>';
+        }).join('')
+      + '</select>';
+    return '<tr>'
+      + '<td>'+sel+'</td>'
+      + '<td><input type="text" value="'+(ent.label||'').replace(/"/g,'&quot;')+'" placeholder="說明（例：加班補貼）" onchange="onOtherChange(\''+eid+'\',\'label\',this.value)"></td>'
+      + '<td><input type="number" step="1" value="'+(ent.amount||0)+'" onchange="onOtherChange(\''+eid+'\',\'amount\',this.value)"></td>'
+      + '<td style="text-align:center"><button class="del" onclick="removeOtherBonus(\''+eid+'\')" title="刪除" style="background:none;border:none;cursor:pointer;color:var(--ink-3);font-size:16px;padding:4px 8px;border-radius:6px">×</button></td>'
+      + '</tr>';
+  });
+  tb.innerHTML = rows.join('');
+}
+function addOtherBonus(){
+  if(!STATE.otherBonuses) STATE.otherBonuses = {};
+  var id = 'ob_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+  STATE.otherBonuses[id] = {
+    empId: (EMPLOYEES[0] && EMPLOYEES[0].id) || (ALL_EMPLOYEES[0] && ALL_EMPLOYEES[0].id) || '',
+    label: '',
+    amount: 0
+  };
+  renderOtherBonus();
+  renderDetail();
+}
+function removeOtherBonus(id){
+  if(!STATE.otherBonuses) return;
+  delete STATE.otherBonuses[id];
+  renderOtherBonus();
+  renderDetail();
+}
+function onOtherChange(id, field, v){
+  if(!STATE.otherBonuses || !STATE.otherBonuses[id]) return;
+  if(field === 'amount') v = Math.round(parseFloat(v) || 0);
+  if(field === 'empId' || field === 'label') v = String(v);
+  STATE.otherBonuses[id][field] = v;
+  renderDetail();
+}
+
 // 勞健保
 function renderInsurance(){
   var tb = document.getElementById('tbody-insurance');
@@ -931,6 +1013,16 @@ function calcEmp(e){
   var b_s7 = sup ? s7SupAmt(!!STATE.s7[id]) : s7RegAmt(!!STATE.s7[id]);
   var insurance = STATE.insurance[id] | 0;
   var fixedOT = fixedOTForRole(role);
+  // 其他獎金 / 懲罰：累加該員工所有 entries
+  var otherBonus = 0;
+  if(STATE.otherBonuses){
+    Object.keys(STATE.otherBonuses).forEach(function(eid){
+      var ent = STATE.otherBonuses[eid];
+      if(ent && ent.empId === id){
+        otherBonus += Math.round(parseFloat(ent.amount) || 0);
+      }
+    });
+  }
 
   // 月薪（含全勤+考核+Google+營業額；正職再含小結+開會+評分表）
   var monthPay = BASE_SALARY + b_s2 + b_s3 + b_s4 + b_s5;
@@ -953,20 +1045,25 @@ function calcEmp(e){
   var restDays = STATE.detail[id].restDays || 0;
 
   // 公式基數（正職：月薪；主管：月薪 + 職務加給）
-  //  雙薪       = 基數 / 30 × 天
+  //  雙薪       = 基數 / 30 × 天 (中和/永春 的副店長+正職 改用固定 45000 / 30)
   //  延長加班費 = 基數 / 30 / 8 × 1.34 × 時數
   //  事假 / 休-1 = 基數 / 30 × 天（一天扣一天）
   //  病假       = 基數 / 30 / 2 × 天（半薪）
   var otBase = monthPay + (sup ? rolePay : 0);
   var perDay = otBase / 30;
-  var doubleWage = dtDays * perDay;
+  // 雙薪特例：中和/永春 的「副店長 + 正職」用固定 45000 為基數
+  var dwBase = otBase;
+  if((STORE === 'chudian-zhonghe' || STORE === 'chudian-yongchun') && role !== 'head'){
+    dwBase = 45000;
+  }
+  var doubleWage = dtDays * dwBase / 30;
   var otPay = otHours * otBase / 30 / 8 * 1.34;
   var sickDeduct = sickDays * perDay / 2;   // 病假半薪
   var personalDeduct = personalDays * perDay;
   var restDeduct = restDays * perDay;
 
   // 總額
-  var total = monthPay + fixedOT + doubleWage + otPay - sickDeduct - personalDeduct - restDeduct;
+  var total = monthPay + fixedOT + doubleWage + otPay - sickDeduct - personalDeduct - restDeduct + otherBonus;
   if(sup){
     total += rolePay;
   }
@@ -981,11 +1078,13 @@ function calcEmp(e){
     monthPay: monthPay,
     rolePay: rolePay, roleBase: roleBase(role),
     fixedOT: fixedOT,
+    dwBase: dwBase,
     dtDays: dtDays, doubleWage: doubleWage,
     otHours: otHours, otPay: otPay,
     sickDays: sickDays, sickDeduct: sickDeduct,
     personalDays: personalDays, personalDeduct: personalDeduct,
     restDays: restDays, restDeduct: restDeduct,
+    otherBonus: otherBonus,
     insurance: insurance,
     total: total, realPay: realPay,
     note: STATE.notes[id] || ''
@@ -1097,6 +1196,11 @@ function renderDetail(){
 
   // 延長加班費
   html.push(payRow('延長加班費', c.otPay));
+
+  // 其他獎金 / 懲罰（有設定才顯示）
+  if(c.otherBonus){
+    html.push(payRow('其他獎金／懲罰', c.otherBonus));
+  }
 
   // 扣款
   html.push(payRow('事假', -c.personalDeduct));
@@ -1439,7 +1543,7 @@ function pullFromCloud(showToast){
       // 雲端有資料 → 合併到 STATE（以雲端為主）
       var cloud = res.state || {};
       var def = blankState();
-      ['s1','s2','s3','s4','s5','s6','s7','insurance','roles','detail','notes','ptWage'].forEach(function(k){
+      ['s1','s2','s3','s4','s5','s6','s7','insurance','roles','detail','notes','ptWage','otherBonuses'].forEach(function(k){
         cloud[k] = Object.assign({}, def[k], cloud[k] || {});
       });
       if(!cloud.activeEmp) cloud.activeEmp = EMPLOYEES[0].id;
