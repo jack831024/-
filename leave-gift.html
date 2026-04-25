@@ -109,14 +109,24 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
 .emp-balance .amt.zero{color:var(--ink-3)}
 .emp-balance .amt.low{color:var(--danger)}
 
-.upload-area{border:2px dashed rgba(219,39,119,.4);border-radius:14px;padding:1.5rem;text-align:center;background:rgba(252,231,243,.3);cursor:pointer;transition:all .2s;margin-bottom:12px}
+.upload-area{display:flex;align-items:center;gap:12px;border:1.5px dashed rgba(219,39,119,.4);border-radius:12px;padding:.75rem 1rem;background:rgba(252,231,243,.3);cursor:pointer;transition:all .2s;margin-bottom:10px}
 .upload-area:hover{background:rgba(252,231,243,.5);border-color:var(--gift)}
-.upload-area.dragover{background:rgba(252,231,243,.7);border-color:var(--gift);transform:scale(1.01)}
-.upload-area .uicon{font-size:32px;margin-bottom:6px}
-.upload-area .utitle{font-weight:700;color:var(--gift);margin-bottom:2px}
-.upload-area .uhint{font-size:11.5px;color:var(--ink-3);line-height:1.6}
+.upload-area.dragover{background:rgba(252,231,243,.7);border-color:var(--gift)}
+.upload-area .uicon{font-size:22px;flex-shrink:0}
+.upload-area .uwords{flex:1;text-align:left;line-height:1.4}
+.upload-area .utitle{font-weight:700;color:var(--gift);font-size:13.5px}
+.upload-area .uhint{font-size:11.5px;color:var(--ink-3)}
 .upload-area .uhint b{color:var(--ink-2)}
 .upload-area input[type=file]{display:none}
+
+.preview-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;min-height:0}
+.preview-thumb{position:relative;width:88px;height:88px;border-radius:10px;overflow:hidden;border:1.5px solid var(--line);background:#f1f5f9;flex-shrink:0;box-shadow:0 4px 10px -4px rgba(15,23,42,.12)}
+.preview-thumb img{width:100%;height:100%;object-fit:cover}
+.preview-thumb .px-tag{position:absolute;left:0;right:0;bottom:0;font-size:10px;color:#fff;background:linear-gradient(to top,rgba(0,0,0,.65),transparent);padding:8px 6px 4px;text-align:center;font-weight:600}
+.preview-thumb.busy::after{content:"";position:absolute;inset:0;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center}
+.preview-thumb.busy::before{content:"";position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;border:2px solid rgba(219,39,119,.25);border-top-color:var(--gift);animation:spin .8s linear infinite;z-index:2}
+.preview-thumb.ok .px-tag{background:linear-gradient(to top,rgba(16,185,129,.85),transparent)}
+.preview-thumb.err .px-tag{background:linear-gradient(to top,rgba(220,38,38,.85),transparent)}
 
 .busy{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--info);margin-left:6px}
 .busy::before{content:"";width:11px;height:11px;border-radius:50%;border:2px solid rgba(59,130,246,.25);border-top-color:var(--info);animation:spin .8s linear infinite}
@@ -610,13 +620,16 @@ function renderEmpCardAndUpload(){
     + '</div>'
     + '</div>';
 
-  upArea.innerHTML = '<label class="upload-area" id="up-area" for="gift-file">'
-    + '<div class="uicon">📷</div>'
-    + '<div class="utitle">點擊或拖曳上傳禮金收據</div>'
-    + '<div class="uhint">AI 自動辨識金額並從 <b>'+emp.name+'</b> 的禮金扣款 · 圖片自動存到雲端</div>'
+  upArea.innerHTML = '<div class="preview-row" id="gift-preview"></div>'
+    + '<label class="upload-area" id="up-area" for="gift-file">'
+    + '<span class="uicon">📷</span>'
+    + '<span class="uwords">'
+    +   '<div class="utitle">點擊或拖曳上傳禮金收據</div>'
+    +   '<div class="uhint">AI 自動辨識金額並從 <b>'+emp.name+'</b> 的禮金扣款 · 圖片自動存到雲端</div>'
+    + '</span>'
     + '<input type="file" id="gift-file" accept="image/*" onchange="onGiftFile(this.files)">'
-    + '<div id="gift-busy" style="margin-top:10px"></div>'
-    + '</label>';
+    + '</label>'
+    + '<div id="gift-busy"></div>';
 
   // 拖曳支援
   var ua = document.getElementById('up-area');
@@ -668,7 +681,9 @@ function renderHistory(){
     var isSeed = (h.reason === '初始餘額');
     var thumb;
     if(h.fileId){
-      thumb = '<img class="history-thumb" src="" alt="圖片" data-fileid="'+h.fileId+'" onclick="openImgFromFileId(\''+h.fileId+'\')">';
+      // 剛上傳的：用本機 blob URL 直接顯示，不用等雲端 lazy fetch
+      var localSrc = LOCAL_BLOB_BY_FILEID[h.fileId] || '';
+      thumb = '<img class="history-thumb" src="'+localSrc+'" alt="圖片" data-fileid="'+h.fileId+'" onclick="openImgFromFileId(\''+h.fileId+'\')">';
     } else {
       thumb = '<div class="history-thumb placeholder">'+(isSeed ? '📌' : (h.type==='credit'?'🎁':'💸'))+'</div>';
     }
@@ -733,21 +748,44 @@ function render(){
 // ============================================
 // 上傳禮金圖片 → AI 識別 → 上傳 Drive → 寫歷史
 // ============================================
+// 暫存剛上傳的圖片 blob URL，讓歷史欄位可以立即顯示縮圖（不用等 Drive lazy-fetch）
+var LOCAL_BLOB_BY_FILEID = {};
+// 上傳預覽列每張縮圖
+function addPreviewThumb(blobUrl){
+  var row = document.getElementById('gift-preview');
+  if(!row) return null;
+  var div = document.createElement('div');
+  div.className = 'preview-thumb busy';
+  var img = document.createElement('img');
+  img.src = blobUrl;
+  div.appendChild(img);
+  var tag = document.createElement('div');
+  tag.className = 'px-tag';
+  tag.textContent = '處理中…';
+  div.appendChild(tag);
+  row.appendChild(div);
+  return { el: div, tag: tag };
+}
+
 async function onGiftFile(files){
   if(!files || !files.length) return;
   var emp = EMPLOYEES.find(function(e){ return e.id === STATE.selectedEmpId; });
   if(!emp){ toast('請先選擇員工', 'err'); return; }
   var file = files[0];
   var busy = document.getElementById('gift-busy');
-  busy.innerHTML = '<span class="busy">壓縮並 AI 識別中…</span>';
+  busy.innerHTML = '';
+
+  // 立即顯示縮圖（先用原檔的 object URL）
+  var previewUrl = URL.createObjectURL(file);
+  var pv = addPreviewThumb(previewUrl);
 
   try {
     // 1. 壓縮（最長邊 1200px）
+    if(pv) pv.tag.textContent = '壓縮中…';
     var resized = await resizeImage(file, 1200);
 
     // 2. AI 識別金額
-    //   寬鬆版 prompt：只要圖片有清楚數字就抓，不管是不是「禮金」性質
-    //   （員工只會上傳要扣的東西；判斷「合不合理」交給人）
+    if(pv) pv.tag.textContent = 'AI 識別中…';
     var prompt = '從這張圖片抽取金額（可能是收據、發票、轉帳畫面、紅包、訊息截圖、Line/銀行 App、便利商店條碼等）。\n'
       + '只回 JSON：\n'
       + '{ "amount": 整數金額（總額、應付金額、轉出金額、紅包面額…擇一最關鍵的）, "occasion": "簡短事由（如：餐費/紅包/禮品/車資/其他）", "recipient": "收/付對象（看不到就空字串）", "note": "備註，如店名、品項、日期等" }\n'
@@ -762,13 +800,14 @@ async function onGiftFile(files){
     catch(jerr){ throw new Error('AI 回應格式錯誤：'+raw.slice(0,80)); }
     var amount = Math.abs(Math.round(Number(data.amount) || 0));
     if(!amount){
-      busy.innerHTML = '<span style="color:var(--danger);font-size:12px">❌ AI 沒辨識出金額，AI 回應：'+ JSON.stringify(data).slice(0,120) +'</span>';
+      if(pv){ pv.el.classList.remove('busy'); pv.el.classList.add('err'); pv.tag.textContent = '無金額'; }
+      busy.innerHTML = '<span style="color:var(--danger);font-size:12px">❌ AI 沒辨識出金額：'+ JSON.stringify(data).slice(0,80) +'</span>';
       toast('AI 沒辨識出金額', 'err');
       return;
     }
 
     // 3. 上傳到 Drive
-    busy.innerHTML = '<span class="busy">上傳到雲端…</span>';
+    if(pv) pv.tag.textContent = '上傳雲端…';
     var b64 = await blobToBase64(resized.blob);
     var up = await callGAS('uploadGiftImage', [
       getStorePassword(), STORE, emp.id,
@@ -778,6 +817,9 @@ async function onGiftFile(files){
     if(!up || !up.ok){
       throw new Error((up && up.error) || '上傳失敗');
     }
+
+    // 把 blob URL 和 fileId 綁在一起，render history 時可立即用
+    LOCAL_BLOB_BY_FILEID[up.fileId] = previewUrl;
 
     // 4. 寫進 history
     var entry = {
@@ -797,6 +839,11 @@ async function onGiftFile(files){
       'debit', amount, entry.reason, up.fileId, entry.note
     ]);
 
+    if(pv){
+      pv.el.classList.remove('busy');
+      pv.el.classList.add('ok');
+      pv.tag.textContent = '−$'+fmt(amount);
+    }
     busy.innerHTML = '<span style="color:var(--ok);font-size:12px">✓ 已扣款 $'+fmt(amount)+'，餘額更新</span>';
     toast('已扣款 $'+fmt(amount), 'ok');
 
@@ -804,6 +851,7 @@ async function onGiftFile(files){
     render();
     document.getElementById('gift-file').value = '';
   } catch(e){
+    if(pv){ pv.el.classList.remove('busy'); pv.el.classList.add('err'); pv.tag.textContent = '失敗'; }
     busy.innerHTML = '<span style="color:var(--danger);font-size:12px">❌ '+ (e.message||'失敗') +'</span>';
     toast('失敗：'+(e.message||''), 'err');
   }
