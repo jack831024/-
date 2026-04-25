@@ -683,7 +683,8 @@ function renderHistory(){
     if(h.fileId){
       // 剛上傳的：用本機 blob URL 直接顯示，不用等雲端 lazy fetch
       var localSrc = LOCAL_BLOB_BY_FILEID[h.fileId] || '';
-      thumb = '<img class="history-thumb" src="'+localSrc+'" alt="圖片" data-fileid="'+h.fileId+'" onclick="openImgFromFileId(\''+h.fileId+'\')">';
+      var srcAttr = localSrc ? ' src="'+localSrc+'" data-loaded="1"' : '';
+      thumb = '<img class="history-thumb" alt="圖片"'+srcAttr+' data-fileid="'+h.fileId+'" onclick="openImgFromFileId(\''+h.fileId+'\')">';
     } else {
       thumb = '<div class="history-thumb placeholder">'+(isSeed ? '📌' : (h.type==='credit'?'🎁':'💸'))+'</div>';
     }
@@ -701,14 +702,15 @@ function renderHistory(){
   });
   area.innerHTML = rows.join('');
 
-  // 載入縮圖
+  // 載入縮圖（用 data-loaded 旗標判斷，避免 img.src 為空時解析成當前頁網址導致誤判）
   document.querySelectorAll('.history-thumb[data-fileid]').forEach(function(img){
     var fid = img.getAttribute('data-fileid');
-    if(!fid || img.src) return;
+    if(!fid || img.getAttribute('data-loaded')) return;
     callGAS('getGiftImage', [getStorePassword(), fid])
       .then(function(res){
         if(res && res.ok){
           img.src = 'data:'+(res.mimeType||'image/jpeg')+';base64,'+res.base64;
+          img.setAttribute('data-loaded', '1');
         }
       });
   });
