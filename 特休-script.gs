@@ -99,6 +99,7 @@ function doPost(e) {
       case 'uploadGiftImage': res = uploadGiftImage(args[0], args[1], args[2], args[3], args[4], args[5]); break;
       case 'getGiftImage':    res = getGiftImage(args[0], args[1]); break;
       case 'logGift':         res = logGift(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8]); break;
+      case 'deleteGiftEntry': res = deleteGiftEntry(args[0], args[1], args[2], args[3]); break;
       // 舊介面（保留向後相容）
       case 'saveLeave':  res = saveLeave(args[0], args[1], args[2], args[3]); break;
       case 'loadLeave':  res = loadLeave(args[0], args[1], args[2]);          break;
@@ -202,6 +203,49 @@ function getGiftImage(password, fileId) {
       base64: Utilities.base64Encode(blob.getBytes()),
       name: file.getName()
     };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
+
+// ============================================
+// 🗑️ deleteGiftEntry — 刪一筆禮金紀錄（含 Drive 圖片）
+//   args: password, store, empId, entryId
+//   會驗證密碼、把對應 fileId 的 Drive 檔丟垃圾桶、從 STATE.giftHistory 移除
+//   ⚠️ 不允許刪除 seed_ 開頭的初始餘額
+// ============================================
+function deleteGiftEntry(password, store, empId, entryId) {
+  try {
+    if (VALID_STORES.indexOf(store) === -1) return { ok: false, error: '無效的店家：' + store };
+    if (!_verifyFor(password, store))       return { ok: false, error: 'unauthorized' };
+    if (!empId || !entryId)                 return { ok: false, error: '參數不全' };
+    if (String(entryId).indexOf('seed_') === 0) return { ok: false, error: '初始餘額不可刪除' };
+
+    var sheet = getStateSheet();
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][1]) !== store) continue;
+      var st = {};
+      try { st = JSON.parse(data[i][2] || '{}'); } catch (e) { st = {}; }
+      var hist = (st.giftHistory && st.giftHistory[empId]) || [];
+      var idx = -1;
+      for (var k = 0; k < hist.length; k++) {
+        if (hist[k] && hist[k].id === entryId) { idx = k; break; }
+      }
+      if (idx < 0) return { ok: false, error: '找不到該筆紀錄' };
+      var entry = hist[idx];
+      // 移到 Drive 垃圾桶
+      if (entry.fileId) {
+        try { DriveApp.getFileById(entry.fileId).setTrashed(true); }
+        catch (de) { /* 檔案可能已被手動刪 → 忽略 */ }
+      }
+      hist.splice(idx, 1);
+      st.giftHistory[empId] = hist;
+      sheet.getRange(i + 1, 1, 1, STATE_HEADERS.length).setValues([[new Date(), store, JSON.stringify(st)]]);
+      return { ok: true, deleted: entry, remaining: hist.length };
+    }
+    return { ok: false, error: '找不到該店資料' };
   } catch (err) {
     return { ok: false, error: String(err) };
   }

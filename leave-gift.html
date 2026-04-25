@@ -133,8 +133,10 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 .history-list{display:flex;flex-direction:column;gap:8px}
-.history-item{display:grid;grid-template-columns:80px 1fr auto;gap:12px;align-items:center;padding:10px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.65);transition:all .15s}
+.history-item{display:grid;grid-template-columns:80px 1fr auto auto;gap:12px;align-items:center;padding:10px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.65);transition:all .15s}
 .history-item:hover{background:#fff;box-shadow:0 4px 12px -6px rgba(15,23,42,.1)}
+.history-del{width:30px;height:30px;border-radius:50%;background:rgba(220,38,38,.08);color:var(--danger);border:none;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;font-family:inherit}
+.history-del:hover{background:var(--danger);color:#fff;transform:scale(1.05)}
 .history-thumb{width:80px;height:80px;border-radius:10px;object-fit:cover;background:#f1f5f9;cursor:pointer;border:1px solid var(--line)}
 .history-thumb.placeholder{display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--ink-3)}
 .history-meta .h-line1{font-weight:700;font-size:13px;color:var(--ink);margin-bottom:3px;display:flex;align-items:center;gap:6px}
@@ -163,7 +165,7 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
   .emp-balance .amt{font-size:24px}
   table.grid{font-size:12px}
   table.grid th,table.grid td{padding:6px 5px}
-  .history-item{grid-template-columns:64px 1fr auto}
+  .history-item{grid-template-columns:64px 1fr auto auto}
   .history-thumb{width:64px;height:64px}
 }
 </style>
@@ -688,6 +690,9 @@ function renderHistory(){
     } else {
       thumb = '<div class="history-thumb placeholder">'+(isSeed ? '📌' : (h.type==='credit'?'🎁':'💸'))+'</div>';
     }
+    var delBtn = isSeed
+      ? '<span></span>'
+      : '<button class="history-del" title="刪除這筆（需密碼）" onclick="onDeleteEntry(\''+h.id+'\')">✕</button>';
     return '<div class="history-item">'
       + thumb
       + '<div class="history-meta">'
@@ -698,6 +703,7 @@ function renderHistory(){
       +   '<div class="h-line2">'+ fmtTs(h.ts) + (h.note ? ' · '+h.note : '') +'</div>'
       + '</div>'
       + '<div class="history-amount '+amtCls+'">'+sign+'$'+fmt(Math.abs(amt))+'</div>'
+      + delBtn
       + '</div>';
   });
   area.innerHTML = rows.join('');
@@ -714,6 +720,38 @@ function renderHistory(){
         }
       });
   });
+}
+
+// ============================================
+// 刪除一筆禮金紀錄（需密碼，跟薪資計算同一組）
+// ============================================
+function onDeleteEntry(entryId){
+  var emp = EMPLOYEES.find(function(e){ return e.id === STATE.selectedEmpId; });
+  if(!emp){ toast('未選員工', 'err'); return; }
+  var hist = STATE.giftHistory[emp.id] || [];
+  var entry = hist.find(function(h){ return h.id === entryId; });
+  if(!entry){ toast('找不到紀錄', 'err'); return; }
+  if(String(entryId).indexOf('seed_') === 0){ toast('初始餘額不可刪', 'err'); return; }
+
+  var pw = prompt('刪除「'+(entry.reason||'禮金')+' $'+fmt(Math.abs(entry.amount||0))+'」需要密碼\n（跟薪資計算同一組）');
+  if(pw === null) return;
+  if(String(pw).trim() !== getStorePassword()){
+    alert('❌ 密碼錯誤');
+    return;
+  }
+
+  callGAS('deleteGiftEntry', [getStorePassword(), STORE, emp.id, entryId])
+    .then(function(res){
+      if(res && res.ok){
+        // 更新本機 STATE
+        STATE.giftHistory[emp.id] = hist.filter(function(h){ return h.id !== entryId; });
+        toast('已刪除（含雲端圖片）', 'ok');
+        render();
+      } else {
+        toast('刪除失敗：'+((res&&res.error)||''), 'err');
+      }
+    })
+    .catch(function(err){ toast('連線失敗：'+(err.message||''), 'err'); });
 }
 
 function openImgFromFileId(fid){
