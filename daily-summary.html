@@ -243,8 +243,6 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
         </select>
       </div>
       <div class="row"><span class="label">淨銷售額</span><input class="amt-input ai-only" id="b-net" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
-      <div class="row" style="background:#f5f8ff"><span class="label" style="color:#4a90d9">本月累積營業額</span><span class="status neutral" id="m-monthly" style="font-weight:600;color:#4a90d9">—</span></div>
-      <div class="row" style="background:#fff5e6"><span class="label" style="color:#e8810d">營業額獎金 <span id="m-bonus-pct" style="font-size:11px;color:#aaa">（—）</span></span><span class="status neutral" id="m-bonus" style="font-weight:600;color:#e8810d">—</span></div>
       <div class="row"><span class="label">預期錢櫃金額</span><input class="amt-input ai-only" id="i-expected" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
       <div class="row"><span class="label">小結提現</span><input class="amt-input ai-only" id="i-withdrawal" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
       <div class="row"><span class="label">小結代收</span><input class="amt-input ai-only" id="i-daishuo" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
@@ -402,6 +400,9 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
 
     <!-- 已解鎖：實際內容 -->
     <div id="bonus-content" style="display:none">
+      <!-- 從上方移過來：本月累積營業額 + 營業額獎金 -->
+      <div class="row" style="background:#f5f8ff;border-radius:8px;padding:10px 12px;margin-bottom:6px"><span class="label" style="color:#4a90d9">本月累積營業額</span><span class="status neutral" id="m-monthly" style="font-weight:600;color:#4a90d9">—</span></div>
+      <div class="row" style="background:#fff5e6;border-radius:8px;padding:10px 12px;margin-bottom:14px"><span class="label" style="color:#e8810d">營業額獎金 <span id="m-bonus-pct" style="font-size:11px;color:#aaa">（—）</span></span><span class="status neutral" id="m-bonus" style="font-weight:600;color:#e8810d">—</span></div>
       <div class="staff-grid" id="staff-bonus-grid"></div>
       <div style="text-align:right;margin-top:6px">
         <button type="button" onclick="toggleBonusDetail()" id="bonus-detail-toggle" style="font-size:12px;padding:4px 10px;border:1px solid #4a90d9;border-radius:6px;background:#fff;color:#4a90d9;cursor:pointer">📋 顯示每日明細</button>
