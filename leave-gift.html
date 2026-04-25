@@ -33,15 +33,13 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
     linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
 }
 
-.topbar{max-width:1000px;margin:0 auto 14px;display:flex;align-items:center;gap:10px;padding:4px;flex-wrap:wrap}
+.topbar{max-width:1100px;margin:0 auto 14px;display:flex;align-items:center;gap:10px;padding:4px;flex-wrap:wrap}
 .back-btn{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.8);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);transition:all .2s;box-shadow:0 4px 12px -4px rgba(15,23,42,.08);flex-shrink:0}
 .back-btn:hover{background:#fff;color:var(--brand);transform:translateX(-2px)}
 .back-btn svg{width:17px;height:17px}
 .store-chip{display:flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;background:rgba(255,255,255,.8);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);border-radius:999px;font-size:13px;color:var(--ink);font-weight:600;box-shadow:0 4px 12px -4px rgba(15,23,42,.06)}
 .store-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--brand),#facc15);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px}
 .spacer{flex:1}
-.month-picker{padding:8px 12px;font-size:14px;border:1.5px solid var(--line);border-radius:10px;background:rgba(255,255,255,.9);cursor:pointer;color:var(--ink);font-family:inherit;font-weight:600;outline:none;transition:all .18s}
-.month-picker:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(202,138,4,.18)}
 
 .sync-chip{padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;user-select:none}
 .sync-chip.ok{background:rgba(16,185,129,.12);color:#059669}
@@ -52,7 +50,7 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
 .sync-chip.err{background:rgba(220,38,38,.12);color:var(--danger)}
 .sync-chip.err:hover{background:rgba(220,38,38,.2)}
 
-.wrap{max-width:1000px;margin:0 auto;padding:0 0 3rem}
+.wrap{max-width:1100px;margin:0 auto;padding:0 0 3rem}
 
 .hero-card{background:linear-gradient(135deg,#fef9c3 0%,#fde68a 100%);border:1px solid rgba(202,138,4,.18);border-radius:20px;padding:1.25rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(202,138,4,.06),0 8px 24px -12px rgba(202,138,4,.2)}
 .hero-icon{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--brand) 0%,#facc15 100%);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 8px 20px -8px rgba(202,138,4,.5);flex-shrink:0}
@@ -63,89 +61,100 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
 .section.travel{border-left:4px solid var(--travel)}
 .section.annual{border-left:4px solid var(--brand)}
 .section.gift{border-left:4px solid var(--gift)}
-h3{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:12px;display:flex;align-items:center;gap:8px;letter-spacing:0.01em;flex-wrap:wrap}
+h3{font-size:14.5px;font-weight:700;color:var(--ink);margin-bottom:12px;display:flex;align-items:center;gap:8px;letter-spacing:0.01em;flex-wrap:wrap}
 h3 .icon{font-size:18px}
 h3 .hint{font-size:11.5px;color:var(--ink-3);font-weight:500;margin-left:auto;letter-spacing:0}
 h3 .pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--brand-light);color:var(--brand-dark)}
 h3 .pill.travel{background:#e0f2fe;color:#0369a1}
 h3 .pill.gift{background:#fce7f3;color:#9d174d}
 
-.tools-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
-
 .btn{padding:9px 16px;font-size:13.5px;border:none;border-radius:10px;cursor:pointer;font-family:inherit;font-weight:600;transition:all .18s;display:inline-flex;align-items:center;gap:7px}
 .btn-primary{background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);color:#fff;box-shadow:0 6px 16px -6px rgba(202,138,4,.45)}
 .btn-primary:hover{transform:translateY(-1px);box-shadow:0 10px 22px -6px rgba(202,138,4,.55)}
-.btn-travel{background:linear-gradient(135deg,var(--travel) 0%,#38bdf8 100%);color:#fff;box-shadow:0 6px 16px -6px rgba(14,165,233,.45)}
-.btn-gift{background:linear-gradient(135deg,var(--gift) 0%,#f472b6 100%);color:#fff;box-shadow:0 6px 16px -6px rgba(219,39,119,.45)}
 .btn-ghost{background:rgba(255,255,255,.8);border:1.5px solid var(--line);color:var(--ink-2)}
 .btn-ghost:hover{background:#fff;border-color:var(--brand);color:var(--brand)}
 .btn-sm{padding:6px 11px;font-size:12px;border-radius:8px}
-.btn-danger{background:rgba(220,38,38,.08);color:var(--danger);border:1px solid rgba(220,38,38,.2)}
-.btn-danger:hover{background:rgba(220,38,38,.15)}
-
-.import-status{font-size:11.5px;color:var(--ink-3);margin-left:6px}
 
 table.grid{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
-table.grid th{text-align:left;padding:8px 8px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:1px;border-bottom:1.5px solid var(--line)}
-table.grid td{padding:8px;border-bottom:1px solid rgba(226,232,240,.6);vertical-align:top}
+table.grid th{text-align:left;padding:8px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:1px;border-bottom:1.5px solid var(--line);background:rgba(248,250,252,.5)}
+table.grid td{padding:10px 8px;border-bottom:1px solid rgba(226,232,240,.6);vertical-align:middle}
 table.grid tr:last-child td{border-bottom:none}
-table.grid .c-name{font-weight:700;color:var(--ink);width:140px}
+table.grid .c-name{font-weight:700;color:var(--ink);width:130px}
+table.grid .c-num{font-family:ui-monospace,Menlo,monospace;text-align:right;font-variant-numeric:tabular-nums}
+table.grid .c-num.big{font-size:15px;font-weight:700}
+.bal-pos{color:var(--ok)}
+.bal-zero{color:var(--ink-3)}
+.bal-warn{color:var(--warn)}
+.bal-low{color:var(--danger)}
+.tag-line{font-size:11px;color:var(--ink-3);margin-top:2px}
 
-.date-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.date-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#fef9c3;color:#854d0e;font-size:12px;font-weight:600;font-family:ui-monospace,Menlo,monospace}
-.date-chip.travel{background:#e0f2fe;color:#075985}
-.date-chip.auto{background-image:linear-gradient(90deg,rgba(255,255,255,.4),transparent)}
-.date-chip .x{cursor:pointer;color:rgba(15,23,42,.45);font-weight:700;line-height:1;padding:0 2px}
-.date-chip .x:hover{color:var(--danger)}
-.date-chip .src{font-size:10px;font-weight:600;padding:1px 5px;border-radius:6px;background:rgba(255,255,255,.6);color:var(--ink-3);letter-spacing:0.5px}
-.empty-row{color:var(--ink-3);font-size:12.5px;padding:8px 4px}
-
-.add-inline{display:inline-flex;gap:6px;align-items:center;margin-left:6px}
-.add-inline input[type=date]{padding:5px 9px;border:1.5px solid var(--line);border-radius:7px;font-size:12.5px;font-family:inherit;color:var(--ink);outline:none;background:#fff}
-.add-inline input[type=date]:focus{border-color:var(--brand)}
-.add-inline button{padding:5px 10px;font-size:12px;border-radius:7px;border:none;background:var(--brand);color:#fff;cursor:pointer;font-family:inherit;font-weight:600}
-.add-inline button.travel{background:var(--travel)}
-.add-inline button:hover{filter:brightness(1.06)}
-
-.note-input{width:100%;margin-top:6px;padding:6px 10px;border:1.5px solid var(--line);border-radius:8px;font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;background:rgba(255,255,255,.9)}
-.note-input:focus{border-color:var(--brand)}
+.empty-row{text-align:center;color:var(--ink-3);padding:18px;font-size:12.5px;background:rgba(248,250,252,.5);border-radius:10px;line-height:1.6}
 
 /* 禮金 */
-.gift-summary{font-size:12.5px;color:var(--ink-2);margin-bottom:8px}
-.gift-summary b{color:var(--gift);font-size:14px;font-family:ui-monospace,Menlo,monospace}
+.emp-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.emp-tab{padding:9px 16px;border-radius:999px;font-size:13px;font-weight:600;background:rgba(255,255,255,.7);border:1.5px solid var(--line);cursor:pointer;color:var(--ink-2);transition:all .15s;font-family:inherit;display:inline-flex;align-items:center;gap:8px}
+.emp-tab:hover{color:var(--gift);border-color:#fbcfe8}
+.emp-tab.active{background:linear-gradient(135deg,var(--gift) 0%,#f472b6 100%);color:#fff;border-color:transparent;box-shadow:0 6px 18px -6px rgba(219,39,119,.5)}
+.emp-tab .bal{font-family:ui-monospace,Menlo,monospace;font-size:11px;background:rgba(255,255,255,.25);padding:2px 7px;border-radius:999px;color:inherit}
+.emp-tab:not(.active) .bal{background:rgba(15,23,42,.05);color:var(--ink-3)}
 
-.upload-area{border:2px dashed rgba(219,39,119,.4);border-radius:14px;padding:1.5rem;text-align:center;background:rgba(252,231,243,.3);cursor:pointer;transition:all .2s;margin-bottom:10px}
+.emp-card{background:linear-gradient(135deg,#fdf2f8 0%,#fce7f3 100%);border:1px solid rgba(219,39,119,.18);border-radius:16px;padding:1.25rem 1.5rem;margin-bottom:14px;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center}
+.emp-avatar{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--gift) 0%,#f472b6 100%);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;box-shadow:0 8px 20px -8px rgba(219,39,119,.5)}
+.emp-meta h2{font-size:18px;font-weight:700;color:var(--ink);margin-bottom:3px;display:flex;align-items:center;gap:8px}
+.emp-meta .sub{font-size:12px;color:var(--ink-2);line-height:1.6}
+.emp-meta .sub b{color:var(--gift)}
+.emp-balance{text-align:right}
+.emp-balance .label{font-size:11px;color:var(--ink-3);font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px}
+.emp-balance .amt{font-family:ui-monospace,Menlo,monospace;font-size:28px;font-weight:700;color:var(--gift);font-variant-numeric:tabular-nums;line-height:1}
+.emp-balance .amt.zero{color:var(--ink-3)}
+.emp-balance .amt.low{color:var(--danger)}
+
+.upload-area{border:2px dashed rgba(219,39,119,.4);border-radius:14px;padding:1.5rem;text-align:center;background:rgba(252,231,243,.3);cursor:pointer;transition:all .2s;margin-bottom:12px}
 .upload-area:hover{background:rgba(252,231,243,.5);border-color:var(--gift)}
+.upload-area.dragover{background:rgba(252,231,243,.7);border-color:var(--gift);transform:scale(1.01)}
 .upload-area .uicon{font-size:32px;margin-bottom:6px}
 .upload-area .utitle{font-weight:700;color:var(--gift);margin-bottom:2px}
-.upload-area .uhint{font-size:11.5px;color:var(--ink-3)}
+.upload-area .uhint{font-size:11.5px;color:var(--ink-3);line-height:1.6}
+.upload-area .uhint b{color:var(--ink-2)}
 .upload-area input[type=file]{display:none}
-
-.preview-grid{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
-.preview-grid img{width:74px;height:74px;border-radius:10px;object-fit:cover;border:1.5px solid var(--line);box-shadow:0 2px 6px -2px rgba(15,23,42,.08)}
-
-.gift-table th, .gift-table td{padding:7px 6px}
-.gift-table input[type=text],.gift-table input[type=number],.gift-table input[type=date]{
-  padding:5px 8px;border:1.5px solid var(--line);border-radius:7px;background:#fff;font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;width:100%
-}
-.gift-table input:focus{border-color:var(--gift);box-shadow:0 0 0 3px rgba(219,39,119,.1)}
-.gift-table .amt{font-family:ui-monospace,Menlo,monospace;text-align:right}
-
-.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);padding:12px 22px;border-radius:12px;background:var(--ink);color:#fff;font-size:13px;font-weight:600;opacity:0;transition:all .28s;pointer-events:none;z-index:100;box-shadow:0 10px 30px -10px rgba(15,23,42,.4)}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.toast.err{background:var(--danger)}
-.toast.ok{background:var(--ok)}
 
 .busy{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--info);margin-left:6px}
 .busy::before{content:"";width:11px;height:11px;border-radius:50%;border:2px solid rgba(59,130,246,.25);border-top-color:var(--info);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-.action-bar{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.history-list{display:flex;flex-direction:column;gap:8px}
+.history-item{display:grid;grid-template-columns:80px 1fr auto;gap:12px;align-items:center;padding:10px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.65);transition:all .15s}
+.history-item:hover{background:#fff;box-shadow:0 4px 12px -6px rgba(15,23,42,.1)}
+.history-thumb{width:80px;height:80px;border-radius:10px;object-fit:cover;background:#f1f5f9;cursor:pointer;border:1px solid var(--line)}
+.history-thumb.placeholder{display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--ink-3)}
+.history-meta .h-line1{font-weight:700;font-size:13px;color:var(--ink);margin-bottom:3px;display:flex;align-items:center;gap:6px}
+.history-meta .h-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px}
+.history-meta .h-tag.credit{background:rgba(16,185,129,.12);color:#059669}
+.history-meta .h-tag.debit{background:rgba(220,38,38,.1);color:var(--danger)}
+.history-meta .h-line2{font-size:11.5px;color:var(--ink-2);line-height:1.6}
+.history-amount{font-family:ui-monospace,Menlo,monospace;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.history-amount.credit{color:var(--ok)}
+.history-amount.debit{color:var(--danger)}
+
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.75);display:none;align-items:center;justify-content:center;z-index:200;padding:20px}
+.modal-bg.open{display:flex}
+.modal-bg img{max-width:100%;max-height:85vh;border-radius:14px;box-shadow:0 30px 80px -20px rgba(0,0,0,.5)}
+.modal-bg .close-x{position:absolute;top:20px;right:20px;width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.2);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:22px;font-weight:700;border:none;transition:all .15s}
+.modal-bg .close-x:hover{background:rgba(255,255,255,.35);transform:scale(1.05)}
+
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);padding:12px 22px;border-radius:12px;background:var(--ink);color:#fff;font-size:13px;font-weight:600;opacity:0;transition:all .28s;pointer-events:none;z-index:300;box-shadow:0 10px 30px -10px rgba(15,23,42,.4);max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--danger)}
+.toast.ok{background:var(--ok)}
 
 @media(max-width:720px){
+  .emp-card{grid-template-columns:auto 1fr;gap:10px;padding:1rem}
+  .emp-balance{grid-column:1/-1;text-align:left;border-top:1px dashed rgba(219,39,119,.2);padding-top:10px}
+  .emp-balance .amt{font-size:24px}
   table.grid{font-size:12px}
   table.grid th,table.grid td{padding:6px 5px}
-  .gift-table input{font-size:11.5px;padding:4px 6px}
+  .history-item{grid-template-columns:64px 1fr auto}
+  .history-thumb{width:64px;height:64px}
 }
 </style>
 </head>
@@ -161,9 +170,6 @@ table.grid .c-name{font-weight:700;color:var(--ink);width:140px}
   </div>
   <span class="spacer"></span>
   <span id="sync-chip" class="sync-chip off" title="點擊重新同步" onclick="syncNow()">☁ 未設定</span>
-  <select class="month-picker" id="month-picker" aria-label="選擇月份"></select>
-  <button class="btn btn-ghost btn-sm" onclick="openSyncSettings()" title="雲端同步設定">⚙️</button>
-  <button class="btn btn-ghost btn-sm" onclick="saveAll()">💾 儲存</button>
 </div>
 
 <div class="wrap">
@@ -172,35 +178,27 @@ table.grid .c-name{font-weight:700;color:var(--ink);width:140px}
     <div class="hero-icon">🎁</div>
     <div class="hero-text">
       <h1>特休／旅遊假／禮金</h1>
-      <p>特休與旅遊假自動同步加班費系統，禮金支援上傳圖片 AI 辨識</p>
+      <p>特休依到職日累計、旅遊假依年資；禮金生日/中秋/端午自動 +2000，僅 AI 識別可扣款</p>
     </div>
   </div>
 
   <!-- 特休 -->
   <div class="section annual">
-    <h3><span class="icon">🌴</span>特休<span class="pill">自動抓取加班費系統</span><span class="hint">班表代碼：特 / 特休</span></h3>
-    <div class="tools-row">
-      <button class="btn btn-primary btn-sm" onclick="importFromOvertime()">🔄 從加班費系統匯入</button>
-      <span id="annual-import-status" class="import-status"></span>
-    </div>
+    <h3><span class="icon">🌴</span>特休<span class="hint">勞基法：滿半年 3 / 1年 7 / 2年 10 / 3年 14 / 5年 15 ...（公式累計）</span></h3>
     <table class="grid">
       <thead>
-        <tr><th>員工</th><th>特休日期（點 ✕ 移除，可手動加）</th><th style="width:36px"></th></tr>
+        <tr><th style="width:100px">員工</th><th>到職日</th><th class="c-num">總累計</th><th class="c-num">已使用</th><th class="c-num">剩餘可用</th></tr>
       </thead>
       <tbody id="tbody-annual"></tbody>
     </table>
   </div>
 
   <!-- 旅遊假 -->
-  <div class="section travel">
-    <h3><span class="icon">✈️</span>旅遊假<span class="pill travel">自動抓取加班費系統</span><span class="hint">班表代碼：旅 / 旅遊 / 旅遊假</span></h3>
-    <div class="tools-row">
-      <button class="btn btn-travel btn-sm" onclick="importFromOvertime()">🔄 從加班費系統匯入</button>
-      <span id="travel-import-status" class="import-status"></span>
-    </div>
+  <div class="section travel" id="section-travel">
+    <h3><span class="icon">✈️</span>旅遊假<span class="pill travel">3月中~9月底 平日休</span><span class="hint">半年~1年=1天 / 1~2年=2天 / 2~3年=3天 / 3年+=4天</span></h3>
     <table class="grid">
       <thead>
-        <tr><th>員工</th><th>旅遊假日期（點 ✕ 移除，可手動加）</th><th style="width:36px"></th></tr>
+        <tr><th style="width:100px">員工</th><th>到職日</th><th class="c-num">本年可用</th><th class="c-num">已使用</th><th class="c-num">剩餘</th></tr>
       </thead>
       <tbody id="tbody-travel"></tbody>
     </table>
@@ -208,398 +206,596 @@ table.grid .c-name{font-weight:700;color:var(--ink);width:140px}
 
   <!-- 禮金 -->
   <div class="section gift">
-    <h3><span class="icon">💝</span>禮金<span class="pill gift">AI 圖片辨識</span><span class="hint">上傳婚喪喜慶 / 紅白包 / 收據</span></h3>
+    <h3><span class="icon">💝</span>禮金<span class="pill gift">AI 圖片辨識才能扣款</span><span class="hint">生日／中秋／端午 自動 +2000（須滿半年）</span></h3>
 
-    <label class="upload-area" for="gift-file">
-      <div class="uicon">📷</div>
-      <div class="utitle">點擊或拖曳上傳禮金圖片</div>
-      <div class="uhint">支援多張：紅包封面、收據、訊息截圖等 · 上傳後 AI 自動辨識</div>
-      <input type="file" id="gift-file" accept="image/*" multiple onchange="onGiftFiles(this.files)">
-    </label>
-    <div id="gift-preview" class="preview-grid"></div>
-    <div id="gift-busy"></div>
+    <!-- 員工 tabs -->
+    <div class="emp-tabs" id="emp-tabs"></div>
 
-    <div class="gift-summary">本月禮金筆數：<b id="gift-count">0</b> · 總金額：<b id="gift-total">$ 0</b></div>
+    <!-- 選中的員工卡 -->
+    <div id="emp-card-area"></div>
 
-    <table class="grid gift-table">
-      <thead>
-        <tr>
-          <th style="width:120px">事由</th>
-          <th style="width:120px">對象</th>
-          <th style="width:120px">日期</th>
-          <th style="width:110px">金額</th>
-          <th>備註</th>
-          <th style="width:36px"></th>
-        </tr>
-      </thead>
-      <tbody id="tbody-gift"></tbody>
-    </table>
-    <div class="tools-row" style="margin-top:8px">
-      <button class="btn btn-ghost btn-sm" onclick="addGiftRow()">＋ 手動新增一筆</button>
-    </div>
+    <!-- 上傳 -->
+    <div id="upload-area-wrap"></div>
+
+    <!-- 歷史紀錄 -->
+    <h4 style="font-size:12.5px;font-weight:700;color:var(--ink-2);margin:14px 0 10px;letter-spacing:1px">📜 此員工的歷史紀錄</h4>
+    <div id="history-list" class="history-list"></div>
   </div>
 
-  <div class="action-bar">
-    <button class="btn btn-primary" onclick="saveAll()">💾 儲存全部</button>
-  </div>
+</div>
 
+<!-- 圖片放大 modal -->
+<div class="modal-bg" id="img-modal" onclick="closeImgModal(event)">
+  <button class="close-x" onclick="closeImgModal(event)">✕</button>
+  <img id="modal-img" alt="圖片">
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
 // ============================================
-// 設定
+// 員工資料（每店一份）
 // ============================================
+var EMP_DATA = {
+  'chudian-zhonghe': [
+    // 待補
+  ],
+  'chudian-yongchun': [
+    { id:'yc1', name:'謝其淇', hireDate:'2024-10-01', birthday:'03-07', initialAnnualAccrued:10, initialAnnualUsed:4,  initialTravelRemaining:0, initialGiftBalance:2458 },
+    { id:'yc2', name:'林韋翔', hireDate:'2023-01-10', birthday:'06-29', initialAnnualAccrued:34, initialAnnualUsed:23, initialTravelRemaining:3, initialGiftBalance:1354 },
+    { id:'yc3', name:'洪文祥', hireDate:'2023-10-16', birthday:'01-23', initialAnnualAccrued:20, initialAnnualUsed:12, initialTravelRemaining:2, initialGiftBalance:1499 },
+    { id:'yc4', name:'呂直宸', hireDate:'2023-12-01', birthday:'12-17', initialAnnualAccrued:20, initialAnnualUsed:10, initialTravelRemaining:2, initialGiftBalance:2144 },
+    { id:'yc5', name:'吳孟澤', hireDate:'2025-02-01', birthday:'01-26', initialAnnualAccrued:10, initialAnnualUsed:3,  initialTravelRemaining:0, initialGiftBalance:1112 },
+    { id:'yc6', name:'邱昊勳', hireDate:'2025-04-01', birthday:'11-26', initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0    }
+  ],
+  'chudian-xinzhuang': [
+    // 待補
+  ],
+  'shicheng-zhongxiao': [
+    // 待補
+  ]
+};
+
+// 中秋 / 端午（國曆）— 多年資料
+var HOLIDAYS = {
+  dragonBoat: { 2024:'06-10', 2025:'05-31', 2026:'06-19', 2027:'06-08', 2028:'05-28' },
+  midAutumn:  { 2024:'09-17', 2025:'10-06', 2026:'09-25', 2027:'09-15', 2028:'10-03' }
+};
+
+// 十城沒有旅遊假
+var STORES_WITHOUT_TRAVEL = { 'shicheng-zhongxiao': true };
+
 var STORE = sessionStorage.getItem('cd_store') || '';
 var STORE_NAME = sessionStorage.getItem('cd_store_name') || '（未選店）';
 document.getElementById('store-name').textContent = STORE_NAME;
 
-// 各店員工（與 salary.html 一致）
-var STORE_CONFIG = {
-  'chudian-zhonghe': {
-    employees: [
-      { id:'zh1', name:'李文少' },
-      { id:'zh2', name:'施偉祥' },
-      { id:'zh3', name:'劉濡瑜' },
-      { id:'zh4', name:'褚心榆' }
-    ]
-  },
-  'chudian-yongchun': {
-    employees: [
-      { id:'yc1', name:'謝其淇' },
-      { id:'yc2', name:'林韋翔' },
-      { id:'yc3', name:'洪文祥' },
-      { id:'yc4', name:'呂直宸' },
-      { id:'yc5', name:'吳孟澤' },
-      { id:'yc6', name:'邱昊勳' }
-    ]
-  },
-  'chudian-xinzhuang': {
-    employees: [
-      { id:'xz1', name:'蔡鈺豪' },
-      { id:'xz2', name:'蘇奕誠' },
-      { id:'xz3', name:'李嘉真' },
-      { id:'xz4', name:'洪仕賢' }
-    ]
-  },
-  'shicheng-zhongxiao': {
-    employees: [
-      { id:'sc1', name:'林梓彥' },
-      { id:'sc2', name:'王謖' },
-      { id:'sc3', name:'林哲民' },
-      { id:'sc4', name:'陳柏維' }
-    ]
-  }
-};
+var EMPLOYEES = (EMP_DATA[STORE] || []).slice();
 
-var CFG = STORE_CONFIG[STORE] || STORE_CONFIG['chudian-zhonghe'];
-var EMPLOYEES = CFG.employees.slice();
+// 隱藏旅遊假區塊（十城）
+if(STORES_WITHOUT_TRAVEL[STORE]){
+  document.getElementById('section-travel').style.display = 'none';
+}
 
-// 月份初始化
-(function initMonth(){
-  var sel = document.getElementById('month-picker');
-  var now = new Date();
-  var y = now.getFullYear();
-  var items = [];
-  for(var m=1; m<=12; m++){
-    items.push('<option value="'+m+'">'+y+'年 '+m+'月</option>');
-  }
-  sel.innerHTML = items.join('');
-  sel.value = String(now.getMonth() + 1);
-  sel.addEventListener('change', onMonthChange);
-})();
+// 雲端設定（沿用先前部署）
+var LEAVE_SYNC_URL = 'https://script.google.com/macros/s/AKfycbxeJRR4Xlt4fSngAwEIAW2FBMEwLuNH9djZKY7LzI7RhX0_Lk9L2TvUM_WyFU-YpEfO6A/exec';
+var LS_LEAVE_SYNC_URL = 'cd_leavegift_sync_url';
 
-function getSelectedYM(){
-  var m = Number(document.getElementById('month-picker').value) || (new Date().getMonth() + 1);
-  var y = new Date().getFullYear();
-  return y + '-' + String(m).padStart(2, '0');
+function getSyncUrl(){
+  return localStorage.getItem(LS_LEAVE_SYNC_URL) || LEAVE_SYNC_URL || '';
+}
+function getStorePassword(){
+  var pw = {
+    'chudian-zhonghe':    'a90369287',
+    'chudian-yongchun':   'a94213054',
+    'chudian-xinzhuang':  'a60749791',
+    'shicheng-zhongxiao': 'a61222042'
+  };
+  return pw[STORE] || '';
+}
+
+function callGAS(action, args){
+  var url = getSyncUrl();
+  if(!url) return Promise.reject(new Error('尚未設定雲端網址'));
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: action, args: args || [] })
+  }).then(function(r){ return r.json(); });
 }
 
 // ============================================
 // State
 // ============================================
 var STATE = null;
-
 function blankState(){
-  var s = {
-    ym: getSelectedYM(),
+  return {
     store: STORE,
-    annual: {},   // { empName: { dates: ['2026-04-15', ...], note:'', autoDates: {date:1} } }
-    travel: {},
-    gifts: []     // [{ id, occasion, recipient, date, amount, note }]
+    annualUsedManual: {},   // empId -> 額外手動已用天數
+    travelUsedManual: {},   // empId -> 已用天數
+    giftHistory: {},        // empId -> [{id, ts, type, amount, reason, fileId, note}]
+    giftCreditYears: {},    // empId -> { 'birthday-2026':1, 'midAutumn-2026':1, 'dragonBoat-2026':1 }
+    selectedEmpId: (EMPLOYEES[0] && EMPLOYEES[0].id) || ''
   };
+}
+
+function ensureSlots(){
   EMPLOYEES.forEach(function(e){
-    s.annual[e.name] = { dates: [], note:'', autoDates: {} };
-    s.travel[e.name] = { dates: [], note:'', autoDates: {} };
+    if(!STATE.annualUsedManual[e.id]) STATE.annualUsedManual[e.id] = 0;
+    if(!STATE.travelUsedManual[e.id]) STATE.travelUsedManual[e.id] = 0;
+    if(!STATE.giftHistory[e.id]) STATE.giftHistory[e.id] = [];
+    if(!STATE.giftCreditYears[e.id]) STATE.giftCreditYears[e.id] = {};
   });
-  return s;
+  if(!STATE.selectedEmpId && EMPLOYEES.length) STATE.selectedEmpId = EMPLOYEES[0].id;
 }
 
-function stateKey(ym){
-  return 'cd_leavegift_' + (STORE || 'nostore') + '_' + ym;
+// ============================================
+// 公式計算
+// ============================================
+var TODAY = new Date();
+function parseDate(s){ var p = String(s||'').split('-'); return new Date(Number(p[0]), Number(p[1])-1, Number(p[2]||1)); }
+function diffDays(a, b){ return Math.floor((a - b) / 86400000); }
+function tenureMonths(hireDate){
+  var d = parseDate(hireDate);
+  var months = (TODAY.getFullYear() - d.getFullYear()) * 12 + (TODAY.getMonth() - d.getMonth());
+  if(TODAY.getDate() < d.getDate()) months--;
+  return Math.max(0, months);
+}
+function tenureYears(hireDate){ return tenureMonths(hireDate) / 12; }
+
+// 旅遊假（依目前年資）
+//   半年~1年: 1天 / 1~2年: 2天 / 2~3年: 3天 / 3年+: 4天
+function travelEntitlement(hireDate){
+  var m = tenureMonths(hireDate);
+  if(m < 6) return 0;
+  var y = m / 12;
+  if(y < 1) return 1;
+  if(y < 2) return 2;
+  if(y < 3) return 3;
+  return 4;
 }
 
-function loadState(){
-  var ym = getSelectedYM();
-  try {
-    var raw = localStorage.getItem(stateKey(ym));
-    if(raw){
-      var obj = JSON.parse(raw);
-      var def = blankState();
-      // 確保新員工也會有 slot
-      EMPLOYEES.forEach(function(e){
-        if(!obj.annual) obj.annual = {};
-        if(!obj.travel) obj.travel = {};
-        if(!obj.annual[e.name]) obj.annual[e.name] = { dates: [], note:'', autoDates: {} };
-        if(!obj.travel[e.name]) obj.travel[e.name] = { dates: [], note:'', autoDates: {} };
-        if(!obj.annual[e.name].autoDates) obj.annual[e.name].autoDates = {};
-        if(!obj.travel[e.name].autoDates) obj.travel[e.name].autoDates = {};
+// 員工各種衍生值
+function calcAnnual(emp){
+  // 用初始累計 + 已用，後續變化由手動扣 / 自動公式延伸（暫不自動加未來年度）
+  var accrued = emp.initialAnnualAccrued || 0;
+  var used    = (emp.initialAnnualUsed || 0) + (STATE.annualUsedManual[emp.id] || 0);
+  return { accrued: accrued, used: used, remaining: Math.max(0, accrued - used) };
+}
+function calcTravel(emp){
+  var entitlement = travelEntitlement(emp.hireDate);
+  // 用「初始剩餘」當資料源（用戶提供的 = 已扣使用後的數字）
+  // 已用 = entitlement - initialRemaining  (若初始剩餘 > entitlement，已用視為 0)
+  var initialUsed = Math.max(0, entitlement - (emp.initialTravelRemaining || 0));
+  var totalUsed = initialUsed + (STATE.travelUsedManual[emp.id] || 0);
+  return {
+    entitlement: entitlement,
+    used: totalUsed,
+    remaining: Math.max(0, entitlement - totalUsed)
+  };
+}
+function calcGiftBalance(emp){
+  var bal = Number(emp.initialGiftBalance) || 0;
+  (STATE.giftHistory[emp.id] || []).forEach(function(h){
+    var amt = Number(h.amount) || 0;
+    if(h.type === 'credit') bal += Math.abs(amt);
+    else if(h.type === 'debit') bal -= Math.abs(amt);
+  });
+  return bal;
+}
+
+// ============================================
+// 自動 +2000：生日 / 中秋 / 端午（須滿半年）
+// ============================================
+function maybeAutoCredit(){
+  var year = TODAY.getFullYear();
+  var todayY = TODAY.getFullYear(), todayM = TODAY.getMonth()+1, todayD = TODAY.getDate();
+  var added = 0;
+  EMPLOYEES.forEach(function(emp){
+    var hire = parseDate(emp.hireDate);
+    var halfYearDate = new Date(hire.getFullYear(), hire.getMonth()+6, hire.getDate());
+    var creditYears = STATE.giftCreditYears[emp.id] || (STATE.giftCreditYears[emp.id] = {});
+
+    // 生日（每年）
+    var bday = String(emp.birthday||'').split('-'); // MM-DD
+    if(bday.length === 2){
+      var bm = Number(bday[0]), bd = Number(bday[1]);
+      // 檢查近兩年的生日（不會做太久遠的回補）
+      [year-1, year].forEach(function(y){
+        if(y < halfYearDate.getFullYear() || (y === halfYearDate.getFullYear() && (bm < halfYearDate.getMonth()+1 || (bm === halfYearDate.getMonth()+1 && bd < halfYearDate.getDate())))){
+          // 這年的生日當天還沒滿半年 → 不發
+          return;
+        }
+        // 該年生日是否已過今天？
+        if(y < todayY || (y === todayY && (bm < todayM || (bm === todayM && bd <= todayD)))){
+          var key = 'birthday-'+y;
+          if(!creditYears[key]){
+            STATE.giftHistory[emp.id].push({
+              id: 'auto_'+key+'_'+emp.id,
+              ts: new Date(y, bm-1, bd, 9, 0, 0).toISOString(),
+              type: 'credit', amount: 2000, reason: '生日 '+y, fileId: '', note: '自動加值'
+            });
+            creditYears[key] = 1; added++;
+          }
+        }
       });
-      if(!Array.isArray(obj.gifts)) obj.gifts = [];
-      STATE = obj;
-      return;
     }
-  } catch(e){ console.warn('load state fail', e); }
-  STATE = blankState();
-}
 
-function saveAll(){
-  if(!STATE) return;
-  STATE.ym = getSelectedYM();
-  STATE.store = STORE;
-  try {
-    localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE));
-    toast('已儲存（本機）', 'ok');
-  } catch(e){
-    toast('儲存失敗：' + e.message, 'err');
-  }
-  pushToCloud(true);
-}
+    // 端午
+    Object.keys(HOLIDAYS.dragonBoat).forEach(function(yStr){
+      var y = Number(yStr);
+      var dStr = HOLIDAYS.dragonBoat[y];
+      var d = parseDate(y+'-'+dStr);
+      if(d < halfYearDate) return;
+      if(d > TODAY) return;
+      var key = 'dragonBoat-'+y;
+      if(!creditYears[key]){
+        STATE.giftHistory[emp.id].push({
+          id: 'auto_'+key+'_'+emp.id,
+          ts: d.toISOString(),
+          type: 'credit', amount: 2000, reason: '端午 '+y, fileId: '', note: '自動加值'
+        });
+        creditYears[key] = 1; added++;
+      }
+    });
 
-function onMonthChange(){
-  // 先把舊月份推上雲端＋存本機
-  if(STATE){
-    try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+    // 中秋
+    Object.keys(HOLIDAYS.midAutumn).forEach(function(yStr){
+      var y = Number(yStr);
+      var dStr = HOLIDAYS.midAutumn[y];
+      var d = parseDate(y+'-'+dStr);
+      if(d < halfYearDate) return;
+      if(d > TODAY) return;
+      var key = 'midAutumn-'+y;
+      if(!creditYears[key]){
+        STATE.giftHistory[emp.id].push({
+          id: 'auto_'+key+'_'+emp.id,
+          ts: d.toISOString(),
+          type: 'credit', amount: 2000, reason: '中秋 '+y, fileId: '', note: '自動加值'
+        });
+        creditYears[key] = 1; added++;
+      }
+    });
+  });
+  if(added > 0){
     pushToCloud(false);
+    toast('已自動加值 '+added+' 筆節慶禮金', 'ok');
   }
-  loadState();
-  // 自動匯入
-  importFromOvertime(true);
-  render();
-  pullFromCloud(false);
 }
 
 // ============================================
-// 從加班費系統匯入特休 / 旅遊假
+// 渲染
 // ============================================
-function importFromOvertime(silent){
-  var ym = getSelectedYM();
-  var key = 'cd_ot_summary_' + (STORE || 'nostore') + '_' + ym;
-  var raw = localStorage.getItem(key);
-  var statusA = document.getElementById('annual-import-status');
-  var statusT = document.getElementById('travel-import-status');
-  if(!raw){
-    var msg = '⚠️ 找不到本月加班費分析結果，請先到加班費系統按「分析」並儲存';
-    if(statusA) statusA.textContent = msg;
-    if(statusT) statusT.textContent = msg;
-    if(!silent) toast('沒有加班費分析資料', 'err');
+function fmt(n){ return Math.round(Number(n)||0).toLocaleString(); }
+
+function renderAnnual(){
+  var tb = document.getElementById('tbody-annual');
+  if(!EMPLOYEES.length){
+    tb.innerHTML = '<tr><td colspan="5"><div class="empty-row">本店尚未設定員工資料</div></td></tr>';
     return;
   }
-  var data;
-  try { data = JSON.parse(raw); } catch(e){ if(!silent) toast('資料格式錯誤', 'err'); return; }
-  var emps = (data && data.employees) || {};
-  var annualCnt = 0, travelCnt = 0;
-
-  // 用名稱對照（class 員工名單）
-  EMPLOYEES.forEach(function(e){
-    var rec = emps[e.name];
-    if(!rec) return;
-    var aDates = rec.annualDates || [];
-    var tDates = rec.travelDates || [];
-    var slotA = STATE.annual[e.name] || (STATE.annual[e.name] = { dates: [], note:'', autoDates:{} });
-    var slotT = STATE.travel[e.name] || (STATE.travel[e.name] = { dates: [], note:'', autoDates:{} });
-    aDates.forEach(function(d){
-      if(slotA.dates.indexOf(d) < 0){
-        slotA.dates.push(d);
-        annualCnt++;
-      }
-      slotA.autoDates[d] = 1;
-    });
-    tDates.forEach(function(d){
-      if(slotT.dates.indexOf(d) < 0){
-        slotT.dates.push(d);
-        travelCnt++;
-      }
-      slotT.autoDates[d] = 1;
-    });
-    slotA.dates.sort();
-    slotT.dates.sort();
-  });
-
-  if(statusA) statusA.textContent = '✓ 匯入 ' + annualCnt + ' 筆特休（更新時間：' + (data.savedAt ? new Date(data.savedAt).toLocaleString() : '未知') + '）';
-  if(statusT) statusT.textContent = '✓ 匯入 ' + travelCnt + ' 筆旅遊假';
-  if(!silent) toast('已匯入 ' + (annualCnt+travelCnt) + ' 筆假', 'ok');
-
-  render();
-  // 自動存
-  try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
-}
-
-// ============================================
-// 渲染：特休 / 旅遊假
-// ============================================
-function fmtDate(d){
-  // YYYY-MM-DD → MM/DD
-  var parts = String(d).split('-');
-  if(parts.length === 3) return parts[1] + '/' + parts[2];
-  return d;
-}
-
-function renderLeave(type){
-  var tb = document.getElementById('tbody-' + type);
-  if(!tb) return;
-  var bag = STATE[type];
-  var cls = type === 'travel' ? 'travel' : '';
   var rows = EMPLOYEES.map(function(e){
-    var slot = bag[e.name] || { dates: [], note:'', autoDates: {} };
-    var chips = (slot.dates || []).map(function(d){
-      var auto = slot.autoDates && slot.autoDates[d];
-      return '<span class="date-chip '+cls+'" title="'+d+(auto?'（自動匯入）':'（手動加）')+'">'
-        + fmtDate(d)
-        + (auto ? '<span class="src">自動</span>' : '<span class="src">手動</span>')
-        + '<span class="x" onclick="removeDate(\''+type+'\',\''+e.name+'\',\''+d+'\')">✕</span>'
-        + '</span>';
-    }).join('') || '<span class="empty-row">— 本月無紀錄 —</span>';
-
-    var addInline = '<span class="add-inline">'
-      + '<input type="date" id="add-'+type+'-'+e.id+'">'
-      + '<button class="'+(type==='travel'?'travel':'')+'" onclick="addDate(\''+type+'\',\''+e.name+'\',\''+e.id+'\')">+ 加</button>'
-      + '</span>';
-
-    var noteVal = (slot.note || '').replace(/"/g,'&quot;');
+    var c = calcAnnual(e);
+    var cls = c.remaining === 0 ? 'bal-zero' : (c.remaining < 3 ? 'bal-warn' : 'bal-pos');
     return '<tr>'
-      + '<td class="c-name">'+e.name+'<br><input class="note-input" type="text" placeholder="備註" value="'+noteVal+'" onchange="onLeaveNote(\''+type+'\',\''+e.name+'\',this.value)"></td>'
-      + '<td><div class="date-chips">'+chips+addInline+'</div></td>'
-      + '<td><span style="font-size:11px;color:var(--ink-3)">共 '+(slot.dates||[]).length+' 天</span></td>'
+      + '<td class="c-name">'+e.name+'</td>'
+      + '<td>'+e.hireDate+'<div class="tag-line">年資 '+tenureYears(e.hireDate).toFixed(1)+' 年</div></td>'
+      + '<td class="c-num">'+c.accrued+' 天</td>'
+      + '<td class="c-num">'+c.used+' 天</td>'
+      + '<td class="c-num big '+cls+'">'+c.remaining+' 天</td>'
       + '</tr>';
   });
   tb.innerHTML = rows.join('');
 }
 
-function addDate(type, name, empId){
-  var input = document.getElementById('add-'+type+'-'+empId);
-  if(!input || !input.value) { toast('請選擇日期', 'err'); return; }
-  var d = input.value;
-  var slot = STATE[type][name] || (STATE[type][name] = { dates: [], note:'', autoDates: {} });
-  if(slot.dates.indexOf(d) < 0){
-    slot.dates.push(d);
-    slot.dates.sort();
+function renderTravel(){
+  if(STORES_WITHOUT_TRAVEL[STORE]) return;
+  var tb = document.getElementById('tbody-travel');
+  if(!EMPLOYEES.length){
+    tb.innerHTML = '<tr><td colspan="5"><div class="empty-row">本店尚未設定員工資料</div></td></tr>';
+    return;
   }
-  input.value = '';
-  renderLeave(type);
-  try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
-}
-
-function removeDate(type, name, d){
-  var slot = STATE[type][name];
-  if(!slot) return;
-  slot.dates = slot.dates.filter(function(x){ return x !== d; });
-  if(slot.autoDates) delete slot.autoDates[d];
-  renderLeave(type);
-  try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
-}
-
-function onLeaveNote(type, name, v){
-  var slot = STATE[type][name];
-  if(!slot) return;
-  slot.note = v || '';
-  try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
-}
-
-// ============================================
-// 禮金：上傳 + AI 辨識
-// ============================================
-function uid(){ return 'g_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
-
-function renderGift(){
-  var tb = document.getElementById('tbody-gift');
-  var rows = STATE.gifts.map(function(g){
+  var rows = EMPLOYEES.map(function(e){
+    var c = calcTravel(e);
+    var months = tenureMonths(e.hireDate);
+    var cls = c.remaining === 0 ? 'bal-zero' : 'bal-pos';
+    var note = months < 6 ? '<div class="tag-line">未滿半年</div>' : '';
     return '<tr>'
-      + '<td><input type="text" value="'+(g.occasion||'').replace(/"/g,'&quot;')+'" placeholder="例：婚禮" onchange="onGiftField(\''+g.id+'\',\'occasion\',this.value)"></td>'
-      + '<td><input type="text" value="'+(g.recipient||'').replace(/"/g,'&quot;')+'" placeholder="姓名" onchange="onGiftField(\''+g.id+'\',\'recipient\',this.value)"></td>'
-      + '<td><input type="date" value="'+(g.date||'')+'" onchange="onGiftField(\''+g.id+'\',\'date\',this.value)"></td>'
-      + '<td><input type="number" class="amt" value="'+(g.amount||0)+'" min="0" step="100" onchange="onGiftField(\''+g.id+'\',\'amount\',this.value)"></td>'
-      + '<td><input type="text" value="'+(g.note||'').replace(/"/g,'&quot;')+'" placeholder="備註（AI 自動辨識會填入）" onchange="onGiftField(\''+g.id+'\',\'note\',this.value)"></td>'
-      + '<td><button class="btn btn-sm btn-danger" onclick="removeGift(\''+g.id+'\')">✕</button></td>'
+      + '<td class="c-name">'+e.name+'</td>'
+      + '<td>'+e.hireDate+note+'</td>'
+      + '<td class="c-num">'+c.entitlement+' 天</td>'
+      + '<td class="c-num">'+c.used+' 天</td>'
+      + '<td class="c-num big '+cls+'">'+c.remaining+' 天</td>'
       + '</tr>';
   });
-  tb.innerHTML = rows.join('') || '<tr><td colspan="6" style="color:var(--ink-3);text-align:center;padding:14px">— 還沒有禮金紀錄，可上傳圖片或手動新增 —</td></tr>';
-
-  var total = STATE.gifts.reduce(function(s,g){ return s + (Number(g.amount)||0); }, 0);
-  document.getElementById('gift-count').textContent = STATE.gifts.length;
-  document.getElementById('gift-total').textContent = '$ ' + total.toLocaleString();
+  tb.innerHTML = rows.join('');
 }
 
-function addGiftRow(){
-  STATE.gifts.push({
-    id: uid(),
-    occasion: '',
-    recipient: '',
-    date: getSelectedYM() + '-01',
-    amount: 0,
-    note: ''
+function renderEmpTabs(){
+  var area = document.getElementById('emp-tabs');
+  if(!EMPLOYEES.length){
+    area.innerHTML = '<div class="empty-row" style="flex:1">本店尚未設定員工資料</div>';
+    return;
+  }
+  var sel = STATE.selectedEmpId;
+  area.innerHTML = EMPLOYEES.map(function(e){
+    var bal = calcGiftBalance(e);
+    return '<button class="emp-tab '+(sel===e.id?'active':'')+'" onclick="selectEmp(\''+e.id+'\')">'
+      + e.name + '<span class="bal">$' + fmt(bal) + '</span>'
+      + '</button>';
+  }).join('');
+}
+
+function renderEmpCardAndUpload(){
+  var area = document.getElementById('emp-card-area');
+  var upArea = document.getElementById('upload-area-wrap');
+  if(!EMPLOYEES.length){ area.innerHTML = ''; upArea.innerHTML = ''; return; }
+  var emp = EMPLOYEES.find(function(e){ return e.id === STATE.selectedEmpId; }) || EMPLOYEES[0];
+  if(!emp){ area.innerHTML=''; upArea.innerHTML=''; return; }
+  var bal = calcGiftBalance(emp);
+  var cls = bal === 0 ? 'zero' : (bal < 500 ? 'low' : '');
+  var bdayMD = (emp.birthday || '').split('-');
+  var bdayLabel = bdayMD.length === 2 ? bdayMD[0]+'月'+bdayMD[1]+'日' : '—';
+
+  area.innerHTML = '<div class="emp-card">'
+    + '<div class="emp-avatar">'+emp.name.charAt(0)+'</div>'
+    + '<div class="emp-meta">'
+    +   '<h2>'+emp.name+'</h2>'
+    +   '<div class="sub">🎂 生日 <b>'+bdayLabel+'</b> · 入職 '+emp.hireDate+'</div>'
+    + '</div>'
+    + '<div class="emp-balance">'
+    +   '<div class="label">目前禮金餘額</div>'
+    +   '<div class="amt '+cls+'">$ '+fmt(bal)+'</div>'
+    + '</div>'
+    + '</div>';
+
+  upArea.innerHTML = '<label class="upload-area" id="up-area" for="gift-file">'
+    + '<div class="uicon">📷</div>'
+    + '<div class="utitle">點擊或拖曳上傳禮金收據</div>'
+    + '<div class="uhint">AI 自動辨識金額並從 <b>'+emp.name+'</b> 的禮金扣款 · 圖片自動存到雲端</div>'
+    + '<input type="file" id="gift-file" accept="image/*" onchange="onGiftFile(this.files)">'
+    + '<div id="gift-busy" style="margin-top:10px"></div>'
+    + '</label>';
+
+  // 拖曳支援
+  var ua = document.getElementById('up-area');
+  if(ua){
+    ['dragenter','dragover'].forEach(function(ev){
+      ua.addEventListener(ev, function(e){ e.preventDefault(); ua.classList.add('dragover'); });
+    });
+    ['dragleave','drop'].forEach(function(ev){
+      ua.addEventListener(ev, function(e){ e.preventDefault(); ua.classList.remove('dragover'); });
+    });
+    ua.addEventListener('drop', function(e){
+      var files = e.dataTransfer && e.dataTransfer.files;
+      if(files && files.length) onGiftFile(files);
+    });
+  }
+}
+
+function selectEmp(id){
+  STATE.selectedEmpId = id;
+  renderEmpTabs();
+  renderEmpCardAndUpload();
+  renderHistory();
+  pushToCloud(false);
+}
+
+function fmtTs(ts){
+  try {
+    var d = new Date(ts);
+    return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
+  } catch(e){ return ts; }
+}
+
+function renderHistory(){
+  var area = document.getElementById('history-list');
+  if(!EMPLOYEES.length){ area.innerHTML=''; return; }
+  var emp = EMPLOYEES.find(function(e){ return e.id === STATE.selectedEmpId; });
+  if(!emp){ area.innerHTML = '<div class="empty-row">未選擇員工</div>'; return; }
+  var hist = (STATE.giftHistory[emp.id] || []).slice().sort(function(a,b){
+    return (b.ts||'').localeCompare(a.ts||'');
   });
-  renderGift();
-  try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+  // 加上「初始餘額」
+  var initialBal = Number(emp.initialGiftBalance) || 0;
+  if(hist.length === 0 && initialBal === 0){
+    area.innerHTML = '<div class="empty-row">尚無紀錄<br><span style="font-size:11px">上傳禮金圖片即可從餘額扣款</span></div>';
+    return;
+  }
+  var rows = hist.map(function(h){
+    var amt = Number(h.amount) || 0;
+    var sign = h.type === 'credit' ? '+' : '−';
+    var amtCls = h.type === 'credit' ? 'credit' : 'debit';
+    var thumb;
+    if(h.fileId){
+      thumb = '<img class="history-thumb" src="" alt="圖片" data-fileid="'+h.fileId+'" onclick="openImgFromFileId(\''+h.fileId+'\')">';
+    } else {
+      thumb = '<div class="history-thumb placeholder">'+(h.type==='credit'?'🎁':'💸')+'</div>';
+    }
+    return '<div class="history-item">'
+      + thumb
+      + '<div class="history-meta">'
+      +   '<div class="h-line1">'
+      +     '<span class="h-tag '+amtCls+'">'+(h.type==='credit'?'加值':'支出')+'</span>'
+      +     (h.reason || '')
+      +   '</div>'
+      +   '<div class="h-line2">'+ fmtTs(h.ts) + (h.note ? ' · '+h.note : '') +'</div>'
+      + '</div>'
+      + '<div class="history-amount '+amtCls+'">'+sign+'$'+fmt(Math.abs(amt))+'</div>'
+      + '</div>';
+  });
+  // 加上「初始餘額」當底部一筆（不可改）
+  rows.push('<div class="history-item">'
+    + '<div class="history-thumb placeholder">📌</div>'
+    + '<div class="history-meta">'
+    +   '<div class="h-line1"><span class="h-tag credit">起始</span>初始餘額</div>'
+    +   '<div class="h-line2">系統初始</div>'
+    + '</div>'
+    + '<div class="history-amount credit">+$'+fmt(initialBal)+'</div>'
+    + '</div>');
+  area.innerHTML = rows.join('');
+
+  // 載入縮圖
+  document.querySelectorAll('.history-thumb[data-fileid]').forEach(function(img){
+    var fid = img.getAttribute('data-fileid');
+    if(!fid || img.src) return;
+    callGAS('getGiftImage', [getStorePassword(), fid])
+      .then(function(res){
+        if(res && res.ok){
+          img.src = 'data:'+(res.mimeType||'image/jpeg')+';base64,'+res.base64;
+        }
+      });
+  });
 }
 
-function removeGift(id){
-  if(!confirm('確定要刪除這筆禮金嗎？')) return;
-  STATE.gifts = STATE.gifts.filter(function(g){ return g.id !== id; });
-  renderGift();
-  try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+function openImgFromFileId(fid){
+  var modal = document.getElementById('img-modal');
+  var img = document.getElementById('modal-img');
+  // 找 cache 過的 img 來複用
+  var el = document.querySelector('.history-thumb[data-fileid="'+fid+'"]');
+  if(el && el.src){
+    img.src = el.src;
+    modal.classList.add('open');
+  } else {
+    callGAS('getGiftImage', [getStorePassword(), fid])
+      .then(function(res){
+        if(res && res.ok){
+          img.src = 'data:'+(res.mimeType||'image/jpeg')+';base64,'+res.base64;
+          modal.classList.add('open');
+        }
+      });
+  }
+}
+function closeImgModal(e){
+  if(e && e.target && e.target.tagName === 'IMG' && e.target.id === 'modal-img') return;
+  document.getElementById('img-modal').classList.remove('open');
 }
 
-function onGiftField(id, field, v){
-  var g = STATE.gifts.find(function(x){ return x.id === id; });
-  if(!g) return;
-  if(field === 'amount') g[field] = Math.max(0, Number(v)||0);
-  else g[field] = v;
-  // 重算合計
-  var total = STATE.gifts.reduce(function(s,g){ return s + (Number(g.amount)||0); }, 0);
-  document.getElementById('gift-total').textContent = '$ ' + total.toLocaleString();
-  try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+function render(){
+  renderAnnual();
+  renderTravel();
+  renderEmpTabs();
+  renderEmpCardAndUpload();
+  renderHistory();
 }
 
 // ============================================
-// AI 辨識（沿用 daily-summary.html 的呼叫路徑）
+// 上傳禮金圖片 → AI 識別 → 上傳 Drive → 寫歷史
 // ============================================
-var DIRECT_CALL_DISABLED = false;
+async function onGiftFile(files){
+  if(!files || !files.length) return;
+  var emp = EMPLOYEES.find(function(e){ return e.id === STATE.selectedEmpId; });
+  if(!emp){ toast('請先選擇員工', 'err'); return; }
+  var file = files[0];
+  var busy = document.getElementById('gift-busy');
+  busy.innerHTML = '<span class="busy">壓縮並 AI 識別中…</span>';
 
-function toB64(file){
+  try {
+    // 1. 壓縮（最長邊 1200px）
+    var resized = await resizeImage(file, 1200);
+
+    // 2. AI 識別金額
+    var prompt = '從這張圖片（紅包/收據/訊息截圖/帳單/轉帳畫面）抽取「禮金金額」。請只回傳純 JSON：\n'
+      + '{ "amount": 整數金額, "occasion": "事由（婚禮/喪禮/喬遷/慰問/賀禮/其他）", "recipient": "收禮人或對象", "note": "簡短備註" }\n'
+      + '規則：1) 只有最關鍵的「給出去的禮金金額」 2) 看不到金額或不像禮金 → amount=0 3) 不要附加說明，只回 JSON';
+    var raw = await geminiCall([resized.blob], prompt);
+    var data = parseJson(raw);
+    var amount = Math.abs(Math.round(Number(data.amount) || 0));
+    if(!amount){
+      busy.innerHTML = '<span style="color:var(--danger);font-size:12px">❌ AI 沒辨識出禮金金額，請改傳更清楚的收據</span>';
+      toast('AI 沒辨識出金額', 'err');
+      return;
+    }
+
+    // 3. 上傳到 Drive
+    busy.innerHTML = '<span class="busy">上傳到雲端…</span>';
+    var b64 = await blobToBase64(resized.blob);
+    var up = await callGAS('uploadGiftImage', [
+      getStorePassword(), STORE, emp.id,
+      b64, resized.blob.type || 'image/jpeg',
+      'gift_'+emp.id+'_'+Date.now()+'.jpg'
+    ]);
+    if(!up || !up.ok){
+      throw new Error((up && up.error) || '上傳失敗');
+    }
+
+    // 4. 寫進 history
+    var entry = {
+      id: 'g_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+      ts: new Date().toISOString(),
+      type: 'debit',
+      amount: amount,
+      reason: data.occasion || '禮金',
+      fileId: up.fileId,
+      note: [data.recipient, data.note].filter(Boolean).join(' · ')
+    };
+    STATE.giftHistory[emp.id].push(entry);
+
+    // 5. 同步到 sheet（log + state）
+    callGAS('logGift', [
+      getStorePassword(), STORE, emp.id, emp.name,
+      'debit', amount, entry.reason, up.fileId, entry.note
+    ]);
+
+    busy.innerHTML = '<span style="color:var(--ok);font-size:12px">✓ 已扣款 $'+fmt(amount)+'，餘額更新</span>';
+    toast('已扣款 $'+fmt(amount), 'ok');
+
+    pushToCloud(false);
+    render();
+    document.getElementById('gift-file').value = '';
+  } catch(e){
+    busy.innerHTML = '<span style="color:var(--danger);font-size:12px">❌ '+ (e.message||'失敗') +'</span>';
+    toast('失敗：'+(e.message||''), 'err');
+  }
+}
+
+function resizeImage(file, maxSide){
+  return new Promise(function(resolve, reject){
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function(){
+      var w = img.naturalWidth, h = img.naturalHeight;
+      var scale = Math.min(1, maxSide / Math.max(w, h));
+      var nw = Math.round(w * scale), nh = Math.round(h * scale);
+      var canvas = document.createElement('canvas');
+      canvas.width = nw; canvas.height = nh;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, nw, nh);
+      canvas.toBlob(function(blob){
+        URL.revokeObjectURL(url);
+        if(!blob) return reject(new Error('壓縮失敗'));
+        resolve({ blob: blob, w: nw, h: nh });
+      }, 'image/jpeg', 0.85);
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('讀檔失敗')); };
+    img.src = url;
+  });
+}
+
+function blobToBase64(blob){
   return new Promise(function(resolve, reject){
     var r = new FileReader();
     r.onload = function(){ resolve(String(r.result).split(',')[1]); };
     r.onerror = reject;
-    r.readAsDataURL(file);
+    r.readAsDataURL(blob);
   });
 }
 
+// ============================================
+// AI: Gemini call (沿用小結報表的三層 fallback)
+// ============================================
+var DIRECT_CALL_DISABLED = false;
 function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
 
 function parseGeminiResponse(data, model){
   if(data.error){
     var msg = typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error));
-    var err = new Error(msg);
-    err.code = (typeof data.error === 'object') ? data.error.code : undefined;
-    throw err;
+    var err = new Error(msg); err.code = (typeof data.error === 'object') ? data.error.code : undefined; throw err;
   }
   var cand = data.candidates && data.candidates[0];
   if(!cand) throw new Error('沒有候選回應');
   if(cand.finishReason === 'SAFETY') throw new Error('被安全過濾器擋下');
   var text = cand.content && cand.content.parts && cand.content.parts[0] && cand.content.parts[0].text;
-  if(!text) throw new Error('空內容（finishReason: ' + (cand.finishReason || '未知') + '）');
+  if(!text) throw new Error('空內容');
   return text;
 }
 
@@ -607,65 +803,43 @@ async function callModelOnce(model, parts){
   var workerUrl = localStorage.getItem('cd_worker_url');
   var directKey = localStorage.getItem('cd_gemini_direct_key');
   var proxyUrl  = localStorage.getItem('cd_sync_url');
-  if(!workerUrl && !directKey && !proxyUrl){
-    throw new Error('尚未設定任何 Gemini 路徑（請先到「小結報表」設定一次）');
-  }
+  if(!workerUrl && !directKey && !proxyUrl) throw new Error('尚未設定 Gemini 路徑（請先到「小結報表」設定一次）');
   var genConfig = { temperature: 0, topP: 0.1, topK: 1 };
 
   if(workerUrl){
     try{
-      var wr = await fetch(workerUrl, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ model: model, parts: parts, generationConfig: genConfig })
-      });
+      var wr = await fetch(workerUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ model: model, parts: parts, generationConfig: genConfig }) });
       var wd = await wr.json();
-      if(!wr.ok && !wd.error){
-        var wHErr = new Error('Worker HTTP ' + wr.status);
-        wHErr.code = wr.status; throw wHErr;
-      }
+      if(!wr.ok && !wd.error){ var e = new Error('Worker HTTP '+wr.status); e.code = wr.status; throw e; }
       return parseGeminiResponse(wd, model);
     } catch(we){
-      var wmsg = (we.message||'').toLowerCase();
-      var wIsBusy = we.code === 503 || we.code === 429 || wmsg.indexOf('overloaded')>=0 || wmsg.indexOf('unavailable')>=0 || wmsg.indexOf('rate')>=0;
-      if(wIsBusy) throw we;
-      console.warn('Worker 失敗：', we.message);
+      var wm = (we.message||'').toLowerCase();
+      if(we.code === 503 || we.code === 429 || wm.indexOf('overloaded')>=0 || wm.indexOf('unavailable')>=0 || wm.indexOf('rate')>=0) throw we;
     }
   }
 
   if(directKey && !DIRECT_CALL_DISABLED){
     try{
-      var url = 'https://generativelanguage.googleapis.com/v1beta/models/'
-              + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(directKey);
-      var dr = await fetch(url, {
+      var dr = await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(directKey), {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ contents:[{ parts: parts }], generationConfig: genConfig })
       });
       var dd = await dr.json();
-      if(!dr.ok && !dd.error){
-        var hErr = new Error('HTTP '+dr.status); hErr.code = dr.status; throw hErr;
-      }
+      if(!dr.ok && !dd.error){ var e = new Error('HTTP '+dr.status); e.code = dr.status; throw e; }
       return parseGeminiResponse(dd, model);
     } catch(de){
-      var dmsg = (de.message||'').toLowerCase();
-      var isBusy = de.code === 503 || de.code === 429 || dmsg.indexOf('overloaded')>=0 || dmsg.indexOf('unavailable')>=0 || dmsg.indexOf('rate')>=0;
-      if(isBusy) throw de;
-      if(proxyUrl){ DIRECT_CALL_DISABLED = true; }
-      else throw de;
+      var dm = (de.message||'').toLowerCase();
+      if(de.code === 503 || de.code === 429 || dm.indexOf('overloaded')>=0 || dm.indexOf('unavailable')>=0 || dm.indexOf('rate')>=0) throw de;
+      if(proxyUrl){ DIRECT_CALL_DISABLED = true; } else throw de;
     }
   }
 
   if(!proxyUrl) throw new Error('沒有代理可用');
-  var r = await fetch(proxyUrl, {
-    method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body: JSON.stringify({ action:'geminiProxy', model: model, parts: parts, generationConfig: genConfig })
-  });
+  var r = await fetch(proxyUrl, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'geminiProxy', model: model, parts: parts, generationConfig: genConfig }) });
   var wrap = await r.json();
   if(wrap.error){
     var em = typeof wrap.error === 'string' ? wrap.error : (wrap.error.message || JSON.stringify(wrap.error));
-    var pxErr = new Error(em);
-    pxErr.code = (typeof wrap.error === 'object') ? wrap.error.code : undefined;
-    throw pxErr;
+    var e2 = new Error(em); e2.code = (typeof wrap.error === 'object') ? wrap.error.code : undefined; throw e2;
   }
   return parseGeminiResponse(wrap.data || {}, model);
 }
@@ -677,27 +851,22 @@ async function geminiCall(imageFiles, promptText){
   var parts = [];
   for(var i=0; i<imageFiles.length; i++){
     var f = imageFiles[i];
-    var b64 = await toB64(f);
+    var b64 = await blobToBase64(f);
     parts.push({inline_data:{mime_type: f.type || 'image/jpeg', data: b64}});
   }
   parts.push({text: promptText});
-
   var primary = localStorage.getItem('cd_gemini_model') || 'gemini-2.0-flash';
-  var fallbackChain = [primary, 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
-  var tried = {};
-  var models = fallbackChain.filter(function(m){ if(tried[m]) return false; tried[m]=1; return true; });
-
+  var fb = [primary, 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
+  var seen = {}, models = fb.filter(function(m){ if(seen[m]) return false; seen[m]=1; return true; });
   var lastErr;
   for(var mi=0; mi<models.length; mi++){
-    var model = models[mi];
     for(var attempt=0; attempt<3; attempt++){
-      try{
-        return await callModelOnce(model, parts);
-      } catch(e){
+      try { return await callModelOnce(models[mi], parts); }
+      catch(e){
         lastErr = e;
         var msg = (e.message||'').toLowerCase();
-        var isBusy = e.code === 503 || e.code === 429 || msg.indexOf('overloaded')>=0 || msg.indexOf('unavailable')>=0 || msg.indexOf('rate')>=0;
-        if(isBusy && attempt < 2){ await sleep((attempt+1)*1000); continue; }
+        var busy = e.code===503 || e.code===429 || msg.indexOf('overloaded')>=0 || msg.indexOf('unavailable')>=0 || msg.indexOf('rate')>=0;
+        if(busy && attempt<2){ await sleep((attempt+1)*1000); continue; }
         break;
       }
     }
@@ -707,110 +876,14 @@ async function geminiCall(imageFiles, promptText){
 
 function parseJson(raw){
   var clean = String(raw||'').replace(/```json|```/g,'').trim();
-  var match = clean.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-  if(match) clean = match[0];
+  var m = clean.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+  if(m) clean = m[0];
   return JSON.parse(clean);
 }
 
-async function onGiftFiles(fileList){
-  if(!fileList || !fileList.length) return;
-  var files = Array.from(fileList);
-  var preview = document.getElementById('gift-preview');
-  var busy = document.getElementById('gift-busy');
-
-  // 預覽縮圖
-  files.forEach(function(f){
-    var url = URL.createObjectURL(f);
-    var img = document.createElement('img');
-    img.src = url; img.title = f.name;
-    preview.appendChild(img);
-  });
-
-  busy.innerHTML = '<span class="busy">AI 辨識中（'+files.length+' 張圖片）…</span>';
-
-  var ym = getSelectedYM();
-  var prompt = '你是禮金紀錄助手。請從這些圖片（可能是紅包、收據、訊息截圖、轉帳畫面、紀錄表）中抽取每一筆「禮金」資訊，並回 JSON：\n'
-    + '{ "items": [ { "occasion": "事由（如：婚禮/喪禮/喬遷/生日/年節/慰問/其他）", "recipient": "收禮人姓名或對象", "date": "YYYY-MM-DD（盡量推斷；若只看到月日，年用 '+ym.split('-')[0]+'）", "amount": 整數金額, "note": "其他細節（如紅包封面文字、關係備註）" } ] }\n'
-    + '規則：\n'
-    + '1. 一張圖如果有多筆禮金（例如清單），請一筆一筆全列出\n'
-    + '2. 看不到金額但其他資訊清楚 → amount 填 0\n'
-    + '3. 完全看不出是禮金（純風景/食物等）→ 不要輸出該筆\n'
-    + '4. 只回 JSON，不要附加說明文字。';
-
-  try{
-    var raw = await geminiCall(files, prompt);
-    var data = parseJson(raw);
-    var items = (data && data.items) || [];
-    if(!items.length){
-      busy.innerHTML = '<span style="color:var(--ink-3);font-size:12px">⚠️ AI 沒有從圖片中找到禮金資訊，可手動新增一筆</span>';
-      return;
-    }
-    items.forEach(function(it){
-      STATE.gifts.push({
-        id: uid(),
-        occasion: it.occasion || '',
-        recipient: it.recipient || '',
-        date: it.date || (ym + '-01'),
-        amount: Math.max(0, Number(it.amount)||0),
-        note: it.note || ''
-      });
-    });
-    busy.innerHTML = '<span style="color:var(--ok);font-size:12px">✓ AI 已辨識並新增 '+items.length+' 筆禮金</span>';
-    renderGift();
-    try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
-    toast('AI 辨識完成：新增 '+items.length+' 筆', 'ok');
-  } catch(e){
-    busy.innerHTML = '<span style="color:var(--danger);font-size:12px">❌ AI 辨識失敗：'+ (e.message||'未知錯誤') +'</span>';
-    toast('AI 辨識失敗：'+(e.message||''), 'err');
-  } finally {
-    // 清空 file input 讓同一張圖可重傳
-    document.getElementById('gift-file').value = '';
-  }
-}
-
 // ============================================
-// Render & Init
+// 雲端 sync
 // ============================================
-function render(){
-  renderLeave('annual');
-  renderLeave('travel');
-  renderGift();
-}
-
-function toast(msg, cls){
-  var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show ' + (cls||'');
-  setTimeout(function(){ t.className = 'toast'; }, 1800);
-}
-
-function goBack(){
-  // 回到主頁
-  window.location.href = 'home.html';
-}
-
-// ============================================
-// ☁ 雲端同步（Google Apps Script）
-// ============================================
-// 4 家店共用同一個 /exec（後端依 store 欄位分流、資料寫進同一份試算表）
-// 部署「特休-script.gs」後把 /exec 網址貼進來（或在頁面上點 ⚙️ 設定）
-var LEAVE_SYNC_URL = 'https://script.google.com/macros/s/AKfycbxeJRR4Xlt4fSngAwEIAW2FBMEwLuNH9djZKY7LzI7RhX0_Lk9L2TvUM_WyFU-YpEfO6A/exec';
-var LS_LEAVE_SYNC_URL = 'cd_leavegift_sync_url';
-
-function getSyncUrl(){
-  return localStorage.getItem(LS_LEAVE_SYNC_URL) || LEAVE_SYNC_URL || '';
-}
-
-function getStorePassword(){
-  var pw = {
-    'chudian-zhonghe':    'a90369287',
-    'chudian-yongchun':   'a94213054',
-    'chudian-xinzhuang':  'a60749791',
-    'shicheng-zhongxiao': 'a61222042'
-  };
-  return pw[STORE] || '';
-}
-
 function setSyncChip(state, text, title){
   var chip = document.getElementById('sync-chip');
   if(!chip) return;
@@ -819,112 +892,65 @@ function setSyncChip(state, text, title){
   if(title) chip.title = title;
 }
 
-function callLeaveGAS(action, args){
-  var url = getSyncUrl();
-  if(!url) return Promise.reject(new Error('尚未設定雲端網址'));
-  return fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: action, args: args || [] })
-  }).then(function(r){ return r.json(); });
-}
-
 var _pushTimer = null;
 function pushToCloud(showToastWhenOk){
   if(!STATE) return;
   var url = getSyncUrl();
-  if(!url){ setSyncChip('off', '☁ 未設定', '點 ⚙️ 設定雲端網址'); return; }
-
+  if(!url){ setSyncChip('off', '☁ 未設定', ''); return; }
   if(_pushTimer) clearTimeout(_pushTimer);
   _pushTimer = setTimeout(function(){
     setSyncChip('busy', '☁ 同步中…', '');
-    var payload = JSON.parse(JSON.stringify(STATE));
-    callLeaveGAS('saveLeave', [getStorePassword(), STORE, getSelectedYM(), payload])
+    callGAS('saveStore', [getStorePassword(), STORE, JSON.parse(JSON.stringify(STATE))])
       .then(function(res){
         if(res && res.ok){
-          var t = res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : '';
-          setSyncChip('ok', '☁ 已同步', '最後同步：' + t);
+          setSyncChip('ok', '☁ 已同步', '最後同步：'+(res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : ''));
           if(showToastWhenOk) toast('已同步到雲端', 'ok');
         } else {
           setSyncChip('err', '☁ 失敗', (res && res.error) || '');
-          if(showToastWhenOk) toast('雲端同步失敗：'+((res&&res.error)||''), 'err');
+          if(showToastWhenOk) toast('同步失敗：'+((res&&res.error)||''), 'err');
         }
       })
-      .catch(function(err){
-        setSyncChip('err', '☁ 離線', err.message || '');
-      });
-  }, 500);
+      .catch(function(err){ setSyncChip('err', '☁ 離線', err.message||''); });
+  }, 600);
 }
 
-function pullFromCloud(showToast){
+function pullFromCloud(){
   var url = getSyncUrl();
-  if(!url){ setSyncChip('off', '☁ 未設定', '點 ⚙️ 設定雲端網址'); return; }
+  if(!url){ setSyncChip('off', '☁ 未設定', ''); return; }
   setSyncChip('busy', '☁ 讀取中…', '');
-  callLeaveGAS('loadLeave', [getStorePassword(), STORE, getSelectedYM()])
+  callGAS('loadStore', [getStorePassword(), STORE])
     .then(function(res){
       if(!res || !res.ok){
         setSyncChip('err', '☁ 讀取失敗', (res && res.error) || '');
-        if(showToast) toast('雲端讀取失敗：'+((res&&res.error)||''), 'err');
         return;
       }
-      if(!res.found){
-        setSyncChip('ok', '☁ 已連線（本月無雲端資料）', '第一次儲存會建立');
-        // 把目前本機（含剛剛 importFromOvertime 的結果）推上雲端建立第一份
-        pushToCloud(false);
-        return;
+      if(res.found){
+        STATE = res.state || blankState();
+        ensureSlots();
+        setSyncChip('ok', '☁ 已同步', '從雲端讀取：'+(res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : ''));
+      } else {
+        STATE = blankState();
+        ensureSlots();
+        setSyncChip('ok', '☁ 已連線（雲端無資料）', '');
       }
-      // 雲端有資料 → 以雲端為主，但保留剛從加班費系統匯入的自動日期
-      var cloud = res.state || {};
-      var def = blankState();
-      EMPLOYEES.forEach(function(e){
-        if(!cloud.annual) cloud.annual = {};
-        if(!cloud.travel) cloud.travel = {};
-        if(!cloud.annual[e.name]) cloud.annual[e.name] = { dates: [], note:'', autoDates: {} };
-        if(!cloud.travel[e.name]) cloud.travel[e.name] = { dates: [], note:'', autoDates: {} };
-        if(!cloud.annual[e.name].autoDates) cloud.annual[e.name].autoDates = {};
-        if(!cloud.travel[e.name].autoDates) cloud.travel[e.name].autoDates = {};
-      });
-      if(!Array.isArray(cloud.gifts)) cloud.gifts = [];
-      cloud.ym = getSelectedYM();
-      cloud.store = STORE;
-      STATE = cloud;
-      try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
-      // 雲端載入後再跑一次 import，把當月新出現的特休/旅遊假補進來
-      importFromOvertime(true);
+      maybeAutoCredit();
       render();
-      var t = res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : '';
-      setSyncChip('ok', '☁ 已同步', '從雲端讀取：' + t);
-      if(showToast) toast('已從雲端讀取（'+t+'）', 'ok');
     })
-    .catch(function(err){
-      setSyncChip('err', '☁ 離線', err.message || '');
-      if(showToast) toast('連線失敗：'+err.message, 'err');
-    });
+    .catch(function(err){ setSyncChip('err', '☁ 離線', err.message||''); render(); });
 }
 
-function syncNow(){
-  var url = getSyncUrl();
-  if(!url){ openSyncSettings(); return; }
-  pushToCloud(true);
-}
+function syncNow(){ pushToCloud(true); }
 
-function openSyncSettings(){
-  var current = getSyncUrl();
-  var hint = '貼上「特休-script.gs」部署後的 /exec 網址\n'
-           + '留空清除，按取消不變。\n\n目前：' + (current || '（未設定）');
-  var v = prompt(hint, current || '');
-  if(v === null) return;
-  v = String(v).trim();
-  if(v){
-    if(!/^https?:\/\//.test(v)){ toast('網址格式不正確', 'err'); return; }
-    localStorage.setItem(LS_LEAVE_SYNC_URL, v);
-    toast('已更新雲端網址', 'ok');
-  } else {
-    localStorage.removeItem(LS_LEAVE_SYNC_URL);
-    toast('已清除雲端網址', 'ok');
-  }
-  pullFromCloud(false);
+// ============================================
+// 工具
+// ============================================
+function toast(msg, cls){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (cls||'');
+  setTimeout(function(){ t.className = 'toast'; }, 2200);
 }
+function goBack(){ window.location.href = 'home.html'; }
 
 (function init(){
   if(!STORE){
@@ -932,20 +958,16 @@ function openSyncSettings(){
     window.location.href = 'home.html';
     return;
   }
-  loadState();
-  // 第一次進來自動匯入一次
-  importFromOvertime(true);
+  STATE = blankState();
+  ensureSlots();
   render();
-  // 啟動時從雲端拉最新（若有設定）
-  pullFromCloud(false);
+  pullFromCloud();
 })();
 
-// 自動儲存（每 8 秒：本機 + 推雲端）
+// 自動同步（10 秒）
 setInterval(function(){
-  if(!STATE) return;
-  try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
-  pushToCloud(false);
-}, 8000);
+  if(STATE) pushToCloud(false);
+}, 10000);
 </script>
 </body>
 </html>
