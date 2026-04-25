@@ -955,10 +955,11 @@ function handleFiles(input, key){
   // ⚠️ 對於會累加到 store[key] 陣列的 'w' / 'd'，一定要只送「新上傳」的檔案給 AI，
   // 否則舊圖片會被重新辨識再 push 一次，造成金額重複
   if(newFiles.length > 0 && hasApiKey()){
-    if(key === 'summary') analyzeSummary();
+    // ⭐ 全部都只送「新上傳」的檔案給 AI，不重讀舊圖以免金額重複
+    if(key === 'summary')         analyzeSummary(newFiles);
     else if(key === 'w' || key === 'd') analyzeReceipts(key, newFiles);
-    else if(key === 'refund') analyzeRefund();
-    else if(key === 'cancel') analyzeCancel();
+    else if(key === 'refund')     analyzeRefund(newFiles);
+    else if(key === 'cancel')     analyzeCancel(newFiles);
   }
 }
 
@@ -1009,8 +1010,11 @@ function handlePayFile(input, key){
   analyzePayFile(key, newFiles[newFiles.length - 1]);
 }
 
-async function analyzeSummary(){
+async function analyzeSummary(filesToAnalyze){
   if(!hasApiKey()) return;
+  // 預設只分析「新上傳」的張數，沒傳就退回全部 imgs.summary
+  var targets = filesToAnalyze || imgs.summary;
+  if(!targets || targets.length === 0) return;
   var line = document.getElementById('ai-status-summary');
   var spin = document.getElementById('spin-summary');
   var btxt = document.getElementById('btxt-summary');
@@ -1076,7 +1080,7 @@ async function analyzeSummary(){
 '\n' +
 '【輸出格式】\n' +
 '{"opening":number|null,"net":number|null,"cash":number|null,"expected":number|null,"withdrawal":number|null,"daishuo":number|null,"jkopay":number|null,"jko":number|null,"refund":number|null,"cancel":number|null}';
-    var raw = await geminiCall(imgs.summary, prompt);
+    var raw = await geminiCall(targets, prompt);
     console.log('Gemini 回應：', raw);
     var p = parseJson(raw);
     console.log('解析後：', p);
@@ -1291,14 +1295,17 @@ async function handleDepositFile(input){
 }
 
 // 退單截圖 AI 識別（只讀退單，不管取消）
-async function analyzeRefund(){
+// ⭐ 只分析新上傳的圖片；結果累加到既有金額（不覆蓋）
+async function analyzeRefund(filesToAnalyze){
   if(!hasApiKey()) return;
+  var targets = filesToAnalyze || imgs.refund;
+  if(!targets || targets.length === 0) return;
   var line = document.getElementById('ai-status-refund');
   var spin = document.getElementById('spin-refund');
   var btxt = document.getElementById('btxt-refund');
   if(line){ line.style.display = 'flex'; line.className = 'ai-status-line'; }
   if(spin) spin.className = 'spinner on';
-  if(btxt) btxt.textContent = 'AI 讀取中...';
+  if(btxt) btxt.textContent = 'AI 讀取中（' + targets.length + ' 張新圖）...';
   try{
     var prompt = '這些是【退單】截圖／POS 列印。' +
       '⚠️ 重要：只要「退單」的金額，取消單、取消交易、廢單都不算！' +
@@ -1308,17 +1315,28 @@ async function analyzeRefund(){
       '沒看到退單就回傳 0。' +
       '\n只回傳 JSON（不要 markdown、不要說明）：' +
       '\n{"refund":退單金額加總}';
-    var raw = await geminiCall(imgs.refund, prompt);
+    var raw = await geminiCall(targets, prompt);
     console.log('[Refund] Gemini 回應：', raw);
     var p = parseJson(raw);
     console.log('[Refund] 解析後：', p);
     var refundEl = document.getElementById('b-refund');
     if(refundEl && p.refund != null && !isNaN(parseFloat(p.refund))){
-      refundEl.value = parseFloat(p.refund);
+      var addAmount = parseFloat(p.refund);
+      var oldAmount = parseFloat(refundEl.value) || 0;
+      // 自動觸發呼叫（重新分析全部）時不累加，只覆蓋；
+      // 只有從 handleFiles 帶 newFiles 進來才是「累加新增」
+      if(filesToAnalyze){
+        refundEl.value = oldAmount + addAmount;
+      }else{
+        refundEl.value = addAmount;
+      }
       recalc();
       if(line) line.className = 'ai-status-line done';
       if(spin) spin.className = 'spinner';
-      if(btxt) btxt.textContent = '✓ 讀取完成：退單 ' + parseFloat(p.refund);
+      if(btxt) btxt.textContent = filesToAnalyze
+        ? '✓ 新增退單 ' + addAmount + '（合計 ' + refundEl.value + '）'
+        : '✓ 讀取完成：退單 ' + addAmount;
+      if(typeof autoSaveNow === 'function') autoSaveNow();
     } else {
       if(line) line.className = 'ai-status-line err';
       if(spin) spin.className = 'spinner';
@@ -1333,14 +1351,17 @@ async function analyzeRefund(){
 }
 
 // 取消單截圖 AI 識別（只讀取消單，不管退單）
-async function analyzeCancel(){
+// ⭐ 只分析新上傳的圖片；結果累加到既有金額（不覆蓋）
+async function analyzeCancel(filesToAnalyze){
   if(!hasApiKey()) return;
+  var targets = filesToAnalyze || imgs.cancel;
+  if(!targets || targets.length === 0) return;
   var line = document.getElementById('ai-status-cancel');
   var spin = document.getElementById('spin-cancel');
   var btxt = document.getElementById('btxt-cancel');
   if(line){ line.style.display = 'flex'; line.className = 'ai-status-line'; }
   if(spin) spin.className = 'spinner on';
-  if(btxt) btxt.textContent = 'AI 讀取中...';
+  if(btxt) btxt.textContent = 'AI 讀取中（' + targets.length + ' 張新圖）...';
   try{
     var prompt = '這些是【取消單】截圖／POS 列印。' +
       '⚠️ 重要：只要「取消單」的金額，退單、退貨、退款都不算！' +
@@ -1350,17 +1371,26 @@ async function analyzeCancel(){
       '沒看到取消就回傳 0。' +
       '\n只回傳 JSON（不要 markdown、不要說明）：' +
       '\n{"cancel":取消單金額加總}';
-    var raw = await geminiCall(imgs.cancel, prompt);
+    var raw = await geminiCall(targets, prompt);
     console.log('[Cancel] Gemini 回應：', raw);
     var p = parseJson(raw);
     console.log('[Cancel] 解析後：', p);
     var cancelEl = document.getElementById('b-cancel');
     if(cancelEl && p.cancel != null && !isNaN(parseFloat(p.cancel))){
-      cancelEl.value = parseFloat(p.cancel);
+      var addAmount = parseFloat(p.cancel);
+      var oldAmount = parseFloat(cancelEl.value) || 0;
+      if(filesToAnalyze){
+        cancelEl.value = oldAmount + addAmount;
+      }else{
+        cancelEl.value = addAmount;
+      }
       recalc();
       if(line) line.className = 'ai-status-line done';
       if(spin) spin.className = 'spinner';
-      if(btxt) btxt.textContent = '✓ 讀取完成：取消單 ' + parseFloat(p.cancel);
+      if(btxt) btxt.textContent = filesToAnalyze
+        ? '✓ 新增取消單 ' + addAmount + '（合計 ' + cancelEl.value + '）'
+        : '✓ 讀取完成：取消單 ' + addAmount;
+      if(typeof autoSaveNow === 'function') autoSaveNow();
     } else {
       if(line) line.className = 'ai-status-line err';
       if(spin) spin.className = 'spinner';
