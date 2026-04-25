@@ -1171,8 +1171,9 @@ function renderDetail(){
   html.push('<label>休(天) <input type="number" min="0" step="0.5" value="'+c.restDays+'" onchange="onDtChange(\''+emp.id+'\',\'restDays\',this.value)"></label>');
   html.push('</div>');
 
-  // 主項：月薪（含各獎金）— 可展開明細（不含底薪 26000 這一列）
-  var bd = bdRow('全勤獎勵金', c.b_s2)
+  // 主項：月薪（含各獎金）— 可展開明細
+  var bd = bdRow('底薪', BASE_SALARY)
+    + bdRow('全勤獎勵金', c.b_s2)
     + bdRow('考核獎金', c.b_s4)
     + bdRow('Google 評論獎金', c.b_s3)
     + bdRow('營業額獎金', c.b_s5);
