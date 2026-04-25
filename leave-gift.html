@@ -43,6 +43,15 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
 .month-picker{padding:8px 12px;font-size:14px;border:1.5px solid var(--line);border-radius:10px;background:rgba(255,255,255,.9);cursor:pointer;color:var(--ink);font-family:inherit;font-weight:600;outline:none;transition:all .18s}
 .month-picker:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(202,138,4,.18)}
 
+.sync-chip{padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;user-select:none}
+.sync-chip.ok{background:rgba(16,185,129,.12);color:#059669}
+.sync-chip.ok:hover{background:rgba(16,185,129,.2)}
+.sync-chip.off{background:rgba(148,163,184,.15);color:var(--ink-3)}
+.sync-chip.off:hover{background:rgba(148,163,184,.25)}
+.sync-chip.busy{background:rgba(59,130,246,.12);color:var(--info)}
+.sync-chip.err{background:rgba(220,38,38,.12);color:var(--danger)}
+.sync-chip.err:hover{background:rgba(220,38,38,.2)}
+
 .wrap{max-width:1000px;margin:0 auto;padding:0 0 3rem}
 
 .hero-card{background:linear-gradient(135deg,#fef9c3 0%,#fde68a 100%);border:1px solid rgba(202,138,4,.18);border-radius:20px;padding:1.25rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(202,138,4,.06),0 8px 24px -12px rgba(202,138,4,.2)}
@@ -151,7 +160,9 @@ table.grid .c-name{font-weight:700;color:var(--ink);width:140px}
     <span id="store-name">（未選店）</span>
   </div>
   <span class="spacer"></span>
+  <span id="sync-chip" class="sync-chip off" title="點擊重新同步" onclick="syncNow()">☁ 未設定</span>
   <select class="month-picker" id="month-picker" aria-label="選擇月份"></select>
+  <button class="btn btn-ghost btn-sm" onclick="openSyncSettings()" title="雲端同步設定">⚙️</button>
   <button class="btn btn-ghost btn-sm" onclick="saveAll()">💾 儲存</button>
 </div>
 
@@ -359,21 +370,24 @@ function saveAll(){
   STATE.store = STORE;
   try {
     localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE));
-    toast('已儲存', 'ok');
+    toast('已儲存（本機）', 'ok');
   } catch(e){
     toast('儲存失敗：' + e.message, 'err');
   }
+  pushToCloud(true);
 }
 
 function onMonthChange(){
-  // 先存舊月份
+  // 先把舊月份推上雲端＋存本機
   if(STATE){
     try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+    pushToCloud(false);
   }
   loadState();
   // 自動匯入
   importFromOvertime(true);
   render();
+  pullFromCloud(false);
 }
 
 // ============================================
@@ -775,6 +789,143 @@ function goBack(){
   window.location.href = 'home.html';
 }
 
+// ============================================
+// ☁ 雲端同步（Google Apps Script）
+// ============================================
+// 4 家店共用同一個 /exec（後端依 store 欄位分流、資料寫進同一份試算表）
+// 部署「特休-script.gs」後把 /exec 網址貼進來（或在頁面上點 ⚙️ 設定）
+var LEAVE_SYNC_URL = '';
+var LS_LEAVE_SYNC_URL = 'cd_leavegift_sync_url';
+
+function getSyncUrl(){
+  return localStorage.getItem(LS_LEAVE_SYNC_URL) || LEAVE_SYNC_URL || '';
+}
+
+function getStorePassword(){
+  var pw = {
+    'chudian-zhonghe':    'a90369287',
+    'chudian-yongchun':   'a94213054',
+    'chudian-xinzhuang':  'a60749791',
+    'shicheng-zhongxiao': 'a61222042'
+  };
+  return pw[STORE] || '';
+}
+
+function setSyncChip(state, text, title){
+  var chip = document.getElementById('sync-chip');
+  if(!chip) return;
+  chip.className = 'sync-chip ' + state;
+  chip.textContent = text;
+  if(title) chip.title = title;
+}
+
+function callLeaveGAS(action, args){
+  var url = getSyncUrl();
+  if(!url) return Promise.reject(new Error('尚未設定雲端網址'));
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: action, args: args || [] })
+  }).then(function(r){ return r.json(); });
+}
+
+var _pushTimer = null;
+function pushToCloud(showToastWhenOk){
+  if(!STATE) return;
+  var url = getSyncUrl();
+  if(!url){ setSyncChip('off', '☁ 未設定', '點 ⚙️ 設定雲端網址'); return; }
+
+  if(_pushTimer) clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(function(){
+    setSyncChip('busy', '☁ 同步中…', '');
+    var payload = JSON.parse(JSON.stringify(STATE));
+    callLeaveGAS('saveLeave', [getStorePassword(), STORE, getSelectedYM(), payload])
+      .then(function(res){
+        if(res && res.ok){
+          var t = res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : '';
+          setSyncChip('ok', '☁ 已同步', '最後同步：' + t);
+          if(showToastWhenOk) toast('已同步到雲端', 'ok');
+        } else {
+          setSyncChip('err', '☁ 失敗', (res && res.error) || '');
+          if(showToastWhenOk) toast('雲端同步失敗：'+((res&&res.error)||''), 'err');
+        }
+      })
+      .catch(function(err){
+        setSyncChip('err', '☁ 離線', err.message || '');
+      });
+  }, 500);
+}
+
+function pullFromCloud(showToast){
+  var url = getSyncUrl();
+  if(!url){ setSyncChip('off', '☁ 未設定', '點 ⚙️ 設定雲端網址'); return; }
+  setSyncChip('busy', '☁ 讀取中…', '');
+  callLeaveGAS('loadLeave', [getStorePassword(), STORE, getSelectedYM()])
+    .then(function(res){
+      if(!res || !res.ok){
+        setSyncChip('err', '☁ 讀取失敗', (res && res.error) || '');
+        if(showToast) toast('雲端讀取失敗：'+((res&&res.error)||''), 'err');
+        return;
+      }
+      if(!res.found){
+        setSyncChip('ok', '☁ 已連線（本月無雲端資料）', '第一次儲存會建立');
+        // 把目前本機（含剛剛 importFromOvertime 的結果）推上雲端建立第一份
+        pushToCloud(false);
+        return;
+      }
+      // 雲端有資料 → 以雲端為主，但保留剛從加班費系統匯入的自動日期
+      var cloud = res.state || {};
+      var def = blankState();
+      EMPLOYEES.forEach(function(e){
+        if(!cloud.annual) cloud.annual = {};
+        if(!cloud.travel) cloud.travel = {};
+        if(!cloud.annual[e.name]) cloud.annual[e.name] = { dates: [], note:'', autoDates: {} };
+        if(!cloud.travel[e.name]) cloud.travel[e.name] = { dates: [], note:'', autoDates: {} };
+        if(!cloud.annual[e.name].autoDates) cloud.annual[e.name].autoDates = {};
+        if(!cloud.travel[e.name].autoDates) cloud.travel[e.name].autoDates = {};
+      });
+      if(!Array.isArray(cloud.gifts)) cloud.gifts = [];
+      cloud.ym = getSelectedYM();
+      cloud.store = STORE;
+      STATE = cloud;
+      try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+      // 雲端載入後再跑一次 import，把當月新出現的特休/旅遊假補進來
+      importFromOvertime(true);
+      render();
+      var t = res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : '';
+      setSyncChip('ok', '☁ 已同步', '從雲端讀取：' + t);
+      if(showToast) toast('已從雲端讀取（'+t+'）', 'ok');
+    })
+    .catch(function(err){
+      setSyncChip('err', '☁ 離線', err.message || '');
+      if(showToast) toast('連線失敗：'+err.message, 'err');
+    });
+}
+
+function syncNow(){
+  var url = getSyncUrl();
+  if(!url){ openSyncSettings(); return; }
+  pushToCloud(true);
+}
+
+function openSyncSettings(){
+  var current = getSyncUrl();
+  var hint = '貼上「特休-script.gs」部署後的 /exec 網址\n'
+           + '留空清除，按取消不變。\n\n目前：' + (current || '（未設定）');
+  var v = prompt(hint, current || '');
+  if(v === null) return;
+  v = String(v).trim();
+  if(v){
+    if(!/^https?:\/\//.test(v)){ toast('網址格式不正確', 'err'); return; }
+    localStorage.setItem(LS_LEAVE_SYNC_URL, v);
+    toast('已更新雲端網址', 'ok');
+  } else {
+    localStorage.removeItem(LS_LEAVE_SYNC_URL);
+    toast('已清除雲端網址', 'ok');
+  }
+  pullFromCloud(false);
+}
+
 (function init(){
   if(!STORE){
     alert('請先選擇門市');
@@ -785,7 +936,16 @@ function goBack(){
   // 第一次進來自動匯入一次
   importFromOvertime(true);
   render();
+  // 啟動時從雲端拉最新（若有設定）
+  pullFromCloud(false);
 })();
+
+// 自動儲存（每 8 秒：本機 + 推雲端）
+setInterval(function(){
+  if(!STATE) return;
+  try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+  pushToCloud(false);
+}, 8000);
 </script>
 </body>
 </html>
