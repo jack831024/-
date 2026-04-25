@@ -160,6 +160,27 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
   table.grid{font-size:12px}
   table.grid th,table.grid td{padding:6px 5px}
 }
+
+/* 其他獎金/懲罰：窄螢幕改用 2-row card layout（員工占整行、說明/金額/× 並排） */
+@media(max-width:560px){
+  #tbl-other thead{display:none}
+  #tbl-other,#tbl-other tbody,#tbl-other tr,#tbl-other td{display:block;width:100%}
+  #tbl-other tr{
+    display:grid;
+    grid-template-columns:1fr 110px 36px;
+    grid-template-areas:"emp emp emp" "lbl amt del";
+    gap:6px;
+    padding:9px 0;
+    border-bottom:1px solid rgba(226,232,240,.7);
+  }
+  #tbl-other tr:last-child{border-bottom:none}
+  #tbl-other td{padding:0;border:none}
+  #tbl-other td:nth-child(1){grid-area:emp}
+  #tbl-other td:nth-child(2){grid-area:lbl}
+  #tbl-other td:nth-child(3){grid-area:amt}
+  #tbl-other td:nth-child(4){grid-area:del;text-align:center}
+  #tbl-other select,#tbl-other input{max-width:none;width:100%}
+}
 </style>
 </head>
 <body>
@@ -303,13 +324,13 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
   <!-- 9. 其他獎金/懲罰（自由新增） -->
   <div class="section">
     <h3><span class="step-num">9</span><span class="icon">🎁</span>其他獎金／懲罰<span class="hint">手動新增，正數加薪、負數扣薪</span></h3>
-    <table class="grid">
+    <table class="grid" id="tbl-other">
       <thead>
         <tr>
           <th>員工</th>
           <th>說明</th>
-          <th style="width:140px">金額</th>
-          <th style="width:50px"></th>
+          <th style="width:120px">金額</th>
+          <th style="width:40px"></th>
         </tr>
       </thead>
       <tbody id="tbody-other"></tbody>
