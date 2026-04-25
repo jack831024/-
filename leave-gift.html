@@ -413,13 +413,39 @@ function calcTravel(emp){
   };
 }
 function calcGiftBalance(emp){
-  var bal = Number(emp.initialGiftBalance) || 0;
+  // 從 0 算起 — 初始餘額在 ensureInitialSeed() 已寫成 history 第一筆
+  var bal = 0;
   (STATE.giftHistory[emp.id] || []).forEach(function(h){
     var amt = Number(h.amount) || 0;
     if(h.type === 'credit') bal += Math.abs(amt);
     else if(h.type === 'debit') bal -= Math.abs(amt);
   });
   return bal;
+}
+
+// 第一次進來：把 code 內的 initialGiftBalance 寫成 history 第一筆 credit
+//   寫進雲端後，code 的數字就不再影響餘額（除非雲端那筆被刪掉）
+function ensureInitialSeed(){
+  var added = 0;
+  EMPLOYEES.forEach(function(emp){
+    var hist = STATE.giftHistory[emp.id] || (STATE.giftHistory[emp.id] = []);
+    var hasSeed = hist.some(function(h){ return h && h.reason === '初始餘額' && h.type === 'credit'; });
+    if(hasSeed) return;
+    var initial = Number(emp.initialGiftBalance) || 0;
+    if(initial > 0){
+      hist.push({
+        id: 'seed_' + emp.id,
+        ts: new Date(EFFECTIVE_DATE + 'T00:00:00').toISOString(),
+        type: 'credit',
+        amount: initial,
+        reason: '初始餘額',
+        fileId: '',
+        note: EFFECTIVE_DATE + ' 系統啟用初始餘額（不可刪）'
+      });
+      added++;
+    }
+  });
+  return added;
 }
 
 // ============================================
@@ -631,9 +657,7 @@ function renderHistory(){
   var hist = (STATE.giftHistory[emp.id] || []).slice().sort(function(a,b){
     return (b.ts||'').localeCompare(a.ts||'');
   });
-  // 加上「初始餘額」
-  var initialBal = Number(emp.initialGiftBalance) || 0;
-  if(hist.length === 0 && initialBal === 0){
+  if(hist.length === 0){
     area.innerHTML = '<div class="empty-row">尚無紀錄<br><span style="font-size:11px">上傳禮金圖片即可從餘額扣款</span></div>';
     return;
   }
@@ -641,17 +665,18 @@ function renderHistory(){
     var amt = Number(h.amount) || 0;
     var sign = h.type === 'credit' ? '+' : '−';
     var amtCls = h.type === 'credit' ? 'credit' : 'debit';
+    var isSeed = (h.reason === '初始餘額');
     var thumb;
     if(h.fileId){
       thumb = '<img class="history-thumb" src="" alt="圖片" data-fileid="'+h.fileId+'" onclick="openImgFromFileId(\''+h.fileId+'\')">';
     } else {
-      thumb = '<div class="history-thumb placeholder">'+(h.type==='credit'?'🎁':'💸')+'</div>';
+      thumb = '<div class="history-thumb placeholder">'+(isSeed ? '📌' : (h.type==='credit'?'🎁':'💸'))+'</div>';
     }
     return '<div class="history-item">'
       + thumb
       + '<div class="history-meta">'
       +   '<div class="h-line1">'
-      +     '<span class="h-tag '+amtCls+'">'+(h.type==='credit'?'加值':'支出')+'</span>'
+      +     '<span class="h-tag '+amtCls+'">'+(isSeed ? '起始' : (h.type==='credit'?'加值':'支出'))+'</span>'
       +     (h.reason || '')
       +   '</div>'
       +   '<div class="h-line2">'+ fmtTs(h.ts) + (h.note ? ' · '+h.note : '') +'</div>'
@@ -659,15 +684,6 @@ function renderHistory(){
       + '<div class="history-amount '+amtCls+'">'+sign+'$'+fmt(Math.abs(amt))+'</div>'
       + '</div>';
   });
-  // 加上「初始餘額」當底部一筆（不可改）
-  rows.push('<div class="history-item">'
-    + '<div class="history-thumb placeholder">📌</div>'
-    + '<div class="history-meta">'
-    +   '<div class="h-line1"><span class="h-tag credit">起始</span>初始餘額</div>'
-    +   '<div class="h-line2">系統初始</div>'
-    + '</div>'
-    + '<div class="history-amount credit">+$'+fmt(initialBal)+'</div>'
-    + '</div>');
   area.innerHTML = rows.join('');
 
   // 載入縮圖
@@ -730,14 +746,23 @@ async function onGiftFile(files){
     var resized = await resizeImage(file, 1200);
 
     // 2. AI 識別金額
-    var prompt = '從這張圖片（紅包/收據/訊息截圖/帳單/轉帳畫面）抽取「禮金金額」。請只回傳純 JSON：\n'
-      + '{ "amount": 整數金額, "occasion": "事由（婚禮/喪禮/喬遷/慰問/賀禮/其他）", "recipient": "收禮人或對象", "note": "簡短備註" }\n'
-      + '規則：1) 只有最關鍵的「給出去的禮金金額」 2) 看不到金額或不像禮金 → amount=0 3) 不要附加說明，只回 JSON';
+    //   寬鬆版 prompt：只要圖片有清楚數字就抓，不管是不是「禮金」性質
+    //   （員工只會上傳要扣的東西；判斷「合不合理」交給人）
+    var prompt = '從這張圖片抽取金額（可能是收據、發票、轉帳畫面、紅包、訊息截圖、Line/銀行 App、便利商店條碼等）。\n'
+      + '只回 JSON：\n'
+      + '{ "amount": 整數金額（總額、應付金額、轉出金額、紅包面額…擇一最關鍵的）, "occasion": "簡短事由（如：餐費/紅包/禮品/車資/其他）", "recipient": "收/付對象（看不到就空字串）", "note": "備註，如店名、品項、日期等" }\n'
+      + '規則：\n'
+      + '1) amount 只填正整數（去掉小數、$、NT、,、空白）\n'
+      + '2) 圖中有多個金額時取「最終總額／應付金額」\n'
+      + '3) 真的看不到任何數字才填 0\n'
+      + '4) 只回 JSON，不要附加任何說明文字';
     var raw = await geminiCall([resized.blob], prompt);
-    var data = parseJson(raw);
+    var data;
+    try { data = parseJson(raw); }
+    catch(jerr){ throw new Error('AI 回應格式錯誤：'+raw.slice(0,80)); }
     var amount = Math.abs(Math.round(Number(data.amount) || 0));
     if(!amount){
-      busy.innerHTML = '<span style="color:var(--danger);font-size:12px">❌ AI 沒辨識出禮金金額，請改傳更清楚的收據</span>';
+      busy.innerHTML = '<span style="color:var(--danger);font-size:12px">❌ AI 沒辨識出金額，AI 回應：'+ JSON.stringify(data).slice(0,120) +'</span>';
       toast('AI 沒辨識出金額', 'err');
       return;
     }
@@ -969,7 +994,9 @@ function pullFromCloud(){
         ensureSlots();
         setSyncChip('ok', '☁ 已連線（雲端無資料）', '');
       }
+      var seedAdded = ensureInitialSeed();
       maybeAutoCredit();
+      if(seedAdded > 0) pushToCloud(false);
       render();
     })
     .catch(function(err){ setSyncChip('err', '☁ 離線', err.message||''); render(); });
