@@ -528,6 +528,28 @@ function getSelectedYM(){
 // ============================================
 // 班別設定表
 // ============================================
+// 把雲端儲存的整頁設定（班別 / PT 名單 / 門檻）套到本機並重新 render
+//   每次「載入班表」後呼叫，確保不同裝置看到的設定一致。
+//   若雲端值非空就覆蓋本機；雲端空陣列代表「沒儲存過」，不動本機。
+function applyCloudSettings(s){
+  if(!s) return;
+  var changed = [];
+  if(Array.isArray(s.shifts) && s.shifts.length){
+    localStorage.setItem(LS_KEY_SHIFTS, JSON.stringify(s.shifts));
+    renderShifts();
+    changed.push('班別');
+  }
+  if(Array.isArray(s.ptList) && s.ptList.length){
+    localStorage.setItem(LS_KEY_PT_LIST, JSON.stringify(s.ptList));
+    renderPtList();
+    changed.push('PT 名單');
+  }
+  // thresholds 目前寫死在程式中，不套用
+  if(changed.length){
+    console.log('[CloudSettings] 已套用雲端設定：' + changed.join('、') + '（來源：' + (s.source||'') + '）');
+  }
+}
+
 function loadShifts(){
   try {
     var raw = localStorage.getItem(LS_KEY_SHIFTS);
@@ -655,6 +677,10 @@ function loadSchedule(){
       SCHEDULE = data;
       renderSchedulePreview();
       setStatus('sched-status','ok','✅ 已載入 '+(data.rows||[]).length+' 位員工');
+
+      // 雲端設定同步：把伺服器存的班別/PT 名單套到 UI（讓不同裝置看到一樣的設定）
+      applyCloudSettings(data.settings);
+
       // 班表載入後：
       //   1) 清掉 PT 名單裡已被排班成 FT 的人
       //   2) 自動把「班表 PT 列（時間非代碼）」的人加進 PT 名單

@@ -275,8 +275,48 @@ function getSchedule(params) {
     store: store,
     year: y, month: m,
     sheetName: sheet.getName(),
-    rows: rows
+    rows: rows,
+    settings: loadSavedSettings(month)   // 順便回傳雲端儲存的整頁設定（班別、PT 名單等）
   };
+}
+
+// ============================================
+// 📥 讀取雲端儲存的整頁設定
+//   從「加班費-YYYY-MM」分頁底部「— 設定快照 —」區塊解析班別、PT 名單、門檻
+//   找不到指定月份的分頁時，自動 fallback 到最近一個 加班費-* 分頁
+// ============================================
+function loadSavedSettings(month) {
+  try {
+    var ss = SCHEDULE_SHEET_ID
+      ? SpreadsheetApp.openById(SCHEDULE_SHEET_ID)
+      : SpreadsheetApp.getActiveSpreadsheet();
+
+    // 先試指定月份
+    var sheet = (month && /^\d{4}-\d{2}$/.test(month)) ? ss.getSheetByName('加班費-' + month) : null;
+    // 找不到 → 取最近的 加班費-* 分頁
+    if (!sheet) {
+      var matches = ss.getSheets().filter(function(s){ return /^加班費-\d{4}-\d{2}$/.test(s.getName()); });
+      matches.sort(function(a, b){ return b.getName().localeCompare(a.getName()); });
+      if (matches.length) sheet = matches[0];
+    }
+    if (!sheet) return { shifts: [], ptList: [], thresholds: {}, source: '' };
+
+    var data = sheet.getDataRange().getValues();
+    var settings = { shifts: [], ptList: [], thresholds: {}, source: sheet.getName() };
+    for (var i = 0; i < data.length; i++) {
+      var label = String(data[i][0] || '').trim();
+      var val = data[i][1];
+      if (!label || val == null || val === '') continue;
+      try {
+        if (label === '班別定義') settings.shifts = JSON.parse(val) || [];
+        else if (label === 'PT 名單') settings.ptList = JSON.parse(val) || [];
+        else if (label === '加班門檻') settings.thresholds = JSON.parse(val) || {};
+      } catch(e){}
+    }
+    return settings;
+  } catch(err){
+    return { shifts: [], ptList: [], thresholds: {}, source: '', error: String(err) };
+  }
 }
 
 // ============================================
