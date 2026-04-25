@@ -2497,12 +2497,32 @@ async function syncFromCloud(){
   setSyncBadge('⏳ 同步中...');
   try{
     var cloudRecords = await cloudLoad();
-    setAllRecords(cloudRecords);
+    // ⚡ 智慧合併：以 savedAt 時間戳判斷誰較新
+    // 避免「載入時雲端拉取覆蓋掉使用者期間的本機儲存」競態
+    var localRecords = getAllRecords();
+    var merged = {};
+    var newerLocalCount = 0;
+    // 先把雲端資料全收進去
+    Object.keys(cloudRecords).forEach(function(d){ merged[d] = cloudRecords[d]; });
+    // 比對本機 — 若本機 savedAt 較新（或雲端沒這天）就保留本機
+    Object.keys(localRecords).forEach(function(d){
+      var l = localRecords[d];
+      var c = merged[d];
+      if(!c){ merged[d] = l; return; }
+      var lT = (l && l.savedAt) || '';
+      var cT = (c && c.savedAt) || '';
+      if(lT && lT > cT){
+        merged[d] = l;
+        newerLocalCount++;
+      }
+    });
+    setAllRecords(merged);
     renderHistoryList();
     var today = document.getElementById('record-date').value || todayStr();
-    if(cloudRecords[today]) loadRecord(today);
+    if(merged[today]) loadRecord(today);
     else updateSavedTag(today);
-    setSyncBadge('☁️ 已同步（' + Object.keys(cloudRecords).length + ' 筆）');
+    setSyncBadge('☁️ 已同步（' + Object.keys(merged).length + ' 筆'
+      + (newerLocalCount > 0 ? '，' + newerLocalCount + ' 筆本機較新已保留' : '') + '）');
   } catch(e){
     setSyncBadge('⚠️ 同步失敗');
     alert('從雲端同步失敗：' + e.message);
