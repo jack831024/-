@@ -211,6 +211,9 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
         <option value="">— 選擇過往紀錄 —</option>
       </select>
     </div>
+    <div class="btn-row" style="margin-top:8px">
+      <button class="primary" onclick="manualSave()" style="width:100%">💾 儲存（同步雲端 + 上傳圖片）</button>
+    </div>
     <span class="saved-tag" id="saved-tag">—</span>
     <span class="saved-tag" id="sync-badge" style="margin-top:2px">—</span>
   </div>
@@ -375,17 +378,37 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
     </div>
   </div>
 
-  <!-- 本月 A 班獎金累計 -->
+  <!-- 本月 A 班獎金累計（加密碼鎖，每店不同） -->
   <div class="section">
-    <h3>🏆 本月 A 班獎金累計 <span id="bonus-month-label" style="font-size:11px;color:#aaa;font-weight:400"></span></h3>
-    <div class="staff-grid" id="staff-bonus-grid"></div>
-    <div style="text-align:right;margin-top:6px">
-      <button type="button" onclick="toggleBonusDetail()" id="bonus-detail-toggle" style="font-size:12px;padding:4px 10px;border:1px solid #4a90d9;border-radius:6px;background:#fff;color:#4a90d9;cursor:pointer">📋 顯示每日明細</button>
+    <h3>
+      🏆 本月 A 班獎金累計
+      <span id="bonus-month-label" style="font-size:11px;color:#aaa;font-weight:400"></span>
+      <button id="bonus-lock-btn" onclick="lockBonus()" title="鎖回來" style="display:none;margin-left:auto;padding:3px 10px;border-radius:999px;background:rgba(15,23,42,.06);border:none;color:#475569;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">🔓 已解鎖</button>
+    </h3>
+
+    <!-- 未解鎖：鎖定畫面 -->
+    <div id="bonus-locked" style="text-align:center;padding:2rem 1.25rem;background:linear-gradient(135deg,#f8fafc 0%,#e2e8f0 100%);border-radius:12px;border:1.5px dashed #cbd5e1">
+      <div style="font-size:38px;margin-bottom:6px;opacity:.6">🔒</div>
+      <div style="font-size:14px;font-weight:600;color:#0f172a;margin-bottom:4px">獎金資料已加密</div>
+      <div style="font-size:12px;color:#94a3b8;margin-bottom:14px;line-height:1.6">營業額獎金等敏感資料僅限授權人員查看<br>請輸入本店密碼解鎖</div>
+      <div style="display:flex;gap:8px;max-width:300px;margin:0 auto;flex-wrap:wrap">
+        <input type="password" id="bonus-pwd-input" placeholder="輸入本店密碼" autocomplete="off" onkeydown="if(event.key==='Enter')tryUnlockBonus()" style="flex:1;min-width:140px;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;font-size:14px;font-family:inherit;outline:none;color:#0f172a">
+        <button onclick="tryUnlockBonus()" style="padding:9px 18px;border-radius:8px;border:none;background:linear-gradient(135deg,#4a90d9 0%,#357abd 100%);color:#fff;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit">🔓 解鎖</button>
+      </div>
+      <div id="bonus-pwd-err" style="margin-top:10px;font-size:12px;color:#d93025;min-height:16px"></div>
     </div>
-    <div id="bonus-detail" style="display:none;margin-top:10px;max-height:360px;overflow-y:auto;border:1px solid #eee;border-radius:8px;padding:8px;background:#fafafa"></div>
-    <div class="row" style="margin-top:12px;border-top:2px solid #eee;padding-top:10px;border-bottom:none">
-      <span class="label" style="font-weight:600">本月獎金總額（全店）</span>
-      <span class="tamt" id="staff-bonus-total">NT$ 0</span>
+
+    <!-- 已解鎖：實際內容 -->
+    <div id="bonus-content" style="display:none">
+      <div class="staff-grid" id="staff-bonus-grid"></div>
+      <div style="text-align:right;margin-top:6px">
+        <button type="button" onclick="toggleBonusDetail()" id="bonus-detail-toggle" style="font-size:12px;padding:4px 10px;border:1px solid #4a90d9;border-radius:6px;background:#fff;color:#4a90d9;cursor:pointer">📋 顯示每日明細</button>
+      </div>
+      <div id="bonus-detail" style="display:none;margin-top:10px;max-height:360px;overflow-y:auto;border:1px solid #eee;border-radius:8px;padding:8px;background:#fafafa"></div>
+      <div class="row" style="margin-top:12px;border-top:2px solid #eee;padding-top:10px;border-bottom:none">
+        <span class="label" style="font-weight:600">本月獎金總額（全店）</span>
+        <span class="tamt" id="staff-bonus-total">NT$ 0</span>
+      </div>
     </div>
   </div>
 
@@ -578,10 +601,11 @@ function findAShiftFromCache(dateStr){
       sel.appendChild(opt);
     });
   }
-  // 初始化「🔄 重新同步」按鈕為綠色「已同步」+ 存款狀態檢查
+  // 初始化「🔄 重新同步」按鈕為綠色「已同步」+ 存款狀態檢查 + 獎金鎖
   setTimeout(function(){
     if(typeof setAutoSaveStatus === 'function') setAutoSaveStatus('idle');
     if(typeof checkDepositStatus === 'function') checkDepositStatus();
+    if(typeof refreshBonusLockState === 'function') refreshBonusLockState();
   }, 0);
 })();
 
@@ -1591,6 +1615,8 @@ async function fetchShiftA(date){
 
 // 計算本月每位員工累積的 A 班獎金 + 每日明細
 function recalcStaffBonus(){
+  // 若獎金區塊上鎖，不算（避免在鎖定畫面下還無謂計算）
+  if(typeof isBonusUnlocked === 'function' && !isBonusUnlocked()) return;
   var gridEl = document.getElementById('staff-bonus-grid');
   var totalEl = document.getElementById('staff-bonus-total');
   var labelEl = document.getElementById('bonus-month-label');
@@ -2049,6 +2075,70 @@ async function manualResync(){
     setAutoSaveStatus('cloud');
   }catch(e){
     console.warn('手動同步失敗', e);
+    setAutoSaveStatus('error');
+  }
+}
+
+// 本月獎金累計密碼鎖（4 家店各自密碼，sessionStorage 記錄解鎖狀態）
+var BONUS_PASSWORDS = {
+  'chudian-zhonghe':    '90369287',
+  'chudian-yongchun':   '94213054',
+  'chudian-xinzhuang':  '60749791',
+  'shicheng-zhongxiao': '61222042'
+};
+
+function isBonusUnlocked(){
+  return sessionStorage.getItem('cd_bonus_unlocked_' + STORE_ID) === '1';
+}
+
+function tryUnlockBonus(){
+  var input = document.getElementById('bonus-pwd-input');
+  var err = document.getElementById('bonus-pwd-err');
+  var pwd = (input.value || '').trim();
+  var expected = BONUS_PASSWORDS[STORE_ID];
+  if(!expected){
+    if(err) err.textContent = '此門市尚未設定密碼，請聯絡管理員';
+    return;
+  }
+  if(pwd === expected){
+    sessionStorage.setItem('cd_bonus_unlocked_' + STORE_ID, '1');
+    if(err) err.textContent = '';
+    if(input) input.value = '';
+    refreshBonusLockState();
+    recalcStaffBonus();  // 解鎖後重新算（之前鎖著沒算）
+  }else{
+    if(err) err.textContent = '❌ 密碼錯誤';
+    if(input){ input.value = ''; input.focus(); }
+    if(navigator.vibrate) navigator.vibrate([50, 30, 50]);
+  }
+}
+
+function lockBonus(){
+  if(!confirm('確定要鎖回獎金資料嗎？下次查看需要重新輸入密碼。')) return;
+  sessionStorage.removeItem('cd_bonus_unlocked_' + STORE_ID);
+  refreshBonusLockState();
+}
+
+// 切換鎖定 / 已解鎖兩個 UI 區塊
+function refreshBonusLockState(){
+  var unlocked = isBonusUnlocked();
+  var lockedEl = document.getElementById('bonus-locked');
+  var contentEl = document.getElementById('bonus-content');
+  var lockBtn = document.getElementById('bonus-lock-btn');
+  if(lockedEl) lockedEl.style.display = unlocked ? 'none' : 'block';
+  if(contentEl) contentEl.style.display = unlocked ? 'block' : 'none';
+  if(lockBtn) lockBtn.style.display = unlocked ? 'inline-block' : 'none';
+}
+
+// 手動儲存按鈕：跟原本 saveRecord 一樣行為（含 alert）
+async function manualSave(){
+  setAutoSaveStatus('saving');
+  try{
+    await saveRecord({ silent: false });  // 跳 alert、帶圖一起上傳
+    _imagesDirty = false;
+    setAutoSaveStatus('cloud');
+  }catch(e){
+    console.warn('手動儲存失敗', e);
     setAutoSaveStatus('error');
   }
 }

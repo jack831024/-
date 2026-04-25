@@ -158,15 +158,12 @@ var SALARY_PASSWORDS = {
 
 function selectStore(id, name){
   var flow = sessionStorage.getItem('cd_flow');
-  // 盤點表、加班費流程：免密碼、免登入
-  var freeFlows = { inventory:1, overtime:1 };
-  if(!freeFlows[flow]){
-    var expected = (flow === 'salary')
-      ? SALARY_PASSWORDS[id]
-      : STORE_PASSWORDS[id];
+  // 入門全部免密碼；只有薪資系統 (salary) 仍要密碼
+  // 小結報表的「本月 A 班獎金累計」改在頁面內加密碼鎖（避免店員誤入但讓登入更順）
+  if(flow === 'salary'){
+    var expected = SALARY_PASSWORDS[id];
     if(expected){
-      var promptLabel = (flow === 'salary') ? '【'+name+'】薪資系統密碼：' : '請輸入【'+name+'】密碼：';
-      var input = prompt(promptLabel);
+      var input = prompt('【'+name+'】薪資系統密碼：');
       if(input === null) return;
       if(String(input).trim() !== expected){
         alert('❌ 密碼錯誤');
