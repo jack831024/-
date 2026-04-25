@@ -407,7 +407,7 @@ var STORE_CONFIG = {
       { id:'yc3', name:'洪文祥', defaultRole:'regular', salesAlias:'洪' },
       { id:'yc4', name:'呂直宸', defaultRole:'regular', salesAlias:'宸' },
       { id:'yc5', name:'吳孟澤', defaultRole:'regular', salesAlias:'小澤' },
-      { id:'yc6', name:'邱昊勳', defaultRole:'regular', salesAlias:'小邱' }
+      { id:'yc6', name:'邱昊勳', defaultRole:'regular', salesAlias:'小邱', dwUseMonthly:true }
     ],
     pt: [],
     // 火鍋店：店長 10000/20000、副店長 5000/15000、正職 0/10000
@@ -1052,8 +1052,11 @@ function calcEmp(e){
   var otBase = monthPay + (sup ? rolePay : 0);
   var perDay = otBase / 30;
   // 雙薪特例：中和/永春 的「副店長 + 正職」用固定 45000 為基數
+  // 但個別員工可在 STORE_CONFIG 標記 dwUseMonthly:true 來改回月薪基數
   var dwBase = otBase;
-  if((STORE === 'chudian-zhonghe' || STORE === 'chudian-yongchun') && role !== 'head'){
+  if((STORE === 'chudian-zhonghe' || STORE === 'chudian-yongchun')
+     && role !== 'head'
+     && !e.dwUseMonthly){
     dwBase = 45000;
   }
   var doubleWage = dtDays * dwBase / 30;
