@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>特休／旅遊假／禮金</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#ca8a04;
+  --brand-dark:#a16207;
+  --brand-light:#fef9c3;
+  --ink:#0f172a;
+  --ink-2:#475569;
+  --ink-3:#94a3b8;
+  --line:#e2e8f0;
+  --danger:#dc2626;
+  --ok:#10b981;
+  --warn:#f59e0b;
+  --info:#3b82f6;
+  --travel:#0ea5e9;
+  --gift:#db2777;
+}
+html,body{height:100%}
+body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;padding:1rem;
+  background:
+    radial-gradient(1000px 500px at 10% -10%, #fef9c3 0%, transparent 50%),
+    radial-gradient(800px 500px at 110% 10%, #fce7f3 0%, transparent 55%),
+    radial-gradient(700px 500px at 50% 110%, #e0f2fe 0%, transparent 55%),
+    linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+}
+
+.topbar{max-width:1000px;margin:0 auto 14px;display:flex;align-items:center;gap:10px;padding:4px;flex-wrap:wrap}
+.back-btn{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.8);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);transition:all .2s;box-shadow:0 4px 12px -4px rgba(15,23,42,.08);flex-shrink:0}
+.back-btn:hover{background:#fff;color:var(--brand);transform:translateX(-2px)}
+.back-btn svg{width:17px;height:17px}
+.store-chip{display:flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;background:rgba(255,255,255,.8);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);border-radius:999px;font-size:13px;color:var(--ink);font-weight:600;box-shadow:0 4px 12px -4px rgba(15,23,42,.06)}
+.store-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--brand),#facc15);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px}
+.spacer{flex:1}
+.month-picker{padding:8px 12px;font-size:14px;border:1.5px solid var(--line);border-radius:10px;background:rgba(255,255,255,.9);cursor:pointer;color:var(--ink);font-family:inherit;font-weight:600;outline:none;transition:all .18s}
+.month-picker:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(202,138,4,.18)}
+
+.wrap{max-width:1000px;margin:0 auto;padding:0 0 3rem}
+
+.hero-card{background:linear-gradient(135deg,#fef9c3 0%,#fde68a 100%);border:1px solid rgba(202,138,4,.18);border-radius:20px;padding:1.25rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(202,138,4,.06),0 8px 24px -12px rgba(202,138,4,.2)}
+.hero-icon{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--brand) 0%,#facc15 100%);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 8px 20px -8px rgba(202,138,4,.5);flex-shrink:0}
+.hero-text h1{font-size:20px;font-weight:700;letter-spacing:-0.02em;margin-bottom:3px}
+.hero-text p{font-size:12.5px;color:var(--ink-2)}
+
+.section{background:rgba(255,255,255,.85);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.9);border-radius:18px;padding:1.1rem 1.25rem;margin-bottom:14px;box-shadow:0 1px 2px rgba(15,23,42,.03),0 6px 18px -10px rgba(15,23,42,.08)}
+.section.travel{border-left:4px solid var(--travel)}
+.section.annual{border-left:4px solid var(--brand)}
+.section.gift{border-left:4px solid var(--gift)}
+h3{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:12px;display:flex;align-items:center;gap:8px;letter-spacing:0.01em;flex-wrap:wrap}
+h3 .icon{font-size:18px}
+h3 .hint{font-size:11.5px;color:var(--ink-3);font-weight:500;margin-left:auto;letter-spacing:0}
+h3 .pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--brand-light);color:var(--brand-dark)}
+h3 .pill.travel{background:#e0f2fe;color:#0369a1}
+h3 .pill.gift{background:#fce7f3;color:#9d174d}
+
+.tools-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+
+.btn{padding:9px 16px;font-size:13.5px;border:none;border-radius:10px;cursor:pointer;font-family:inherit;font-weight:600;transition:all .18s;display:inline-flex;align-items:center;gap:7px}
+.btn-primary{background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);color:#fff;box-shadow:0 6px 16px -6px rgba(202,138,4,.45)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 10px 22px -6px rgba(202,138,4,.55)}
+.btn-travel{background:linear-gradient(135deg,var(--travel) 0%,#38bdf8 100%);color:#fff;box-shadow:0 6px 16px -6px rgba(14,165,233,.45)}
+.btn-gift{background:linear-gradient(135deg,var(--gift) 0%,#f472b6 100%);color:#fff;box-shadow:0 6px 16px -6px rgba(219,39,119,.45)}
+.btn-ghost{background:rgba(255,255,255,.8);border:1.5px solid var(--line);color:var(--ink-2)}
+.btn-ghost:hover{background:#fff;border-color:var(--brand);color:var(--brand)}
+.btn-sm{padding:6px 11px;font-size:12px;border-radius:8px}
+.btn-danger{background:rgba(220,38,38,.08);color:var(--danger);border:1px solid rgba(220,38,38,.2)}
+.btn-danger:hover{background:rgba(220,38,38,.15)}
+
+.import-status{font-size:11.5px;color:var(--ink-3);margin-left:6px}
+
+table.grid{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+table.grid th{text-align:left;padding:8px 8px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:1px;border-bottom:1.5px solid var(--line)}
+table.grid td{padding:8px;border-bottom:1px solid rgba(226,232,240,.6);vertical-align:top}
+table.grid tr:last-child td{border-bottom:none}
+table.grid .c-name{font-weight:700;color:var(--ink);width:140px}
+
+.date-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.date-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#fef9c3;color:#854d0e;font-size:12px;font-weight:600;font-family:ui-monospace,Menlo,monospace}
+.date-chip.travel{background:#e0f2fe;color:#075985}
+.date-chip.auto{background-image:linear-gradient(90deg,rgba(255,255,255,.4),transparent)}
+.date-chip .x{cursor:pointer;color:rgba(15,23,42,.45);font-weight:700;line-height:1;padding:0 2px}
+.date-chip .x:hover{color:var(--danger)}
+.date-chip .src{font-size:10px;font-weight:600;padding:1px 5px;border-radius:6px;background:rgba(255,255,255,.6);color:var(--ink-3);letter-spacing:0.5px}
+.empty-row{color:var(--ink-3);font-size:12.5px;padding:8px 4px}
+
+.add-inline{display:inline-flex;gap:6px;align-items:center;margin-left:6px}
+.add-inline input[type=date]{padding:5px 9px;border:1.5px solid var(--line);border-radius:7px;font-size:12.5px;font-family:inherit;color:var(--ink);outline:none;background:#fff}
+.add-inline input[type=date]:focus{border-color:var(--brand)}
+.add-inline button{padding:5px 10px;font-size:12px;border-radius:7px;border:none;background:var(--brand);color:#fff;cursor:pointer;font-family:inherit;font-weight:600}
+.add-inline button.travel{background:var(--travel)}
+.add-inline button:hover{filter:brightness(1.06)}
+
+.note-input{width:100%;margin-top:6px;padding:6px 10px;border:1.5px solid var(--line);border-radius:8px;font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;background:rgba(255,255,255,.9)}
+.note-input:focus{border-color:var(--brand)}
+
+/* 禮金 */
+.gift-summary{font-size:12.5px;color:var(--ink-2);margin-bottom:8px}
+.gift-summary b{color:var(--gift);font-size:14px;font-family:ui-monospace,Menlo,monospace}
+
+.upload-area{border:2px dashed rgba(219,39,119,.4);border-radius:14px;padding:1.5rem;text-align:center;background:rgba(252,231,243,.3);cursor:pointer;transition:all .2s;margin-bottom:10px}
+.upload-area:hover{background:rgba(252,231,243,.5);border-color:var(--gift)}
+.upload-area .uicon{font-size:32px;margin-bottom:6px}
+.upload-area .utitle{font-weight:700;color:var(--gift);margin-bottom:2px}
+.upload-area .uhint{font-size:11.5px;color:var(--ink-3)}
+.upload-area input[type=file]{display:none}
+
+.preview-grid{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.preview-grid img{width:74px;height:74px;border-radius:10px;object-fit:cover;border:1.5px solid var(--line);box-shadow:0 2px 6px -2px rgba(15,23,42,.08)}
+
+.gift-table th, .gift-table td{padding:7px 6px}
+.gift-table input[type=text],.gift-table input[type=number],.gift-table input[type=date]{
+  padding:5px 8px;border:1.5px solid var(--line);border-radius:7px;background:#fff;font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;width:100%
+}
+.gift-table input:focus{border-color:var(--gift);box-shadow:0 0 0 3px rgba(219,39,119,.1)}
+.gift-table .amt{font-family:ui-monospace,Menlo,monospace;text-align:right}
+
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);padding:12px 22px;border-radius:12px;background:var(--ink);color:#fff;font-size:13px;font-weight:600;opacity:0;transition:all .28s;pointer-events:none;z-index:100;box-shadow:0 10px 30px -10px rgba(15,23,42,.4)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--danger)}
+.toast.ok{background:var(--ok)}
+
+.busy{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--info);margin-left:6px}
+.busy::before{content:"";width:11px;height:11px;border-radius:50%;border:2px solid rgba(59,130,246,.25);border-top-color:var(--info);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.action-bar{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+
+@media(max-width:720px){
+  table.grid{font-size:12px}
+  table.grid th,table.grid td{padding:6px 5px}
+  .gift-table input{font-size:11.5px;padding:4px 6px}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="goBack()" aria-label="返回">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+  </button>
+  <div class="store-chip">
+    <span class="store-avatar">🎁</span>
+    <span id="store-name">（未選店）</span>
+  </div>
+  <span class="spacer"></span>
+  <select class="month-picker" id="month-picker" aria-label="選擇月份"></select>
+  <button class="btn btn-ghost btn-sm" onclick="saveAll()">💾 儲存</button>
+</div>
+
+<div class="wrap">
+
+  <div class="hero-card">
+    <div class="hero-icon">🎁</div>
+    <div class="hero-text">
+      <h1>特休／旅遊假／禮金</h1>
+      <p>特休與旅遊假自動同步加班費系統，禮金支援上傳圖片 AI 辨識</p>
+    </div>
+  </div>
+
+  <!-- 特休 -->
+  <div class="section annual">
+    <h3><span class="icon">🌴</span>特休<span class="pill">自動抓取加班費系統</span><span class="hint">班表代碼：特 / 特休</span></h3>
+    <div class="tools-row">
+      <button class="btn btn-primary btn-sm" onclick="importFromOvertime()">🔄 從加班費系統匯入</button>
+      <span id="annual-import-status" class="import-status"></span>
+    </div>
+    <table class="grid">
+      <thead>
+        <tr><th>員工</th><th>特休日期（點 ✕ 移除，可手動加）</th><th style="width:36px"></th></tr>
+      </thead>
+      <tbody id="tbody-annual"></tbody>
+    </table>
+  </div>
+
+  <!-- 旅遊假 -->
+  <div class="section travel">
+    <h3><span class="icon">✈️</span>旅遊假<span class="pill travel">自動抓取加班費系統</span><span class="hint">班表代碼：旅 / 旅遊 / 旅遊假</span></h3>
+    <div class="tools-row">
+      <button class="btn btn-travel btn-sm" onclick="importFromOvertime()">🔄 從加班費系統匯入</button>
+      <span id="travel-import-status" class="import-status"></span>
+    </div>
+    <table class="grid">
+      <thead>
+        <tr><th>員工</th><th>旅遊假日期（點 ✕ 移除，可手動加）</th><th style="width:36px"></th></tr>
+      </thead>
+      <tbody id="tbody-travel"></tbody>
+    </table>
+  </div>
+
+  <!-- 禮金 -->
+  <div class="section gift">
+    <h3><span class="icon">💝</span>禮金<span class="pill gift">AI 圖片辨識</span><span class="hint">上傳婚喪喜慶 / 紅白包 / 收據</span></h3>
+
+    <label class="upload-area" for="gift-file">
+      <div class="uicon">📷</div>
+      <div class="utitle">點擊或拖曳上傳禮金圖片</div>
+      <div class="uhint">支援多張：紅包封面、收據、訊息截圖等 · 上傳後 AI 自動辨識</div>
+      <input type="file" id="gift-file" accept="image/*" multiple onchange="onGiftFiles(this.files)">
+    </label>
+    <div id="gift-preview" class="preview-grid"></div>
+    <div id="gift-busy"></div>
+
+    <div class="gift-summary">本月禮金筆數：<b id="gift-count">0</b> · 總金額：<b id="gift-total">$ 0</b></div>
+
+    <table class="grid gift-table">
+      <thead>
+        <tr>
+          <th style="width:120px">事由</th>
+          <th style="width:120px">對象</th>
+          <th style="width:120px">日期</th>
+          <th style="width:110px">金額</th>
+          <th>備註</th>
+          <th style="width:36px"></th>
+        </tr>
+      </thead>
+      <tbody id="tbody-gift"></tbody>
+    </table>
+    <div class="tools-row" style="margin-top:8px">
+      <button class="btn btn-ghost btn-sm" onclick="addGiftRow()">＋ 手動新增一筆</button>
+    </div>
+  </div>
+
+  <div class="action-bar">
+    <button class="btn btn-primary" onclick="saveAll()">💾 儲存全部</button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================
+// 設定
+// ============================================
+var STORE = sessionStorage.getItem('cd_store') || '';
+var STORE_NAME = sessionStorage.getItem('cd_store_name') || '（未選店）';
+document.getElementById('store-name').textContent = STORE_NAME;
+
+// 各店員工（與 salary.html 一致）
+var STORE_CONFIG = {
+  'chudian-zhonghe': {
+    employees: [
+      { id:'zh1', name:'李文少' },
+      { id:'zh2', name:'施偉祥' },
+      { id:'zh3', name:'劉濡瑜' },
+      { id:'zh4', name:'褚心榆' }
+    ]
+  },
+  'chudian-yongchun': {
+    employees: [
+      { id:'yc1', name:'謝其淇' },
+      { id:'yc2', name:'林韋翔' },
+      { id:'yc3', name:'洪文祥' },
+      { id:'yc4', name:'呂直宸' },
+      { id:'yc5', name:'吳孟澤' },
+      { id:'yc6', name:'邱昊勳' }
+    ]
+  },
+  'chudian-xinzhuang': {
+    employees: [
+      { id:'xz1', name:'蔡鈺豪' },
+      { id:'xz2', name:'蘇奕誠' },
+      { id:'xz3', name:'李嘉真' },
+      { id:'xz4', name:'洪仕賢' }
+    ]
+  },
+  'shicheng-zhongxiao': {
+    employees: [
+      { id:'sc1', name:'林梓彥' },
+      { id:'sc2', name:'王謖' },
+      { id:'sc3', name:'林哲民' },
+      { id:'sc4', name:'陳柏維' }
+    ]
+  }
+};
+
+var CFG = STORE_CONFIG[STORE] || STORE_CONFIG['chudian-zhonghe'];
+var EMPLOYEES = CFG.employees.slice();
+
+// 月份初始化
+(function initMonth(){
+  var sel = document.getElementById('month-picker');
+  var now = new Date();
+  var y = now.getFullYear();
+  var items = [];
+  for(var m=1; m<=12; m++){
+    items.push('<option value="'+m+'">'+y+'年 '+m+'月</option>');
+  }
+  sel.innerHTML = items.join('');
+  sel.value = String(now.getMonth() + 1);
+  sel.addEventListener('change', onMonthChange);
+})();
+
+function getSelectedYM(){
+  var m = Number(document.getElementById('month-picker').value) || (new Date().getMonth() + 1);
+  var y = new Date().getFullYear();
+  return y + '-' + String(m).padStart(2, '0');
+}
+
+// ============================================
+// State
+// ============================================
+var STATE = null;
+
+function blankState(){
+  var s = {
+    ym: getSelectedYM(),
+    store: STORE,
+    annual: {},   // { empName: { dates: ['2026-04-15', ...], note:'', autoDates: {date:1} } }
+    travel: {},
+    gifts: []     // [{ id, occasion, recipient, date, amount, note }]
+  };
+  EMPLOYEES.forEach(function(e){
+    s.annual[e.name] = { dates: [], note:'', autoDates: {} };
+    s.travel[e.name] = { dates: [], note:'', autoDates: {} };
+  });
+  return s;
+}
+
+function stateKey(ym){
+  return 'cd_leavegift_' + (STORE || 'nostore') + '_' + ym;
+}
+
+function loadState(){
+  var ym = getSelectedYM();
+  try {
+    var raw = localStorage.getItem(stateKey(ym));
+    if(raw){
+      var obj = JSON.parse(raw);
+      var def = blankState();
+      // 確保新員工也會有 slot
+      EMPLOYEES.forEach(function(e){
+        if(!obj.annual) obj.annual = {};
+        if(!obj.travel) obj.travel = {};
+        if(!obj.annual[e.name]) obj.annual[e.name] = { dates: [], note:'', autoDates: {} };
+        if(!obj.travel[e.name]) obj.travel[e.name] = { dates: [], note:'', autoDates: {} };
+        if(!obj.annual[e.name].autoDates) obj.annual[e.name].autoDates = {};
+        if(!obj.travel[e.name].autoDates) obj.travel[e.name].autoDates = {};
+      });
+      if(!Array.isArray(obj.gifts)) obj.gifts = [];
+      STATE = obj;
+      return;
+    }
+  } catch(e){ console.warn('load state fail', e); }
+  STATE = blankState();
+}
+
+function saveAll(){
+  if(!STATE) return;
+  STATE.ym = getSelectedYM();
+  STATE.store = STORE;
+  try {
+    localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE));
+    toast('已儲存', 'ok');
+  } catch(e){
+    toast('儲存失敗：' + e.message, 'err');
+  }
+}
+
+function onMonthChange(){
+  // 先存舊月份
+  if(STATE){
+    try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+  }
+  loadState();
+  // 自動匯入
+  importFromOvertime(true);
+  render();
+}
+
+// ============================================
+// 從加班費系統匯入特休 / 旅遊假
+// ============================================
+function importFromOvertime(silent){
+  var ym = getSelectedYM();
+  var key = 'cd_ot_summary_' + (STORE || 'nostore') + '_' + ym;
+  var raw = localStorage.getItem(key);
+  var statusA = document.getElementById('annual-import-status');
+  var statusT = document.getElementById('travel-import-status');
+  if(!raw){
+    var msg = '⚠️ 找不到本月加班費分析結果，請先到加班費系統按「分析」並儲存';
+    if(statusA) statusA.textContent = msg;
+    if(statusT) statusT.textContent = msg;
+    if(!silent) toast('沒有加班費分析資料', 'err');
+    return;
+  }
+  var data;
+  try { data = JSON.parse(raw); } catch(e){ if(!silent) toast('資料格式錯誤', 'err'); return; }
+  var emps = (data && data.employees) || {};
+  var annualCnt = 0, travelCnt = 0;
+
+  // 用名稱對照（class 員工名單）
+  EMPLOYEES.forEach(function(e){
+    var rec = emps[e.name];
+    if(!rec) return;
+    var aDates = rec.annualDates || [];
+    var tDates = rec.travelDates || [];
+    var slotA = STATE.annual[e.name] || (STATE.annual[e.name] = { dates: [], note:'', autoDates:{} });
+    var slotT = STATE.travel[e.name] || (STATE.travel[e.name] = { dates: [], note:'', autoDates:{} });
+    aDates.forEach(function(d){
+      if(slotA.dates.indexOf(d) < 0){
+        slotA.dates.push(d);
+        annualCnt++;
+      }
+      slotA.autoDates[d] = 1;
+    });
+    tDates.forEach(function(d){
+      if(slotT.dates.indexOf(d) < 0){
+        slotT.dates.push(d);
+        travelCnt++;
+      }
+      slotT.autoDates[d] = 1;
+    });
+    slotA.dates.sort();
+    slotT.dates.sort();
+  });
+
+  if(statusA) statusA.textContent = '✓ 匯入 ' + annualCnt + ' 筆特休（更新時間：' + (data.savedAt ? new Date(data.savedAt).toLocaleString() : '未知') + '）';
+  if(statusT) statusT.textContent = '✓ 匯入 ' + travelCnt + ' 筆旅遊假';
+  if(!silent) toast('已匯入 ' + (annualCnt+travelCnt) + ' 筆假', 'ok');
+
+  render();
+  // 自動存
+  try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+}
+
+// ============================================
+// 渲染：特休 / 旅遊假
+// ============================================
+function fmtDate(d){
+  // YYYY-MM-DD → MM/DD
+  var parts = String(d).split('-');
+  if(parts.length === 3) return parts[1] + '/' + parts[2];
+  return d;
+}
+
+function renderLeave(type){
+  var tb = document.getElementById('tbody-' + type);
+  if(!tb) return;
+  var bag = STATE[type];
+  var cls = type === 'travel' ? 'travel' : '';
+  var rows = EMPLOYEES.map(function(e){
+    var slot = bag[e.name] || { dates: [], note:'', autoDates: {} };
+    var chips = (slot.dates || []).map(function(d){
+      var auto = slot.autoDates && slot.autoDates[d];
+      return '<span class="date-chip '+cls+'" title="'+d+(auto?'（自動匯入）':'（手動加）')+'">'
+        + fmtDate(d)
+        + (auto ? '<span class="src">自動</span>' : '<span class="src">手動</span>')
+        + '<span class="x" onclick="removeDate(\''+type+'\',\''+e.name+'\',\''+d+'\')">✕</span>'
+        + '</span>';
+    }).join('') || '<span class="empty-row">— 本月無紀錄 —</span>';
+
+    var addInline = '<span class="add-inline">'
+      + '<input type="date" id="add-'+type+'-'+e.id+'">'
+      + '<button class="'+(type==='travel'?'travel':'')+'" onclick="addDate(\''+type+'\',\''+e.name+'\',\''+e.id+'\')">+ 加</button>'
+      + '</span>';
+
+    var noteVal = (slot.note || '').replace(/"/g,'&quot;');
+    return '<tr>'
+      + '<td class="c-name">'+e.name+'<br><input class="note-input" type="text" placeholder="備註" value="'+noteVal+'" onchange="onLeaveNote(\''+type+'\',\''+e.name+'\',this.value)"></td>'
+      + '<td><div class="date-chips">'+chips+addInline+'</div></td>'
+      + '<td><span style="font-size:11px;color:var(--ink-3)">共 '+(slot.dates||[]).length+' 天</span></td>'
+      + '</tr>';
+  });
+  tb.innerHTML = rows.join('');
+}
+
+function addDate(type, name, empId){
+  var input = document.getElementById('add-'+type+'-'+empId);
+  if(!input || !input.value) { toast('請選擇日期', 'err'); return; }
+  var d = input.value;
+  var slot = STATE[type][name] || (STATE[type][name] = { dates: [], note:'', autoDates: {} });
+  if(slot.dates.indexOf(d) < 0){
+    slot.dates.push(d);
+    slot.dates.sort();
+  }
+  input.value = '';
+  renderLeave(type);
+  try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+}
+
+function removeDate(type, name, d){
+  var slot = STATE[type][name];
+  if(!slot) return;
+  slot.dates = slot.dates.filter(function(x){ return x !== d; });
+  if(slot.autoDates) delete slot.autoDates[d];
+  renderLeave(type);
+  try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+}
+
+function onLeaveNote(type, name, v){
+  var slot = STATE[type][name];
+  if(!slot) return;
+  slot.note = v || '';
+  try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+}
+
+// ============================================
+// 禮金：上傳 + AI 辨識
+// ============================================
+function uid(){ return 'g_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
+
+function renderGift(){
+  var tb = document.getElementById('tbody-gift');
+  var rows = STATE.gifts.map(function(g){
+    return '<tr>'
+      + '<td><input type="text" value="'+(g.occasion||'').replace(/"/g,'&quot;')+'" placeholder="例：婚禮" onchange="onGiftField(\''+g.id+'\',\'occasion\',this.value)"></td>'
+      + '<td><input type="text" value="'+(g.recipient||'').replace(/"/g,'&quot;')+'" placeholder="姓名" onchange="onGiftField(\''+g.id+'\',\'recipient\',this.value)"></td>'
+      + '<td><input type="date" value="'+(g.date||'')+'" onchange="onGiftField(\''+g.id+'\',\'date\',this.value)"></td>'
+      + '<td><input type="number" class="amt" value="'+(g.amount||0)+'" min="0" step="100" onchange="onGiftField(\''+g.id+'\',\'amount\',this.value)"></td>'
+      + '<td><input type="text" value="'+(g.note||'').replace(/"/g,'&quot;')+'" placeholder="備註（AI 自動辨識會填入）" onchange="onGiftField(\''+g.id+'\',\'note\',this.value)"></td>'
+      + '<td><button class="btn btn-sm btn-danger" onclick="removeGift(\''+g.id+'\')">✕</button></td>'
+      + '</tr>';
+  });
+  tb.innerHTML = rows.join('') || '<tr><td colspan="6" style="color:var(--ink-3);text-align:center;padding:14px">— 還沒有禮金紀錄，可上傳圖片或手動新增 —</td></tr>';
+
+  var total = STATE.gifts.reduce(function(s,g){ return s + (Number(g.amount)||0); }, 0);
+  document.getElementById('gift-count').textContent = STATE.gifts.length;
+  document.getElementById('gift-total').textContent = '$ ' + total.toLocaleString();
+}
+
+function addGiftRow(){
+  STATE.gifts.push({
+    id: uid(),
+    occasion: '',
+    recipient: '',
+    date: getSelectedYM() + '-01',
+    amount: 0,
+    note: ''
+  });
+  renderGift();
+  try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+}
+
+function removeGift(id){
+  if(!confirm('確定要刪除這筆禮金嗎？')) return;
+  STATE.gifts = STATE.gifts.filter(function(g){ return g.id !== id; });
+  renderGift();
+  try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+}
+
+function onGiftField(id, field, v){
+  var g = STATE.gifts.find(function(x){ return x.id === id; });
+  if(!g) return;
+  if(field === 'amount') g[field] = Math.max(0, Number(v)||0);
+  else g[field] = v;
+  // 重算合計
+  var total = STATE.gifts.reduce(function(s,g){ return s + (Number(g.amount)||0); }, 0);
+  document.getElementById('gift-total').textContent = '$ ' + total.toLocaleString();
+  try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+}
+
+// ============================================
+// AI 辨識（沿用 daily-summary.html 的呼叫路徑）
+// ============================================
+var DIRECT_CALL_DISABLED = false;
+
+function toB64(file){
+  return new Promise(function(resolve, reject){
+    var r = new FileReader();
+    r.onload = function(){ resolve(String(r.result).split(',')[1]); };
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+function parseGeminiResponse(data, model){
+  if(data.error){
+    var msg = typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error));
+    var err = new Error(msg);
+    err.code = (typeof data.error === 'object') ? data.error.code : undefined;
+    throw err;
+  }
+  var cand = data.candidates && data.candidates[0];
+  if(!cand) throw new Error('沒有候選回應');
+  if(cand.finishReason === 'SAFETY') throw new Error('被安全過濾器擋下');
+  var text = cand.content && cand.content.parts && cand.content.parts[0] && cand.content.parts[0].text;
+  if(!text) throw new Error('空內容（finishReason: ' + (cand.finishReason || '未知') + '）');
+  return text;
+}
+
+async function callModelOnce(model, parts){
+  var workerUrl = localStorage.getItem('cd_worker_url');
+  var directKey = localStorage.getItem('cd_gemini_direct_key');
+  var proxyUrl  = localStorage.getItem('cd_sync_url');
+  if(!workerUrl && !directKey && !proxyUrl){
+    throw new Error('尚未設定任何 Gemini 路徑（請先到「小結報表」設定一次）');
+  }
+  var genConfig = { temperature: 0, topP: 0.1, topK: 1 };
+
+  if(workerUrl){
+    try{
+      var wr = await fetch(workerUrl, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ model: model, parts: parts, generationConfig: genConfig })
+      });
+      var wd = await wr.json();
+      if(!wr.ok && !wd.error){
+        var wHErr = new Error('Worker HTTP ' + wr.status);
+        wHErr.code = wr.status; throw wHErr;
+      }
+      return parseGeminiResponse(wd, model);
+    } catch(we){
+      var wmsg = (we.message||'').toLowerCase();
+      var wIsBusy = we.code === 503 || we.code === 429 || wmsg.indexOf('overloaded')>=0 || wmsg.indexOf('unavailable')>=0 || wmsg.indexOf('rate')>=0;
+      if(wIsBusy) throw we;
+      console.warn('Worker 失敗：', we.message);
+    }
+  }
+
+  if(directKey && !DIRECT_CALL_DISABLED){
+    try{
+      var url = 'https://generativelanguage.googleapis.com/v1beta/models/'
+              + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(directKey);
+      var dr = await fetch(url, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ contents:[{ parts: parts }], generationConfig: genConfig })
+      });
+      var dd = await dr.json();
+      if(!dr.ok && !dd.error){
+        var hErr = new Error('HTTP '+dr.status); hErr.code = dr.status; throw hErr;
+      }
+      return parseGeminiResponse(dd, model);
+    } catch(de){
+      var dmsg = (de.message||'').toLowerCase();
+      var isBusy = de.code === 503 || de.code === 429 || dmsg.indexOf('overloaded')>=0 || dmsg.indexOf('unavailable')>=0 || dmsg.indexOf('rate')>=0;
+      if(isBusy) throw de;
+      if(proxyUrl){ DIRECT_CALL_DISABLED = true; }
+      else throw de;
+    }
+  }
+
+  if(!proxyUrl) throw new Error('沒有代理可用');
+  var r = await fetch(proxyUrl, {
+    method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action:'geminiProxy', model: model, parts: parts, generationConfig: genConfig })
+  });
+  var wrap = await r.json();
+  if(wrap.error){
+    var em = typeof wrap.error === 'string' ? wrap.error : (wrap.error.message || JSON.stringify(wrap.error));
+    var pxErr = new Error(em);
+    pxErr.code = (typeof wrap.error === 'object') ? wrap.error.code : undefined;
+    throw pxErr;
+  }
+  return parseGeminiResponse(wrap.data || {}, model);
+}
+
+async function geminiCall(imageFiles, promptText){
+  if(!localStorage.getItem('cd_worker_url') && !localStorage.getItem('cd_gemini_direct_key') && !localStorage.getItem('cd_sync_url')){
+    throw new Error('尚未設定 Gemini 路徑（請先到「小結報表」設定一次）');
+  }
+  var parts = [];
+  for(var i=0; i<imageFiles.length; i++){
+    var f = imageFiles[i];
+    var b64 = await toB64(f);
+    parts.push({inline_data:{mime_type: f.type || 'image/jpeg', data: b64}});
+  }
+  parts.push({text: promptText});
+
+  var primary = localStorage.getItem('cd_gemini_model') || 'gemini-2.0-flash';
+  var fallbackChain = [primary, 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
+  var tried = {};
+  var models = fallbackChain.filter(function(m){ if(tried[m]) return false; tried[m]=1; return true; });
+
+  var lastErr;
+  for(var mi=0; mi<models.length; mi++){
+    var model = models[mi];
+    for(var attempt=0; attempt<3; attempt++){
+      try{
+        return await callModelOnce(model, parts);
+      } catch(e){
+        lastErr = e;
+        var msg = (e.message||'').toLowerCase();
+        var isBusy = e.code === 503 || e.code === 429 || msg.indexOf('overloaded')>=0 || msg.indexOf('unavailable')>=0 || msg.indexOf('rate')>=0;
+        if(isBusy && attempt < 2){ await sleep((attempt+1)*1000); continue; }
+        break;
+      }
+    }
+  }
+  throw lastErr || new Error('所有模型皆無法呼叫');
+}
+
+function parseJson(raw){
+  var clean = String(raw||'').replace(/```json|```/g,'').trim();
+  var match = clean.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+  if(match) clean = match[0];
+  return JSON.parse(clean);
+}
+
+async function onGiftFiles(fileList){
+  if(!fileList || !fileList.length) return;
+  var files = Array.from(fileList);
+  var preview = document.getElementById('gift-preview');
+  var busy = document.getElementById('gift-busy');
+
+  // 預覽縮圖
+  files.forEach(function(f){
+    var url = URL.createObjectURL(f);
+    var img = document.createElement('img');
+    img.src = url; img.title = f.name;
+    preview.appendChild(img);
+  });
+
+  busy.innerHTML = '<span class="busy">AI 辨識中（'+files.length+' 張圖片）…</span>';
+
+  var ym = getSelectedYM();
+  var prompt = '你是禮金紀錄助手。請從這些圖片（可能是紅包、收據、訊息截圖、轉帳畫面、紀錄表）中抽取每一筆「禮金」資訊，並回 JSON：\n'
+    + '{ "items": [ { "occasion": "事由（如：婚禮/喪禮/喬遷/生日/年節/慰問/其他）", "recipient": "收禮人姓名或對象", "date": "YYYY-MM-DD（盡量推斷；若只看到月日，年用 '+ym.split('-')[0]+'）", "amount": 整數金額, "note": "其他細節（如紅包封面文字、關係備註）" } ] }\n'
+    + '規則：\n'
+    + '1. 一張圖如果有多筆禮金（例如清單），請一筆一筆全列出\n'
+    + '2. 看不到金額但其他資訊清楚 → amount 填 0\n'
+    + '3. 完全看不出是禮金（純風景/食物等）→ 不要輸出該筆\n'
+    + '4. 只回 JSON，不要附加說明文字。';
+
+  try{
+    var raw = await geminiCall(files, prompt);
+    var data = parseJson(raw);
+    var items = (data && data.items) || [];
+    if(!items.length){
+      busy.innerHTML = '<span style="color:var(--ink-3);font-size:12px">⚠️ AI 沒有從圖片中找到禮金資訊，可手動新增一筆</span>';
+      return;
+    }
+    items.forEach(function(it){
+      STATE.gifts.push({
+        id: uid(),
+        occasion: it.occasion || '',
+        recipient: it.recipient || '',
+        date: it.date || (ym + '-01'),
+        amount: Math.max(0, Number(it.amount)||0),
+        note: it.note || ''
+      });
+    });
+    busy.innerHTML = '<span style="color:var(--ok);font-size:12px">✓ AI 已辨識並新增 '+items.length+' 筆禮金</span>';
+    renderGift();
+    try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
+    toast('AI 辨識完成：新增 '+items.length+' 筆', 'ok');
+  } catch(e){
+    busy.innerHTML = '<span style="color:var(--danger);font-size:12px">❌ AI 辨識失敗：'+ (e.message||'未知錯誤') +'</span>';
+    toast('AI 辨識失敗：'+(e.message||''), 'err');
+  } finally {
+    // 清空 file input 讓同一張圖可重傳
+    document.getElementById('gift-file').value = '';
+  }
+}
+
+// ============================================
+// Render & Init
+// ============================================
+function render(){
+  renderLeave('annual');
+  renderLeave('travel');
+  renderGift();
+}
+
+function toast(msg, cls){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (cls||'');
+  setTimeout(function(){ t.className = 'toast'; }, 1800);
+}
+
+function goBack(){
+  // 回到主頁
+  window.location.href = 'home.html';
+}
+
+(function init(){
+  if(!STORE){
+    alert('請先選擇門市');
+    window.location.href = 'home.html';
+    return;
+  }
+  loadState();
+  // 第一次進來自動匯入一次
+  importFromOvertime(true);
+  render();
+})();
+</script>
+</body>
+</html>
