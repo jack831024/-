@@ -992,14 +992,18 @@ function removeImage(key, idx){
 function handlePayFile(input, key){
   var file = input.files[0];
   if(!file) return;
-  imgs[key] = [file];
-  _imagesDirty = true;  // ⭐ 新支付截圖，下次 auto-save 要帶圖
+  // ⭐ 累加：保留舊截圖，只新增新的（避免上傳新的就蓋掉之前那張）
+  if(!imgs[key]) imgs[key] = [];
+  imgs[key].push(file);
+  input.value = '';  // 清空 input 讓同一張也能再選
+  _imagesDirty = true;  // 下次 auto-save 要帶圖
   var t = document.getElementById('thumbs-' + key);
-  t.innerHTML = '';
+  // 只 append 新縮圖，不清空舊的
   var img = document.createElement('img');
   img.src = URL.createObjectURL(file);
   img.className = 'thumb';
   t.appendChild(img);
+  // AI 只讀新上傳的這張，不重讀舊的（避免金額重複）
   analyzePayFile(key, file);
 }
 
@@ -1217,15 +1221,18 @@ function getPrevDayNextOpening(date){
 async function handleDepositFile(input){
   var file = input.files[0];
   if(!file) return;
-  imgs.deposit = [file];
-  _imagesDirty = true;  // ⭐ 新存款截圖，下次 auto-save 要帶圖
+  // ⭐ 累加：保留舊存款截圖，只新增新的
+  if(!imgs.deposit) imgs.deposit = [];
+  imgs.deposit.push(file);
+  input.value = '';  // 清空 input 讓同一張也能再選
+  _imagesDirty = true;  // 下次 auto-save 要帶圖
   var t = document.getElementById('thumbs-deposit');
-  t.innerHTML = '';
+  // 只 append 新縮圖，不清空舊的
   var img = document.createElement('img');
   img.src = URL.createObjectURL(file);
   img.className = 'thumb';
   t.appendChild(img);
-  checkDepositStatus();  // ⭐ 有照片了，清除異常警告
+  checkDepositStatus();  // 有照片了，清除異常警告
   if(!hasApiKey()) return;
 
   // 顯示狀態列
