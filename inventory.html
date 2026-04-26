@@ -645,7 +645,23 @@ function setEditingDate(dateStr){
       badge.parentElement.style.color = 'var(--brand)';
     }
   }
+  // ⭐ 同步月度表的月份選擇器（避免品項存在 3 月卻看 4 月看不到）
+  syncMonthPickerToDate(dateStr);
   loadVendorData();
+}
+
+// 把月度表月份切到指定日期所屬的月份
+function syncMonthPickerToDate(dateStr){
+  if(!dateStr) return;
+  var ym = dateStr.substring(0, 7);  // "2026-04-21" → "2026-04"
+  var picker = document.getElementById('month-picker');
+  if(picker && picker.value !== ym){
+    picker.value = ym;
+    // 若歷史區塊已開啟，重新拉資料
+    if(currentVendor && document.getElementById('history-section').style.display !== 'none'){
+      loadHistory();
+    }
+  }
 }
 
 // ============================================
@@ -879,7 +895,9 @@ async function doAnalyze(){
 
     stat.className = 'ai-status ok on';
     stat.innerHTML = '✓ 辨識完成，新增 ' + arr.length + ' 筆品項（已自動儲存）';
-    autoSave();  // AI 辨識完立刻自動存
+    // ⭐ AI 辨識完直接存（不走 debounce），月度表能立刻看到新品項
+    if(_autoSaveTimer){ clearTimeout(_autoSaveTimer); _autoSaveTimer = null; }
+    doAutoSave();
   }catch(e){
     console.error(e);
     stat.className = 'ai-status err on';
