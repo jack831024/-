@@ -197,6 +197,22 @@ body.view-form-active #mgr-card{display:none}
 .emp-avg-val{font-weight:800;font-size:16px;color:var(--ink);letter-spacing:-0.02em}
 .emp-avg-val.bonus{color:#d97706}
 
+/* 主管平均分數表格 */
+.avg-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:1rem}
+.avg-table{width:100%;border-collapse:collapse;font-size:13px;min-width:480px}
+.avg-table th, .avg-table td{padding:9px 10px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+.avg-table tbody tr:last-child td{border-bottom:0}
+.avg-table thead th{background:#f1f5f9;color:var(--ink-2);font-weight:700;font-size:12px;letter-spacing:0.5px;position:sticky;top:0;z-index:1}
+.avg-table th:first-child, .avg-table td:first-child{text-align:left;font-weight:700;color:var(--ink);background:#fafafa;position:sticky;left:0;min-width:96px;z-index:2;border-right:1px solid var(--line)}
+.avg-table thead th:first-child{z-index:3}
+.avg-table td.score{font-weight:700;font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:13.5px}
+.avg-table td.score.red{color:var(--err);background:#fef2f2}
+.avg-table td.score.empty{color:var(--ink-3);font-weight:400}
+.avg-table tbody tr:hover{background:#f8fafc}
+.avg-table tbody tr:hover td.red{background:#fee2e2}
+.position-tag{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:999px;background:#e0e7ff;color:#4338ca;margin-left:4px;letter-spacing:0.5px}
+.position-tag.mgr{background:#fee2e2;color:#991b1b}
+
 /* 職位設定卡 */
 .positions-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:1rem}
 .positions-head{margin-bottom:10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -847,46 +863,41 @@ function renderManagerResults(records){
     return;
   }
 
-  // 獎金規則：每項最高分者領 $200，同分者平分，主管不列入
+  // 獎金規則：每項最高分者領 $200，同分者平分（含主管，主管那份蒸發）
   var BONUS_POOL = 200;
 
   var emps = getEmployees(currentMgrStore);
   var cats = getCategories(currentMgrStore);
   var curPositions = getPositionsFor(currentMgrStore);
   var totalBonus = {};
-  var bonusBreakdown = {}; // 記錄每個人拿到哪幾項獎金 + 金額
+  var bonusBreakdown = {};
   emps.forEach(function(e){ totalBonus[e] = 0; bonusBreakdown[e] = []; });
 
-  var catsHtml = cats.map(function(cat, idx){
-    // 1. 先計算每位員工在此項的統計
-    var stats = emps.map(function(emp){
-      var counts = {1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0,10:0};
+  // 計算每人每項平均，順便算獎金
+  var avgs = {}; // avgs[emp][catId] = number 或 null
+  emps.forEach(function(emp){ avgs[emp] = {}; });
+
+  cats.forEach(function(cat){
+    // 每人此項平均
+    emps.forEach(function(emp){
       var sum = 0, cnt = 0;
       records.forEach(function(rec){
         var v = rec.ratings && rec.ratings[cat.id] && rec.ratings[cat.id][emp];
-        if(typeof v === 'number' && counts[v] !== undefined){
-          counts[v]++;
-          sum += v;
-          cnt++;
-        }
+        if(typeof v === 'number'){ sum += v; cnt++; }
       });
-      return { emp:emp, counts:counts, cnt:cnt, avg:cnt>0?sum/cnt:null };
+      avgs[emp][cat.id] = cnt > 0 ? sum/cnt : null;
     });
 
-    // 2. 決定獎金得主：所有有被評分的人（包含主管）一起比最高分，同分平分 $200
-    //    主管的那份直接蒸發（主管不能領），不會轉給其他人
-    var rated = stats.filter(function(s){ return s.avg !== null; });
-    var winnerAmt = {}; // emp → 實領金額（主管為 0）
+    // 找最高分（含主管），算獎金；主管那份蒸發
+    var rated = emps
+      .map(function(emp){ return { emp:emp, avg: avgs[emp][cat.id] }; })
+      .filter(function(s){ return s.avg !== null; });
     if(rated.length > 0){
       var maxAvg = rated.reduce(function(m,s){ return Math.max(m, s.avg); }, -Infinity);
       var winners = rated.filter(function(s){ return s.avg === maxAvg; });
       var perShare = BONUS_POOL / winners.length;
       winners.forEach(function(w){
-        if(isNoBonus(w.emp)){
-          // 主管：列入「最高分」但實領 0，那份蒸發
-          winnerAmt[w.emp] = 0;
-        } else {
-          winnerAmt[w.emp] = perShare;
+        if(!isNoBonus(w.emp)){
           totalBonus[w.emp] += perShare;
           var label = cat.name + ' $'+Math.round(perShare)
                     + (winners.length > 1 ? '('+winners.length+'人平分)' : '');
@@ -894,54 +905,32 @@ function renderManagerResults(records){
         }
       });
     }
+  });
 
-    // 3. 渲染每位員工的卡片
-    var cols = stats.map(function(s){
-      var emp = s.emp, counts = s.counts, cnt = s.cnt, avg = s.avg;
-      var noBonus = isNoBonus(emp);
-      var isWinner = winnerAmt.hasOwnProperty(emp);
-      var winAmt = winnerAmt[emp] || 0;
-
-      // 找最大值當 bar 的 100%（至少 1 避免除 0）
-      var max = Math.max(counts[1],counts[2],counts[3],counts[4],counts[5],counts[6],counts[7],counts[8],counts[9],counts[10],1);
-
-      var bars = [10,9,8,7,6,5,4,3,2,1].map(function(score){
-        var c = counts[score];
-        var pct = (c / max * 100).toFixed(0);
-        var cntCls = c === 0 ? 'cnt zero' : 'cnt';
-        return '<div class="score-bar s'+score+'">'
-          + '<span class="lbl">'+score+'分</span>'
-          + '<span class="bar"><span class="bar-fill" style="width:'+(c>0?pct:0)+'%"></span></span>'
-          + '<span class="'+cntCls+'">'+c+' 人</span>'
-          + '</div>';
-      }).join('');
-
-      var avgText = avg !== null ? avg.toFixed(2) : '—';
-      var title = curPositions[emp] || '';
-      var titleCls = 'emp-title-badge' + (noBonus ? ' mgr' : '');
-      var titleBadge = title ? '<span class="'+titleCls+'">'+esc(title)+'</span>' : '';
-      var paid = isWinner && winAmt > 0;        // 實領獎金
-      var tiedNoPay = isWinner && winAmt === 0; // 主管並列最高但不領
-      var bonusBadge = paid
-        ? '<span class="emp-bonus-badge">✨ +$'+Math.round(winAmt)+'</span>'
-        : (tiedNoPay
-            ? '<span class="emp-bonus-badge" style="background:#e5e7eb;color:#6b7280">最高分·不領</span>'
-            : '');
-      var colCls = 'emp-col' + (paid ? ' bonus' : '');
-      var avgCls = 'emp-avg-val' + (paid ? ' bonus' : '');
-
-      return '<div class="'+colCls+'">'
-        + '<div class="emp-name"><span>'+esc(emp)+' '+titleBadge+'</span>'+bonusBadge+'</div>'
-        + bars
-        + '<div class="emp-avg"><span>平均（共 '+cnt+' 票）</span><span class="'+avgCls+'">'+avgText+'</span></div>'
-        + '</div>';
-    }).join('');
-
-    return '<div class="cat-result">'
-      + '<div class="cat-result-title">'+(idx+1)+'. '+esc(cat.name)+(cat.desc?' <span style="font-size:11px;font-weight:400;color:var(--ink-3)">('+esc(cat.desc)+')</span>':'')+'</div>'
-      + '<div class="emp-row">'+cols+'</div>'
-      + '</div>';
+  // ===== 平均分數表格（員工為列、項目為欄、≤5 標紅）=====
+  var headerHtml = '<th>員工</th>' + cats.map(function(c){
+    return '<th>'+esc(c.name)+'</th>';
   }).join('');
+
+  var bodyRows = emps.map(function(emp){
+    var title = curPositions[emp] || '';
+    var noBonus = isNoBonus(emp);
+    var titleTag = title ? '<span class="position-tag'+(noBonus?' mgr':'')+'">'+esc(title)+'</span>' : '';
+    var cells = cats.map(function(cat){
+      var avg = avgs[emp][cat.id];
+      if(avg === null) return '<td class="score empty">—</td>';
+      var cls = 'score' + (avg <= 5 ? ' red' : '');
+      return '<td class="'+cls+'">'+avg.toFixed(2)+'</td>';
+    }).join('');
+    return '<tr><td>'+esc(emp)+titleTag+'</td>'+cells+'</tr>';
+  }).join('');
+
+  var catsHtml = '<div class="avg-table-wrap">'
+    + '<table class="avg-table">'
+    +   '<thead><tr>'+headerHtml+'</tr></thead>'
+    +   '<tbody>'+bodyRows+'</tbody>'
+    + '</table>'
+    + '</div>';
 
   // 獎金總計卡
   var bonusCardsHtml = emps.map(function(emp){
