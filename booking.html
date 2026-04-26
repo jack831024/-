@@ -58,9 +58,19 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .result .match-line{font-size:16px;margin-top:4px}
 .tag{display:inline-block;background:var(--green);color:#fff;padding:2px 10px;border-radius:5px;font-size:13px;font-weight:700;letter-spacing:0.5px}
 .tag.combo{background:var(--combo)}
-.alt-times{margin-top:8px;font-size:13px}
-.alt-times .alt-btn{display:inline-block;width:auto;padding:5px 11px;margin:3px 4px 0 0;font-size:13px;background:#fff;color:var(--green-dark);border:1px solid var(--green-line);font-weight:600}
-.alt-times .alt-btn:hover{background:var(--green-soft)}
+.store-select-wrap{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.9);border:1px solid var(--green-line);border-radius:999px;padding:3px 6px 3px 14px;box-shadow:0 2px 6px -2px rgba(15,23,42,.06)}
+.store-select-wrap .pin{font-size:14px}
+.store-select-wrap select.store-dropdown{border:none;background:transparent;font-size:13px;font-weight:600;color:var(--green-dark);padding:5px 26px 5px 4px;width:auto;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2315803d' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");background-repeat:no-repeat;background-position:right 6px center}
+.store-select-wrap select.store-dropdown:focus{outline:none;background-color:transparent}
+
+.list-lock{padding:18px 14px;text-align:center;border:1.5px dashed var(--green-line);border-radius:12px;background:linear-gradient(135deg,#f7fdf9 0%,#fafafa 100%)}
+.list-lock .lock-icon{font-size:34px;margin-bottom:6px}
+.list-lock .lock-msg{font-size:13.5px;color:var(--ink-2);margin-bottom:14px}
+.list-lock .lock-msg strong{color:var(--green-dark)}
+.list-lock .lock-form{display:flex;gap:8px;max-width:300px;margin:0 auto}
+.list-lock .lock-form input{flex:1;background:#fff}
+.list-lock .lock-form button{width:auto;padding:9px 18px;font-size:13px}
+.list-lock .lock-err{font-size:13px;color:var(--warn);margin-top:8px;min-height:18px}
 
 table.book-list{width:100%;border-collapse:collapse;margin-top:8px;font-size:13.5px}
 table.book-list th{background:#f8fafc;color:var(--ink-2);font-size:12px;font-weight:600;text-align:left;padding:8px 8px;border-bottom:1px solid var(--line)}
@@ -76,49 +86,25 @@ table.book-list .delete-btn:hover{background:var(--warn-soft)}
 .list-summary{font-size:12.5px;color:var(--ink-2);margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #f0f4f8}
 .empty{font-size:13px;color:var(--ink-3);text-align:center;padding:20px 0}
 
-/* 鎖定畫面 */
-.lock-bg{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#dcfce7 0%,#dbeafe 100%);z-index:50;padding:1rem}
-.lock-card{background:#fff;border-radius:18px;padding:1.75rem;max-width:380px;width:100%;box-shadow:0 20px 50px -20px rgba(15,23,42,.25);border:1px solid #fff}
-.lock-card .ico{width:60px;height:60px;border-radius:18px;background:linear-gradient(135deg,var(--green) 0%,#4ade80 100%);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 14px;box-shadow:0 8px 20px -8px rgba(22,163,74,.5)}
-.lock-card h2{font-size:19px;text-align:center;margin-bottom:6px}
-.lock-card .lock-desc{font-size:13px;color:var(--ink-2);text-align:center;margin-bottom:1.25rem;line-height:1.5}
-.lock-card .err{font-size:13px;color:var(--warn);text-align:center;margin-top:8px;display:none}
 </style>
 </head>
 <body>
 
-<!-- 鎖定畫面 -->
-<div class="lock-bg" id="lockScreen">
-  <div class="lock-card">
-    <div class="ico">📅</div>
-    <h2>訂位表</h2>
-    <p class="lock-desc">請選擇分店並輸入該店密碼<br>（與小結報表獎金相同）</p>
-    <label class="field">
-      <span class="lab">分店</span>
-      <select id="lockStore">
-        <option value="chudian-zhonghe">初殿中和</option>
-        <option value="chudian-yongchun" selected>永春</option>
-        <option value="chudian-xinzhuang">新莊</option>
-      </select>
-    </label>
-    <label class="field">
-      <span class="lab">密碼</span>
-      <input type="password" id="lockPwd" autocomplete="off" placeholder="輸入本店密碼">
-    </label>
-    <button onclick="tryUnlock()">解鎖</button>
-    <div class="err" id="lockErr">❌ 密碼錯誤</div>
-  </div>
-</div>
-
-<!-- 主畫面 -->
-<div id="appWrap" hidden>
+<div id="appWrap">
   <div class="user-bar">
     <a href="home.html" class="back-btn-mini" title="返回主選單">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
     </a>
-    <span class="store-chip">📍 <span id="storeChip">永春</span></span>
+    <div class="store-select-wrap">
+      <span class="pin">📍</span>
+      <select id="storeSelect" class="store-dropdown" onchange="onStoreChange()">
+        <option value="chudian-zhonghe">初殿中和</option>
+        <option value="chudian-yongchun" selected>初殿永春</option>
+        <option value="chudian-xinzhuang">初殿新莊</option>
+      </select>
+    </div>
     <span class="spacer"></span>
-    <a class="logout-link" onclick="lock()">鎖定 / 切換分店</a>
+    <a class="logout-link" id="lockListLink" onclick="lockList()" hidden>🔒 鎖回列表</a>
   </div>
 
   <div class="wrap">
@@ -165,11 +151,24 @@ table.book-list .delete-btn:hover{background:var(--warn-soft)}
 
     <div class="section">
       <h3><span class="num">02</span>訂位列表</h3>
-      <label class="field">
-        <span class="lab">查詢日期</span>
-        <input id="viewDate" type="date" onchange="renderList()">
-      </label>
-      <div id="list"></div>
+
+      <div id="listLock" class="list-lock">
+        <div class="lock-icon">🔒</div>
+        <div class="lock-msg">查看 <strong id="lockStoreName">初殿永春</strong> 訂位列表需要本店密碼</div>
+        <div class="lock-form">
+          <input type="password" id="listPwd" placeholder="輸入本店密碼" autocomplete="off">
+          <button onclick="unlockList()">解鎖</button>
+        </div>
+        <div class="lock-err" id="listErr"></div>
+      </div>
+
+      <div id="listUnlocked" hidden>
+        <label class="field">
+          <span class="lab">查詢日期</span>
+          <input id="viewDate" type="date" onchange="renderList()">
+        </label>
+        <div id="list"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -185,8 +184,8 @@ var BOOKING_PASSWORDS = {
 };
 var STORE_NAMES = {
   'chudian-zhonghe':   '初殿中和',
-  'chudian-yongchun':  '永春',
-  'chudian-xinzhuang': '新莊'
+  'chudian-yongchun':  '初殿永春',
+  'chudian-xinzhuang': '初殿新莊'
 };
 
 // 桌號設定
@@ -215,7 +214,7 @@ var LAST_ACCEPT = 21*60;
 var WK_BLOCK_S = 18*60+1;
 var WK_BLOCK_E = 19*60+39;
 
-var STORE_ID = '';
+var STORE_ID = 'chudian-yongchun';   // 預設永春
 var lastMatch = null;
 
 // ============================================================
@@ -287,25 +286,17 @@ function checkCandidate(c, date, time){
   }
   return {ok:true};
 }
-function suggestAlts(date, time, people){
-  var base = timeToMin(time);
+// 當日是否還有任何可訂的時段（用於失敗訊息判斷）
+function hasAnyAvailableSlot(date, people){
   var cands = findCandidates(people);
-  var seen = {}, results = [];
-  for (var d=10; d<=120 && results.length<4; d+=10){
-    var arr = [base-d, base+d];
-    for (var k=0;k<arr.length;k++){
-      var t = arr[k];
-      if (t<11*60 || t>LAST_ACCEPT) continue;
-      var ts = minToTime(t);
-      if (seen[ts]) continue; seen[ts]=1;
-      for (var i=0;i<cands.length;i++){
-        if (checkCandidate(cands[i], date, ts).ok){
-          results.push({time:ts, cand:cands[i]}); break;
-        }
-      }
+  if (cands.length===0) return false;
+  for (var t=11*60; t<=LAST_ACCEPT; t+=30){
+    var ts = minToTime(t);
+    for (var i=0;i<cands.length;i++){
+      if (checkCandidate(cands[i], date, ts).ok) return true;
     }
   }
-  return results.sort(function(a,b){return timeToMin(a.time)-timeToMin(b.time)});
+  return false;
 }
 
 // ============================================================
@@ -363,19 +354,13 @@ function findMatch(){
     }
   }
 
-  var alts = suggestAlts(f.date, f.time, f.people);
-  var altHtml = '';
-  if (alts.length>0){
-    altHtml = '<div class="alt-times">建議改選時間：';
-    for (var a=0;a<alts.length;a++){
-      altHtml += '<button class="alt-btn" onclick="setTime(\''+alts[a].time+'\')">'+alts[a].time+' → '+alts[a].cand.label+'</button>';
-    }
-    altHtml += '</div>';
+  if (hasAnyAvailableSlot(f.date, f.people)){
+    showResult('只能訂 18:00 之前的位置 或 19:40 之後的位置', false);
+  } else {
+    showResult('✗ 此時段無可用桌位', false);
   }
-  showResult('✗ 此時段無可用桌位'+altHtml, false);
   lastMatch = null;
 }
-function setTime(t){ $('time').value = t; findMatch(); }
 
 function confirmReserve(){
   if (!lastMatch) return;
@@ -407,9 +392,10 @@ function confirmReserve(){
 }
 
 // ============================================================
-// 訂位列表（同桌號合併）
+// 訂位列表（同桌號合併）— 需密碼解鎖
 // ============================================================
 function renderList(){
+  if (!isListUnlocked()) return;
   var date = $('viewDate').value;
   var el = $('list');
   if (!date){ el.innerHTML = '<div class="empty">請選擇查詢日期</div>'; return; }
@@ -492,57 +478,63 @@ function delRes(id){
 }
 
 // ============================================================
-// 鎖定 / 解鎖
+// 訂位列表密碼鎖（每店各自密碼，與小結報表獎金同步）
 // ============================================================
-function tryUnlock(){
-  var sid = $('lockStore').value;
-  var pwd = ($('lockPwd').value||'').trim();
-  var expected = BOOKING_PASSWORDS[sid];
-  if (!expected){ $('lockErr').textContent='此分店尚未設定密碼'; $('lockErr').style.display='block'; return; }
+function isListUnlocked(){
+  return sessionStorage.getItem('booking_list_unlocked_'+STORE_ID) === '1';
+}
+function unlockList(){
+  var pwd = ($('listPwd').value||'').trim();
+  var expected = BOOKING_PASSWORDS[STORE_ID];
+  if (!expected){
+    $('listErr').textContent = '此分店尚未設定密碼';
+    return;
+  }
   if (pwd !== expected){
-    $('lockErr').textContent = '❌ 密碼錯誤';
-    $('lockErr').style.display = 'block';
-    $('lockPwd').value = ''; $('lockPwd').focus();
+    $('listErr').textContent = '❌ 密碼錯誤';
+    $('listPwd').value = ''; $('listPwd').focus();
     if (navigator.vibrate) navigator.vibrate([50,30,50]);
     return;
   }
-  STORE_ID = sid;
-  sessionStorage.setItem('booking_unlocked_'+sid, '1');
-  enterApp();
+  sessionStorage.setItem('booking_list_unlocked_'+STORE_ID, '1');
+  $('listErr').textContent = '';
+  $('listPwd').value = '';
+  refreshListLockState();
 }
-function enterApp(){
-  $('lockScreen').style.display='none';
-  $('appWrap').hidden = false;
-  $('storeChip').textContent = STORE_NAMES[STORE_ID];
-  $('subtitle').textContent = STORE_NAMES[STORE_ID]+'店訂位管理';
-  if (!$('date').value)     $('date').value     = todayStr();
-  if (!$('viewDate').value) $('viewDate').value = todayStr();
-  renderList();
+function lockList(){
+  if (!confirm('確定要鎖回訂位列表嗎？下次查看需重新輸入密碼。')) return;
+  sessionStorage.removeItem('booking_list_unlocked_'+STORE_ID);
+  refreshListLockState();
 }
-function lock(){
-  STORE_ID = '';
-  // 清掉所有店的解鎖狀態，回到選店畫面
-  Object.keys(BOOKING_PASSWORDS).forEach(function(k){ sessionStorage.removeItem('booking_unlocked_'+k); });
-  $('appWrap').hidden = true;
-  $('lockScreen').style.display='flex';
-  $('lockPwd').value='';
-  $('lockErr').style.display='none';
-  $('matchResult').innerHTML='';
-  $('lockPwd').focus();
-}
-
-$('lockPwd').addEventListener('keydown', function(e){ if (e.key==='Enter') tryUnlock(); });
-
-// 沿用本分頁的解鎖狀態
-(function init(){
-  var sids = Object.keys(BOOKING_PASSWORDS);
-  for (var i=0;i<sids.length;i++){
-    if (sessionStorage.getItem('booking_unlocked_'+sids[i])==='1'){
-      STORE_ID = sids[i]; $('lockStore').value = sids[i];
-      enterApp(); return;
-    }
+function refreshListLockState(){
+  var unlocked = isListUnlocked();
+  $('listLock').hidden       = unlocked;
+  $('listUnlocked').hidden   = !unlocked;
+  $('lockListLink').hidden   = !unlocked;
+  $('lockStoreName').textContent = STORE_NAMES[STORE_ID];
+  if (unlocked){
+    if (!$('viewDate').value) $('viewDate').value = todayStr();
+    renderList();
   }
-  $('lockPwd').focus();
+}
+
+// 切換分店
+function onStoreChange(){
+  STORE_ID = $('storeSelect').value;
+  $('subtitle').textContent = STORE_NAMES[STORE_ID]+'店訂位管理';
+  $('matchResult').innerHTML = '';
+  lastMatch = null;
+  refreshListLockState();
+}
+
+$('listPwd').addEventListener('keydown', function(e){ if (e.key==='Enter') unlockList(); });
+
+// 初始化
+(function init(){
+  STORE_ID = $('storeSelect').value || 'chudian-yongchun';
+  $('subtitle').textContent = STORE_NAMES[STORE_ID]+'店訂位管理';
+  if (!$('date').value) $('date').value = todayStr();
+  refreshListLockState();
 })();
 </script>
 </body>
