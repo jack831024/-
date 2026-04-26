@@ -154,8 +154,12 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
 .monthly thead th{position:sticky;top:0;background:linear-gradient(180deg,#dbeafe 0%,#bfdbfe 100%);padding:7px 6px;font-size:11px;font-weight:700;color:#1e40af;text-align:center;white-space:nowrap;border-right:1px solid #93c5fd;border-bottom:1.5px solid #60a5fa;z-index:3;min-width:36px}
 .monthly thead th.day-col{cursor:pointer;transition:background .15s}
 .monthly thead th.day-col:hover{background:linear-gradient(180deg,#93c5fd 0%,#60a5fa 100%);color:#fff}
-.monthly tbody td.cell-click{cursor:pointer;transition:all .12s}
-.monthly tbody td.cell-click:hover{background:#fef3c7;color:var(--accent-dark);box-shadow:inset 0 0 0 1.5px var(--accent);font-weight:700}
+.monthly tbody td.cell-edit{padding:0;position:relative}
+.monthly tbody td.cell-edit .cell-input{width:100%;height:100%;min-width:36px;padding:5px 4px;border:none;background:transparent;font-size:11.5px;font-family:ui-monospace,"SF Mono",Menlo,monospace;text-align:right;color:var(--ink);outline:none;border-radius:0}
+.monthly tbody td.cell-edit .cell-input:hover{background:#fef3c7;color:var(--accent-dark)}
+.monthly tbody td.cell-edit .cell-input:focus{background:#fff7ed;color:var(--accent-dark);box-shadow:inset 0 0 0 2px var(--accent);font-weight:700;z-index:5}
+.monthly tbody td.cell-edit .cell-input::placeholder{color:#cbd5e1}
+.monthly tbody td.cell-edit.weekend{background:rgba(224,231,255,.3)}
 .monthly thead th.c-name{left:0;z-index:5;text-align:left;padding:7px 10px;min-width:80px;background:linear-gradient(180deg,#dbeafe 0%,#bfdbfe 100%)}
 .monthly thead th.c-type{left:80px;z-index:5;min-width:68px;background:linear-gradient(180deg,#dbeafe 0%,#bfdbfe 100%)}
 .monthly thead th.c-sum{background:linear-gradient(180deg,#fecaca 0%,#fca5a5 100%);color:#991b1b;min-width:72px;font-size:10.5px;letter-spacing:0}
@@ -328,52 +332,21 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
     <p style="font-size:11.5px;color:var(--ink-3);margin-top:8px;line-height:1.6">💡 請依貨單上實際的日期輸入，AI 只會辨識品項、單價、貨量，不會猜日期，避免辨識錯誤。</p>
   </div>
 
-  <!-- 上傳 + AI -->
+  <!-- 上傳 + AI（上傳完直接自動辨識，不需按按鈕）-->
   <div class="section" id="upload-section" style="display:none">
-    <h3><span class="step-num">3</span>上傳出貨單 / 發票</h3>
-    <label class="upload-zone">
-      <span class="uz-icon">📷</span>
-      <span class="uz-label">點此拍照或選擇照片（可一次多張）</span>
-      <span class="uz-hint">支援 JPG / PNG / HEIC，建議每張 &lt; 3MB</span>
-      <input type="file" id="inv-files" accept="image/*" multiple onchange="handleFiles(this)">
-    </label>
-    <div class="thumb-row" id="thumb-row"></div>
-    <button class="analyze-btn" id="analyze-btn" onclick="doAnalyze()" disabled>
-      <span id="ai-icon">🤖</span>
-      <span id="ai-text">AI 辨識品項</span>
-    </button>
-    <div class="ai-status" id="ai-status"></div>
-  </div>
-
-  <!-- 表格 -->
-  <div class="section" id="table-section" style="display:none">
-    <h3>
-      <span class="step-num">4</span>品項明細
-      <span id="edit-badge" style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:999px;background:rgba(249,115,22,.1);color:var(--accent);font-weight:600;letter-spacing:0.5px">
+    <h3><span class="step-num">3</span>上傳出貨單 / 發票
+      <span style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:999px;background:rgba(249,115,22,.1);color:var(--accent);font-weight:600">
         📅 <span id="editing-date">今天</span>
       </span>
     </h3>
-    <div class="table-wrap">
-      <table class="items">
-        <thead>
-          <tr>
-            <th class="col-name">品項</th>
-            <th class="col-price" style="text-align:right">單價</th>
-            <th class="col-qty" style="text-align:right">貨量</th>
-            <th class="col-date">出貨日期</th>
-            <th class="col-del"></th>
-          </tr>
-        </thead>
-        <tbody id="item-tbody"></tbody>
-      </table>
-    </div>
-    <div class="add-row">
-      <button onclick="addRow()">＋ 新增一列</button>
-    </div>
-    <div class="summary-bar">
-      <div class="item">品項數<span class="val" id="sum-count">0</span></div>
-      <div class="item">總金額<span class="val" id="sum-total">$0</span></div>
-    </div>
+    <label class="upload-zone">
+      <span class="uz-icon">📷</span>
+      <span class="uz-label">點此拍照或選擇照片（上傳後自動 AI 辨識）</span>
+      <span class="uz-hint">支援 JPG / PNG / HEIC、可一次多張，建議每張 &lt; 3MB</span>
+      <input type="file" id="inv-files" accept="image/*" multiple onchange="handleFiles(this)">
+    </label>
+    <div class="thumb-row" id="thumb-row"></div>
+    <div class="ai-status" id="ai-status"></div>
   </div>
 
   <span class="saved-tag" id="saved-tag" style="text-align:right;margin-top:6px;min-height:16px"></span>
@@ -393,7 +366,7 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
     <div style="font-size:11.5px;color:var(--ink-2);background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:10px;padding:9px 12px;margin-bottom:10px;line-height:1.6;display:flex;gap:6px;align-items:flex-start">
       <span>💡</span>
       <span>
-        <b>修正數字錯誤：</b>點擊月度表任一「日期欄頭」或「格子」，該日資料會載入至上方「品項明細」，直接改數字就會自動儲存覆蓋該日（不需按任何按鈕）。<br>
+        <b>修正數字錯誤：</b>直接點任一格子的數字輸入框，改完按 Enter 或點別處就會自動儲存到本機 + 雲端。<br>
         <b>自動合併近似品項：</b>字元相似度 ≥ 75%（例「速食麵」vs「迷食麵」=82%）會自動歸為同品項，該列會顯示綠色 <span style="display:inline-block;font-size:10px;padding:1px 6px;border-radius:999px;background:rgba(16,185,129,.15);color:#047857;font-weight:700">＋N</span> 徽章（懸停可看合併的別名）。差異較大的（如「鴨肉丸」vs「上等縣肉丸」=33%）請手動點品項名重新命名合併。<br>
         <b>手動合併品項：</b>點品項名稱（會顯示 ✎ 圖示）可重新命名，所有日期同名項目會一起合併並同步雲端。
       </span>
@@ -603,15 +576,12 @@ function selectVendor(name, btnEl){
 
   document.getElementById('date-section').style.display = 'block';
   document.getElementById('upload-section').style.display = 'block';
-  document.getElementById('table-section').style.display = 'block';
-  // action-row 已移除，改為 topbar 的「重新同步」按鈕
+  // 品項明細區塊已移除（直接編輯月度表）
   document.getElementById('history-section').style.display = 'block';
   document.getElementById('analysis-section').style.display = 'block';
 
   // 預設編輯今天
   setEditingDate(todayDate());
-  // 自動載入該廠商的歷史資料
-  loadVendorData();
   loadHistory();
   document.getElementById('date-section').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -647,7 +617,6 @@ function setEditingDate(dateStr){
   }
   // ⭐ 同步月度表的月份選擇器（避免品項存在 3 月卻看 4 月看不到）
   syncMonthPickerToDate(dateStr);
-  loadVendorData();
 }
 
 // 把月度表月份切到指定日期所屬的月份
@@ -671,10 +640,12 @@ var uploadedFiles = [];
 
 function handleFiles(input){
   var newFiles = Array.from(input.files);
+  if(newFiles.length === 0) return;
   uploadedFiles = uploadedFiles.concat(newFiles);
   input.value = '';
   renderThumbs();
-  document.getElementById('analyze-btn').disabled = uploadedFiles.length === 0;
+  // ⭐ 上傳後立刻自動觸發 AI 辨識（只送新上傳的張數，避免舊圖再讀一次）
+  doAnalyze(newFiles);
 }
 
 function renderThumbs(){
@@ -690,7 +661,7 @@ function renderThumbs(){
     var del = document.createElement('button');
     del.className = 'thumb-del';
     del.textContent = '×';
-    del.onclick = function(e){ e.stopPropagation(); uploadedFiles.splice(idx,1); renderThumbs(); document.getElementById('analyze-btn').disabled = uploadedFiles.length === 0; };
+    del.onclick = function(e){ e.stopPropagation(); uploadedFiles.splice(idx,1); renderThumbs(); };
     wrap.appendChild(img);
     wrap.appendChild(del);
     row.appendChild(wrap);
@@ -823,24 +794,21 @@ function parseJson(raw){
 }
 
 // ============================================
-// AI 辨識
+// AI 辨識（自動觸發）
+// 上傳完直接呼叫，AI 辨識結果直接寫入 localStorage 對應日期 + 同步雲端
+// 月度盤點表會自動刷新顯示新品項
 // ============================================
-async function doAnalyze(){
-  if(!currentVendor){ alert('請先選擇廠商'); return; }
-  if(uploadedFiles.length === 0){ alert('請先上傳出貨單照片'); return; }
+async function doAnalyze(filesToAnalyze){
+  if(!currentVendor){ return; }
+  // 預設只分析「新上傳」的張數（避免舊圖再讀），沒傳就退回全部
+  var targets = filesToAnalyze || uploadedFiles;
+  if(!targets || targets.length === 0) return;
 
-  var btn = document.getElementById('analyze-btn');
-  var icon = document.getElementById('ai-icon');
-  var text = document.getElementById('ai-text');
   var stat = document.getElementById('ai-status');
-
-  btn.disabled = true;
-  icon.innerHTML = '<span class="spinner"></span>';
-  text.textContent = 'AI 辨識中，請稍候...';
   stat.className = 'ai-status info on';
-  stat.innerHTML = '<span class="spinner"></span>正在讀取出貨單內容...';
+  stat.innerHTML = '<span class="spinner"></span>AI 辨識中，' + targets.length + ' 張新圖...';
 
-  var invoiceDate = document.getElementById('inv-date').value;
+  var invoiceDate = document.getElementById('inv-date').value || todayDate();
 
   // 菜商需要單位換算（1斤=16兩=600g）
   var needsUnitConversion = (currentVendor === '菜商');
@@ -879,33 +847,74 @@ async function doAnalyze(){
     var arr = parseJson(raw);
     if(!Array.isArray(arr)) throw new Error('回傳格式非陣列');
 
-    var before = items.length;
-    arr.forEach(function(row){
-      items.push({
+    // ⭐ 不再 push 到 items[]，直接寫入 localStorage 該日期的 key
+    var key = 'cd_inv_' + STORE_ID + '_' + currentVendor + '_' + invoiceDate;
+    var existingData = {};
+    try{ existingData = JSON.parse(localStorage.getItem(key) || '{}'); }catch(e){}
+    var existingItems = (existingData && Array.isArray(existingData.items)) ? existingData.items : [];
+
+    var newItems = arr.map(function(row){
+      return {
         name: String(row.name || '').trim(),
         price: Number(row.price) || 0,
         qty: Number(row.qty) || 0,
         unit: String(row.unit || '').trim(),
-        date: invoiceDate,  // 一律使用使用者輸入的貨單日期
-        _new: true
-      });
-    });
-    renderTable();
-    updateSummary();
+        date: invoiceDate
+      };
+    }).filter(function(it){ return it.name; });
+
+    var combined = existingItems.concat(newItems);
+    var savedAt = new Date().toISOString();
+    localStorage.setItem(key, JSON.stringify({
+      vendor: currentVendor,
+      date: invoiceDate,
+      items: combined,
+      savedAt: savedAt
+    }));
 
     stat.className = 'ai-status ok on';
-    stat.innerHTML = '✓ 辨識完成，新增 ' + arr.length + ' 筆品項（已自動儲存）';
-    // ⭐ AI 辨識完直接存（不走 debounce），月度表能立刻看到新品項
-    if(_autoSaveTimer){ clearTimeout(_autoSaveTimer); _autoSaveTimer = null; }
-    doAutoSave();
+    stat.innerHTML = '✓ 辨識完成，新增 ' + newItems.length + ' 筆品項到 ' + invoiceDate + '（月度表已更新）';
+
+    // 同步月份 + 重畫月度表
+    syncMonthPickerToDate(invoiceDate);
+    await loadHistory();
+
+    // 同步到雲端（背景）
+    cloudSyncOneDay(invoiceDate, combined, savedAt);
   }catch(e){
     console.error(e);
     stat.className = 'ai-status err on';
     stat.innerHTML = '⚠️ 辨識失敗：' + (e.message || '未知錯誤');
-  }finally{
-    btn.disabled = false;
-    icon.textContent = '🤖';
-    text.textContent = '再辨識一批（可累加）';
+  }
+}
+
+// 把指定日期的 items 推到雲端（單日同步）
+async function cloudSyncOneDay(dateStr, itemsList, savedAt){
+  var url = localStorage.getItem('cd_inv_sync_url');
+  if(!url) return;
+  try{
+    setAutoSaveStatus('saving');
+    var its = (itemsList || []).map(function(it){
+      return { name: it.name, price: it.price, qty: it.qty, unit: it.unit || '', date: dateStr };
+    });
+    var r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'saveInventory',
+        store: STORE_ID,
+        vendor: currentVendor,
+        date: dateStr,
+        items: its,
+        savedAt: savedAt || new Date().toISOString()
+      })
+    });
+    var j = await r.json();
+    if(j && j.ok) setAutoSaveStatus('cloud');
+    else setAutoSaveStatus('error');
+  }catch(e){
+    console.warn('雲端同步失敗', e);
+    setAutoSaveStatus('error');
   }
 }
 
@@ -916,6 +925,7 @@ var items = [];
 
 function renderTable(){
   var tb = document.getElementById('item-tbody');
+  if(!tb) return;  // 品項明細表已移除（直接編輯月度表），找不到就略過
   tb.innerHTML = '';
   if(items.length === 0){
     tb.innerHTML = '<tr><td colspan="5" class="empty">尚無品項，請上傳出貨單由 AI 辨識，或點下方「新增一列」手動輸入</td></tr>';
@@ -1052,9 +1062,12 @@ async function manualResync(){
 }
 
 function updateSummary(){
+  // 品項明細的合計卡已移除，這裡 no-op（保留以避免其他地方呼叫時錯誤）
+  var sc = document.getElementById('sum-count');
+  if(!sc) return;
   var total = 0;
   items.forEach(function(it){ total += (Number(it.price)||0) * (Number(it.qty)||0); });
-  document.getElementById('sum-count').textContent = items.length;
+  sc.textContent = items.length;
   document.getElementById('sum-total').textContent = '$' + Math.round(total).toLocaleString();
 }
 
@@ -1670,16 +1683,13 @@ function renderHistoryTable(box, stat, records){
     var aliasTitle = aliases.length > 0
       ? '此列已自動合併：'+aliases.join('、')+'\n點擊可重新命名'
       : '點品項名可重新命名並合併重複項';
-    html += '<tr class="price-row item-top"><th class="c-name c-name-click" rowspan="2" onclick="renameItem(\''+escapeAttr(n).replace(/'/g,"\\\'")+'\')" title="'+escapeAttr(aliasTitle)+'">'+escapeAttr(n)+aliasBadge+' <span class="edit-icon">✎</span></th><td class="c-type">採購價</td>';
+    var nEsc = escapeAttr(n).replace(/'/g,"\\\'");
+    html += '<tr class="price-row item-top"><th class="c-name c-name-click" rowspan="2" onclick="renameItem(\''+nEsc+'\')" title="'+escapeAttr(aliasTitle)+'">'+escapeAttr(n)+aliasBadge+' <span class="edit-icon">✎</span></th><td class="c-type">採購價</td>';
     for(var d=1; d<=daysInMonth; d++){
       var c = pivot[n][d];
       var wk = isWeekend(d) ? ' weekend' : '';
-      var clk = ' onclick="editDay('+d+')" title="編輯 '+yearMonth+'-'+String(d).padStart(2,'0')+'"';
-      if(c && c.price > 0){
-        html += '<td class="cell-click'+wk+'"'+clk+'>'+formatNum(c.price)+'</td>';
-      }else{
-        html += '<td class="cell-click zero'+wk+'"'+clk+'>—</td>';
-      }
+      var val = (c && c.price > 0) ? formatNum(c.price) : '';
+      html += '<td class="cell-edit'+wk+'"><input type="number" step="0.01" class="cell-input" value="'+val+'" placeholder="—" onchange="editCell(\''+nEsc+'\','+d+',\'price\',this.value)"></td>';
     }
     // 累計 amount
     for(var d=1; d<=daysInMonth; d++){
@@ -1698,13 +1708,9 @@ function renderHistoryTable(box, stat, records){
     for(var d=1; d<=daysInMonth; d++){
       var c = pivot[n][d];
       var wk = isWeekend(d) ? ' weekend' : '';
-      var clk = ' onclick="editDay('+d+')" title="編輯 '+yearMonth+'-'+String(d).padStart(2,'0')+'"';
-      if(c && c.qty > 0){
-        itemTotalQty += c.qty;
-        html += '<td class="cell-click'+wk+'"'+clk+'>'+formatNum(c.qty)+'</td>';
-      }else{
-        html += '<td class="cell-click zero'+wk+'"'+clk+'>—</td>';
-      }
+      var val = (c && c.qty > 0) ? formatNum(c.qty) : '';
+      if(c && c.qty > 0) itemTotalQty += c.qty;
+      html += '<td class="cell-edit'+wk+'"><input type="number" step="0.01" class="cell-input" value="'+val+'" placeholder="—" onchange="editCell(\''+nEsc+'\','+d+',\'qty\',this.value)"></td>';
     }
     html += '<td class="c-sum">'+formatNum(itemTotalQty)+'</td><td class="c-sum zero">—</td></tr>';
   });
@@ -1999,15 +2005,64 @@ function formatNum(n){
   return (Math.round(num * 10000) / 10000).toLocaleString();
 }
 
-// 月度表格子被點擊 → 載入該日資料至編輯區
-function editDay(day){
+// 月度表格子直接編輯：updates the price/qty for (rep_name, day) in localStorage + cloud
+// field: 'price' | 'qty'
+async function editCell(repName, day, field, newValue){
   if(!currentVendor) return;
   var picker = document.getElementById('month-picker');
-  if(!picker.value) return;
-  var dateStr = picker.value + '-' + String(day).padStart(2,'0');
-  setEditingDate(dateStr);
-  // 捲動到品項明細
-  document.getElementById('table-section').scrollIntoView({behavior:'smooth',block:'start'});
+  if(!picker || !picker.value) return;
+  var ym = picker.value;
+  var dateStr = ym + '-' + String(day).padStart(2, '0');
+  var key = 'cd_inv_' + STORE_ID + '_' + currentVendor + '_' + dateStr;
+  var num = newValue === '' ? 0 : (Number(newValue) || 0);
+
+  // 讀現有
+  var data = {};
+  try{ data = JSON.parse(localStorage.getItem(key) || '{}'); }catch(e){}
+  if(!data.items) data.items = [];
+  data.vendor = currentVendor;
+  data.date = dateStr;
+
+  // 找該日符合 repName（正規化後）的項目
+  var normRep = normalizeItemName(repName);
+  var matches = data.items.filter(function(it){ return normalizeItemName(it.name) === normRep; });
+
+  if(matches.length === 0){
+    // 該日沒有此品項 → 新增一筆
+    var newRow = { name: repName, price: 0, qty: 0, unit: '', date: dateStr };
+    newRow[field] = num;
+    data.items.push(newRow);
+  }else if(matches.length === 1){
+    // 唯一一筆 → 直接改
+    matches[0][field] = num;
+  }else{
+    // 多筆相似 → 全部合併成一筆，更新指定欄位
+    var totalQty = matches.reduce(function(s, it){ return s + (Number(it.qty)||0); }, 0);
+    var avgPrice = matches.reduce(function(s, it){ return s + (Number(it.price)||0); }, 0) / matches.length;
+    var unit = matches[0].unit || '';
+    data.items = data.items.filter(function(it){ return normalizeItemName(it.name) !== normRep; });
+    var merged = { name: repName, price: avgPrice, qty: totalQty, unit: unit, date: dateStr };
+    merged[field] = num;
+    data.items.push(merged);
+  }
+
+  // 若該品項該日 price 和 qty 都歸零，可選擇刪除這列（保持資料乾淨）
+  // 這裡保留為 0，使用者後續可以再補上
+
+  data.savedAt = new Date().toISOString();
+
+  // 該日如果完全沒品項了，移掉整個 key
+  if(data.items.length === 0){
+    localStorage.removeItem(key);
+  }else{
+    localStorage.setItem(key, JSON.stringify(data));
+  }
+
+  // 雲端同步
+  cloudSyncOneDay(dateStr, data.items, data.savedAt);
+
+  // 重畫月度表（讓總計、其他列也同步更新）
+  await loadHistory();
 }
 
 // ============================================
