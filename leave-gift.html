@@ -90,6 +90,10 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
 
 .empty-row{text-align:center;color:var(--ink-3);padding:18px;font-size:12.5px;background:rgba(248,250,252,.5);border-radius:10px;line-height:1.6}
 
+.date-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.date-chip-mini{display:inline-flex;align-items:center;font-size:10.5px;font-weight:600;font-family:ui-monospace,Menlo,monospace;padding:2px 7px;border-radius:999px;background:rgba(202,138,4,.1);color:#92400e;letter-spacing:.5px}
+.date-chip-mini.travel{background:rgba(14,165,233,.1);color:#075985}
+
 /* 禮金 */
 .emp-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
 .emp-tab{padding:9px 16px;border-radius:999px;font-size:13px;font-weight:600;background:rgba(255,255,255,.7);border:1.5px solid var(--line);cursor:pointer;color:var(--ink-2);transition:all .15s;font-family:inherit;display:inline-flex;align-items:center;gap:8px}
@@ -419,10 +423,11 @@ function travelEntitlement(hireDate){
   return 4;
 }
 
-// 從加班費系統匯入的請假紀錄中，找此員工 EFFECTIVE_DATE 之後的特/旅遊日數
+// 從加班費系統匯入的請假紀錄中，找此員工 EFFECTIVE_DATE 之後的特/旅遊日期
 //   key: cd_ot_summary_<store>_<ym>，每個 record 有 employees[name].annualDates / travelDates
-function getOvertimeUsedAfter(empName, type){
-  var count = 0;
+//   回傳排序好的日期陣列（不重複）
+function getOvertimeDatesAfter(empName, type){
+  var seen = {};
   var prefix = 'cd_ot_summary_' + STORE + '_';
   for(var i = 0; i < localStorage.length; i++){
     var key = localStorage.key(i);
@@ -432,12 +437,13 @@ function getOvertimeUsedAfter(empName, type){
       var rec = (p.employees || {})[empName];
       if(!rec) continue;
       var dates = type === 'annual' ? (rec.annualDates || []) : (rec.travelDates || []);
-      dates.forEach(function(d){
-        if(d > EFFECTIVE_DATE) count++;
-      });
+      dates.forEach(function(d){ if(d > EFFECTIVE_DATE) seen[d] = 1; });
     } catch(e){}
   }
-  return count;
+  return Object.keys(seen).sort();
+}
+function getOvertimeUsedAfter(empName, type){
+  return getOvertimeDatesAfter(empName, type).length;
 }
 
 // 員工各種衍生值
@@ -445,7 +451,8 @@ function calcAnnual(emp){
   // initialAnnualUsed = EFFECTIVE_DATE 之前已用；之後自動從加班費系統抓
   var accrued = emp.initialAnnualAccrued || 0;
   var initialUsed = emp.initialAnnualUsed || 0;
-  var fromOT = getOvertimeUsedAfter(emp.name, 'annual');
+  var fromOTDates = getOvertimeDatesAfter(emp.name, 'annual');
+  var fromOT = fromOTDates.length;
   var manual = STATE.annualUsedManual[emp.id] || 0;
   var used = initialUsed + fromOT + manual;
   return {
@@ -453,6 +460,7 @@ function calcAnnual(emp){
     used: used,
     initialUsed: initialUsed,
     fromOT: fromOT,
+    fromOTDates: fromOTDates,
     remaining: Math.max(0, accrued - used)
   };
 }
@@ -461,7 +469,8 @@ function calcTravel(emp){
   // 「初始剩餘」是 EFFECTIVE_DATE 當下的剩餘
   // 之後自動從加班費抓 → 從剩餘扣掉
   var initialRemaining = emp.initialTravelRemaining || 0;
-  var fromOT = getOvertimeUsedAfter(emp.name, 'travel');
+  var fromOTDates = getOvertimeDatesAfter(emp.name, 'travel');
+  var fromOT = fromOTDates.length;
   var manual = STATE.travelUsedManual[emp.id] || 0;
   var initialUsed = Math.max(0, entitlement - initialRemaining);
   var used = initialUsed + fromOT + manual;
@@ -469,6 +478,7 @@ function calcTravel(emp){
     entitlement: entitlement,
     used: used,
     fromOT: fromOT,
+    fromOTDates: fromOTDates,
     remaining: Math.max(0, initialRemaining - fromOT - manual)
   };
 }
@@ -599,16 +609,27 @@ function renderAnnual(){
   var rows = ft.map(function(e){
     var c = calcAnnual(e);
     var cls = c.remaining === 0 ? 'bal-zero' : (c.remaining < 3 ? 'bal-warn' : 'bal-pos');
-    var usedTag = c.fromOT > 0 ? '<div class="tag-line">＋'+c.fromOT+' 自動匯入</div>' : '';
+    var usedTag = '';
+    if(c.fromOT > 0){
+      var chips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini">'+fmtMD(d)+'</span>'; }).join('');
+      usedTag = '<div class="tag-line">＋'+c.fromOT+' 自動匯入</div><div class="date-chips">'+chips+'</div>';
+    }
     return '<tr>'
       + '<td class="c-name">'+e.name+'</td>'
       + '<td>'+e.hireDate+'<div class="tag-line">年資 '+tenureYears(e.hireDate).toFixed(1)+' 年</div></td>'
       + '<td class="c-num">'+c.accrued+' 天</td>'
-      + '<td class="c-num">'+c.used+' 天'+usedTag+'</td>'
+      + '<td>'+c.used+' 天'+usedTag+'</td>'
       + '<td class="c-num big '+cls+'">'+c.remaining+' 天</td>'
       + '</tr>';
   });
   tb.innerHTML = rows.join('');
+}
+
+// YYYY-MM-DD → MM/DD
+function fmtMD(d){
+  var p = String(d||'').split('-');
+  if(p.length === 3) return p[1] + '/' + p[2];
+  return d;
 }
 
 function renderTravel(){
@@ -624,12 +645,16 @@ function renderTravel(){
     var months = tenureMonths(e.hireDate);
     var cls = c.remaining === 0 ? 'bal-zero' : 'bal-pos';
     var note = months < 6 ? '<div class="tag-line">未滿半年</div>' : '';
-    var usedTag = c.fromOT > 0 ? '<div class="tag-line">＋'+c.fromOT+' 自動匯入</div>' : '';
+    var usedTag = '';
+    if(c.fromOT > 0){
+      var chips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini travel">'+fmtMD(d)+'</span>'; }).join('');
+      usedTag = '<div class="tag-line">＋'+c.fromOT+' 自動匯入</div><div class="date-chips">'+chips+'</div>';
+    }
     return '<tr>'
       + '<td class="c-name">'+e.name+'</td>'
       + '<td>'+e.hireDate+note+'</td>'
       + '<td class="c-num">'+c.entitlement+' 天</td>'
-      + '<td class="c-num">'+c.used+' 天'+usedTag+'</td>'
+      + '<td>'+c.used+' 天'+usedTag+'</td>'
       + '<td class="c-num big '+cls+'">'+c.remaining+' 天</td>'
       + '</tr>';
   });
