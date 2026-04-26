@@ -394,7 +394,7 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
       <span>💡</span>
       <span>
         <b>修正數字錯誤：</b>點擊月度表任一「日期欄頭」或「格子」，該日資料會載入至上方「品項明細」，直接改數字就會自動儲存覆蓋該日（不需按任何按鈕）。<br>
-        <b>自動合併近似品項：</b>字元相似度 ≥ 33%（例「鴨肉丸」vs「上等縣肉丸」）會自動歸為同品項，該列會顯示綠色 <span style="display:inline-block;font-size:10px;padding:1px 6px;border-radius:999px;background:rgba(16,185,129,.15);color:#047857;font-weight:700">＋N</span> 徽章（懸停可看合併的別名）。<br>
+        <b>自動合併近似品項：</b>字元相似度 ≥ 50%（例「速食麵」vs「迷食麵」=82%）會自動歸為同品項，該列會顯示綠色 <span style="display:inline-block;font-size:10px;padding:1px 6px;border-radius:999px;background:rgba(16,185,129,.15);color:#047857;font-weight:700">＋N</span> 徽章（懸停可看合併的別名）。差異大的（如「鴨肉丸」vs「上等縣肉丸」=33%）需手動點品項名重新命名合併。<br>
         <b>手動合併品項：</b>點品項名稱（會顯示 ✎ 圖示）可重新命名，所有日期同名項目會一起合併並同步雲端。
       </span>
     </div>
@@ -1419,9 +1419,10 @@ function normalizeItemName(s){
 }
 
 // 模糊比對門檻：字元 Jaccard 相似度 ≥ 此值時判定為同品項
-// 例："鴨肉丸" vs "上等縣肉丸" → 共用 {肉,丸} / 聯集 {鴨,上,等,縣,肉,丸} = 2/6 ≈ 33%
-// 例："速食麵(箱)滷味專用" vs "迷食麵(箱)滷味專用" → ≈ 82%
-var FUZZY_MATCH_THRESHOLD = 0.33;
+// 例："速食麵(箱)滷味專用" vs "迷食麵(箱)滷味專用" → ≈ 82% ✓ 合併
+// 例："鴨肉丸" vs "上等鴨肉丸" → 3/4 = 75% ✓ 合併
+// 例："鴨肉丸" vs "上等縣肉丸" → 2/6 ≈ 33% ✗ 不合併（避免「牛肉片 vs 豬肉片」誤併）
+var FUZZY_MATCH_THRESHOLD = 0.50;
 
 // 計算兩個字串的字元集合 Jaccard 相似度（0~1）
 function jaccardSimilarity(a, b){
@@ -1573,7 +1574,7 @@ function renderHistoryTable(box, stat, records){
     nameCounts[n] = (nameCounts[n] || 0) + 1;
   });
 
-  // Step 2: 模糊群集（Jaccard ≥ 33%）→ 決定每個名稱對應的代表名
+  // Step 2: 模糊群集（Jaccard ≥ 50%）→ 決定每個名稱對應的代表名
   var clusterResult = clusterSimilarNames(nameCounts);
   var nameToRep = clusterResult.nameToRep;
   var repAliases = clusterResult.repAliases;
