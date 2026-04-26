@@ -187,10 +187,10 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
 <div class="wrap">
 
   <div class="hero-card">
-    <div class="hero-icon">🎁</div>
+    <div class="hero-icon" id="hero-icon">🎁</div>
     <div class="hero-text">
-      <h1>特休／旅遊假／禮金</h1>
-      <p>特休依到職日累計、旅遊假依年資；禮金生日/中秋/端午自動 +2000，僅 AI 識別可扣款</p>
+      <h1 id="hero-title">特休／旅遊假／禮金</h1>
+      <p id="hero-subtitle">特休依到職日累計、旅遊假依年資；禮金生日/中秋/端午自動 +2000，僅 AI 識別可扣款</p>
     </div>
   </div>
 
@@ -217,7 +217,7 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
   </div>
 
   <!-- 禮金 -->
-  <div class="section gift">
+  <div class="section gift" id="section-gift">
     <h3><span class="icon">💝</span>禮金<span class="pill gift">AI 圖片辨識才能扣款</span><span class="hint">生日／中秋／端午：FT +$2,000、PT +$1,000（須滿半年）</span></h3>
 
     <!-- 員工 tabs -->
@@ -300,6 +300,8 @@ var EFFECTIVE_DATE = '2026-04-25';
 
 // 十城沒有旅遊假
 var STORES_WITHOUT_TRAVEL = { 'shicheng-zhongxiao': true };
+// 十城沒有禮金
+var STORES_WITHOUT_GIFT = { 'shicheng-zhongxiao': true };
 
 var STORE = sessionStorage.getItem('cd_store') || '';
 var STORE_NAME = sessionStorage.getItem('cd_store_name') || '（未選店）';
@@ -311,6 +313,30 @@ var EMPLOYEES = (EMP_DATA[STORE] || []).slice();
 if(STORES_WITHOUT_TRAVEL[STORE]){
   document.getElementById('section-travel').style.display = 'none';
 }
+// 隱藏禮金區塊（十城）
+if(STORES_WITHOUT_GIFT[STORE]){
+  document.getElementById('section-gift').style.display = 'none';
+}
+// 動態調整標題：十城只看特休
+(function(){
+  var hideTravel = !!STORES_WITHOUT_TRAVEL[STORE];
+  var hideGift   = !!STORES_WITHOUT_GIFT[STORE];
+  var titleEl = document.getElementById('hero-title');
+  var subEl   = document.getElementById('hero-subtitle');
+  if(hideTravel && hideGift){
+    titleEl.textContent = '特休';
+    subEl.textContent   = '特休依到職日累計，加班費系統「特/特休」自動扣假';
+    document.title = '特休';
+  } else if(hideGift){
+    titleEl.textContent = '特休／旅遊假';
+    subEl.textContent   = '特休依到職日累計、旅遊假依年資';
+    document.title = '特休／旅遊假';
+  } else if(hideTravel){
+    titleEl.textContent = '特休／禮金';
+    subEl.textContent   = '特休依到職日累計；禮金生日/中秋/端午自動加值，僅 AI 識別可扣款';
+    document.title = '特休／禮金';
+  }
+})();
 
 // 雲端設定（沿用先前部署）
 var LEAVE_SYNC_URL = 'https://script.google.com/macros/s/AKfycbxeJRR4Xlt4fSngAwEIAW2FBMEwLuNH9djZKY7LzI7RhX0_Lk9L2TvUM_WyFU-YpEfO6A/exec';
@@ -460,6 +486,7 @@ function calcGiftBalance(emp){
 // 第一次進來：把 code 內的 initialGiftBalance 寫成 history 第一筆 credit
 //   寫進雲端後，code 的數字就不再影響餘額（除非雲端那筆被刪掉）
 function ensureInitialSeed(){
+  if(STORES_WITHOUT_GIFT[STORE]) return 0;
   var added = 0;
   EMPLOYEES.forEach(function(emp){
     var hist = STATE.giftHistory[emp.id] || (STATE.giftHistory[emp.id] = []);
@@ -486,6 +513,7 @@ function ensureInitialSeed(){
 // 自動 +2000：生日 / 中秋 / 端午（須滿半年）
 // ============================================
 function maybeAutoCredit(){
+  if(STORES_WITHOUT_GIFT[STORE]) return;
   // ⚠️ 只回補 EFFECTIVE_DATE 之後的事件；之前的「目前禮金」用 initialGiftBalance 為準
   var effDate = parseDate(EFFECTIVE_DATE);
   var added = 0;
