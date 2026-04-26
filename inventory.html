@@ -1006,8 +1006,14 @@ function autoSave(){
   _autoSaveTimer = setTimeout(doAutoSave, 600);
 }
 
+var _autoSavePending = false;  // 在儲存中又被呼叫 → 標記，跑完再跑一次
 async function doAutoSave(){
-  if(_autoSaving) return;
+  if(_autoSaving){
+    // ⭐ 已有 save 在跑（例如 cloud sync 還沒回來），先記下「結束後再跑一次」
+    // 這樣 AI 辨識完的新 items[] 不會被跳過
+    _autoSavePending = true;
+    return;
+  }
   _autoSaving = true;
   setAutoSaveStatus('saving');
   try{
@@ -1015,12 +1021,16 @@ async function doAutoSave(){
     var hasCloud = !!url;
     await saveInv({ silent: true });
     setAutoSaveStatus(hasCloud ? 'cloud' : 'saved');
-    // 「🟢 ✓ 已同步 HH:MM:SS」保留顯示，下一次同步才覆蓋（讓使用者看得到最後同步時間）
   }catch(e){
     console.warn('自動儲存失敗', e);
     setAutoSaveStatus('error');
   }finally{
     _autoSaving = false;
+    // 在剛才儲存中又被呼叫 → 立刻再跑一次（用最新的 items[]）
+    if(_autoSavePending){
+      _autoSavePending = false;
+      setTimeout(doAutoSave, 0);
+    }
   }
 }
 
