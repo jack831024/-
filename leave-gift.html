@@ -218,7 +218,7 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
 
   <!-- 禮金 -->
   <div class="section gift">
-    <h3><span class="icon">💝</span>禮金<span class="pill gift">AI 圖片辨識才能扣款</span><span class="hint">生日／中秋／端午 自動 +2000（須滿半年）</span></h3>
+    <h3><span class="icon">💝</span>禮金<span class="pill gift">AI 圖片辨識才能扣款</span><span class="hint">生日／中秋／端午：FT +$2,000、PT +$1,000（須滿半年）</span></h3>
 
     <!-- 員工 tabs -->
     <div class="emp-tabs" id="emp-tabs"></div>
@@ -250,7 +250,15 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
 // ============================================
 var EMP_DATA = {
   'chudian-zhonghe': [
-    // 待補
+    // FT
+    { id:'zh1', name:'李文少', hireDate:'2024-03-16', birthday:'03-12', initialAnnualAccrued:20, initialAnnualUsed:7,  initialTravelRemaining:0, initialGiftBalance:2834 },
+    { id:'zh2', name:'施偉祥', hireDate:'2023-12-01', birthday:'08-09', initialAnnualAccrued:20, initialAnnualUsed:13, initialTravelRemaining:0, initialGiftBalance:1287 },
+    { id:'zh3', name:'劉濡瑜', hireDate:'2024-07-01', birthday:'11-08', initialAnnualAccrued:10, initialAnnualUsed:6,  initialTravelRemaining:0, initialGiftBalance:1181 },
+    { id:'zh4', name:'褚心榆', hireDate:'2025-08-01', birthday:'03-14', initialAnnualAccrued:3,  initialAnnualUsed:0,  initialTravelRemaining:1, initialGiftBalance:820  },
+    // PT（沒有特休/旅遊假；節慶 +1000 而非 +2000）
+    { id:'zh_pt1', name:'潘立軒', pt:true, hireDate:'2023-07-01', birthday:'12-13', initialGiftBalance:3384 },
+    { id:'zh_pt2', name:'江竑緯', pt:true, hireDate:'',           birthday:'09-30', initialGiftBalance:0 },
+    { id:'zh_pt3', name:'黃威倫', pt:true, hireDate:'',           birthday:'09-06', initialGiftBalance:0 }
   ],
   'chudian-yongchun': [
     { id:'yc1', name:'謝其淇', hireDate:'2024-10-01', birthday:'03-07', initialAnnualAccrued:10, initialAnnualUsed:4,  initialTravelRemaining:0, initialGiftBalance:2458 },
@@ -261,10 +269,21 @@ var EMP_DATA = {
     { id:'yc6', name:'邱昊勳', hireDate:'2026-04-01', birthday:'11-26', initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0    }
   ],
   'chudian-xinzhuang': [
-    // 待補
+    // FT
+    { id:'xz1', name:'蔡鈺豪', hireDate:'2022-11-20', birthday:'09-06', initialAnnualAccrued:34, initialAnnualUsed:27, initialTravelRemaining:2, initialGiftBalance:290  },
+    { id:'xz2', name:'蘇奕誠', hireDate:'2025-09-01', birthday:'10-03', initialAnnualAccrued:3,  initialAnnualUsed:1,  initialTravelRemaining:0, initialGiftBalance:0    },
+    { id:'xz3', name:'李嘉真', hireDate:'2025-08-16', birthday:'04-15', initialAnnualAccrued:3,  initialAnnualUsed:1,  initialTravelRemaining:0, initialGiftBalance:1204 },
+    { id:'xz4', name:'洪仕賢', hireDate:'2025-12-01', birthday:'03-07', initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0    },
+    // PT
+    { id:'xz_pt1', name:'洪晟育', pt:true, hireDate:'', birthday:'09-02', initialGiftBalance:0 },
+    { id:'xz_pt2', name:'林詩縈', pt:true, hireDate:'', birthday:'12-08', initialGiftBalance:0 }
   ],
   'shicheng-zhongxiao': [
-    // 待補
+    // 十城沒有旅遊假；用戶只提供剩餘特休 → 用公式回算累計、已用 = 累計 - 剩餘
+    { id:'sc1', name:'林梓彥', hireDate:'2025-02-01', birthday:'',      initialAnnualAccrued:10, initialAnnualUsed:1,  initialTravelRemaining:0, initialGiftBalance:0 },
+    { id:'sc2', name:'王謖',   hireDate:'2026-02-01', birthday:'',      initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0 },
+    { id:'sc3', name:'林哲民', hireDate:'2026-02-01', birthday:'',      initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0 },
+    { id:'sc4', name:'陳柏維', hireDate:'2026-04-01', birthday:'',      initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0 }
   ]
 };
 
@@ -352,12 +371,15 @@ var TODAY = new Date();
 function parseDate(s){ var p = String(s||'').split('-'); return new Date(Number(p[0]), Number(p[1])-1, Number(p[2]||1)); }
 function diffDays(a, b){ return Math.floor((a - b) / 86400000); }
 function tenureMonths(hireDate){
+  if(!hireDate) return 0;
   var d = parseDate(hireDate);
   var months = (TODAY.getFullYear() - d.getFullYear()) * 12 + (TODAY.getMonth() - d.getMonth());
   if(TODAY.getDate() < d.getDate()) months--;
   return Math.max(0, months);
 }
 function tenureYears(hireDate){ return tenureMonths(hireDate) / 12; }
+// FT 員工（用於特休/旅遊假表）
+function ftOnly(){ return EMPLOYEES.filter(function(e){ return !e.pt; }); }
 
 // 旅遊假（依目前年資）
 //   半年~1年: 1天 / 1~2年: 2天 / 2~3年: 3天 / 3年+: 4天
@@ -489,7 +511,7 @@ function maybeAutoCredit(){
           STATE.giftHistory[emp.id].push({
             id: 'auto_'+key+'_'+emp.id,
             ts: new Date(y, bm-1, bd, 9, 0, 0).toISOString(),
-            type: 'credit', amount: 2000, reason: '生日 '+y, fileId: '', note: '自動加值'
+            type: 'credit', amount: emp.pt ? 1000 : 2000, reason: '生日 '+y, fileId: '', note: '自動加值'+(emp.pt?'(PT)':'')
           });
           creditYears[key] = 1; added++;
         }
@@ -506,7 +528,7 @@ function maybeAutoCredit(){
       if(!creditYears[key]){
         STATE.giftHistory[emp.id].push({
           id: 'auto_'+key+'_'+emp.id, ts: d.toISOString(),
-          type:'credit', amount:2000, reason:'端午 '+y, fileId:'', note:'自動加值'
+          type:'credit', amount: emp.pt ? 1000 : 2000, reason:'端午 '+y, fileId:'', note:'自動加值'+(emp.pt?'(PT)':'')
         });
         creditYears[key] = 1; added++;
       }
@@ -522,7 +544,7 @@ function maybeAutoCredit(){
       if(!creditYears[key]){
         STATE.giftHistory[emp.id].push({
           id: 'auto_'+key+'_'+emp.id, ts: d.toISOString(),
-          type:'credit', amount:2000, reason:'中秋 '+y, fileId:'', note:'自動加值'
+          type:'credit', amount: emp.pt ? 1000 : 2000, reason:'中秋 '+y, fileId:'', note:'自動加值'+(emp.pt?'(PT)':'')
         });
         creditYears[key] = 1; added++;
       }
@@ -541,11 +563,12 @@ function fmt(n){ return Math.round(Number(n)||0).toLocaleString(); }
 
 function renderAnnual(){
   var tb = document.getElementById('tbody-annual');
-  if(!EMPLOYEES.length){
+  var ft = ftOnly();
+  if(!ft.length){
     tb.innerHTML = '<tr><td colspan="5"><div class="empty-row">本店尚未設定員工資料</div></td></tr>';
     return;
   }
-  var rows = EMPLOYEES.map(function(e){
+  var rows = ft.map(function(e){
     var c = calcAnnual(e);
     var cls = c.remaining === 0 ? 'bal-zero' : (c.remaining < 3 ? 'bal-warn' : 'bal-pos');
     var usedTag = c.fromOT > 0 ? '<div class="tag-line">＋'+c.fromOT+' 自動匯入</div>' : '';
@@ -563,11 +586,12 @@ function renderAnnual(){
 function renderTravel(){
   if(STORES_WITHOUT_TRAVEL[STORE]) return;
   var tb = document.getElementById('tbody-travel');
-  if(!EMPLOYEES.length){
+  var ft = ftOnly();
+  if(!ft.length){
     tb.innerHTML = '<tr><td colspan="5"><div class="empty-row">本店尚未設定員工資料</div></td></tr>';
     return;
   }
-  var rows = EMPLOYEES.map(function(e){
+  var rows = ft.map(function(e){
     var c = calcTravel(e);
     var months = tenureMonths(e.hireDate);
     var cls = c.remaining === 0 ? 'bal-zero' : 'bal-pos';
@@ -593,8 +617,9 @@ function renderEmpTabs(){
   var sel = STATE.selectedEmpId;
   area.innerHTML = EMPLOYEES.map(function(e){
     var bal = calcGiftBalance(e);
+    var ptBadge = e.pt ? '<span class="bal" style="background:rgba(245,158,11,.15);color:#a16207">PT</span>' : '';
     return '<button class="emp-tab '+(sel===e.id?'active':'')+'" onclick="selectEmp(\''+e.id+'\')">'
-      + e.name + '<span class="bal">$' + fmt(bal) + '</span>'
+      + e.name + ptBadge + '<span class="bal">$' + fmt(bal) + '</span>'
       + '</button>';
   }).join('');
 }
@@ -610,11 +635,13 @@ function renderEmpCardAndUpload(){
   var bdayMD = (emp.birthday || '').split('-');
   var bdayLabel = bdayMD.length === 2 ? bdayMD[0]+'月'+bdayMD[1]+'日' : '—';
 
+  var ptBadge = emp.pt ? '<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(245,158,11,.18);color:#a16207;margin-left:6px">PT</span>' : '';
+  var hireLabel = emp.hireDate || '—';
   area.innerHTML = '<div class="emp-card">'
     + '<div class="emp-avatar">'+emp.name.charAt(0)+'</div>'
     + '<div class="emp-meta">'
-    +   '<h2>'+emp.name+'</h2>'
-    +   '<div class="sub">🎂 生日 <b>'+bdayLabel+'</b> · 入職 '+emp.hireDate+'</div>'
+    +   '<h2>'+emp.name+ptBadge+'</h2>'
+    +   '<div class="sub">🎂 生日 <b>'+bdayLabel+'</b> · 入職 '+hireLabel+(emp.pt?' · <b>節慶 +$1,000</b>':'')+'</div>'
     + '</div>'
     + '<div class="emp-balance">'
     +   '<div class="label">目前禮金餘額</div>'
