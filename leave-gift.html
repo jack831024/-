@@ -158,6 +158,19 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
 .modal-bg .close-x{position:absolute;top:20px;right:20px;width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.2);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:22px;font-weight:700;border:none;transition:all .15s}
 .modal-bg .close-x:hover{background:rgba(255,255,255,.35);transform:scale(1.05)}
 
+/* 通知 modal — 上傳完成/刪除完成 */
+.notice-modal{position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;align-items:center;justify-content:center;z-index:300;padding:20px;animation:fadeIn .2s}
+.notice-modal.open{display:flex}
+.notice-modal .box{background:#fff;border-radius:18px;padding:2rem 2.25rem 1.5rem;text-align:center;max-width:340px;width:100%;box-shadow:0 30px 80px -20px rgba(0,0,0,.4);animation:popIn .3s cubic-bezier(.4,1.6,.5,1)}
+.notice-modal .icon-circle{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 12px;box-shadow:0 12px 24px -8px rgba(16,185,129,.5)}
+.notice-modal h3{font-size:18px;font-weight:700;color:var(--ink);margin-bottom:8px;margin-left:0}
+.notice-modal h3{justify-content:center}
+.notice-modal p{font-size:13px;color:var(--ink-2);line-height:1.6;margin-bottom:16px}
+.notice-modal button{padding:9px 28px;background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);color:#fff;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 6px 14px -4px rgba(202,138,4,.4);transition:transform .12s}
+.notice-modal button:hover{transform:translateY(-1px)}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes popIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+
 .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);padding:12px 22px;border-radius:12px;background:var(--ink);color:#fff;font-size:13px;font-weight:600;opacity:0;transition:all .28s;pointer-events:none;z-index:300;box-shadow:0 10px 30px -10px rgba(15,23,42,.4);max-width:90vw}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.err{background:var(--danger)}
@@ -244,6 +257,16 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
 <div class="modal-bg" id="img-modal" onclick="closeImgModal(event)">
   <button class="close-x" onclick="closeImgModal(event)">✕</button>
   <img id="modal-img" alt="圖片">
+</div>
+
+<!-- 上傳/刪除完成通知 modal -->
+<div class="notice-modal" id="notice-modal" onclick="closeNoticeModal(event)">
+  <div class="box" onclick="event.stopPropagation()">
+    <div class="icon-circle" id="notice-icon">✓</div>
+    <h3 id="notice-title">已上傳雲端</h3>
+    <p id="notice-msg"></p>
+    <button onclick="closeNoticeModal()">確定</button>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -825,8 +848,8 @@ function onDeleteEntry(entryId){
       if(res && res.ok){
         // 更新本機 STATE
         STATE.giftHistory[emp.id] = hist.filter(function(h){ return h.id !== entryId; });
-        toast('已刪除（含雲端圖片）', 'ok');
         render();
+        showNotice('已上傳雲端', '已刪除「'+(entry.reason||'禮金')+' $'+fmt(Math.abs(entry.amount||0))+'」並從 Drive 移除圖片');
       } else {
         toast('刪除失敗：'+((res&&res.error)||''), 'err');
       }
@@ -855,6 +878,17 @@ function openImgFromFileId(fid){
 function closeImgModal(e){
   if(e && e.target && e.target.tagName === 'IMG' && e.target.id === 'modal-img') return;
   document.getElementById('img-modal').classList.remove('open');
+}
+
+// 通知 modal（上傳/刪除完成）
+function showNotice(title, msg){
+  document.getElementById('notice-title').textContent = title || '已上傳雲端';
+  document.getElementById('notice-msg').textContent = msg || '';
+  document.getElementById('notice-modal').classList.add('open');
+}
+function closeNoticeModal(e){
+  if(e && e.target && !e.currentTarget.contains(e.target)) return;
+  document.getElementById('notice-modal').classList.remove('open');
 }
 
 function render(){
@@ -965,11 +999,11 @@ async function onGiftFile(files){
       pv.tag.textContent = '−$'+fmt(amount);
     }
     busy.innerHTML = '<span style="color:var(--ok);font-size:12px">✓ 已扣款 $'+fmt(amount)+'，餘額更新</span>';
-    toast('已扣款 $'+fmt(amount), 'ok');
 
     pushToCloud(false);
     render();
     document.getElementById('gift-file').value = '';
+    showNotice('已上傳雲端', '已從 '+emp.name+' 的禮金扣款 $'+fmt(amount)+'，圖片已存到 Drive');
   } catch(e){
     if(pv){ pv.el.classList.remove('busy'); pv.el.classList.add('err'); pv.tag.textContent = '失敗'; }
     busy.innerHTML = '<span style="color:var(--danger);font-size:12px">❌ '+ (e.message||'失敗') +'</span>';
