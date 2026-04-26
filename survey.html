@@ -69,6 +69,24 @@ h1{font-size:26px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 body.view-form-active .divider,
 body.view-form-active #mgr-card{display:none}
 
+/* 評分標準說明卡 */
+.rubric-card{background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border-color:#bae6fd}
+.rubric-title{font-size:14px;font-weight:700;color:#075985;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.rubric-list{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 10px;font-size:12.5px}
+.rubric-row{display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:7px;background:#fff;border:1px solid var(--line)}
+.rubric-row .num{font-weight:800;font-size:13.5px;width:20px;text-align:center;flex-shrink:0;font-family:"SF Mono",ui-monospace,Menlo,monospace}
+.rubric-row.t-top{background:#ecfdf5;border-color:#86efac;color:#065f46}
+.rubric-row.t-top .num{color:#10b981}
+.rubric-row.t-second{background:#eff6ff;border-color:#bfdbfe;color:#1e40af}
+.rubric-row.t-second .num{color:#3b82f6}
+.rubric-row.t-mid{background:#fffbeb;border-color:#fde68a;color:#92400e}
+.rubric-row.t-mid .num{color:#f59e0b}
+.rubric-row.t-low{background:#fff7ed;border-color:#fdba74;color:#9a3412}
+.rubric-row.t-low .num{color:#f97316}
+.rubric-row.t-bad{background:#fef2f2;border-color:#fca5a5;color:#991b1b}
+.rubric-row.t-bad .num{color:#ef4444}
+.rubric-note{margin-top:10px;font-size:11.5px;color:#92400e;background:#fef3c7;padding:8px 10px;border-radius:8px;line-height:1.6}
+
 .field{margin-bottom:1rem}
 .field:last-child{margin-bottom:0}
 .label{display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px}
@@ -197,6 +215,8 @@ body.view-form-active #mgr-card{display:none}
 @media(max-width:640px){
   .positions-grid{grid-template-columns:1fr}
   .store-grid{grid-template-columns:1fr}
+  .rubric-list{grid-template-columns:1fr;gap:5px}
+  .rubric-row{padding:4px 8px}
 }
 
 .comment-list{display:flex;flex-direction:column;gap:10px;margin-top:0.5rem}
@@ -251,6 +271,24 @@ body.view-form-active #mgr-card{display:none}
     <div class="store-switch-bar">
       <button class="store-switch-btn" type="button" onclick="goToPicker()">← 換店</button>
       <span class="current-store-tag" id="current-store-tag"></span>
+    </div>
+
+    <!-- 評分標準 -->
+    <div class="card rubric-card">
+      <div class="rubric-title">📌 評分標準說明</div>
+      <div class="rubric-list">
+        <div class="rubric-row t-top"><span class="num">10</span><span>店內 NO.1，能力 100%</span></div>
+        <div class="rubric-row t-top"><span class="num">9</span><span>店內 NO.1，能力 90%</span></div>
+        <div class="rubric-row t-top"><span class="num">8</span><span>店內 NO.1，能力 80%</span></div>
+        <div class="rubric-row t-second"><span class="num">7</span><span>店內 NO.2</span></div>
+        <div class="rubric-row t-mid"><span class="num">6</span><span>符合標準</span></div>
+        <div class="rubric-row t-mid"><span class="num">5</span><span>還需加強</span></div>
+        <div class="rubric-row t-low"><span class="num">4</span><span>偶爾缺失</span></div>
+        <div class="rubric-row t-low"><span class="num">3</span><span>常常缺失</span></div>
+        <div class="rubric-row t-bad"><span class="num">2</span><span>完全不熟</span></div>
+        <div class="rubric-row t-bad"><span class="num">1</span><span>擺爛</span></div>
+      </div>
+      <div class="rubric-note">💡 若認為店內 NO.1 有兩位且能力相同，可以給這兩位相同分數</div>
     </div>
 
     <!-- 月份選擇 -->
@@ -976,31 +1014,31 @@ function formatTs(iso){
 // 🚀 啟動
 // ============================================
 // 允許「點已選中的分數再點一次 = 取消選取」
-// 原生 radio 沒這功能，這邊用 mousedown 記錄點擊前狀態，click 後再決定要不要取消
+// 直接攔截 label 的 click，自己管理 radio 的 checked 狀態（避開瀏覽器的預設「點同一個沒反應」行為）
 (function(){
-  function getRadio(e){
-    var t = e.target;
-    if(!t || !t.closest) return null;
-    if(t.tagName === 'INPUT' && t.type === 'radio') return t;
-    var lab = t.closest('label');
-    if(lab && lab.htmlFor){
-      var inp = document.getElementById(lab.htmlFor);
-      if(inp && inp.type === 'radio') return inp;
-    }
-    return null;
-  }
-  var preState = null;
-  document.addEventListener('mousedown', function(e){
-    var r = getRadio(e);
-    preState = (r && r.name && r.name.indexOf('r_') === 0)
-      ? { input: r, wasChecked: r.checked } : null;
-  }, true);
   document.addEventListener('click', function(e){
-    if(preState && preState.wasChecked && preState.input){
-      preState.input.checked = false;
+    var t = e.target;
+    if(!t || !t.closest) return;
+    var lab = t.closest('label[for]');
+    if(!lab) return;
+    var input = document.getElementById(lab.htmlFor);
+    if(!input || input.type !== 'radio') return;
+    if(!input.name || input.name.indexOf('r_') !== 0) return;
+
+    // 攔下來，不讓瀏覽器自動把 radio 打勾
+    e.preventDefault();
+
+    if(input.checked){
+      // 已選中 → 點同一個取消
+      input.checked = false;
+    } else {
+      // 未選中 → 把同 group 其他選項清掉，再選這個
+      document.querySelectorAll('input[type=radio][name="' + input.name + '"]').forEach(function(r){
+        if(r !== input) r.checked = false;
+      });
+      input.checked = true;
     }
-    preState = null;
-  }, true);
+  });
 })();
 
 document.addEventListener('DOMContentLoaded', function(){
