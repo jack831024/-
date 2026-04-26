@@ -975,6 +975,34 @@ function formatTs(iso){
 // ============================================
 // 🚀 啟動
 // ============================================
+// 允許「點已選中的分數再點一次 = 取消選取」
+// 原生 radio 沒這功能，這邊用 mousedown 記錄點擊前狀態，click 後再決定要不要取消
+(function(){
+  function getRadio(e){
+    var t = e.target;
+    if(!t || !t.closest) return null;
+    if(t.tagName === 'INPUT' && t.type === 'radio') return t;
+    var lab = t.closest('label');
+    if(lab && lab.htmlFor){
+      var inp = document.getElementById(lab.htmlFor);
+      if(inp && inp.type === 'radio') return inp;
+    }
+    return null;
+  }
+  var preState = null;
+  document.addEventListener('mousedown', function(e){
+    var r = getRadio(e);
+    preState = (r && r.name && r.name.indexOf('r_') === 0)
+      ? { input: r, wasChecked: r.checked } : null;
+  }, true);
+  document.addEventListener('click', function(e){
+    if(preState && preState.wasChecked && preState.input){
+      preState.input.checked = false;
+    }
+    preState = null;
+  }, true);
+})();
+
 document.addEventListener('DOMContentLoaded', function(){
   // 店別選單
   renderStorePicker();
