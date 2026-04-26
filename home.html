@@ -192,17 +192,21 @@ h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 </div>
 
 <script>
-// 加班費進入密碼（共用一組，通過後 4 家店都可選）
-var OVERTIME_PASSWORD = 'chudian';
+// 全域登入密碼（共用一組，通過後 小結報表 + 加班費 4 家店都可選）
+var GLOBAL_PASSWORD = 'yaunxin2022';
 
 function goFlow(flow){
-  if(flow === 'overtime' && sessionStorage.getItem('cd_overtime_auth') !== '1'){
-    var pw = prompt('請輸入加班費系統密碼：');
+  // 小結 + 加班費 共用同一組密碼，一次輸入後到關閉分頁前不再問
+  if((flow === 'summary' || flow === 'overtime')
+     && sessionStorage.getItem('cd_global_auth') !== '1'){
+    var pw = prompt('請輸入登入密碼：');
     if(pw === null) return;
-    if(String(pw).trim() !== OVERTIME_PASSWORD){
+    if(String(pw).trim() !== GLOBAL_PASSWORD){
       alert('❌ 密碼錯誤');
       return;
     }
+    sessionStorage.setItem('cd_global_auth', '1');
+    // 同時設定舊的 cd_overtime_auth 以維持相容（其他頁面可能還會檢查）
     sessionStorage.setItem('cd_overtime_auth', '1');
   }
   sessionStorage.setItem('cd_flow', flow);

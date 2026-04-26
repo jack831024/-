@@ -141,16 +141,8 @@ h1{font-size:24px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
   el.innerHTML = '<span class="flow-tag '+m.cls+'"><span class="pulse"></span>'+m.icon+' '+m.label+'</span>';
 })();
 
-// 各店密碼（客戶端驗證，防一般員工誤入，不是高強度安全）
-// ⚠️ 這是「進入門市（小結報表用）」的密碼，與盤點表「月度成本分析」解鎖密碼分開
-var STORE_PASSWORDS = {
-  'chudian-zhonghe':    '90369287',
-  'chudian-yongchun':   '94213054',
-  'chudian-xinzhuang':  '60749791',
-  'shicheng-zhongxiao': '61222042'
-};
-
-// 薪資系統獨立密碼（有 a 前綴，與小結/加班費的入門密碼區隔）
+// 進入小結 / 加班費 的全域密碼已在 home.html (GLOBAL_PASSWORD) 統一驗證；
+// 此處只保留「薪資系統」獨立的每店密碼。
 var SALARY_PASSWORDS = {
   'chudian-zhonghe':    'a90369287',
   'chudian-yongchun':   'a94213054',
