@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>特休／旅遊假／禮金</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#ca8a04;
+  --brand-dark:#a16207;
+  --brand-light:#fef9c3;
+  --ink:#0f172a;
+  --ink-2:#475569;
+  --ink-3:#94a3b8;
+  --line:#e2e8f0;
+  --danger:#dc2626;
+  --ok:#10b981;
+  --warn:#f59e0b;
+  --info:#3b82f6;
+  --travel:#0ea5e9;
+  --gift:#db2777;
+}
+html,body{height:100%}
+body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;padding:1rem;
+  background:
+    radial-gradient(1000px 500px at 10% -10%, #fef9c3 0%, transparent 50%),
+    radial-gradient(800px 500px at 110% 10%, #fce7f3 0%, transparent 55%),
+    radial-gradient(700px 500px at 50% 110%, #e0f2fe 0%, transparent 55%),
+    linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+}
+
+.topbar{max-width:1100px;margin:0 auto 14px;display:flex;align-items:center;gap:10px;padding:4px;flex-wrap:wrap}
+.back-btn{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.8);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);transition:all .2s;box-shadow:0 4px 12px -4px rgba(15,23,42,.08);flex-shrink:0}
+.back-btn:hover{background:#fff;color:var(--brand);transform:translateX(-2px)}
+.back-btn svg{width:17px;height:17px}
+.store-chip{display:flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;background:rgba(255,255,255,.8);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);border-radius:999px;font-size:13px;color:var(--ink);font-weight:600;box-shadow:0 4px 12px -4px rgba(15,23,42,.06)}
+.store-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--brand),#facc15);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px}
+.spacer{flex:1}
+
+.sync-chip{padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;user-select:none}
+.sync-chip.ok{background:rgba(16,185,129,.12);color:#059669}
+.sync-chip.ok:hover{background:rgba(16,185,129,.2)}
+.sync-chip.off{background:rgba(148,163,184,.15);color:var(--ink-3)}
+.sync-chip.off:hover{background:rgba(148,163,184,.25)}
+.sync-chip.busy{background:rgba(59,130,246,.12);color:var(--info)}
+.sync-chip.err{background:rgba(220,38,38,.12);color:var(--danger)}
+.sync-chip.err:hover{background:rgba(220,38,38,.2)}
+
+.wrap{max-width:1100px;margin:0 auto;padding:0 0 3rem}
+
+.hero-card{background:linear-gradient(135deg,#fef9c3 0%,#fde68a 100%);border:1px solid rgba(202,138,4,.18);border-radius:20px;padding:1.25rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(202,138,4,.06),0 8px 24px -12px rgba(202,138,4,.2)}
+.hero-icon{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--brand) 0%,#facc15 100%);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 8px 20px -8px rgba(202,138,4,.5);flex-shrink:0}
+.hero-text h1{font-size:20px;font-weight:700;letter-spacing:-0.02em;margin-bottom:3px}
+.hero-text p{font-size:12.5px;color:var(--ink-2)}
+
+.section{background:rgba(255,255,255,.85);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.9);border-radius:18px;padding:1.1rem 1.25rem;margin-bottom:14px;box-shadow:0 1px 2px rgba(15,23,42,.03),0 6px 18px -10px rgba(15,23,42,.08)}
+.section.travel{border-left:4px solid var(--travel)}
+.section.annual{border-left:4px solid var(--brand)}
+.section.gift{border-left:4px solid var(--gift)}
+h3{font-size:14.5px;font-weight:700;color:var(--ink);margin-bottom:12px;display:flex;align-items:center;gap:8px;letter-spacing:0.01em;flex-wrap:wrap}
+h3 .icon{font-size:18px}
+h3 .hint{font-size:11.5px;color:var(--ink-3);font-weight:500;margin-left:auto;letter-spacing:0}
+h3 .pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--brand-light);color:var(--brand-dark)}
+h3 .pill.travel{background:#e0f2fe;color:#0369a1}
+h3 .pill.gift{background:#fce7f3;color:#9d174d}
+
+.btn{padding:9px 16px;font-size:13.5px;border:none;border-radius:10px;cursor:pointer;font-family:inherit;font-weight:600;transition:all .18s;display:inline-flex;align-items:center;gap:7px}
+.btn-primary{background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);color:#fff;box-shadow:0 6px 16px -6px rgba(202,138,4,.45)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 10px 22px -6px rgba(202,138,4,.55)}
+.btn-ghost{background:rgba(255,255,255,.8);border:1.5px solid var(--line);color:var(--ink-2)}
+.btn-ghost:hover{background:#fff;border-color:var(--brand);color:var(--brand)}
+.btn-sm{padding:6px 11px;font-size:12px;border-radius:8px}
+
+table.grid{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+table.grid th{text-align:left;padding:8px;font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:1px;border-bottom:1.5px solid var(--line);background:rgba(248,250,252,.5)}
+table.grid td{padding:10px 8px;border-bottom:1px solid rgba(226,232,240,.6);vertical-align:middle}
+table.grid tr:last-child td{border-bottom:none}
+table.grid .c-name{font-weight:700;color:var(--ink);width:130px}
+table.grid .c-num{font-family:ui-monospace,Menlo,monospace;text-align:right;font-variant-numeric:tabular-nums}
+table.grid .c-num.big{font-size:15px;font-weight:700}
+.bal-pos{color:var(--ok)}
+.bal-zero{color:var(--ink-3)}
+.bal-warn{color:var(--warn)}
+.bal-low{color:var(--danger)}
+.tag-line{font-size:11px;color:var(--ink-3);margin-top:2px}
+
+.empty-row{text-align:center;color:var(--ink-3);padding:18px;font-size:12.5px;background:rgba(248,250,252,.5);border-radius:10px;line-height:1.6}
+
+.date-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.date-chip-mini{display:inline-flex;align-items:center;font-size:10.5px;font-weight:600;font-family:ui-monospace,Menlo,monospace;padding:2px 7px;border-radius:999px;background:rgba(202,138,4,.1);color:#92400e;letter-spacing:.5px}
+.date-chip-mini.travel{background:rgba(14,165,233,.1);color:#075985}
+
+/* 禮金 */
+.emp-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.emp-tab{padding:9px 16px;border-radius:999px;font-size:13px;font-weight:600;background:rgba(255,255,255,.7);border:1.5px solid var(--line);cursor:pointer;color:var(--ink-2);transition:all .15s;font-family:inherit;display:inline-flex;align-items:center;gap:8px}
+.emp-tab:hover{color:var(--gift);border-color:#fbcfe8}
+.emp-tab.active{background:linear-gradient(135deg,var(--gift) 0%,#f472b6 100%);color:#fff;border-color:transparent;box-shadow:0 6px 18px -6px rgba(219,39,119,.5)}
+.emp-tab .bal{font-family:ui-monospace,Menlo,monospace;font-size:11px;background:rgba(255,255,255,.25);padding:2px 7px;border-radius:999px;color:inherit}
+.emp-tab:not(.active) .bal{background:rgba(15,23,42,.05);color:var(--ink-3)}
+
+.emp-card{background:linear-gradient(135deg,#fdf2f8 0%,#fce7f3 100%);border:1px solid rgba(219,39,119,.18);border-radius:16px;padding:1.25rem 1.5rem;margin-bottom:14px;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center}
+.emp-avatar{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--gift) 0%,#f472b6 100%);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;box-shadow:0 8px 20px -8px rgba(219,39,119,.5)}
+.emp-meta h2{font-size:18px;font-weight:700;color:var(--ink);margin-bottom:3px;display:flex;align-items:center;gap:8px}
+.emp-meta .sub{font-size:12px;color:var(--ink-2);line-height:1.6}
+.emp-meta .sub b{color:var(--gift)}
+.emp-balance{text-align:right}
+.emp-balance .label{font-size:11px;color:var(--ink-3);font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px}
+.emp-balance .amt{font-family:ui-monospace,Menlo,monospace;font-size:28px;font-weight:700;color:var(--gift);font-variant-numeric:tabular-nums;line-height:1}
+.emp-balance .amt.zero{color:var(--ink-3)}
+.emp-balance .amt.low{color:var(--danger)}
+
+.upload-area{display:flex;align-items:center;gap:12px;border:1.5px dashed rgba(219,39,119,.4);border-radius:12px;padding:.75rem 1rem;background:rgba(252,231,243,.3);cursor:pointer;transition:all .2s;margin-bottom:10px}
+.upload-area:hover{background:rgba(252,231,243,.5);border-color:var(--gift)}
+.upload-area.dragover{background:rgba(252,231,243,.7);border-color:var(--gift)}
+.upload-area .uicon{font-size:22px;flex-shrink:0}
+.upload-area .uwords{flex:1;text-align:left;line-height:1.4}
+.upload-area .utitle{font-weight:700;color:var(--gift);font-size:13.5px}
+.upload-area .uhint{font-size:11.5px;color:var(--ink-3)}
+.upload-area .uhint b{color:var(--ink-2)}
+.upload-area input[type=file]{display:none}
+
+.preview-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;min-height:0}
+.preview-thumb{position:relative;width:88px;height:88px;border-radius:10px;overflow:hidden;border:1.5px solid var(--line);background:#f1f5f9;flex-shrink:0;box-shadow:0 4px 10px -4px rgba(15,23,42,.12)}
+.preview-thumb img{width:100%;height:100%;object-fit:cover}
+.preview-thumb .px-tag{position:absolute;left:0;right:0;bottom:0;font-size:10px;color:#fff;background:linear-gradient(to top,rgba(0,0,0,.65),transparent);padding:8px 6px 4px;text-align:center;font-weight:600}
+.preview-thumb.busy::after{content:"";position:absolute;inset:0;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center}
+.preview-thumb.busy::before{content:"";position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;border:2px solid rgba(219,39,119,.25);border-top-color:var(--gift);animation:spin .8s linear infinite;z-index:2}
+.preview-thumb.ok .px-tag{background:linear-gradient(to top,rgba(16,185,129,.85),transparent)}
+.preview-thumb.err .px-tag{background:linear-gradient(to top,rgba(220,38,38,.85),transparent)}
+
+.busy{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--info);margin-left:6px}
+.busy::before{content:"";width:11px;height:11px;border-radius:50%;border:2px solid rgba(59,130,246,.25);border-top-color:var(--info);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.history-list{display:flex;flex-direction:column;gap:8px}
+.history-item{display:grid;grid-template-columns:80px 1fr auto auto;gap:12px;align-items:center;padding:10px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.65);transition:all .15s}
+.history-item:hover{background:#fff;box-shadow:0 4px 12px -6px rgba(15,23,42,.1)}
+.history-del{width:30px;height:30px;border-radius:50%;background:rgba(220,38,38,.08);color:var(--danger);border:none;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;font-family:inherit}
+.history-del:hover{background:var(--danger);color:#fff;transform:scale(1.05)}
+.history-thumb{width:80px;height:80px;border-radius:10px;object-fit:cover;background:#f1f5f9;cursor:pointer;border:1px solid var(--line)}
+.history-thumb.placeholder{display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--ink-3)}
+.history-meta .h-line1{font-weight:700;font-size:13px;color:var(--ink);margin-bottom:3px;display:flex;align-items:center;gap:6px}
+.history-meta .h-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px}
+.history-meta .h-tag.credit{background:rgba(16,185,129,.12);color:#059669}
+.history-meta .h-tag.debit{background:rgba(220,38,38,.1);color:var(--danger)}
+.history-meta .h-line2{font-size:11.5px;color:var(--ink-2);line-height:1.6}
+.history-amount{font-family:ui-monospace,Menlo,monospace;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.history-amount.credit{color:var(--ok)}
+.history-amount.debit{color:var(--danger)}
+
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.75);display:none;align-items:center;justify-content:center;z-index:200;padding:20px}
+.modal-bg.open{display:flex}
+.modal-bg img{max-width:100%;max-height:85vh;border-radius:14px;box-shadow:0 30px 80px -20px rgba(0,0,0,.5)}
+.modal-bg .close-x{position:absolute;top:20px;right:20px;width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.2);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:22px;font-weight:700;border:none;transition:all .15s}
+.modal-bg .close-x:hover{background:rgba(255,255,255,.35);transform:scale(1.05)}
+
+/* 通知 modal — 上傳完成/刪除完成 */
+.notice-modal{position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;align-items:center;justify-content:center;z-index:300;padding:20px;animation:fadeIn .2s}
+.notice-modal.open{display:flex}
+.notice-modal .box{background:#fff;border-radius:18px;padding:2rem 2.25rem 1.5rem;text-align:center;max-width:340px;width:100%;box-shadow:0 30px 80px -20px rgba(0,0,0,.4);animation:popIn .3s cubic-bezier(.4,1.6,.5,1)}
+.notice-modal .icon-circle{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 12px;box-shadow:0 12px 24px -8px rgba(16,185,129,.5)}
+.notice-modal h3{font-size:18px;font-weight:700;color:var(--ink);margin-bottom:8px;margin-left:0}
+.notice-modal h3{justify-content:center}
+.notice-modal p{font-size:13px;color:var(--ink-2);line-height:1.6;margin-bottom:16px}
+.notice-modal button{padding:9px 28px;background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);color:#fff;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 6px 14px -4px rgba(202,138,4,.4);transition:transform .12s}
+.notice-modal button:hover{transform:translateY(-1px)}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes popIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);padding:12px 22px;border-radius:12px;background:var(--ink);color:#fff;font-size:13px;font-weight:600;opacity:0;transition:all .28s;pointer-events:none;z-index:300;box-shadow:0 10px 30px -10px rgba(15,23,42,.4);max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--danger)}
+.toast.ok{background:var(--ok)}
+
+@media(max-width:720px){
+  .emp-card{grid-template-columns:auto 1fr;gap:10px;padding:1rem}
+  .emp-balance{grid-column:1/-1;text-align:left;border-top:1px dashed rgba(219,39,119,.2);padding-top:10px}
+  .emp-balance .amt{font-size:24px}
+  table.grid{font-size:12px}
+  table.grid th,table.grid td{padding:6px 5px}
+  .history-item{grid-template-columns:64px 1fr auto auto}
+  .history-thumb{width:64px;height:64px}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="goBack()" aria-label="返回">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+  </button>
+  <div class="store-chip">
+    <span class="store-avatar">🎁</span>
+    <span id="store-name">（未選店）</span>
+  </div>
+  <span class="spacer"></span>
+  <span id="sync-chip" class="sync-chip off" title="點擊重新同步" onclick="syncNow()">☁ 未設定</span>
+</div>
+
+<div class="wrap">
+
+  <div class="hero-card">
+    <div class="hero-icon" id="hero-icon">🎁</div>
+    <div class="hero-text">
+      <h1 id="hero-title">特休／旅遊假／禮金</h1>
+      <p id="hero-subtitle">特休依到職日累計、旅遊假依年資；禮金生日/中秋/端午自動 +2000，僅 AI 識別可扣款</p>
+    </div>
+  </div>
+
+  <!-- 特休 -->
+  <div class="section annual">
+    <h3><span class="icon">🌴</span>特休<span class="pill">加班費系統「特/特休」自動扣</span><span class="hint">已用 = 起始 + 加班費系統匯入</span></h3>
+    <table class="grid">
+      <thead>
+        <tr><th style="width:100px">員工</th><th>到職日</th><th class="c-num">總累計</th><th class="c-num">已使用</th><th class="c-num">剩餘可用</th></tr>
+      </thead>
+      <tbody id="tbody-annual"></tbody>
+    </table>
+  </div>
+
+  <!-- 旅遊假 -->
+  <div class="section travel" id="section-travel">
+    <h3><span class="icon">✈️</span>旅遊假<span class="pill travel">加班費系統「旅/旅遊」自動扣</span><span class="hint">3月中~9月底 平日休 · 半年=1 / 1年=2 / 2年=3 / 3年+=4</span></h3>
+    <table class="grid">
+      <thead>
+        <tr><th style="width:100px">員工</th><th>到職日</th><th class="c-num">本年可用</th><th class="c-num">已使用</th><th class="c-num">剩餘</th></tr>
+      </thead>
+      <tbody id="tbody-travel"></tbody>
+    </table>
+  </div>
+
+  <!-- 禮金 -->
+  <div class="section gift" id="section-gift">
+    <h3><span class="icon">💝</span>禮金<span class="pill gift">AI 圖片辨識才能扣款</span><span class="hint">生日／中秋／端午：FT +$2,000、PT +$1,000（須滿半年）</span></h3>
+
+    <!-- 員工 tabs -->
+    <div class="emp-tabs" id="emp-tabs"></div>
+
+    <!-- 選中的員工卡 -->
+    <div id="emp-card-area"></div>
+
+    <!-- 上傳 -->
+    <div id="upload-area-wrap"></div>
+
+    <!-- 歷史紀錄 -->
+    <h4 style="font-size:12.5px;font-weight:700;color:var(--ink-2);margin:14px 0 10px;letter-spacing:1px">📜 此員工的歷史紀錄</h4>
+    <div id="history-list" class="history-list"></div>
+  </div>
+
+</div>
+
+<!-- 圖片放大 modal -->
+<div class="modal-bg" id="img-modal" onclick="closeImgModal(event)">
+  <button class="close-x" onclick="closeImgModal(event)">✕</button>
+  <img id="modal-img" alt="圖片">
+</div>
+
+<!-- 上傳/刪除完成通知 modal -->
+<div class="notice-modal" id="notice-modal" onclick="closeNoticeModal(event)">
+  <div class="box" onclick="event.stopPropagation()">
+    <div class="icon-circle" id="notice-icon">✓</div>
+    <h3 id="notice-title">已上傳雲端</h3>
+    <p id="notice-msg"></p>
+    <button onclick="closeNoticeModal()">確定</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================
+// 員工資料（每店一份）
+// ============================================
+var EMP_DATA = {
+  'chudian-zhonghe': [
+    // FT
+    { id:'zh1', name:'李文少', hireDate:'2024-03-16', birthday:'03-12', initialAnnualAccrued:20, initialAnnualUsed:7,  initialTravelRemaining:0, initialGiftBalance:2834 },
+    { id:'zh2', name:'施偉祥', hireDate:'2023-12-01', birthday:'08-09', initialAnnualAccrued:20, initialAnnualUsed:13, initialTravelRemaining:0, initialGiftBalance:869  },
+    { id:'zh3', name:'劉濡瑜', hireDate:'2024-07-01', birthday:'11-08', initialAnnualAccrued:10, initialAnnualUsed:6,  initialTravelRemaining:0, initialGiftBalance:768  },
+    { id:'zh4', name:'褚心榆', hireDate:'2025-08-01', birthday:'03-14', initialAnnualAccrued:3,  initialAnnualUsed:0,  initialTravelRemaining:1, initialGiftBalance:407  },
+    // PT（沒有特休/旅遊假；節慶 +1000 而非 +2000）
+    { id:'zh_pt1', name:'潘立軒', pt:true, hireDate:'2023-07-01', birthday:'12-13', initialGiftBalance:3384 },
+    { id:'zh_pt2', name:'江竑緯', pt:true, hireDate:'2025-08-01', birthday:'09-30', initialGiftBalance:0 },
+    { id:'zh_pt3', name:'黃威倫', pt:true, hireDate:'2025-12-01', birthday:'09-06', initialGiftBalance:0 }
+  ],
+  'chudian-yongchun': [
+    { id:'yc1', name:'謝其淇', hireDate:'2024-10-01', birthday:'03-07', initialAnnualAccrued:10, initialAnnualUsed:4,  initialTravelRemaining:0, initialGiftBalance:1706 },
+    { id:'yc2', name:'林韋翔', hireDate:'2023-01-10', birthday:'06-29', initialAnnualAccrued:34, initialAnnualUsed:23, initialTravelRemaining:3, initialGiftBalance:557  },
+    { id:'yc3', name:'洪文祥', hireDate:'2023-10-16', birthday:'01-23', initialAnnualAccrued:20, initialAnnualUsed:12, initialTravelRemaining:2, initialGiftBalance:1200 },
+    { id:'yc4', name:'呂直宸', hireDate:'2023-12-01', birthday:'12-17', initialAnnualAccrued:20, initialAnnualUsed:10, initialTravelRemaining:2, initialGiftBalance:1895 },
+    { id:'yc5', name:'吳孟澤', hireDate:'2025-02-01', birthday:'01-26', initialAnnualAccrued:10, initialAnnualUsed:3,  initialTravelRemaining:0, initialGiftBalance:913  },
+    { id:'yc6', name:'邱昊勳', hireDate:'2026-04-01', birthday:'11-26', initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0    }
+  ],
+  'chudian-xinzhuang': [
+    // FT
+    { id:'xz1', name:'蔡鈺豪', hireDate:'2022-11-20', birthday:'09-06', initialAnnualAccrued:34, initialAnnualUsed:27, initialTravelRemaining:2, initialGiftBalance:290  },
+    { id:'xz2', name:'蘇奕誠', hireDate:'2025-09-01', birthday:'10-03', initialAnnualAccrued:3,  initialAnnualUsed:1,  initialTravelRemaining:0, initialGiftBalance:0    },
+    { id:'xz3', name:'李嘉真', hireDate:'2025-08-16', birthday:'04-15', initialAnnualAccrued:3,  initialAnnualUsed:1,  initialTravelRemaining:0, initialGiftBalance:1204 },
+    { id:'xz4', name:'洪仕賢', hireDate:'2025-12-01', birthday:'03-07', initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0    },
+    // PT
+    { id:'xz_pt1', name:'洪晟育', pt:true, hireDate:'2025-10-01', birthday:'09-02', initialGiftBalance:0 },
+    { id:'xz_pt2', name:'林詩縈', pt:true, hireDate:'2025-12-01', birthday:'12-08', initialGiftBalance:0 }
+  ],
+  'shicheng-zhongxiao': [
+    // 十城沒有旅遊假；用戶只提供剩餘特休 → 用公式回算累計、已用 = 累計 - 剩餘
+    { id:'sc1', name:'林梓彥', hireDate:'2025-02-01', birthday:'',      initialAnnualAccrued:10, initialAnnualUsed:1,  initialTravelRemaining:0, initialGiftBalance:0 },
+    { id:'sc2', name:'王謖',   hireDate:'2026-02-01', birthday:'',      initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0 },
+    { id:'sc3', name:'林哲民', hireDate:'2026-02-01', birthday:'',      initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0 },
+    { id:'sc4', name:'陳柏維', hireDate:'2026-04-01', birthday:'',      initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0 }
+  ]
+};
+
+// 中秋 / 端午（國曆）— 多年資料
+var HOLIDAYS = {
+  dragonBoat: { 2024:'06-10', 2025:'05-31', 2026:'06-19', 2027:'06-08', 2028:'05-28' },
+  midAutumn:  { 2024:'09-17', 2025:'10-06', 2026:'09-25', 2027:'09-15', 2028:'10-03' }
+};
+
+// ⚠️ 系統正式啟用日：在此之前的紀錄都不回補
+//    特休/旅遊假已用 → 用 initialAnnualUsed/initialTravelRemaining 為準
+//    禮金生日/中秋/端午自動加 → 此日後才會發
+var EFFECTIVE_DATE = '2026-04-25';
+
+// 十城沒有旅遊假
+var STORES_WITHOUT_TRAVEL = { 'shicheng-zhongxiao': true };
+// 十城沒有禮金
+var STORES_WITHOUT_GIFT = { 'shicheng-zhongxiao': true };
+
+var STORE = sessionStorage.getItem('cd_store') || '';
+var STORE_NAME = sessionStorage.getItem('cd_store_name') || '（未選店）';
+document.getElementById('store-name').textContent = STORE_NAME;
+
+var EMPLOYEES = (EMP_DATA[STORE] || []).slice();
+
+// 隱藏旅遊假區塊（十城）
+if(STORES_WITHOUT_TRAVEL[STORE]){
+  document.getElementById('section-travel').style.display = 'none';
+}
+// 隱藏禮金區塊（十城）
+if(STORES_WITHOUT_GIFT[STORE]){
+  document.getElementById('section-gift').style.display = 'none';
+}
+// 動態調整標題：十城只看特休
+(function(){
+  var hideTravel = !!STORES_WITHOUT_TRAVEL[STORE];
+  var hideGift   = !!STORES_WITHOUT_GIFT[STORE];
+  var titleEl = document.getElementById('hero-title');
+  var subEl   = document.getElementById('hero-subtitle');
+  if(hideTravel && hideGift){
+    titleEl.textContent = '特休';
+    subEl.textContent   = '特休依到職日累計，加班費系統「特/特休」自動扣假';
+    document.title = '特休';
+  } else if(hideGift){
+    titleEl.textContent = '特休／旅遊假';
+    subEl.textContent   = '特休依到職日累計、旅遊假依年資';
+    document.title = '特休／旅遊假';
+  } else if(hideTravel){
+    titleEl.textContent = '特休／禮金';
+    subEl.textContent   = '特休依到職日累計；禮金生日/中秋/端午自動加值，僅 AI 識別可扣款';
+    document.title = '特休／禮金';
+  }
+})();
+
+// 雲端設定（沿用先前部署）
+var LEAVE_SYNC_URL = 'https://script.google.com/macros/s/AKfycbxeJRR4Xlt4fSngAwEIAW2FBMEwLuNH9djZKY7LzI7RhX0_Lk9L2TvUM_WyFU-YpEfO6A/exec';
+var LS_LEAVE_SYNC_URL = 'cd_leavegift_sync_url';
+
+function getSyncUrl(){
+  return localStorage.getItem(LS_LEAVE_SYNC_URL) || LEAVE_SYNC_URL || '';
+}
+function getStorePassword(){
+  var pw = {
+    'chudian-zhonghe':    'a90369287',
+    'chudian-yongchun':   'a94213054',
+    'chudian-xinzhuang':  'a60749791',
+    'shicheng-zhongxiao': 'a61222042'
+  };
+  return pw[STORE] || '';
+}
+
+function callGAS(action, args){
+  var url = getSyncUrl();
+  if(!url) return Promise.reject(new Error('尚未設定雲端網址'));
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: action, args: args || [] })
+  }).then(function(r){ return r.json(); });
+}
+
+// ============================================
+// State
+// ============================================
+var STATE = null;
+function blankState(){
+  return {
+    store: STORE,
+    annualUsedManual: {},   // empId -> 額外手動已用天數
+    travelUsedManual: {},   // empId -> 已用天數
+    giftHistory: {},        // empId -> [{id, ts, type, amount, reason, fileId, note}]
+    giftCreditYears: {},    // empId -> { 'birthday-2026':1, 'midAutumn-2026':1, 'dragonBoat-2026':1 }
+    selectedEmpId: (EMPLOYEES[0] && EMPLOYEES[0].id) || ''
+  };
+}
+
+function ensureSlots(){
+  EMPLOYEES.forEach(function(e){
+    if(!STATE.annualUsedManual[e.id]) STATE.annualUsedManual[e.id] = 0;
+    if(!STATE.travelUsedManual[e.id]) STATE.travelUsedManual[e.id] = 0;
+    if(!STATE.giftHistory[e.id]) STATE.giftHistory[e.id] = [];
+    if(!STATE.giftCreditYears[e.id]) STATE.giftCreditYears[e.id] = {};
+  });
+  if(!STATE.selectedEmpId && EMPLOYEES.length) STATE.selectedEmpId = EMPLOYEES[0].id;
+}
+
+// ============================================
+// 公式計算
+// ============================================
+var TODAY = new Date();
+function parseDate(s){ var p = String(s||'').split('-'); return new Date(Number(p[0]), Number(p[1])-1, Number(p[2]||1)); }
+function diffDays(a, b){ return Math.floor((a - b) / 86400000); }
+function tenureMonths(hireDate){
+  if(!hireDate) return 0;
+  var d = parseDate(hireDate);
+  var months = (TODAY.getFullYear() - d.getFullYear()) * 12 + (TODAY.getMonth() - d.getMonth());
+  if(TODAY.getDate() < d.getDate()) months--;
+  return Math.max(0, months);
+}
+function tenureYears(hireDate){ return tenureMonths(hireDate) / 12; }
+// FT 員工（用於特休/旅遊假表）
+function ftOnly(){ return EMPLOYEES.filter(function(e){ return !e.pt; }); }
+
+// 旅遊假（依目前年資）
+//   半年~1年: 1天 / 1~2年: 2天 / 2~3年: 3天 / 3年+: 4天
+function travelEntitlement(hireDate){
+  var m = tenureMonths(hireDate);
+  if(m < 6) return 0;
+  var y = m / 12;
+  if(y < 1) return 1;
+  if(y < 2) return 2;
+  if(y < 3) return 3;
+  return 4;
+}
+
+// 從加班費系統匯入的請假紀錄中，找此員工 EFFECTIVE_DATE 之後的特/旅遊日期
+//   key: cd_ot_summary_<store>_<ym>，每個 record 有 employees[name].annualDates / travelDates
+//   回傳排序好的日期陣列（不重複）
+function getOvertimeDatesAfter(empName, type){
+  var seen = {};
+  var prefix = 'cd_ot_summary_' + STORE + '_';
+  for(var i = 0; i < localStorage.length; i++){
+    var key = localStorage.key(i);
+    if(!key || key.indexOf(prefix) !== 0) continue;
+    try {
+      var p = JSON.parse(localStorage.getItem(key) || '{}');
+      var rec = (p.employees || {})[empName];
+      if(!rec) continue;
+      var dates = type === 'annual' ? (rec.annualDates || []) : (rec.travelDates || []);
+      dates.forEach(function(d){ if(d > EFFECTIVE_DATE) seen[d] = 1; });
+    } catch(e){}
+  }
+  return Object.keys(seen).sort();
+}
+function getOvertimeUsedAfter(empName, type){
+  return getOvertimeDatesAfter(empName, type).length;
+}
+
+// 員工各種衍生值
+function calcAnnual(emp){
+  // initialAnnualUsed = EFFECTIVE_DATE 之前已用；之後自動從加班費系統抓
+  var accrued = emp.initialAnnualAccrued || 0;
+  var initialUsed = emp.initialAnnualUsed || 0;
+  var fromOTDates = getOvertimeDatesAfter(emp.name, 'annual');
+  var fromOT = fromOTDates.length;
+  var manual = STATE.annualUsedManual[emp.id] || 0;
+  var used = initialUsed + fromOT + manual;
+  return {
+    accrued: accrued,
+    used: used,
+    initialUsed: initialUsed,
+    fromOT: fromOT,
+    fromOTDates: fromOTDates,
+    remaining: Math.max(0, accrued - used)
+  };
+}
+function calcTravel(emp){
+  var entitlement = travelEntitlement(emp.hireDate);
+  // 「初始剩餘」是 EFFECTIVE_DATE 當下的剩餘
+  // 之後自動從加班費抓 → 從剩餘扣掉
+  var initialRemaining = emp.initialTravelRemaining || 0;
+  var fromOTDates = getOvertimeDatesAfter(emp.name, 'travel');
+  var fromOT = fromOTDates.length;
+  var manual = STATE.travelUsedManual[emp.id] || 0;
+  var initialUsed = Math.max(0, entitlement - initialRemaining);
+  var used = initialUsed + fromOT + manual;
+  return {
+    entitlement: entitlement,
+    used: used,
+    fromOT: fromOT,
+    fromOTDates: fromOTDates,
+    remaining: Math.max(0, initialRemaining - fromOT - manual)
+  };
+}
+function calcGiftBalance(emp){
+  // 從 0 算起 — 初始餘額在 ensureInitialSeed() 已寫成 history 第一筆
+  var bal = 0;
+  (STATE.giftHistory[emp.id] || []).forEach(function(h){
+    var amt = Number(h.amount) || 0;
+    if(h.type === 'credit') bal += Math.abs(amt);
+    else if(h.type === 'debit') bal -= Math.abs(amt);
+  });
+  return bal;
+}
+
+// 第一次進來：把 code 內的 initialGiftBalance 寫成 history 第一筆 credit
+//   寫進雲端後，code 的數字就不再影響餘額（除非雲端那筆被刪掉）
+function ensureInitialSeed(){
+  if(STORES_WITHOUT_GIFT[STORE]) return 0;
+  var added = 0;
+  EMPLOYEES.forEach(function(emp){
+    var hist = STATE.giftHistory[emp.id] || (STATE.giftHistory[emp.id] = []);
+    var hasSeed = hist.some(function(h){ return h && h.reason === '初始餘額' && h.type === 'credit'; });
+    if(hasSeed) return;
+    var initial = Number(emp.initialGiftBalance) || 0;
+    if(initial > 0){
+      hist.push({
+        id: 'seed_' + emp.id,
+        ts: new Date(EFFECTIVE_DATE + 'T00:00:00').toISOString(),
+        type: 'credit',
+        amount: initial,
+        reason: '初始餘額',
+        fileId: '',
+        note: EFFECTIVE_DATE + ' 系統啟用初始餘額（不可刪）'
+      });
+      added++;
+    }
+  });
+  return added;
+}
+
+// ============================================
+// 自動 +2000：生日 / 中秋 / 端午（須滿半年）
+// ============================================
+function maybeAutoCredit(){
+  if(STORES_WITHOUT_GIFT[STORE]) return;
+  // ⚠️ 只回補 EFFECTIVE_DATE 之後的事件；之前的「目前禮金」用 initialGiftBalance 為準
+  var effDate = parseDate(EFFECTIVE_DATE);
+  var added = 0;
+  EMPLOYEES.forEach(function(emp){
+    var hire = parseDate(emp.hireDate);
+    var halfYearDate = new Date(hire.getFullYear(), hire.getMonth()+6, hire.getDate());
+    var creditYears = STATE.giftCreditYears[emp.id] || (STATE.giftCreditYears[emp.id] = {});
+
+    // 滿半年限制：實際生效日 = max(halfYearDate, EFFECTIVE_DATE)
+    var earliest = halfYearDate > effDate ? halfYearDate : effDate;
+
+    // 生日（每年）
+    var bday = String(emp.birthday||'').split('-');
+    if(bday.length === 2){
+      var bm = Number(bday[0]), bd = Number(bday[1]);
+      // 檢查近兩年的生日
+      [TODAY.getFullYear()-1, TODAY.getFullYear(), TODAY.getFullYear()+1].forEach(function(y){
+        var d = new Date(y, bm-1, bd);
+        if(d < earliest) return;       // 還沒滿半年 / 在 EFFECTIVE_DATE 之前 → 跳過
+        if(d > TODAY) return;          // 還沒到 → 跳過
+        var key = 'birthday-'+y;
+        if(!creditYears[key]){
+          STATE.giftHistory[emp.id].push({
+            id: 'auto_'+key+'_'+emp.id,
+            ts: new Date(y, bm-1, bd, 9, 0, 0).toISOString(),
+            type: 'credit', amount: emp.pt ? 1000 : 2000, reason: '生日 '+y, fileId: '', note: '自動加值'+(emp.pt?'(PT)':'')
+          });
+          creditYears[key] = 1; added++;
+        }
+      });
+    }
+
+    // 端午
+    Object.keys(HOLIDAYS.dragonBoat).forEach(function(yStr){
+      var y = Number(yStr);
+      var d = parseDate(y+'-'+HOLIDAYS.dragonBoat[y]);
+      if(d < earliest) return;
+      if(d > TODAY) return;
+      var key = 'dragonBoat-'+y;
+      if(!creditYears[key]){
+        STATE.giftHistory[emp.id].push({
+          id: 'auto_'+key+'_'+emp.id, ts: d.toISOString(),
+          type:'credit', amount: emp.pt ? 1000 : 2000, reason:'端午 '+y, fileId:'', note:'自動加值'+(emp.pt?'(PT)':'')
+        });
+        creditYears[key] = 1; added++;
+      }
+    });
+
+    // 中秋
+    Object.keys(HOLIDAYS.midAutumn).forEach(function(yStr){
+      var y = Number(yStr);
+      var d = parseDate(y+'-'+HOLIDAYS.midAutumn[y]);
+      if(d < earliest) return;
+      if(d > TODAY) return;
+      var key = 'midAutumn-'+y;
+      if(!creditYears[key]){
+        STATE.giftHistory[emp.id].push({
+          id: 'auto_'+key+'_'+emp.id, ts: d.toISOString(),
+          type:'credit', amount: emp.pt ? 1000 : 2000, reason:'中秋 '+y, fileId:'', note:'自動加值'+(emp.pt?'(PT)':'')
+        });
+        creditYears[key] = 1; added++;
+      }
+    });
+  });
+  if(added > 0){
+    pushToCloud(false);
+    toast('已自動加值 '+added+' 筆節慶禮金', 'ok');
+  }
+}
+
+// ============================================
+// 渲染
+// ============================================
+function fmt(n){ return Math.round(Number(n)||0).toLocaleString(); }
+
+function renderAnnual(){
+  var tb = document.getElementById('tbody-annual');
+  var ft = ftOnly();
+  if(!ft.length){
+    tb.innerHTML = '<tr><td colspan="5"><div class="empty-row">本店尚未設定員工資料</div></td></tr>';
+    return;
+  }
+  var rows = ft.map(function(e){
+    var c = calcAnnual(e);
+    var cls = c.remaining === 0 ? 'bal-zero' : (c.remaining < 3 ? 'bal-warn' : 'bal-pos');
+    var usedTag = '';
+    if(c.fromOT > 0){
+      var chips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini">'+fmtMD(d)+'</span>'; }).join('');
+      usedTag = '<div class="tag-line">＋'+c.fromOT+' 自動匯入</div><div class="date-chips">'+chips+'</div>';
+    }
+    return '<tr>'
+      + '<td class="c-name">'+e.name+'</td>'
+      + '<td>'+e.hireDate+'<div class="tag-line">年資 '+tenureYears(e.hireDate).toFixed(1)+' 年</div></td>'
+      + '<td class="c-num">'+c.accrued+' 天</td>'
+      + '<td>'+c.used+' 天'+usedTag+'</td>'
+      + '<td class="c-num big '+cls+'">'+c.remaining+' 天</td>'
+      + '</tr>';
+  });
+  tb.innerHTML = rows.join('');
+}
+
+// YYYY-MM-DD → MM/DD
+function fmtMD(d){
+  var p = String(d||'').split('-');
+  if(p.length === 3) return p[1] + '/' + p[2];
+  return d;
+}
+
+function renderTravel(){
+  if(STORES_WITHOUT_TRAVEL[STORE]) return;
+  var tb = document.getElementById('tbody-travel');
+  var ft = ftOnly();
+  if(!ft.length){
+    tb.innerHTML = '<tr><td colspan="5"><div class="empty-row">本店尚未設定員工資料</div></td></tr>';
+    return;
+  }
+  var rows = ft.map(function(e){
+    var c = calcTravel(e);
+    var months = tenureMonths(e.hireDate);
+    var cls = c.remaining === 0 ? 'bal-zero' : 'bal-pos';
+    var note = months < 6 ? '<div class="tag-line">未滿半年</div>' : '';
+    var usedTag = '';
+    if(c.fromOT > 0){
+      var chips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini travel">'+fmtMD(d)+'</span>'; }).join('');
+      usedTag = '<div class="tag-line">＋'+c.fromOT+' 自動匯入</div><div class="date-chips">'+chips+'</div>';
+    }
+    return '<tr>'
+      + '<td class="c-name">'+e.name+'</td>'
+      + '<td>'+e.hireDate+note+'</td>'
+      + '<td class="c-num">'+c.entitlement+' 天</td>'
+      + '<td>'+c.used+' 天'+usedTag+'</td>'
+      + '<td class="c-num big '+cls+'">'+c.remaining+' 天</td>'
+      + '</tr>';
+  });
+  tb.innerHTML = rows.join('');
+}
+
+function renderEmpTabs(){
+  var area = document.getElementById('emp-tabs');
+  if(!EMPLOYEES.length){
+    area.innerHTML = '<div class="empty-row" style="flex:1">本店尚未設定員工資料</div>';
+    return;
+  }
+  var sel = STATE.selectedEmpId;
+  area.innerHTML = EMPLOYEES.map(function(e){
+    var bal = calcGiftBalance(e);
+    var ptBadge = e.pt ? '<span class="bal" style="background:rgba(245,158,11,.15);color:#a16207">PT</span>' : '';
+    return '<button class="emp-tab '+(sel===e.id?'active':'')+'" onclick="selectEmp(\''+e.id+'\')">'
+      + e.name + ptBadge + '<span class="bal">$' + fmt(bal) + '</span>'
+      + '</button>';
+  }).join('');
+}
+
+function renderEmpCardAndUpload(){
+  var area = document.getElementById('emp-card-area');
+  var upArea = document.getElementById('upload-area-wrap');
+  if(!EMPLOYEES.length){ area.innerHTML = ''; upArea.innerHTML = ''; return; }
+  var emp = EMPLOYEES.find(function(e){ return e.id === STATE.selectedEmpId; }) || EMPLOYEES[0];
+  if(!emp){ area.innerHTML=''; upArea.innerHTML=''; return; }
+  var bal = calcGiftBalance(emp);
+  var cls = bal === 0 ? 'zero' : (bal < 500 ? 'low' : '');
+  var bdayMD = (emp.birthday || '').split('-');
+  var bdayLabel = bdayMD.length === 2 ? bdayMD[0]+'月'+bdayMD[1]+'日' : '—';
+
+  var ptBadge = emp.pt ? '<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(245,158,11,.18);color:#a16207;margin-left:6px">PT</span>' : '';
+  var hireLabel = emp.hireDate || '—';
+  area.innerHTML = '<div class="emp-card">'
+    + '<div class="emp-avatar">'+emp.name.charAt(0)+'</div>'
+    + '<div class="emp-meta">'
+    +   '<h2>'+emp.name+ptBadge+'</h2>'
+    +   '<div class="sub">🎂 生日 <b>'+bdayLabel+'</b> · 入職 '+hireLabel+(emp.pt?' · <b>節慶 +$1,000</b>':'')+'</div>'
+    + '</div>'
+    + '<div class="emp-balance">'
+    +   '<div class="label">目前禮金餘額</div>'
+    +   '<div class="amt '+cls+'">$ '+fmt(bal)+'</div>'
+    + '</div>'
+    + '</div>';
+
+  upArea.innerHTML = '<div class="preview-row" id="gift-preview"></div>'
+    + '<label class="upload-area" id="up-area" for="gift-file">'
+    + '<span class="uicon">📷</span>'
+    + '<span class="uwords">'
+    +   '<div class="utitle">點擊或拖曳上傳禮金收據</div>'
+    +   '<div class="uhint">AI 自動辨識金額並從 <b>'+emp.name+'</b> 的禮金扣款 · 圖片自動存到雲端</div>'
+    + '</span>'
+    + '<input type="file" id="gift-file" accept="image/*" onchange="onGiftFile(this.files)">'
+    + '</label>'
+    + '<div id="gift-busy"></div>';
+
+  // 拖曳支援
+  var ua = document.getElementById('up-area');
+  if(ua){
+    ['dragenter','dragover'].forEach(function(ev){
+      ua.addEventListener(ev, function(e){ e.preventDefault(); ua.classList.add('dragover'); });
+    });
+    ['dragleave','drop'].forEach(function(ev){
+      ua.addEventListener(ev, function(e){ e.preventDefault(); ua.classList.remove('dragover'); });
+    });
+    ua.addEventListener('drop', function(e){
+      var files = e.dataTransfer && e.dataTransfer.files;
+      if(files && files.length) onGiftFile(files);
+    });
+  }
+}
+
+function selectEmp(id){
+  STATE.selectedEmpId = id;
+  renderEmpTabs();
+  renderEmpCardAndUpload();
+  renderHistory();
+  pushToCloud(false);
+}
+
+function fmtTs(ts){
+  try {
+    var d = new Date(ts);
+    return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
+  } catch(e){ return ts; }
+}
+
+function renderHistory(){
+  var area = document.getElementById('history-list');
+  if(!EMPLOYEES.length){ area.innerHTML=''; return; }
+  var emp = EMPLOYEES.find(function(e){ return e.id === STATE.selectedEmpId; });
+  if(!emp){ area.innerHTML = '<div class="empty-row">未選擇員工</div>'; return; }
+  var hist = (STATE.giftHistory[emp.id] || []).slice().sort(function(a,b){
+    return (b.ts||'').localeCompare(a.ts||'');
+  });
+  if(hist.length === 0){
+    area.innerHTML = '<div class="empty-row">尚無紀錄<br><span style="font-size:11px">上傳禮金圖片即可從餘額扣款</span></div>';
+    return;
+  }
+  var rows = hist.map(function(h){
+    var amt = Number(h.amount) || 0;
+    var sign = h.type === 'credit' ? '+' : '−';
+    var amtCls = h.type === 'credit' ? 'credit' : 'debit';
+    var isSeed = (h.reason === '初始餘額');
+    var thumb;
+    if(h.fileId){
+      // 剛上傳的：用本機 blob URL 直接顯示，不用等雲端 lazy fetch
+      var localSrc = LOCAL_BLOB_BY_FILEID[h.fileId] || '';
+      var srcAttr = localSrc ? ' src="'+localSrc+'" data-loaded="1"' : '';
+      thumb = '<img class="history-thumb" alt="圖片"'+srcAttr+' data-fileid="'+h.fileId+'" onclick="openImgFromFileId(\''+h.fileId+'\')">';
+    } else {
+      thumb = '<div class="history-thumb placeholder">'+(isSeed ? '📌' : (h.type==='credit'?'🎁':'💸'))+'</div>';
+    }
+    var delBtn = isSeed
+      ? '<span></span>'
+      : '<button class="history-del" title="刪除這筆（需密碼）" onclick="onDeleteEntry(\''+h.id+'\')">✕</button>';
+    return '<div class="history-item">'
+      + thumb
+      + '<div class="history-meta">'
+      +   '<div class="h-line1">'
+      +     '<span class="h-tag '+amtCls+'">'+(isSeed ? '起始' : (h.type==='credit'?'加值':'支出'))+'</span>'
+      +     (h.reason || '')
+      +   '</div>'
+      +   '<div class="h-line2">'+ fmtTs(h.ts) + (h.note ? ' · '+h.note : '') +'</div>'
+      + '</div>'
+      + '<div class="history-amount '+amtCls+'">'+sign+'$'+fmt(Math.abs(amt))+'</div>'
+      + delBtn
+      + '</div>';
+  });
+  area.innerHTML = rows.join('');
+
+  // 載入縮圖（用 data-loaded 旗標判斷，避免 img.src 為空時解析成當前頁網址導致誤判）
+  document.querySelectorAll('.history-thumb[data-fileid]').forEach(function(img){
+    var fid = img.getAttribute('data-fileid');
+    if(!fid || img.getAttribute('data-loaded')) return;
+    callGAS('getGiftImage', [getStorePassword(), fid])
+      .then(function(res){
+        if(res && res.ok){
+          img.src = 'data:'+(res.mimeType||'image/jpeg')+';base64,'+res.base64;
+          img.setAttribute('data-loaded', '1');
+        }
+      });
+  });
+}
+
+// ============================================
+// 刪除一筆禮金紀錄（需密碼，跟薪資計算同一組）
+// ============================================
+function onDeleteEntry(entryId){
+  var emp = EMPLOYEES.find(function(e){ return e.id === STATE.selectedEmpId; });
+  if(!emp){ toast('未選員工', 'err'); return; }
+  var hist = STATE.giftHistory[emp.id] || [];
+  var entry = hist.find(function(h){ return h.id === entryId; });
+  if(!entry){ toast('找不到紀錄', 'err'); return; }
+  if(String(entryId).indexOf('seed_') === 0){ toast('初始餘額不可刪', 'err'); return; }
+
+  var pw = prompt('刪除「'+(entry.reason||'禮金')+' $'+fmt(Math.abs(entry.amount||0))+'」需要密碼\n（跟薪資計算同一組）');
+  if(pw === null) return;
+  if(String(pw).trim() !== getStorePassword()){
+    alert('❌ 密碼錯誤');
+    return;
+  }
+
+  callGAS('deleteGiftEntry', [getStorePassword(), STORE, emp.id, entryId])
+    .then(function(res){
+      if(res && res.ok){
+        // 更新本機 STATE
+        STATE.giftHistory[emp.id] = hist.filter(function(h){ return h.id !== entryId; });
+        render();
+        showNotice('已上傳雲端', '已刪除「'+(entry.reason||'禮金')+' $'+fmt(Math.abs(entry.amount||0))+'」並從 Drive 移除圖片');
+      } else {
+        toast('刪除失敗：'+((res&&res.error)||''), 'err');
+      }
+    })
+    .catch(function(err){ toast('連線失敗：'+(err.message||''), 'err'); });
+}
+
+function openImgFromFileId(fid){
+  var modal = document.getElementById('img-modal');
+  var img = document.getElementById('modal-img');
+  // 找 cache 過的 img 來複用
+  var el = document.querySelector('.history-thumb[data-fileid="'+fid+'"]');
+  if(el && el.src){
+    img.src = el.src;
+    modal.classList.add('open');
+  } else {
+    callGAS('getGiftImage', [getStorePassword(), fid])
+      .then(function(res){
+        if(res && res.ok){
+          img.src = 'data:'+(res.mimeType||'image/jpeg')+';base64,'+res.base64;
+          modal.classList.add('open');
+        }
+      });
+  }
+}
+function closeImgModal(e){
+  if(e && e.target && e.target.tagName === 'IMG' && e.target.id === 'modal-img') return;
+  document.getElementById('img-modal').classList.remove('open');
+}
+
+// 通知 modal（上傳/刪除完成）
+function showNotice(title, msg){
+  document.getElementById('notice-title').textContent = title || '已上傳雲端';
+  document.getElementById('notice-msg').textContent = msg || '';
+  document.getElementById('notice-modal').classList.add('open');
+}
+function closeNoticeModal(e){
+  if(e && e.target && !e.currentTarget.contains(e.target)) return;
+  document.getElementById('notice-modal').classList.remove('open');
+}
+
+function render(){
+  renderAnnual();
+  renderTravel();
+  renderEmpTabs();
+  renderEmpCardAndUpload();
+  renderHistory();
+}
+
+// ============================================
+// 上傳禮金圖片 → AI 識別 → 上傳 Drive → 寫歷史
+// ============================================
+// 暫存剛上傳的圖片 blob URL，讓歷史欄位可以立即顯示縮圖（不用等 Drive lazy-fetch）
+var LOCAL_BLOB_BY_FILEID = {};
+// 上傳預覽列每張縮圖
+function addPreviewThumb(blobUrl){
+  var row = document.getElementById('gift-preview');
+  if(!row) return null;
+  var div = document.createElement('div');
+  div.className = 'preview-thumb busy';
+  var img = document.createElement('img');
+  img.src = blobUrl;
+  div.appendChild(img);
+  var tag = document.createElement('div');
+  tag.className = 'px-tag';
+  tag.textContent = '處理中…';
+  div.appendChild(tag);
+  row.appendChild(div);
+  return { el: div, tag: tag };
+}
+
+async function onGiftFile(files){
+  if(!files || !files.length) return;
+  var emp = EMPLOYEES.find(function(e){ return e.id === STATE.selectedEmpId; });
+  if(!emp){ toast('請先選擇員工', 'err'); return; }
+  var file = files[0];
+  var busy = document.getElementById('gift-busy');
+  busy.innerHTML = '';
+
+  // 立即顯示縮圖（先用原檔的 object URL）
+  var previewUrl = URL.createObjectURL(file);
+  var pv = addPreviewThumb(previewUrl);
+
+  try {
+    // 1. 壓縮（最長邊 1200px）
+    if(pv) pv.tag.textContent = '壓縮中…';
+    var resized = await resizeImage(file, 1200);
+
+    // 2. AI 識別金額
+    if(pv) pv.tag.textContent = 'AI 識別中…';
+    var prompt = '從這張圖片抽取金額（可能是收據、發票、轉帳畫面、紅包、訊息截圖、Line/銀行 App、便利商店條碼等）。\n'
+      + '只回 JSON：\n'
+      + '{ "amount": 整數金額（總額、應付金額、轉出金額、紅包面額…擇一最關鍵的）, "occasion": "簡短事由（如：餐費/紅包/禮品/車資/其他）", "recipient": "收/付對象（看不到就空字串）", "note": "備註，如店名、品項、日期等" }\n'
+      + '規則：\n'
+      + '1) amount 只填正整數（去掉小數、$、NT、,、空白）\n'
+      + '2) 圖中有多個金額時取「最終總額／應付金額」\n'
+      + '3) 真的看不到任何數字才填 0\n'
+      + '4) 只回 JSON，不要附加任何說明文字';
+    var raw = await geminiCall([resized.blob], prompt);
+    var data;
+    try { data = parseJson(raw); }
+    catch(jerr){ throw new Error('AI 回應格式錯誤：'+raw.slice(0,80)); }
+    var amount = Math.abs(Math.round(Number(data.amount) || 0));
+    if(!amount){
+      if(pv){ pv.el.classList.remove('busy'); pv.el.classList.add('err'); pv.tag.textContent = '無金額'; }
+      busy.innerHTML = '<span style="color:var(--danger);font-size:12px">❌ AI 沒辨識出金額：'+ JSON.stringify(data).slice(0,80) +'</span>';
+      toast('AI 沒辨識出金額', 'err');
+      return;
+    }
+
+    // 3. 上傳到 Drive
+    if(pv) pv.tag.textContent = '上傳雲端…';
+    var b64 = await blobToBase64(resized.blob);
+    var up = await callGAS('uploadGiftImage', [
+      getStorePassword(), STORE, emp.id,
+      b64, resized.blob.type || 'image/jpeg',
+      'gift_'+emp.id+'_'+Date.now()+'.jpg'
+    ]);
+    if(!up || !up.ok){
+      throw new Error((up && up.error) || '上傳失敗');
+    }
+
+    // 把 blob URL 和 fileId 綁在一起，render history 時可立即用
+    LOCAL_BLOB_BY_FILEID[up.fileId] = previewUrl;
+
+    // 4. 寫進 history
+    var entry = {
+      id: 'g_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+      ts: new Date().toISOString(),
+      type: 'debit',
+      amount: amount,
+      reason: data.occasion || '禮金',
+      fileId: up.fileId,
+      note: [data.recipient, data.note].filter(Boolean).join(' · ')
+    };
+    STATE.giftHistory[emp.id].push(entry);
+
+    // 5. 同步到 sheet（log + state）
+    callGAS('logGift', [
+      getStorePassword(), STORE, emp.id, emp.name,
+      'debit', amount, entry.reason, up.fileId, entry.note
+    ]);
+
+    if(pv){
+      pv.el.classList.remove('busy');
+      pv.el.classList.add('ok');
+      pv.tag.textContent = '−$'+fmt(amount);
+    }
+    busy.innerHTML = '<span style="color:var(--ok);font-size:12px">✓ 已扣款 $'+fmt(amount)+'，餘額更新</span>';
+
+    pushToCloud(false);
+    render();
+    document.getElementById('gift-file').value = '';
+    showNotice('已上傳雲端', '已從 '+emp.name+' 的禮金扣款 $'+fmt(amount)+'，圖片已存到 Drive');
+  } catch(e){
+    if(pv){ pv.el.classList.remove('busy'); pv.el.classList.add('err'); pv.tag.textContent = '失敗'; }
+    busy.innerHTML = '<span style="color:var(--danger);font-size:12px">❌ '+ (e.message||'失敗') +'</span>';
+    toast('失敗：'+(e.message||''), 'err');
+  }
+}
+
+function resizeImage(file, maxSide){
+  return new Promise(function(resolve, reject){
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function(){
+      var w = img.naturalWidth, h = img.naturalHeight;
+      var scale = Math.min(1, maxSide / Math.max(w, h));
+      var nw = Math.round(w * scale), nh = Math.round(h * scale);
+      var canvas = document.createElement('canvas');
+      canvas.width = nw; canvas.height = nh;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, nw, nh);
+      canvas.toBlob(function(blob){
+        URL.revokeObjectURL(url);
+        if(!blob) return reject(new Error('壓縮失敗'));
+        resolve({ blob: blob, w: nw, h: nh });
+      }, 'image/jpeg', 0.85);
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('讀檔失敗')); };
+    img.src = url;
+  });
+}
+
+function blobToBase64(blob){
+  return new Promise(function(resolve, reject){
+    var r = new FileReader();
+    r.onload = function(){ resolve(String(r.result).split(',')[1]); };
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
+
+// ============================================
+// AI: Gemini call (沿用小結報表的三層 fallback)
+// ============================================
+var DIRECT_CALL_DISABLED = false;
+function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+function parseGeminiResponse(data, model){
+  if(data.error){
+    var msg = typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error));
+    var err = new Error(msg); err.code = (typeof data.error === 'object') ? data.error.code : undefined; throw err;
+  }
+  var cand = data.candidates && data.candidates[0];
+  if(!cand) throw new Error('沒有候選回應');
+  if(cand.finishReason === 'SAFETY') throw new Error('被安全過濾器擋下');
+  var text = cand.content && cand.content.parts && cand.content.parts[0] && cand.content.parts[0].text;
+  if(!text) throw new Error('空內容');
+  return text;
+}
+
+async function callModelOnce(model, parts){
+  var workerUrl = localStorage.getItem('cd_worker_url');
+  var directKey = localStorage.getItem('cd_gemini_direct_key');
+  var proxyUrl  = localStorage.getItem('cd_sync_url');
+  if(!workerUrl && !directKey && !proxyUrl) throw new Error('尚未設定 Gemini 路徑（請先到「小結報表」設定一次）');
+  var genConfig = { temperature: 0, topP: 0.1, topK: 1 };
+
+  if(workerUrl){
+    try{
+      var wr = await fetch(workerUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ model: model, parts: parts, generationConfig: genConfig }) });
+      var wd = await wr.json();
+      if(!wr.ok && !wd.error){ var e = new Error('Worker HTTP '+wr.status); e.code = wr.status; throw e; }
+      return parseGeminiResponse(wd, model);
+    } catch(we){
+      var wm = (we.message||'').toLowerCase();
+      if(we.code === 503 || we.code === 429 || wm.indexOf('overloaded')>=0 || wm.indexOf('unavailable')>=0 || wm.indexOf('rate')>=0) throw we;
+    }
+  }
+
+  if(directKey && !DIRECT_CALL_DISABLED){
+    try{
+      var dr = await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(directKey), {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ contents:[{ parts: parts }], generationConfig: genConfig })
+      });
+      var dd = await dr.json();
+      if(!dr.ok && !dd.error){ var e = new Error('HTTP '+dr.status); e.code = dr.status; throw e; }
+      return parseGeminiResponse(dd, model);
+    } catch(de){
+      var dm = (de.message||'').toLowerCase();
+      if(de.code === 503 || de.code === 429 || dm.indexOf('overloaded')>=0 || dm.indexOf('unavailable')>=0 || dm.indexOf('rate')>=0) throw de;
+      if(proxyUrl){ DIRECT_CALL_DISABLED = true; } else throw de;
+    }
+  }
+
+  if(!proxyUrl) throw new Error('沒有代理可用');
+  var r = await fetch(proxyUrl, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ action:'geminiProxy', model: model, parts: parts, generationConfig: genConfig }) });
+  var wrap = await r.json();
+  if(wrap.error){
+    var em = typeof wrap.error === 'string' ? wrap.error : (wrap.error.message || JSON.stringify(wrap.error));
+    var e2 = new Error(em); e2.code = (typeof wrap.error === 'object') ? wrap.error.code : undefined; throw e2;
+  }
+  return parseGeminiResponse(wrap.data || {}, model);
+}
+
+async function geminiCall(imageFiles, promptText){
+  if(!localStorage.getItem('cd_worker_url') && !localStorage.getItem('cd_gemini_direct_key') && !localStorage.getItem('cd_sync_url')){
+    throw new Error('尚未設定 Gemini 路徑（請先到「小結報表」設定一次）');
+  }
+  var parts = [];
+  for(var i=0; i<imageFiles.length; i++){
+    var f = imageFiles[i];
+    var b64 = await blobToBase64(f);
+    parts.push({inline_data:{mime_type: f.type || 'image/jpeg', data: b64}});
+  }
+  parts.push({text: promptText});
+  var primary = localStorage.getItem('cd_gemini_model') || 'gemini-2.0-flash';
+  var fb = [primary, 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
+  var seen = {}, models = fb.filter(function(m){ if(seen[m]) return false; seen[m]=1; return true; });
+  var lastErr;
+  for(var mi=0; mi<models.length; mi++){
+    for(var attempt=0; attempt<3; attempt++){
+      try { return await callModelOnce(models[mi], parts); }
+      catch(e){
+        lastErr = e;
+        var msg = (e.message||'').toLowerCase();
+        var busy = e.code===503 || e.code===429 || msg.indexOf('overloaded')>=0 || msg.indexOf('unavailable')>=0 || msg.indexOf('rate')>=0;
+        if(busy && attempt<2){ await sleep((attempt+1)*1000); continue; }
+        break;
+      }
+    }
+  }
+  throw lastErr || new Error('所有模型皆無法呼叫');
+}
+
+function parseJson(raw){
+  var clean = String(raw||'').replace(/```json|```/g,'').trim();
+  var m = clean.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+  if(m) clean = m[0];
+  return JSON.parse(clean);
+}
+
+// ============================================
+// 雲端 sync
+// ============================================
+function setSyncChip(state, text, title){
+  var chip = document.getElementById('sync-chip');
+  if(!chip) return;
+  chip.className = 'sync-chip ' + state;
+  chip.textContent = text;
+  if(title) chip.title = title;
+}
+
+var _pushTimer = null;
+function pushToCloud(showToastWhenOk){
+  if(!STATE) return;
+  var url = getSyncUrl();
+  if(!url){ setSyncChip('off', '☁ 未設定', ''); return; }
+  if(_pushTimer) clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(function(){
+    setSyncChip('busy', '☁ 同步中…', '');
+    callGAS('saveStore', [getStorePassword(), STORE, JSON.parse(JSON.stringify(STATE))])
+      .then(function(res){
+        if(res && res.ok){
+          setSyncChip('ok', '☁ 已同步', '最後同步：'+(res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : ''));
+          if(showToastWhenOk) toast('已同步到雲端', 'ok');
+        } else {
+          setSyncChip('err', '☁ 失敗', (res && res.error) || '');
+          if(showToastWhenOk) toast('同步失敗：'+((res&&res.error)||''), 'err');
+        }
+      })
+      .catch(function(err){ setSyncChip('err', '☁ 離線', err.message||''); });
+  }, 600);
+}
+
+function pullFromCloud(){
+  var url = getSyncUrl();
+  if(!url){ setSyncChip('off', '☁ 未設定', ''); return; }
+  setSyncChip('busy', '☁ 讀取中…', '');
+  callGAS('loadStore', [getStorePassword(), STORE])
+    .then(function(res){
+      if(!res || !res.ok){
+        setSyncChip('err', '☁ 讀取失敗', (res && res.error) || '');
+        return;
+      }
+      if(res.found){
+        STATE = res.state || blankState();
+        ensureSlots();
+        setSyncChip('ok', '☁ 已同步', '從雲端讀取：'+(res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : ''));
+      } else {
+        STATE = blankState();
+        ensureSlots();
+        setSyncChip('ok', '☁ 已連線（雲端無資料）', '');
+      }
+      var seedAdded = ensureInitialSeed();
+      maybeAutoCredit();
+      if(seedAdded > 0) pushToCloud(false);
+      render();
+    })
+    .catch(function(err){ setSyncChip('err', '☁ 離線', err.message||''); render(); });
+}
+
+function syncNow(){ pushToCloud(true); }
+
+// ============================================
+// 工具
+// ============================================
+function toast(msg, cls){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (cls||'');
+  setTimeout(function(){ t.className = 'toast'; }, 2200);
+}
+function goBack(){ window.location.href = 'home.html'; }
+
+(function init(){
+  if(!STORE){
+    alert('請先選擇門市');
+    window.location.href = 'home.html';
+    return;
+  }
+  STATE = blankState();
+  ensureSlots();
+  render();
+  pullFromCloud();
+})();
+
+// 自動同步（10 秒）
+setInterval(function(){
+  if(STATE) pushToCloud(false);
+}, 10000);
+</script>
+</body>
+</html>

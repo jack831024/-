@@ -135,6 +135,7 @@ h1{font-size:24px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
     overtime:  { cls:'overtime',  icon:'💰', label:'計算加班費' },
     summary:   { cls:'',          icon:'📋', label:'小結報表' },
     salary:    { cls:'',          icon:'🧾', label:'薪水計算' },
+    leave:     { cls:'',          icon:'🎁', label:'特休／禮金' }
   };
   var m = map[flow] || map.summary;
   el.innerHTML = '<span class="flow-tag '+m.cls+'"><span class="pulse"></span>'+m.icon+' '+m.label+'</span>';
@@ -149,7 +150,8 @@ function selectStore(id, name){
   var pageMap = {
     inventory: 'inventory.html',
     overtime:  'overtime.html',
-    salary:    'salary.html'
+    salary:    'salary.html',
+    leave:     'leave-gift.html'
   };
   window.location.href = pageMap[flow] || 'daily-summary.html';
 }

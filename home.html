@@ -91,13 +91,6 @@ h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 .menu-card.leave:hover .icon-wrap{background:linear-gradient(135deg,#eab308 0%,#facc15 100%);color:#fff;transform:scale(1.05)}
 .menu-card.leave .mgo{color:#ca8a04}
 
-.menu-card.booking .icon-wrap{background:linear-gradient(135deg,#dcfce7 0%,#bbf7d0 100%);color:#16a34a}
-.menu-card.booking::after{background:linear-gradient(90deg,#22c55e,#4ade80)}
-.menu-card.booking:hover .icon-wrap{background:linear-gradient(135deg,#22c55e 0%,#4ade80 100%);color:#fff;transform:scale(1.05)}
-.menu-card.booking .mgo{color:#16a34a}
-.menu-card.booking{opacity:.85}
-.menu-card.booking .soon{font-size:10px;font-weight:700;background:rgba(22,163,74,.12);color:#15803d;padding:2px 8px;border-radius:999px;letter-spacing:1px;display:inline-block;margin-top:4px}
-
 .footer{text-align:center;font-size:11px;color:var(--ink-3);letter-spacing:1px;margin-top:1rem}
 .footer .year{font-weight:600;color:var(--ink-2)}
 
@@ -165,11 +158,11 @@ h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
       <span class="mdesc">各項獎金彙整、勞健保與加給，<br>自動算出每位員工實領</span>
       <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
     </button>
-    <button class="menu-card booking" onclick="goBooking()">
+    <button class="menu-card leave" onclick="goFlow('leave')">
       <span class="num">06</span>
-      <span class="icon-wrap">📅</span>
-      <span class="mtitle">訂位表</span>
-      <span class="mdesc">訂位管理、座位安排<br><span class="soon">獨立網站 · 各分店分開部署</span></span>
+      <span class="icon-wrap">🎁</span>
+      <span class="mtitle">特休／禮金</span>
+      <span class="mdesc">特休自動同步加班費系統，<br>禮金支援圖片上傳 AI 辨識</span>
       <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
     </button>
     <button class="menu-card patrol" onclick="goPatrol()">
@@ -214,25 +207,6 @@ function goSurvey(){
 
 function goPatrol(){
   window.location.href = 'threads-patrol.html';
-}
-
-// 三家分店各自獨立的 Apps Script Web App URL
-// 部署完成後請填入對應的 /exec URL（任何裝置開了就會看到同一份訂位表）
-var BOOKING_URLS = {
-  'chudian-yongchun':  'https://script.google.com/macros/s/AKfycbzcyx2jQnnXPGf0QaL-SXXYeIg9V-PAYJzsTZxKTW9iLJi72HlRqILvFEWYTqJnB1Ex/exec',  // 初殿永春
-  'chudian-zhonghe':   '',  // 初殿中和
-  'chudian-xinzhuang': ''   // 初殿新莊
-};
-
-function goBooking(){
-  var labels = { 'chudian-yongchun':'初殿永春', 'chudian-zhonghe':'初殿中和', 'chudian-xinzhuang':'初殿新莊' };
-  var pick = prompt('請輸入要進入的分店代號：\n  1 = 初殿永春\n  2 = 初殿中和\n  3 = 初殿新莊');
-  if (pick === null) return;
-  var key = ({'1':'chudian-yongchun','2':'chudian-zhonghe','3':'chudian-xinzhuang'})[String(pick).trim()];
-  if (!key){ alert('代號錯誤'); return; }
-  var url = BOOKING_URLS[key];
-  if (!url){ alert(labels[key] + '尚未部署訂位網站'); return; }
-  window.open(url, '_blank');
 }
 </script>
 </body>
