@@ -165,22 +165,15 @@ h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
       <span class="mdesc">各項獎金彙整、勞健保與加給，<br>自動算出每位員工實領</span>
       <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
     </button>
-    <button class="menu-card leave" onclick="goFlow('leave')">
-      <span class="num">06</span>
-      <span class="icon-wrap">🎁</span>
-      <span class="mtitle">特休／禮金</span>
-      <span class="mdesc">特休自動同步加班費系統，<br>禮金支援圖片上傳 AI 辨識</span>
-      <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
-    </button>
     <button class="menu-card booking" onclick="goBooking()">
-      <span class="num">07</span>
+      <span class="num">06</span>
       <span class="icon-wrap">📅</span>
       <span class="mtitle">訂位表</span>
       <span class="mdesc">訂位管理、座位安排<br><span class="soon">獨立網站 · 各分店分開部署</span></span>
       <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
     </button>
     <button class="menu-card patrol" onclick="goPatrol()">
-      <span class="num">08</span>
+      <span class="num">07</span>
       <span class="icon-wrap">🔎</span>
       <span class="mtitle">Threads 海巡</span>
       <span class="mdesc">美食貼文關鍵字搜尋、AI 留言<br>產生器、UGC 蒐集</span>
@@ -192,12 +185,13 @@ h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 </div>
 
 <script>
-// 全域登入密碼（共用一組，通過後 小結報表 + 加班費 4 家店都可選）
+// 全域登入密碼（共用一組，通過後 加班費 / 薪水計算 4 家店都可選）
+// 小結報表進去免密碼，但「本月 A 班獎金累計」區塊另有 4 組店家密碼鎖
 var GLOBAL_PASSWORD = 'yaunxin2022';
 
 function goFlow(flow){
-  // 小結 + 加班費 共用同一組密碼，一次輸入後到關閉分頁前不再問
-  if((flow === 'summary' || flow === 'overtime')
+  // 加班費 + 薪水計算 共用全域密碼，一次輸入後到關閉分頁前不再問
+  if((flow === 'overtime' || flow === 'salary')
      && sessionStorage.getItem('cd_global_auth') !== '1'){
     var pw = prompt('請輸入登入密碼：');
     if(pw === null) return;
@@ -206,8 +200,7 @@ function goFlow(flow){
       return;
     }
     sessionStorage.setItem('cd_global_auth', '1');
-    // 同時設定舊的 cd_overtime_auth 以維持相容（其他頁面可能還會檢查）
-    sessionStorage.setItem('cd_overtime_auth', '1');
+    sessionStorage.setItem('cd_overtime_auth', '1'); // 與舊頁面相容
   }
   sessionStorage.setItem('cd_flow', flow);
   sessionStorage.removeItem('cd_store');
