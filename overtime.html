@@ -2432,6 +2432,48 @@ renderPtList();
     setStatus('sched-status','warn','⚠️ 請先到「⚙️ 設定」填入本店 Apps Script 網址');
   }
 })();
+
+// ☁️ 開頁就自動把雲端的「整頁設定」拉下來覆蓋本機
+//   讓不同裝置一打開就看到 A 裝置最新改的班別/PT 名單，不用按「載入班表」
+//   抑制錯誤：抓不到就靜悄悄略過（例如該月還沒建班表分頁、未設定網址）
+(function prefetchCloudSettings(){
+  if(!STORE) return;
+  var url = getSyncUrl();
+  if(!url) return;
+  var ym = getSelectedYM();
+  if(!ym) return;
+  var q = url + (url.indexOf('?')>=0 ? '&' : '?')
+        + 'action=getSchedule'
+        + '&store=' + encodeURIComponent(STORE)
+        + '&month=' + encodeURIComponent(ym)
+        + '&_ts='   + Date.now();
+  setSyncStatus('info','拉取雲端設定…','正在從雲端取得最新班別/PT 設定');
+  fetch(q, { method:'GET' })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(data && data.settings){
+        applyCloudSettings(data.settings);
+      }
+      // 連帶把班表也存起來給後續分析用（如果有回）
+      if(data && Array.isArray(data.rows)){
+        SCHEDULE = data;
+        renderSchedulePreview();
+        setStatus('sched-status','ok','✅ 已自動載入 '+data.rows.length+' 位員工的 '+ym+' 班表');
+        cleanupPtListBySchedule();
+        autoAddPtFromSchedule();
+        if(PUNCHES && PUNCHES.rows && PUNCHES.rows.length){
+          autoImportPtList(true);
+        }
+        maybeEnableAnalyze();
+      }
+      setSyncStatus('ok','已同步','已從雲端套用最新設定');
+    })
+    .catch(function(err){
+      // 靜悄悄失敗：使用者沒按按鈕也不要嚇到他
+      console.warn('[prefetchCloudSettings] 略過：', err.message || err);
+      setSyncStatus('ok','已同步','（雲端設定預抓略過：'+(err.message||err)+'）');
+    });
+})();
 </script>
 </body>
 </html>
