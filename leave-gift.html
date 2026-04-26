@@ -836,7 +836,7 @@ function onDeleteEntry(entryId){
   if(!entry){ toast('找不到紀錄', 'err'); return; }
   if(String(entryId).indexOf('seed_') === 0){ toast('初始餘額不可刪', 'err'); return; }
 
-  var pw = prompt('刪除「'+(entry.reason||'禮金')+' $'+fmt(Math.abs(entry.amount||0))+'」需要密碼\n（跟薪資計算同一組）');
+  var pw = prompt('刪除「'+(entry.reason||'禮金')+' $'+fmt(Math.abs(entry.amount||0))+'」需要密碼');
   if(pw === null) return;
   if(String(pw).trim() !== getStorePassword()){
     alert('❌ 密碼錯誤');
