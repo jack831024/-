@@ -518,6 +518,99 @@ function normalizeDate(v) {
   return s;
 }
 
+// ============================================
+// 🔧 一次性還原：把 Drive 還原回來的圖片 FileID 重新寫回試算表
+// ============================================
+// 適用情境：
+//   舊版自動儲存 bug 把 Drive 圖片誤丟到垃圾桶、並把試算表 E 欄（圖片FileID）清空。
+//   使用者已經從 Drive 垃圾桶把圖片還原回來，現在要把 E 欄的 FileID 也重新接回去。
+//
+// 執行方式：
+//   Apps Script 編輯器 → 上方函式下拉選「restoreImageFileIds」→ ▶️ 執行 → 看 Log
+//
+// 邏輯：
+//   1. 掃描 chudian-daily-images/[店名]/ 底下所有 [YYYY-MM-DD].json
+//   2. 對每個日期取「最新修改」的那個檔案的 fileId
+//   3. 寫回對應店家試算表第 5 欄（如果該日期的 E 欄目前是空的或不一樣）
+function restoreImageFileIds() {
+  var root = DriveApp.getRootFolder();
+  var rootFolders = root.getFoldersByName(IMAGES_ROOT);
+  if (!rootFolders.hasNext()) {
+    Logger.log('❌ 找不到根資料夾：' + IMAGES_ROOT);
+    return;
+  }
+  var imagesRoot = rootFolders.next();
+
+  var stores = ['chudian-zhonghe', 'chudian-yongchun', 'chudian-xinzhuang', 'shicheng-zhongxiao'];
+  var totalRestored = 0;
+  var totalAlreadyOk = 0;
+  var totalNoMatch = 0;
+
+  stores.forEach(function(store) {
+    try {
+      var sheetName = storeToSheetName(store);
+      var subFolders = imagesRoot.getFoldersByName(sheetName);
+      if (!subFolders.hasNext()) {
+        Logger.log('⚠️ ' + store + '：找不到子資料夾「' + sheetName + '」');
+        return;
+      }
+      var storeFolder = subFolders.next();
+
+      // 掃描所有 [date].json，每個日期保留「最新修改」那個
+      var dateMap = {};
+      var files = storeFolder.getFiles();
+      while (files.hasNext()) {
+        var f = files.next();
+        var m = f.getName().match(/^(\d{4}-\d{2}-\d{2})\.json$/);
+        if (!m) continue;
+        var d = m[1];
+        var t = f.getLastUpdated().getTime();
+        if (!dateMap[d] || t > dateMap[d].time) {
+          dateMap[d] = { id: f.getId(), time: t };
+        }
+      }
+
+      // 寫回試算表
+      var sheet = getSheet(store);
+      var data = sheet.getDataRange().getValues();
+      var restored = 0;
+      var alreadyOk = 0;
+      var rowNoMatch = 0;
+      for (var i = 1; i < data.length; i++) {
+        var rowDate = normalizeDate(data[i][0]);
+        if (!rowDate) continue;
+        var hit = dateMap[rowDate];
+        if (!hit) {
+          // 這個日期的試算表列在 Drive 找不到對應檔（可能本來就沒圖）
+          // 只在 E 欄原本有值的情況才當「找不到對應檔」
+          if (data[i][4]) rowNoMatch++;
+          continue;
+        }
+        var currentFileId = data[i][4] || '';
+        if (currentFileId === hit.id) {
+          alreadyOk++;
+          continue;
+        }
+        sheet.getRange(i + 1, 5).setValue(hit.id);
+        restored++;
+        Logger.log('  ✓ ' + sheetName + ' / ' + rowDate + ' → ' + hit.id);
+      }
+      totalRestored += restored;
+      totalAlreadyOk += alreadyOk;
+      totalNoMatch += rowNoMatch;
+      Logger.log('━ ' + sheetName + '：還原 ' + restored + ' 筆，原本就正確 ' + alreadyOk + ' 筆，找不到對應 Drive 檔 ' + rowNoMatch + ' 筆');
+    } catch (err) {
+      Logger.log('❌ ' + store + ' 失敗：' + err);
+    }
+  });
+
+  Logger.log('━━━━━━━━━━━━━━━━━━━━━━━━');
+  Logger.log('🎉 全部完成');
+  Logger.log('  本次還原：' + totalRestored + ' 筆');
+  Logger.log('  原本就正確：' + totalAlreadyOk + ' 筆');
+  Logger.log('  Drive 找不到對應檔：' + totalNoMatch + ' 筆');
+}
+
 // 一次性清理：把試算表裡所有日期欄位統一成 YYYY-MM-DD 文字格式
 // 執行方式：Apps Script 編輯器 → 函式下拉選「normalizeAllSheets」→ ▶️ 執行
 function normalizeAllSheets() {
