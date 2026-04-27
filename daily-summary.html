@@ -2032,7 +2032,9 @@ async function saveRecord(opts){
     if(images){ Object.keys(images).forEach(function(k){ imgCount += images[k].length; }); }
     if(!silent) setSyncBadge('⏳ 同步中...' + (imgCount ? '（含 ' + imgCount + ' 張圖）' : ''));
     try{
-      var res = await cloudSave(date, rec, images);
+      // 🔴 重要：skipImages 時要告訴後端「保留現有圖片，不要刪」
+      // 否則後端看到 images 是 null/undefined 會把現有 fileId 設為 trashed
+      var res = await cloudSave(date, rec, images, skipImages);
       if(res.fileId){ rec.imageFileId = res.fileId; records[date] = rec; setAllRecords(records); }
       setSyncBadge('☁️ 已同步' + (imgCount ? '（' + imgCount + ' 張圖）' : ''));
       if(!silent) alert('已儲存 ' + date + ' 的紀錄' + (imgCount ? '（含 ' + imgCount + ' 張圖）' : '') + '\n已同步到雲端');
@@ -2517,11 +2519,13 @@ async function cloudLoad(){
   return d.records || {};
 }
 
-async function cloudSave(date, rec, images){
+async function cloudSave(date, rec, images, keepExistingImages){
   var url = localStorage.getItem('cd_sync_url');
   if(!url) throw new Error('未設定同步網址');
   var payload = {action:'save', store:STORE_ID, date:date, record:rec};
   if(images) payload.images = images;
+  // ⭐ 告訴後端「這次不傳圖片，但請保留現有的圖片，不要刪除」
+  if(keepExistingImages) payload.keepImages = true;
   var r = await fetch(url, {
     method: 'POST',
     headers: {'Content-Type': 'text/plain;charset=utf-8'},

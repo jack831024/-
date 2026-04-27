@@ -109,11 +109,17 @@ function doPost(e) {
       var date = body.date;
       var rec = body.record || {};
       var images = body.images || null;
+      var keepImages = !!body.keepImages;  // 自動儲存時 true：保留現有圖片
       var existingFileId = findExistingFileId(sheet, date);
       var fileId = existingFileId || '';
 
-      // 若有圖片就存到 Drive，若沒有圖片但以前有，就刪掉舊的
-      if (images && Object.keys(images).length > 0) {
+      // 三種情況：
+      // 1) keepImages=true → 純文字儲存，保留既有 fileId 不動
+      // 2) 有 images 內容 → 上傳新圖到 Drive（會取代舊的）
+      // 3) 沒 images 也沒 keepImages → 視為「使用者要刪光圖片」，trash 舊檔
+      if (keepImages) {
+        // 完全不動圖片，fileId 保持不變
+      } else if (images && Object.keys(images).length > 0) {
         fileId = saveImagesToDrive(store, date, images, existingFileId);
       } else if (existingFileId) {
         try { DriveApp.getFileById(existingFileId).setTrashed(true); } catch (err) {}
