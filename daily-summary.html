@@ -446,7 +446,7 @@ document.addEventListener('keydown', function(e){
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.04.27-02';
+var APP_VERSION = '2026.04.27-03';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -950,11 +950,10 @@ function handleFiles(input, key){
   renderThumbs(key);
   var btn = document.getElementById('btn-' + key);
   if(btn) btn.disabled = imgs[key].length === 0;
-  // ⭐ 標記有新圖片未上傳，下次 auto-save 會帶圖片同步
+  // ⭐ 標記有新圖片未上傳，立刻觸發自動同步（不 debounce 等 800ms）
   if(newFiles.length > 0){
     _imagesDirty = true;
-    // 直接觸發自動同步（即使 AI 沒填欄位，也要把圖上傳到 Drive）
-    if(typeof autoSaveNow === 'function') autoSaveNow();
+    if(typeof autoSaveNow === 'function') autoSaveNow({immediate:true});
   }
   // 自動觸發 AI 識別（只在有新增檔案時）
   // ⚠️ 對於會累加到 store[key] 陣列的 'w' / 'd'，一定要只送「新上傳」的檔案給 AI，
@@ -996,10 +995,10 @@ function removeImage(key, idx){
   renderThumbs(key);
   var btn = document.getElementById('btn-' + key);
   if(btn) btn.disabled = imgs[key].length === 0;
-  // ⭐ 圖片有變動，下次 auto-save 重推 Drive；觸發自動存
+  // ⭐ 圖片有變動，下次 auto-save 重推 Drive；立刻觸發自動存
   _imagesDirty = true;
   if(key === 'deposit' && typeof checkDepositStatus === 'function') checkDepositStatus();
-  if(typeof autoSaveNow === 'function') autoSaveNow();
+  if(typeof autoSaveNow === 'function') autoSaveNow({immediate:true});
 }
 
 function handlePayFile(input, key){
@@ -1011,8 +1010,8 @@ function handlePayFile(input, key){
   _imagesDirty = true;
   // 用統一的 renderThumbs 重畫整列縮圖（每張帶 × 刪除鈕）
   renderThumbs(key);
-  // 直接觸發自動同步（圖片立刻推到 Drive）
-  if(typeof autoSaveNow === 'function') autoSaveNow();
+  // 立刻觸發自動同步（圖片立刻推到 Drive，不 debounce 防漏傳）
+  if(typeof autoSaveNow === 'function') autoSaveNow({immediate:true});
   // AI 只讀「最後一張新上傳的」，避免舊圖重讀
   analyzePayFile(key, newFiles[newFiles.length - 1]);
 }
@@ -1259,8 +1258,8 @@ async function handleDepositFile(input){
   // 統一用 renderThumbs（每張帶 × 刪除鈕）
   renderThumbs('deposit');
   checkDepositStatus();  // 有照片了，清除異常警告
-  // 直接觸發自動同步（圖片立刻推到 Drive）
-  if(typeof autoSaveNow === 'function') autoSaveNow();
+  // 立刻觸發自動同步（圖片立刻推到 Drive，不 debounce 防漏傳）
+  if(typeof autoSaveNow === 'function') autoSaveNow({immediate:true});
   // AI 只讀最新上傳的最後一張
   var file = newFiles[newFiles.length - 1];
   if(!hasApiKey()) return;
@@ -2093,13 +2092,19 @@ function setAutoSaveStatus(state){
   btn.style.borderColor = s.bd || '';
 }
 
-function autoSaveNow(){
+function autoSaveNow(opts){
   if(_loadingRecord) return;  // 剛載入舊紀錄時不要自動存一次
   var date = document.getElementById('record-date');
   if(!date || !date.value) return;
   setAutoSaveStatus('typing');
   if(_autoSaveTimer) clearTimeout(_autoSaveTimer);
-  _autoSaveTimer = setTimeout(doAutoSave, 800);
+  // ⭐ 圖片上傳要立刻同步（不 debounce），避免使用者上傳完馬上關頁圖片漏傳
+  if(opts && opts.immediate){
+    _autoSaveTimer = null;
+    doAutoSave();
+  } else {
+    _autoSaveTimer = setTimeout(doAutoSave, 800);
+  }
 }
 
 // 全域 input / change 監聽：任何 INPUT_IDS 欄位改動都觸發 autoSave
@@ -2159,6 +2164,17 @@ async function manualResync(){
     setAutoSaveStatus('error');
   }
 }
+
+// ⭐ 防呆：圖片還在上傳 / 還沒同步時關頁 → 跳瀏覽器警告
+//    這樣使用者上傳完馬上想關頁，瀏覽器會擋一下，避免圖片漏傳
+window.addEventListener('beforeunload', function(e){
+  if(_autoSaving || _autoSavePending || _imagesDirty){
+    var msg = '圖片還在上傳到雲端，現在關閉可能會漏掉，確定要離開嗎？';
+    e.preventDefault();
+    e.returnValue = msg;
+    return msg;
+  }
+});
 
 // 本月獎金累計密碼鎖（4 家店各自密碼，sessionStorage 記錄解鎖狀態）
 var BONUS_PASSWORDS = {
