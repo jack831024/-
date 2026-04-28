@@ -841,24 +841,26 @@ async function doAnalyze(filesToAnalyze){
 
   var invoiceDate = document.getElementById('inv-date').value || todayDate();
 
-  // 菜商需要單位換算（1斤=16兩=600g）
+  // 菜商需要單位換算（1斤=16兩=600g）—— 強制所有 qty 都以「斤」為單位
   var needsUnitConversion = (currentVendor === '菜商');
   var unitRule = '';
   if(needsUnitConversion){
     unitRule =
-      '\n【本單為菜商，貨單上單價 = 元/斤，請務必把 qty 換算成「斤」】\n' +
-      '換算規則（1 斤 = 16 兩 = 600 公克）：\n' +
+      '\n【本單為菜商，貨單上單價是「元/斤」，所以 qty 必須一律換算成「斤」】\n' +
+      '⚠️ 無論單據上寫什麼單位（斤、兩、g、kg、包、束、把、件…），qty 都要換算成「斤」這個單位。\n' +
+      '換算規則（1 斤 = 16 兩 = 600 公克 = 0.6 kg）：\n' +
       '  - "3斤5" 或 "3斤5兩" → qty = 3 + 5/16 = 3.3125\n' +
       '  - "3斤" → qty = 3\n' +
       '  - "2兩" → qty = 2/16 = 0.125\n' +
       '  - "200g" 或 "200公克" → qty = 200/600 = 0.3333\n' +
       '  - "100g" → qty = 100/600 = 0.1667\n' +
       '  - "3.15k" 或 "3.15kg" → qty = 3.15 × 1000 / 600 = 5.25\n' +
-      '  - "1p" / "1包" / "1P" → qty = 1、unit = "包"（不換算，代表整包計價）\n' +
-      '  - "3束" → qty = 3、unit = "束"（維持原數字）\n' +
-      '請在每個品項多回傳 unit 欄位（原始單位，如 "斤" / "g" / "包" / "兩" / "束"），沒寫就填 "斤"。\n' +
-      '回傳格式：[{"name":"...","price":數字,"qty":數字,"unit":"..."}]\n' +
-      '驗算：qty × price 應該接近單據上的金額欄。';
+      '  - 「包 / 束 / 把 / 件」等計件單位：請用「該列總金額 ÷ 單價」反推 qty（單位即為斤）\n' +
+      '    例：單據寫「1包」、單價 100、小計 300 → qty = 300/100 = 3（斤）\n' +
+      '  - 若該列沒有總金額也沒有單價，無法反推 → qty 維持原數字，unit 填原始單位讓人工修正\n' +
+      'unit 欄位規則：成功換算成斤 → unit = "斤"；無法換算 → unit 填原始單位（"包"、"束" 等）讓人工修正\n' +
+      '回傳格式：[{"name":"...","price":數字,"qty":數字(斤),"unit":"斤"}]\n' +
+      '驗算：qty × price 應該等於單據上該列的金額。';
   }
 
   var prompt = '請仔細辨識這張「' + currentVendor + '」的出貨單/發票/收據，抽取每個品項的資訊。\n' +
@@ -1011,8 +1013,9 @@ function renderBatchItems(){
   var html = '<div class="batch-header"><span>品項名稱</span><span>採購價</span><span>進貨量</span><span></span></div>';
   currentBatch.forEach(function(it, i){
     var unitTag = '';
-    if(currentVendor === '菜商' && it.unit){
-      unitTag = '<span class="unit-tag" title="原始單位">'+escapeAttr(it.unit)+'</span>';
+    if(currentVendor === '菜商' && it.unit && it.unit !== '斤'){
+      // 預設都以「斤」記錄，所以斤不顯示 badge；其他單位 = AI 沒能換算成功，用警示色提醒人工修正
+      unitTag = '<span class="unit-tag" style="background:rgba(245,158,11,.18);color:#b45309" title="AI 未能換算成「斤」，請人工修正進貨量">'+escapeAttr(it.unit)+' ⚠</span>';
     }
     html += '<div class="batch-row">'+
       '<input type="text" value="'+escapeAttr(it.name)+'" placeholder="品項名稱" oninput="updBatchItem('+i+',\'name\',this.value)">'+
@@ -1068,11 +1071,10 @@ function renderTable(){
   items.forEach(function(it, idx){
     var tr = document.createElement('tr');
     if(it._new){ tr.classList.add('highlight'); delete it._new; }
-    // 貨量欄：若為菜商且有 unit，顯示單位 badge；其他維持純輸入
+    // 貨量欄：菜商已強制以「斤」為單位，僅在 AI 換算失敗（unit 不是斤）時顯示警示 badge
     var unitBadge = '';
-    if(currentVendor === '菜商' && it.unit){
-      var unitColor = (it.unit === '包' || it.unit === '束') ? '#0369a1' : '#047857';
-      unitBadge = '<span class="unit-chip" style="color:'+unitColor+'" title="原始單位：'+escapeAttr(it.unit)+'">'+escapeAttr(it.unit)+'</span>';
+    if(currentVendor === '菜商' && it.unit && it.unit !== '斤'){
+      unitBadge = '<span class="unit-chip" style="color:#b45309;background:rgba(245,158,11,.18)" title="AI 未能換算成「斤」，請人工修正">'+escapeAttr(it.unit)+' ⚠</span>';
     }
     tr.innerHTML =
       '<td><input type="text" value="'+escapeAttr(it.name)+'" onchange="upd('+idx+',\'name\',this.value)" placeholder="品項名稱"></td>'+
