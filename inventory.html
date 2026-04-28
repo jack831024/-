@@ -154,6 +154,22 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
 .monthly thead th{position:sticky;top:0;background:linear-gradient(180deg,#dbeafe 0%,#bfdbfe 100%);padding:7px 6px;font-size:11px;font-weight:700;color:#1e40af;text-align:center;white-space:nowrap;border-right:1px solid #93c5fd;border-bottom:1.5px solid #60a5fa;z-index:3;min-width:36px}
 .monthly thead th.day-col{cursor:pointer;transition:background .15s}
 .monthly thead th.day-col:hover{background:linear-gradient(180deg,#93c5fd 0%,#60a5fa 100%);color:#fff}
+/* === 本批品項明細（在上傳出貨單下方） === */
+.batch-header{display:grid;grid-template-columns:1.6fr 1fr 1fr 38px;gap:8px;font-size:11px;color:var(--ink-3);font-weight:700;padding:8px 4px 6px;border-bottom:1.5px solid var(--line);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;align-items:center}
+.batch-header span:nth-child(2),.batch-header span:nth-child(3){text-align:right}
+.batch-row{display:grid;grid-template-columns:1.6fr 1fr 1fr 38px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #f1f5f9}
+.batch-row:last-child{border-bottom:none}
+.batch-row input[type=text]{padding:8px 11px;border:1.5px solid var(--line);border-radius:9px;background:rgba(255,255,255,.7);font-size:13px;outline:none;font-family:inherit;font-weight:500;color:var(--ink);min-width:0;width:100%}
+.batch-row input[type=number]{padding:8px 10px;border:1.5px solid var(--line);border-radius:9px;background:rgba(255,255,255,.7);font-size:13px;outline:none;font-family:ui-monospace,"SF Mono",Menlo,monospace;text-align:right;min-width:0;width:100%;color:var(--ink);font-weight:600}
+.batch-row input:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(249,115,22,.08)}
+.batch-row .qty-wrap{position:relative}
+.batch-row .qty-wrap .unit-tag{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:10px;background:rgba(16,185,129,.12);color:#047857;padding:1px 6px;border-radius:999px;font-weight:700;pointer-events:none}
+.batch-row .qty-wrap input[type=number]{padding-right:36px}
+.batch-row .del-btn{width:36px;height:36px;border:1px solid #fecaca;border-radius:9px;background:rgba(254,226,226,.4);color:#dc2626;font-size:16px;cursor:pointer;font-family:inherit;font-weight:bold;line-height:1;transition:all .15s;padding:0}
+.batch-row .del-btn:hover{background:#fee2e2;border-color:#dc2626;transform:scale(1.05)}
+.batch-empty{padding:20px;text-align:center;color:var(--ink-3);font-size:12.5px;background:rgba(15,23,42,.02);border-radius:10px;border:1px dashed var(--line);line-height:1.6}
+.add-batch-btn{width:100%;padding:11px 14px;border:1.5px dashed var(--accent);border-radius:11px;background:rgba(249,115,22,.05);color:var(--accent);cursor:pointer;font-size:13.5px;font-weight:700;font-family:inherit;margin-top:10px;transition:all .15s;letter-spacing:.5px}
+.add-batch-btn:hover{background:rgba(249,115,22,.1);border-style:solid}
 .monthly tbody td.cell-edit{padding:0;position:relative}
 .monthly tbody td.cell-edit .cell-input{width:100%;height:100%;min-width:36px;padding:5px 4px;border:none;background:transparent;font-size:11.5px;font-family:ui-monospace,"SF Mono",Menlo,monospace;text-align:right;color:var(--ink);outline:none;border-radius:0}
 .monthly tbody td.cell-edit .cell-input:hover{background:#fef3c7;color:var(--accent-dark)}
@@ -347,6 +363,16 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
     </label>
     <div class="thumb-row" id="thumb-row"></div>
     <div class="ai-status" id="ai-status"></div>
+  </div>
+
+  <!-- 本批品項明細（AI 辨識完顯示，可手動編輯/刪除/新增） -->
+  <div class="section" id="batch-section" style="display:none">
+    <h3><span class="step-num">4</span>本批品項明細
+      <span style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:999px;background:rgba(59,130,246,.1);color:var(--brand);font-weight:600">📅 <span id="batch-date-badge">—</span></span>
+    </h3>
+    <p style="font-size:11.5px;color:var(--ink-2);background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.12);border-radius:10px;padding:9px 12px;margin-bottom:10px;line-height:1.6">💡 AI 辨識完會列在這。可直接修改採購價／進貨量，或刪除錯誤列、補打 AI 漏掉的品項。任何變動會自動同步到月度表 + 雲端。</p>
+    <div id="batch-items-list"></div>
+    <button class="add-batch-btn" onclick="addBatchItem()">＋ 新增一列</button>
   </div>
 
   <span class="saved-tag" id="saved-tag" style="text-align:right;margin-top:6px;min-height:16px"></span>
@@ -576,7 +602,7 @@ function selectVendor(name, btnEl){
 
   document.getElementById('date-section').style.display = 'block';
   document.getElementById('upload-section').style.display = 'block';
-  // 品項明細區塊已移除（直接編輯月度表）
+  document.getElementById('batch-section').style.display = 'block';
   document.getElementById('history-section').style.display = 'block';
   document.getElementById('analysis-section').style.display = 'block';
 
@@ -617,6 +643,11 @@ function setEditingDate(dateStr){
   }
   // ⭐ 同步月度表的月份選擇器（避免品項存在 3 月卻看 4 月看不到）
   syncMonthPickerToDate(dateStr);
+  // 重新載入這天的品項明細
+  if(typeof reloadBatchFromStorage === 'function'){
+    reloadBatchFromStorage();
+    renderBatchItems();
+  }
 }
 
 // 把月度表月份切到指定日期所屬的月份
@@ -873,11 +904,20 @@ async function doAnalyze(filesToAnalyze){
     }));
 
     stat.className = 'ai-status ok on';
-    stat.innerHTML = '✓ 辨識完成，新增 ' + newItems.length + ' 筆品項到 ' + invoiceDate + '（月度表已更新）';
+    stat.innerHTML = '✓ 辨識完成，新增 ' + newItems.length + ' 筆品項到 ' + invoiceDate + '（請至下方核對）';
 
     // 同步月份 + 重畫月度表
     syncMonthPickerToDate(invoiceDate);
     await loadHistory();
+
+    // 重新載入「本批品項明細」區塊（讓使用者立即看到 AI 結果並可編輯）
+    if(typeof reloadBatchFromStorage === 'function'){
+      reloadBatchFromStorage();
+      renderBatchItems();
+      // 滾動到「本批品項明細」讓使用者一眼看到剛辨識的結果
+      var batchSec = document.getElementById('batch-section');
+      if(batchSec) batchSec.scrollIntoView({behavior:'smooth',block:'start'});
+    }
 
     // 同步到雲端（背景）
     cloudSyncOneDay(invoiceDate, combined, savedAt);
@@ -919,7 +959,101 @@ async function cloudSyncOneDay(dateStr, itemsList, savedAt){
 }
 
 // ============================================
-// 表格
+// 本批品項明細（在「上傳出貨單」下方，可直接編輯／刪除／新增）
+// 用 localStorage 該日期 key 當資料源；變更會即時同步月度表 + 雲端
+// ============================================
+var currentBatch = [];
+var _batchSaveTimer = null;
+
+function reloadBatchFromStorage(){
+  if(!currentVendor){ currentBatch = []; return; }
+  var dateInput = document.getElementById('inv-date');
+  var date = dateInput ? dateInput.value : '';
+  if(!date){ currentBatch = []; return; }
+  var key = 'cd_inv_' + STORE_ID + '_' + currentVendor + '_' + date;
+  try{
+    var d = JSON.parse(localStorage.getItem(key) || '{}');
+    currentBatch = Array.isArray(d.items) ? d.items.slice() : [];
+  }catch(e){ currentBatch = []; }
+}
+
+function commitBatch(){
+  var date = document.getElementById('inv-date').value;
+  if(!date || !currentVendor) return;
+  var key = 'cd_inv_' + STORE_ID + '_' + currentVendor + '_' + date;
+  var savedAt = new Date().toISOString();
+  // 過濾掉完全空的列（沒名稱也沒數字）
+  var clean = currentBatch.filter(function(it){
+    return (it.name && it.name.trim()) || it.price || it.qty;
+  });
+  localStorage.setItem(key, JSON.stringify({
+    vendor: currentVendor, date: date, items: clean, savedAt: savedAt
+  }));
+  if(typeof loadHistory === 'function') loadHistory();
+  if(typeof cloudSyncOneDay === 'function') cloudSyncOneDay(date, clean, savedAt);
+}
+
+function scheduleBatchSave(){
+  if(_batchSaveTimer) clearTimeout(_batchSaveTimer);
+  _batchSaveTimer = setTimeout(commitBatch, 600);
+}
+
+function renderBatchItems(){
+  var list = document.getElementById('batch-items-list');
+  if(!list) return;
+  var date = document.getElementById('inv-date').value;
+  var dateBadge = document.getElementById('batch-date-badge');
+  if(dateBadge) dateBadge.textContent = date || '—';
+  if(currentBatch.length === 0){
+    list.innerHTML = '<div class="batch-empty">📭 此日期尚無品項<br>請上傳出貨單由 AI 辨識，或點下方「＋ 新增一列」手動輸入</div>';
+    return;
+  }
+  var html = '<div class="batch-header"><span>品項名稱</span><span>採購價</span><span>進貨量</span><span></span></div>';
+  currentBatch.forEach(function(it, i){
+    var unitTag = '';
+    if(currentVendor === '菜商' && it.unit){
+      unitTag = '<span class="unit-tag" title="原始單位">'+escapeAttr(it.unit)+'</span>';
+    }
+    html += '<div class="batch-row">'+
+      '<input type="text" value="'+escapeAttr(it.name)+'" placeholder="品項名稱" oninput="updBatchItem('+i+',\'name\',this.value)">'+
+      '<input type="number" step="0.01" value="'+(it.price||'')+'" placeholder="0" oninput="updBatchItem('+i+',\'price\',this.value)">'+
+      '<div class="qty-wrap"><input type="number" step="0.0001" value="'+(it.qty||'')+'" placeholder="0" oninput="updBatchItem('+i+',\'qty\',this.value)">'+unitTag+'</div>'+
+      '<button class="del-btn" onclick="delBatchItem('+i+')" title="刪除這一列">×</button>'+
+      '</div>';
+  });
+  list.innerHTML = html;
+}
+
+function updBatchItem(idx, field, val){
+  if(!currentBatch[idx]) return;
+  if(field === 'price' || field === 'qty') currentBatch[idx][field] = Number(val) || 0;
+  else currentBatch[idx][field] = val;
+  scheduleBatchSave();
+}
+
+function delBatchItem(idx){
+  currentBatch.splice(idx, 1);
+  renderBatchItems();
+  commitBatch();  // 刪除立刻提交、不 debounce
+}
+
+function addBatchItem(){
+  var date = document.getElementById('inv-date').value;
+  if(!date){ alert('請先選擇貨單日期'); return; }
+  if(!currentVendor){ alert('請先選擇廠商'); return; }
+  var defaultUnit = (currentVendor === '菜商') ? '斤' : '';
+  currentBatch.push({ name:'', price:0, qty:0, unit:defaultUnit, date:date });
+  renderBatchItems();
+  // 自動聚焦到新列的品項輸入框，讓使用者直接打名稱
+  setTimeout(function(){
+    var inputs = document.querySelectorAll('#batch-items-list .batch-row input[type=text]');
+    if(inputs.length){ inputs[inputs.length-1].focus(); }
+  }, 30);
+  // 不立刻 commit，等使用者填完欄位 oninput 才 debounce 觸發
+}
+
+// ============================================
+// 表格（舊版 step-4 已移除，保留為 no-op）
 // ============================================
 var items = [];
 
@@ -2063,6 +2197,13 @@ async function editCell(repName, day, field, newValue){
 
   // 重畫月度表（讓總計、其他列也同步更新）
   await loadHistory();
+
+  // 如果這天剛好是「本批品項明細」正在顯示的日期，也跟著刷新
+  var curBatchDate = document.getElementById('inv-date');
+  if(curBatchDate && curBatchDate.value === dateStr && typeof reloadBatchFromStorage === 'function'){
+    reloadBatchFromStorage();
+    renderBatchItems();
+  }
 }
 
 // ============================================
