@@ -446,7 +446,7 @@ document.addEventListener('keydown', function(e){
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.04.27-01';
+var APP_VERSION = '2026.04.27-02';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -2063,6 +2063,7 @@ async function saveRecord(opts){
 // =========================================================
 var _autoSaveTimer = null;
 var _autoSaving = false;
+var _autoSavePending = false;  // 上一次 autoSave 進行中時又被觸發 → 結束後補跑一次
 var _loadingRecord = false;  // applyData 時設為 true，避免載入觸發 autoSave
 var _imagesDirty = false;    // 有新上傳的圖片 → 下次 autoSave 要帶圖（上雲 Drive）
 
@@ -2112,15 +2113,25 @@ document.addEventListener('change', function(e){
 });
 
 async function doAutoSave(){
-  if(_autoSaving) return;
+  // 已經在儲存 → 標記等等補跑一次（之前是直接 return，會丟失「還有圖要傳」的狀態）
+  if(_autoSaving){ _autoSavePending = true; return; }
   _autoSaving = true;
   setAutoSaveStatus('saving');
   try{
     var hasCloud = !!localStorage.getItem('cd_sync_url');
     // ⭐ 有新圖片就帶圖一起上；純文字編輯才 skipImages 省頻寬
     var needImages = _imagesDirty;
-    await saveRecord({ silent: true, skipImages: !needImages });
-    if(needImages) _imagesDirty = false;  // 成功上傳後清旗標
+    // ⚠️ 重要：提早把 _imagesDirty 清掉（在 saveRecord await 之前）
+    //    這樣 saveRecord 進行期間若使用者又上傳新圖、handleFiles 設的 _imagesDirty=true
+    //    不會被本次 saveRecord 完成後的「if(needImages) _imagesDirty=false」覆蓋掉
+    if(needImages) _imagesDirty = false;
+    try{
+      await saveRecord({ silent: true, skipImages: !needImages });
+    }catch(saveErr){
+      // 失敗就把旗標還原，下次 autoSave 會重試帶圖
+      if(needImages) _imagesDirty = true;
+      throw saveErr;
+    }
     setAutoSaveStatus(hasCloud ? 'cloud' : 'saved');
     // 「🟢 ✓ 已同步 HH:MM:SS」保留顯示到下次同步，讓使用者看得到最後同步時間
   }catch(e){
@@ -2128,6 +2139,11 @@ async function doAutoSave(){
     setAutoSaveStatus('error');
   }finally{
     _autoSaving = false;
+    // 期間有新的儲存請求被擋掉 → 立刻補跑一次（不 debounce）
+    if(_autoSavePending){
+      _autoSavePending = false;
+      setTimeout(doAutoSave, 0);
+    }
   }
 }
 
