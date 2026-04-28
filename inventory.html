@@ -149,7 +149,7 @@ table.items{width:100%;border-collapse:separate;border-spacing:0;min-width:560px
 .history-toolbar .src-chip.cloud{background:rgba(59,130,246,.1);color:var(--brand)}
 .history-toolbar .src-chip.local{background:rgba(245,158,11,.1);color:#b45309}
 
-.grid-wrap{overflow:auto;max-height:620px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.grid-wrap{overflow:auto;max-height:min(75vh,720px);border:1px solid var(--line);border-radius:12px;background:#fff;-webkit-overflow-scrolling:touch}
 table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
 .monthly thead th{position:sticky;top:0;background:linear-gradient(180deg,#dbeafe 0%,#bfdbfe 100%);padding:7px 6px;font-size:11px;font-weight:700;color:#1e40af;text-align:center;white-space:nowrap;border-right:1px solid #93c5fd;border-bottom:1.5px solid #60a5fa;z-index:3;min-width:36px}
 .monthly thead th.day-col{cursor:pointer;transition:background .15s}
@@ -924,9 +924,9 @@ async function doAnalyze(filesToAnalyze){
     stat.className = 'ai-status ok on';
     stat.innerHTML = '✓ 辨識完成，新增 ' + newItems.length + ' 筆品項到 ' + invoiceDate + '（請至下方核對）';
 
-    // 同步月份 + 重畫月度表
+    // 同步月份 + 重畫月度表（只用本機資料，避免雲端舊值蓋掉剛 AI 識別出的新品項）
     syncMonthPickerToDate(invoiceDate);
-    await loadHistory();
+    await loadHistory({skipCloud:true});
 
     // 重新載入「本批品項明細」區塊（讓使用者立即看到 AI 結果並可編輯）
     if(typeof reloadBatchFromStorage === 'function'){
@@ -1007,7 +1007,8 @@ function commitBatch(){
   localStorage.setItem(key, JSON.stringify({
     vendor: currentVendor, date: date, items: clean, savedAt: savedAt
   }));
-  if(typeof loadHistory === 'function') loadHistory();
+  // 月度表只用本機資料 render（避免雲端舊值覆蓋剛 commit 的本機值）
+  if(typeof loadHistory === 'function') loadHistory({skipCloud:true});
   if(typeof cloudSyncOneDay === 'function') cloudSyncOneDay(date, clean, savedAt);
 }
 
@@ -1518,8 +1519,10 @@ async function renameItem(oldName){
   loadHistory();
 }
 
-async function loadHistory(){
+async function loadHistory(opts){
   if(!currentVendor) return;
+  // ⭐ skipCloud:true → 只用本機資料 render（剛編輯/儲存後用，避免雲端「舊資料」覆蓋本機剛打的值）
+  var skipCloud = !!(opts && opts.skipCloud);
   var box = document.getElementById('hist-container');
   var stat = document.getElementById('hist-stat');
   var srcChip = document.getElementById('hist-src');
@@ -1536,6 +1539,8 @@ async function loadHistory(){
   srcChip.textContent = '本機';
   renderHistoryTable(box, stat, allRecords);
   renderBusinessSummary();
+
+  if(skipCloud) return;  // 編輯場景：跳過雲端 fetch，避免舊雲端值覆蓋剛編輯的本機值
 
   // 若有設定雲端 URL，再從雲端拉補齊
   var url = localStorage.getItem('cd_inv_sync_url');
@@ -1744,6 +1749,10 @@ function normalizeDate(s){
 }
 
 function renderHistoryTable(box, stat, records){
+  // 重畫前記住舊的 scroll 位置（避免每次編輯後表格「跳回最上方」造成「縮短／看不到」的錯覺）
+  var oldGrid = box.querySelector('.grid-wrap');
+  var savedScrollTop = oldGrid ? oldGrid.scrollTop : 0;
+  var savedScrollLeft = oldGrid ? oldGrid.scrollLeft : 0;
   // 取目前選擇的月份（預設：今天所在月）
   var picker = document.getElementById('month-picker');
   if(!picker.value){
@@ -1909,6 +1918,12 @@ function renderHistoryTable(box, stat, records){
 
   html += '</table></div>';
   box.innerHTML = html;
+  // 還原 scroll 位置，讓使用者剛剛在看的格子不會跑掉
+  var newGrid = box.querySelector('.grid-wrap');
+  if(newGrid){
+    newGrid.scrollTop = savedScrollTop;
+    newGrid.scrollLeft = savedScrollLeft;
+  }
   stat.textContent = nameOrder.length + ' 品項 · ' + yearMonth + ' · 總金額 $' + formatNum(grandTotal);
 }
 
@@ -2237,11 +2252,11 @@ async function editCell(repName, day, field, newValue){
     localStorage.setItem(key, JSON.stringify(data));
   }
 
-  // 雲端同步
+  // 雲端同步（背景進行）
   cloudSyncOneDay(dateStr, data.items, data.savedAt);
 
-  // 重畫月度表（讓總計、其他列也同步更新）
-  await loadHistory();
+  // 重畫月度表（只用本機資料，避免「雲端舊值」蓋掉剛剛編輯）
+  await loadHistory({skipCloud:true});
 
   // 如果這天剛好是「本批品項明細」正在顯示的日期，也跟著刷新
   var curBatchDate = document.getElementById('inv-date');
