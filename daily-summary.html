@@ -446,7 +446,7 @@ document.addEventListener('keydown', function(e){
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.04.27-03';
+var APP_VERSION = '2026.04.27-04';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -2039,10 +2039,16 @@ async function saveRecord(opts){
     var imgCount = 0;
     if(images){ Object.keys(images).forEach(function(k){ imgCount += images[k].length; }); }
     if(!silent) setSyncBadge('⏳ 同步中...' + (imgCount ? '（含 ' + imgCount + ' 張圖）' : ''));
+
+    // ⭐⭐ 三道防呆計算 keepImages（避免任何 race / 空 imgs 情境下誤刪 Drive 圖）
+    //   1) skipImages=true                 → 純文字儲存，當然 keep
+    //   2) 雲端圖片還沒載入完成（_imagesLoaded=false） → 強制 keep，防止 race 下送出 null 觸發後端刪檔
+    //   3) skipImages=false 但 collectImages 沒拿到圖 → 也 keep（除非 _imagesDirty 明確表示「使用者剛動過圖」）
+    //      這樣手動同步時若 imgs 是空（剛載入過去的紀錄但還沒下載完），也不會誤刪
+    var keepImagesFlag = skipImages || !_imagesLoaded || (!images && !_imagesDirty);
+
     try{
-      // 🔴 重要：skipImages 時要告訴後端「保留現有圖片，不要刪」
-      // 否則後端看到 images 是 null/undefined 會把現有 fileId 設為 trashed
-      var res = await cloudSave(date, rec, images, skipImages);
+      var res = await cloudSave(date, rec, images, keepImagesFlag);
       if(res.fileId){ rec.imageFileId = res.fileId; records[date] = rec; setAllRecords(records); }
       setSyncBadge('☁️ 已同步' + (imgCount ? '（' + imgCount + ' 張圖）' : ''));
       if(!silent) alert('已儲存 ' + date + ' 的紀錄' + (imgCount ? '（含 ' + imgCount + ' 張圖）' : '') + '\n已同步到雲端');
@@ -2065,6 +2071,7 @@ var _autoSaving = false;
 var _autoSavePending = false;  // 上一次 autoSave 進行中時又被觸發 → 結束後補跑一次
 var _loadingRecord = false;  // applyData 時設為 true，避免載入觸發 autoSave
 var _imagesDirty = false;    // 有新上傳的圖片 → 下次 autoSave 要帶圖（上雲 Drive）
+var _imagesLoaded = true;    // ⭐ 當前日期的雲端圖片是否已載入完成；false 時嚴禁送 keepImages=false（會誤刪 Drive 檔）
 
 function nowHMS(){
   var d = new Date();
@@ -2231,6 +2238,9 @@ async function loadRecord(date){
   var records = getAllRecords();
   var r = records[date];
   if(!r){ return false; }
+  // ⭐ 載入新紀錄前先標記「圖還沒載入」，避免任何 autoSave 在這空檔送出 keepImages=false 誤刪 Drive 檔
+  _imagesLoaded = false;
+  _imagesDirty = false;
   applyData(r.data);
   document.getElementById('record-date').value = date;
   document.getElementById('history-select').value = date;
@@ -2252,13 +2262,16 @@ async function loadRecord(date){
       var count = 0;
       if(images){ Object.keys(images).forEach(function(k){ count += (images[k] || []).length; }); }
       setSyncBadge('☁️ 已載入' + (count ? '（' + count + ' 張圖）' : ''));
+      _imagesLoaded = true;  // ⭐ 載入成功才允許後續送 keepImages=false
     } catch(e){
       setSyncBadge('⚠️ 圖片載入失敗');
       console.warn(e);
+      // _imagesLoaded 維持 false，保護 Drive 檔不被誤刪（直到使用者重新整理或載入成功）
     }
   } else {
-    // 沒圖片或離線，清縮圖
+    // 沒圖片紀錄或沒設雲端 → imgs 清空、_imagesLoaded=true（已知狀態：沒圖）
     await applyImages(null);
+    _imagesLoaded = true;
   }
   return true;
 }
@@ -2279,7 +2292,10 @@ async function onDateChange(){
       await loadRecord(date);
     }
   } else {
-    // 沒有舊紀錄 → 嘗試從前一天自動帶入開箱金額
+    // 沒有舊紀錄 → 清空 imgs（避免帶入前一天的圖）+ reset 旗標
+    await applyImages(null);
+    _imagesDirty = false;
+    _imagesLoaded = true;  // 新一天、沒圖，已知狀態
     autoFillOpening(date);
   }
   updateSavedTag(date);
