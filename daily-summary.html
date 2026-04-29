@@ -446,7 +446,7 @@ document.addEventListener('keydown', function(e){
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.04.27-04';
+var APP_VERSION = '2026.04.27-05';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -527,13 +527,36 @@ document.addEventListener('visibilitychange', function(){
 var STORE_ID = sessionStorage.getItem('cd_store');
 var STORE_NAME = sessionStorage.getItem('cd_store_name');
 
-// 各門市營業額獎金百分比
+// 各門市營業額獎金百分比（預設 / 從開店以來的基準值）
 var BONUS_RATES = {
   'chudian-zhonghe':    0.0165, // 中和店 1.65%
   'chudian-yongchun':   0.02,   // 永春店 2%
   'chudian-xinzhuang':  0.0175, // 新莊店 1.75%
   'shicheng-zhongxiao': 0.025   // 十城忠孝店 2.5%
 };
+
+// 月份覆蓋表：某店從哪個月起改用新比率（不影響該月之前的歷史紀錄）
+// 用法：'店ID': { 'YYYY-MM': 新比率, ... }；ym ≥ 該月份就生效，會延續到下個 override 出現為止
+var BONUS_RATES_MONTHLY = {
+  'shicheng-zhongxiao': {
+    '2026-05': 0.028  // 十城忠孝店 2026 年 5 月起改成 2.8%
+  }
+};
+
+// 取得指定店、指定月份（YYYY-MM）的獎金率
+function getBonusRate(storeId, ym){
+  var overrides = BONUS_RATES_MONTHLY[storeId];
+  if(overrides && ym){
+    var months = Object.keys(overrides).sort();
+    var hit = null;
+    for(var i = 0; i < months.length; i++){
+      if(months[i] <= ym) hit = overrides[months[i]];
+      else break;  // 月份是排好的，找到第一個大於 ym 的就停
+    }
+    if(hit !== null) return hit;
+  }
+  return BONUS_RATES[storeId] || 0;
+}
 
 // 各門市 A 班候選員工名單
 var STAFF_LISTS = {
@@ -1499,9 +1522,6 @@ function recalcMonthly(){
       return;
     }
 
-    var rate = BONUS_RATES[STORE_ID] || 0;
-    if(pctEl) pctEl.textContent = '（' + (rate * 100).toFixed(2).replace(/\.?0+$/, '') + '%）';
-
     // 日期：優先讀 record-date，沒有就 fallback 用今天
     var dateStr = (document.getElementById('record-date').value || '').trim();
     if(!dateStr){
@@ -1510,6 +1530,9 @@ function recalcMonthly(){
     }
     // 當前月份（例 2026-04）
     var ym = dateStr.substring(0, 7);
+    // 獎金率按月份（5 月起十城用 2.8% 等等）
+    var rate = getBonusRate(STORE_ID, ym);
+    if(pctEl) pctEl.textContent = '（' + (rate * 100).toFixed(2).replace(/\.?0+$/, '') + '%）';
 
     // 累加本月所有已儲存紀錄的淨銷售額
     var records = getAllRecords();
@@ -1685,9 +1708,10 @@ function recalcStaffBonus(){
   var detailEl = document.getElementById('bonus-detail');
   if(!gridEl || !totalEl) return;
 
-  var rate = BONUS_RATES[STORE_ID] || 0;
   var dateStr = document.getElementById('record-date').value;
   var ym = dateStr ? dateStr.substring(0, 7) : '';
+  // 按月份取獎金率（5 月起十城用 2.8% 等等）
+  var rate = getBonusRate(STORE_ID, ym);
   if(labelEl) labelEl.textContent = ym ? ('（' + ym + ' 月 · ' + (rate * 100).toFixed(2).replace(/\.?0+$/, '') + '%）') : '';
 
   // 初始化每人累計 + 每日明細

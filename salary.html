@@ -396,6 +396,29 @@ var SALES_BONUS_RATES = {
   'shicheng-zhongxiao': 0.025
 };
 
+// 月份覆蓋（須與 daily-summary.html 的 BONUS_RATES_MONTHLY 一致）
+// 某店從哪個月起改用新比率；不影響該月之前的歷史紀錄
+var SALES_BONUS_RATES_MONTHLY = {
+  'shicheng-zhongxiao': {
+    '2026-05': 0.028  // 十城忠孝店 2026 年 5 月起改成 2.8%
+  }
+};
+
+// 取得指定店、指定月份（YYYY-MM）的獎金率
+function getSalesBonusRate(storeId, ym){
+  var overrides = SALES_BONUS_RATES_MONTHLY[storeId];
+  if(overrides && ym){
+    var months = Object.keys(overrides).sort();
+    var hit = null;
+    for(var i = 0; i < months.length; i++){
+      if(months[i] <= ym) hit = overrides[months[i]];
+      else break;
+    }
+    if(hit !== null) return hit;
+  }
+  return SALES_BONUS_RATES[storeId] || 0;
+}
+
 // ============================================
 // 各店員工設定（姓名、預設職級、勞健保、職務加給基礎）
 // ============================================
@@ -1338,7 +1361,7 @@ function importFromOvertime(){ doImportOvertime(true); }
 // ============================================
 function doImportSalesBonus(showToast){
   var ym = getSelectedYM();
-  var rate = SALES_BONUS_RATES[STORE] || 0;
+  var rate = getSalesBonusRate(STORE, ym);  // 按月份取（5 月起十城用 2.8% 等）
   var status = document.getElementById('sales-import-status');
 
   // 清空所有員工的營業額獎金，避免切月時殘留
