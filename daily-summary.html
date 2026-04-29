@@ -446,7 +446,7 @@ document.addEventListener('keydown', function(e){
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.04.29-02';
+var APP_VERSION = '2026.04.29-03';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -1133,7 +1133,10 @@ async function analyzeSummary(filesToAnalyze){
     });
     console.log('[analyzeSummary] 已填入：', filled, '；AI 沒抓到：', missing, '；跳過：', skipped);
     recalc(); recalcNextDay(); onOpeningChange();
-    if(typeof autoSaveNow === 'function') autoSaveNow();
+    // ⭐ AI 完成後改用立即同步（之前是 800ms debounce，使用者切頁/關頁會丟失資料）
+    //    純文字 skipImages=true（圖片在上傳階段已經推過）
+    try{ await saveRecord({ silent:true, skipImages:true }); }
+    catch(syncErr){ console.warn('[analyzeSummary] AI 完成後立即同步失敗，會由下次 autoSave 補', syncErr); }
     line.className = 'ai-status-line done';
     spin.className = 'spinner';
     btxt.textContent = '✓ 讀取完成（已自動儲存）';
@@ -1179,7 +1182,9 @@ async function analyzePayFile(key, file){
       if(line) line.className = 'ai-status-line done';
       if(spin) spin.className = 'spinner';
       if(btxt) btxt.textContent = '✓ 讀取完成：'+label+' '+n;
-      if(typeof autoSaveNow === 'function') autoSaveNow();
+      // ⭐ 立即同步 (避免 user 切頁導致 800ms debounce 失效)
+      try{ await saveRecord({ silent:true, skipImages:true }); }
+      catch(syncErr){ console.warn('[analyzePayFile] AI 完成後立即同步失敗', syncErr); }
     } else {
       if(line) line.className = 'ai-status-line err';
       if(spin) spin.className = 'spinner';
@@ -1216,7 +1221,9 @@ async function analyzeReceipts(key, filesToAnalyze){
       }
     });
     renderAll(); recalc();
-    if(typeof autoSaveNow === 'function') autoSaveNow();
+    // ⭐ 立即同步 (避免 user 切頁導致 800ms debounce 失效)
+    try{ await saveRecord({ silent:true, skipImages:true }); }
+    catch(syncErr){ console.warn('[analyzeReceipts] AI 完成後立即同步失敗', syncErr); }
     line.className = 'ai-status-line done';
     spin.className = 'spinner';
     btxt.textContent = '✓ 辨識完成（已自動儲存）';
@@ -1367,7 +1374,9 @@ async function analyzeRefund(filesToAnalyze){
       if(btxt) btxt.textContent = filesToAnalyze
         ? '✓ 新增退單 ' + addAmount + '（合計 ' + refundEl.value + '）'
         : '✓ 讀取完成：退單 ' + addAmount;
-      if(typeof autoSaveNow === 'function') autoSaveNow();
+      // ⭐ 立即同步 (避免 user 切頁導致 800ms debounce 失效)
+      try{ await saveRecord({ silent:true, skipImages:true }); }
+      catch(syncErr){ console.warn('[analyzeRefund] AI 完成後立即同步失敗', syncErr); }
     } else {
       if(line) line.className = 'ai-status-line err';
       if(spin) spin.className = 'spinner';
@@ -1421,7 +1430,9 @@ async function analyzeCancel(filesToAnalyze){
       if(btxt) btxt.textContent = filesToAnalyze
         ? '✓ 新增取消單 ' + addAmount + '（合計 ' + cancelEl.value + '）'
         : '✓ 讀取完成：取消單 ' + addAmount;
-      if(typeof autoSaveNow === 'function') autoSaveNow();
+      // ⭐ 立即同步 (避免 user 切頁導致 800ms debounce 失效)
+      try{ await saveRecord({ silent:true, skipImages:true }); }
+      catch(syncErr){ console.warn('[analyzeCancel] AI 完成後立即同步失敗', syncErr); }
     } else {
       if(line) line.className = 'ai-status-line err';
       if(spin) spin.className = 'spinner';
