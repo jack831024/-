@@ -446,7 +446,7 @@ document.addEventListener('keydown', function(e){
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.04.27-05';
+var APP_VERSION = '2026.04.29-01';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -2316,10 +2316,20 @@ async function onDateChange(){
       await loadRecord(date);
     }
   } else {
-    // 沒有舊紀錄 → 清空 imgs（避免帶入前一天的圖）+ reset 旗標
+    // ⭐ 切到「沒紀錄的新一天」→ 完整清空畫面（避免殘留前一天的提現/代收/欄位/圖片）
+    // 1) 清所有 INPUT_IDS 欄位、store.w/d 提現代收陣列、no-deposit checkbox
+    applyData({inputs:{}, store:{w:[], d:[]}, noDeposit:false});
+    // 2) 清所有圖片陣列 + 縮圖（含 deposit / refund / cancel，clearFields 沒涵蓋的也清）
     await applyImages(null);
+    // 3) 隱藏所有 AI 狀態列
+    ['summary','jkopay','jko','w','d','deposit','refund','cancel'].forEach(function(k){
+      var line = document.getElementById('ai-status-' + k);
+      if(line) line.style.display = 'none';
+    });
+    // 4) reset 圖片相關旗標
     _imagesDirty = false;
-    _imagesLoaded = true;  // 新一天、沒圖，已知狀態
+    _imagesLoaded = true;
+    // 5) 自動帶入前一天的隔日開箱金額
     autoFillOpening(date);
   }
   updateSavedTag(date);
