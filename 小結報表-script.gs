@@ -113,6 +113,25 @@ function doPost(e) {
       var existingFileId = findExistingFileId(sheet, date);
       var fileId = existingFileId || '';
 
+      // ⭐ 後端防呆：拒絕「空白資料」覆蓋既有非空紀錄（防前端 race condition）
+      // 場景：前端 init 還沒拉完雲端、使用者切日期 race、loadRecord 還沒套用完...
+      //       此時前端可能不小心送出空白 record.data 蓋掉已有資料
+      if (isEmptyRecordData(rec.data)) {
+        var existingRow = findExistingRowByDate(sheet, date);
+        if (existingRow) {
+          var existingDataJson = existingRow[1];
+          if (existingDataJson) {
+            try {
+              var existingData = JSON.parse(existingDataJson);
+              if (!isEmptyRecordData(existingData)) {
+                Logger.log('[save] 拒絕空白資料覆蓋 ' + store + ' / ' + date);
+                return json({ ok: false, rejected: true, reason: 'empty data would overwrite existing non-empty record', store: store, fileId: existingFileId });
+              }
+            } catch (e) {}
+          }
+        }
+      }
+
       // 三種情況：
       // 1) keepImages=true → 純文字儲存，保留既有 fileId 不動
       // 2) 有 images 內容 → 上傳新圖到 Drive（會取代舊的）
@@ -464,6 +483,34 @@ function findExistingFileId(sheet, date) {
     if (normalizeDate(data[i][0]) === target) return data[i][4] || '';
   }
   return '';
+}
+
+// 找指定日期那一列（[date, jsonData, savedAt, savedBy, fileId]），找不到回 null
+function findExistingRowByDate(sheet, date) {
+  var target = normalizeDate(date);
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (normalizeDate(data[i][0]) === target) return data[i];
+  }
+  return null;
+}
+
+// 判斷一筆 record.data 是否「實質上沒填任何欄位」
+// 用於 save action 的後端防呆，阻止空白資料覆蓋已存在的紀錄
+function isEmptyRecordData(d) {
+  if (!d || typeof d !== 'object') return true;
+  var inp = d.inputs || {};
+  var keys = Object.keys(inp);
+  for (var i = 0; i < keys.length; i++) {
+    var v = inp[keys[i]];
+    if (v !== null && v !== undefined && v !== '' && v !== 0 && v !== '0') return false;
+  }
+  if (d.store) {
+    if (d.store.w && d.store.w.length) return false;
+    if (d.store.d && d.store.d.length) return false;
+  }
+  if (d.noDeposit) return false;
+  return true;
 }
 
 function upsertRow(sheet, date, row) {
