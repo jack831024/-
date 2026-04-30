@@ -568,7 +568,7 @@ function blankState(){
     insurance: {},     // {empId: 金額}
     roles: {},         // {empId: role}
     detail: {},        // {empId: {dtDays,otHours,sickDays,personalDays,latePunch}}
-    ptWage: {},        // {empId: {hours,otHours,wage}} — 從加班費系統匯入的 PT 月度工資
+    ptWage: {},        // 對帳模式：{empId: {hours, hourlyWage}} — 店長手動輸入
     otherBonuses: {},  // {entryId: {empId, label, amount}}
     activeEmp: EMPLOYEES[0].id,
     notes: {}          // {empId: 備註字串}
@@ -1021,12 +1021,13 @@ function calcEmp(e){
   var id = e.id;
   var role = STATE.roles[id] || e.defaultRole || e.role;
 
-  // PT 簡化：從加班費系統代入當月總工資；加班時、時薪可見
+  // PT 對帳模式：時數 + 時薪 改成手動輸入；當月總工資 = 時數 × 時薪 自動算
   if(isPT(e)){
-    var det = STATE.detail[id] || {};
     var insurance = STATE.insurance[id] | 0;
-    var ptInfo = (STATE.ptWage && STATE.ptWage[id]) || { hours:0, otHours:0, wage:0 };
-    var ptWage = ptInfo.wage | 0;
+    var ptInfo = (STATE.ptWage && STATE.ptWage[id]) || { hours:0, hourlyWage:0 };
+    var ptHours = parseFloat(ptInfo.hours) || 0;
+    var ptHourlyWage = parseFloat(ptInfo.hourlyWage) || 0;
+    var ptWage = Math.round(ptHours * ptHourlyWage);
     // PT 也支援其他獎金 / 懲罰
     var ptOther = 0;
     if(STATE.otherBonuses){
@@ -1041,12 +1042,10 @@ function calcEmp(e){
     return {
       pt: true, role:'pt',
       insurance: insurance,
-      ptHours: ptInfo.hours || 0,
-      ptOtHours: ptInfo.otHours || 0,
+      ptHours: ptHours,
+      ptHourlyWage: ptHourlyWage,
       ptWage: ptWage,
       otherBonus: ptOther,
-      otHours: det.otHours || ptInfo.otHours || 0,
-      // PT 的「總額」＝當月總工資 + 其他獎金；實領 = 總額 + 勞健保
       total: ptTotal,
       realPay: ptTotal + insurance,
       note: STATE.notes[id] || ''
@@ -1191,10 +1190,11 @@ function renderDetail(){
   if(isPT(emp)){
     html.push('<div class="payroll">');
     html.push('<div class="ptitle">'+getYMLabel()+'_'+emp.name+'<span class="tag-role pt">PT</span></div>');
-    var srcNote = (c.ptWage > 0)
-      ? '<b>當月總工資</b>自動從「加班費計算」彙整（總工時 '+(c.ptHours||0)+' 小時，含加班 '+(c.ptOtHours||0)+' 小時）'
-      : '<b>當月總工資</b>請先到加班費計算匯入打卡後自動帶入（目前：無資料）';
-    html.push('<div class="pay-sub">'+srcNote+'</div>');
+    html.push('<div class="pay-sub"><b>對帳模式</b>：手動填入<b>時數</b>與<b>時薪</b>，當月總工資自動 = 時數 × 時薪</div>');
+    html.push('<div class="inline-input-row">');
+    html.push('<label>時數 <input type="number" min="0" step="0.5" value="'+(c.ptHours||0)+'" onchange="onPtWageChange(\''+emp.id+'\',\'hours\',this.value)"></label>');
+    html.push('<label>時薪 <input type="number" min="0" step="1" value="'+(c.ptHourlyWage||0)+'" onchange="onPtWageChange(\''+emp.id+'\',\'hourlyWage\',this.value)"></label>');
+    html.push('</div>');
     html.push(payRow('當月總工資', c.ptWage));
     if(c.otherBonus){
       html.push(payRow('其他獎金／懲罰', c.otherBonus));
@@ -1290,6 +1290,14 @@ function onDtChange(id, field, v){
   renderDetail();
 }
 function onNoteChange(id, v){ STATE.notes[id] = v; }
+
+// PT 對帳模式專用：手動更新時數 / 時薪
+function onPtWageChange(id, field, v){
+  if(!STATE.ptWage) STATE.ptWage = {};
+  if(!STATE.ptWage[id]) STATE.ptWage[id] = { hours:0, hourlyWage:0 };
+  STATE.ptWage[id][field] = parseFloat(v) || 0;
+  renderDetail();
+}
 
 function getYMLabel(){
   var ym = getSelectedYM();
