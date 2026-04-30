@@ -1021,13 +1021,17 @@ function calcEmp(e){
   var id = e.id;
   var role = STATE.roles[id] || e.defaultRole || e.role;
 
-  // PT 對帳模式：時數 + 時薪 改成手動輸入；當月總工資 = 時數 × 時薪 自動算
+  // PT 對帳模式：時數/加班時數/時薪 手動輸入
+  // 當月總工資 = 時數 × 時薪 + 加班時數 × 時薪 × 1.34
   if(isPT(e)){
     var insurance = STATE.insurance[id] | 0;
-    var ptInfo = (STATE.ptWage && STATE.ptWage[id]) || { hours:0, hourlyWage:0 };
-    var ptHours = parseFloat(ptInfo.hours) || 0;
-    var ptHourlyWage = parseFloat(ptInfo.hourlyWage) || 0;
-    var ptWage = Math.round(ptHours * ptHourlyWage);
+    var ptInfo = (STATE.ptWage && STATE.ptWage[id]) || { hours:0, otHours:0, hourlyWage:0 };
+    var ptHours       = parseFloat(ptInfo.hours)       || 0;
+    var ptOtHours     = parseFloat(ptInfo.otHours)     || 0;
+    var ptHourlyWage  = parseFloat(ptInfo.hourlyWage)  || 0;
+    var ptRegularPay  = Math.round(ptHours * ptHourlyWage);
+    var ptOtPay       = Math.round(ptOtHours * ptHourlyWage * 1.34);
+    var ptWage        = ptRegularPay + ptOtPay;
     // PT 也支援其他獎金 / 懲罰
     var ptOther = 0;
     if(STATE.otherBonuses){
@@ -1043,7 +1047,10 @@ function calcEmp(e){
       pt: true, role:'pt',
       insurance: insurance,
       ptHours: ptHours,
+      ptOtHours: ptOtHours,
       ptHourlyWage: ptHourlyWage,
+      ptRegularPay: ptRegularPay,
+      ptOtPay: ptOtPay,
       ptWage: ptWage,
       otherBonus: ptOther,
       total: ptTotal,
@@ -1190,11 +1197,17 @@ function renderDetail(){
   if(isPT(emp)){
     html.push('<div class="payroll">');
     html.push('<div class="ptitle">'+getYMLabel()+'_'+emp.name+'<span class="tag-role pt">PT</span></div>');
-    html.push('<div class="pay-sub"><b>對帳模式</b>：手動填入<b>時數</b>與<b>時薪</b>，當月總工資自動 = 時數 × 時薪</div>');
+    var otRate = c.ptHourlyWage ? Math.round(c.ptHourlyWage * 1.34) : 0;
+    html.push('<div class="pay-sub"><b>對帳模式</b>：手動填入時數／加班時數／時薪。一般工資 = 時數 × 時薪；加班費 = 加班時數 × 時薪 × 1.34（加班時薪 = '+otRate+'）</div>');
     html.push('<div class="inline-input-row">');
     html.push('<label>時數 <input type="number" min="0" step="0.5" value="'+(c.ptHours||0)+'" onchange="onPtWageChange(\''+emp.id+'\',\'hours\',this.value)"></label>');
+    html.push('<label>加班時數 <input type="number" min="0" step="0.5" value="'+(c.ptOtHours||0)+'" onchange="onPtWageChange(\''+emp.id+'\',\'otHours\',this.value)"></label>');
     html.push('<label>時薪 <input type="number" min="0" step="1" value="'+(c.ptHourlyWage||0)+'" onchange="onPtWageChange(\''+emp.id+'\',\'hourlyWage\',this.value)"></label>');
     html.push('</div>');
+    html.push(payRow('一般工資', c.ptRegularPay));
+    if(c.ptOtHours > 0){
+      html.push(payRow('加班費（×1.34）', c.ptOtPay));
+    }
     html.push(payRow('當月總工資', c.ptWage));
     if(c.otherBonus){
       html.push(payRow('其他獎金／懲罰', c.otherBonus));
