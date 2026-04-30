@@ -194,7 +194,7 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
     <span id="store-name">（未選店）</span>
   </div>
   <span class="spacer"></span>
-  <span id="sync-chip" class="sync-chip off" title="本機獨立模式：資料只存在這個瀏覽器，不上雲端">📱 本機獨立</span>
+  <span id="sync-chip" class="sync-chip off" title="點擊重新同步" onclick="syncNow()">☁ 未同步</span>
   <select class="month-picker" id="month-picker" aria-label="選擇月份"></select>
   <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 列印</button>
 </div>
@@ -205,7 +205,7 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
     <div class="hero-icon">🧮</div>
     <div class="hero-text">
       <h1>薪資對帳（店長版）</h1>
-      <p>獨立計算頁，資料只存本機 · 不會影響主系統 · 用來和老闆的數字對帳</p>
+      <p>獨立試算表 · 與老闆系統資料完全分開 · 多裝置自動同步 · 用來和老闆的數字對帳</p>
     </div>
   </div>
 
@@ -644,10 +644,11 @@ function onMonthChange(){
   }
   loadState();
   render();
-  // 對帳模式：不從加班費系統匯入，全部手動
-  // 但仍從小結 / 匿名表 cache 帶資料供參考
+  // 對帳模式：不抓加班費；但仍從小結 / 匿名表 cache 帶資料供參考
   doImportSalesBonus(false);
   doImportSurveyBonus(false);
+  // 從對帳的雲端拉最新（試算表 10KO8v5...）
+  pullFromCloud(false);
 }
 
 // ============================================
@@ -1509,10 +1510,16 @@ function goBack(){
 // ☁ 雲端同步（Google Apps Script）
 // ============================================
 // 4 家店共用同一個 /exec（後端依 store 欄位分流、資料寫進同一份試算表）
-// 🔌 對帳模式：完全不連雲端，所有資料只存在本機 localStorage
-var SALARY_SYNC_URL = '';
-var BUILTIN_SALARY_URLS = {};
-var LS_SALARY_SYNC_URL = 'cd_salary_verify_sync_url';  // 對帳模式不會用，但保留 key 名以避免和主系統衝突
+// ☁ 對帳模式雲端同步：寫入獨立試算表 10KO8v5zdU1U7xq7JL3_3bL_NjtkB5p0f_DWpH-Vummo
+//    與老闆系統 (薪水-script.gs) 是兩個完全分開的專案，資料不會混在一起
+var SALARY_SYNC_URL = 'https://script.google.com/macros/s/AKfycbyhGk6owVuwsgTfXQmWen8lNfyU6Buxzeiv8Dv5ZLry2C_OcSc7h6ZFzHJO1U2-ZGCthg/exec';
+var BUILTIN_SALARY_URLS = {
+  'chudian-zhonghe':    SALARY_SYNC_URL,
+  'chudian-yongchun':   SALARY_SYNC_URL,
+  'chudian-xinzhuang':  SALARY_SYNC_URL,
+  'shicheng-zhongxiao': SALARY_SYNC_URL
+};
+var LS_SALARY_SYNC_URL = 'cd_salary_verify_sync_url';  // 與主系統 key 完全分離
 
 function getSyncUrl(){
   return localStorage.getItem(LS_SALARY_SYNC_URL)
@@ -1553,8 +1560,7 @@ function pushToCloud(showToastWhenOk){
   if(!STATE) return;
   var url = getSyncUrl();
   if(!url){
-    // 對帳模式：完全不上雲；保持「📱 本機獨立」狀態籤
-    setSyncChip('off', '📱 本機獨立', '對帳模式：資料只存本機');
+    setSyncChip('off', '☁ 未設定', '');
     return;
   }
 
@@ -1583,7 +1589,7 @@ function pushToCloud(showToastWhenOk){
 function pullFromCloud(showToast){
   var url = getSyncUrl();
   if(!url){
-    setSyncChip('off', '📱 本機獨立', '對帳模式：資料只存本機');
+    setSyncChip('off', '☁ 未設定', '');
     return;
   }
   setSyncChip('busy', '☁ 讀取中…', '');
@@ -1612,6 +1618,9 @@ function pullFromCloud(showToast){
       STATE = cloud;
       try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
       render();
+      // 雲端讀完後重跑非加班費的 imports（對帳模式不抓加班費）
+      doImportSalesBonus(false);
+      doImportSurveyBonus(false);
       var t = res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : '';
       setSyncChip('ok', '☁ 已同步', '從雲端讀取：' + t);
       if(showToast) toast('已從雲端讀取（'+t+'）', 'ok');
@@ -1655,6 +1664,8 @@ render();
 // 對帳模式：不從加班費系統匯入；小結 / 匿名表 仍自動帶（供對帳參考）
 doImportSalesBonus(false);
 doImportSurveyBonus(false);
+// 啟動時從對帳的雲端拉最新（試算表 10KO8v5...）
+pullFromCloud(false);
 // 啟動時從雲端拉最新（若有設定）→ 若雲端較新，會覆寫本地
 pullFromCloud(false);
 
