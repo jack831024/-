@@ -195,8 +195,9 @@ h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 var GLOBAL_PASSWORD = 'yuanxin2022';
 
 function goFlow(flow){
-  // 加班費 + 薪水計算 + 薪資對帳 共用全域密碼，一次輸入後到關閉分頁前不再問
-  if((flow === 'overtime' || flow === 'salary' || flow === 'salaryVerify')
+  // 加班費 + 薪水計算 共用全域密碼 yuanxin2022
+  // 薪資對帳走自己的店家 a-prefix 密碼，於 index.html 內驗證
+  if((flow === 'overtime' || flow === 'salary')
      && sessionStorage.getItem('cd_global_auth') !== '1'){
     var pw = prompt('請輸入登入密碼：');
     if(pw === null) return;

@@ -144,8 +144,28 @@ h1{font-size:24px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 
 // 加班費 + 薪水 已在 home.html (GLOBAL_PASSWORD) 統一驗證
 // 小結報表的「本月 A 班獎金累計」在 daily-summary.html 內加 4 組店家密碼鎖
+// 薪資對帳（店長版）使用與「匿名表主管」同一組 a-prefix 密碼
+var VERIFY_PASSWORDS = {
+  'chudian-zhonghe':    'a90369287',
+  'chudian-yongchun':   'a94213054',
+  'chudian-xinzhuang':  'a60749791',
+  'shicheng-zhongxiao': 'a61222042'
+};
+
 function selectStore(id, name){
   var flow = sessionStorage.getItem('cd_flow');
+  // 薪資對帳：以店家為單位的 a-prefix 密碼（跟匿名表主管同一組）
+  if(flow === 'salaryVerify'){
+    var expected = VERIFY_PASSWORDS[id];
+    if(expected){
+      var input = prompt('【'+name+'】薪資對帳密碼（同匿名表主管）：');
+      if(input === null) return;
+      if(String(input).trim() !== expected){
+        alert('❌ 密碼錯誤');
+        return;
+      }
+    }
+  }
   sessionStorage.setItem('cd_store', id);
   sessionStorage.setItem('cd_store_name', name);
   var pageMap = {
