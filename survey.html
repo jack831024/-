@@ -896,21 +896,26 @@ function renderManagerResults(records){
   var bonusBreakdown = {};
   emps.forEach(function(e){ totalBonus[e] = 0; bonusBreakdown[e] = []; });
 
-  // 計算每人每項平均與評分人數，順便算獎金
-  var avgs = {};   // avgs[emp][catId]   = number 或 null
-  var counts = {}; // counts[emp][catId] = 該項收到幾位匿名者打分
-  emps.forEach(function(emp){ avgs[emp] = {}; counts[emp] = {}; });
+  // 計算每人每項平均、評分人數、是否有低分，順便算獎金
+  var avgs = {};    // avgs[emp][catId]   = 平均分數
+  var counts = {};  // counts[emp][catId] = 該項收到幾位打分
+  var lows = {};    // lows[emp][catId]   = 該項是否有任一份 ≤ 6（紅字觸發）
+  emps.forEach(function(emp){ avgs[emp] = {}; counts[emp] = {}; lows[emp] = {}; });
 
   cats.forEach(function(cat){
-    // 每人此項平均 + 票數
+    // 每人此項平均 + 票數 + 是否有 ≤6 評分
     emps.forEach(function(emp){
-      var sum = 0, cnt = 0;
+      var sum = 0, cnt = 0, hasLow = false;
       records.forEach(function(rec){
         var v = rec.ratings && rec.ratings[cat.id] && rec.ratings[cat.id][emp];
-        if(typeof v === 'number'){ sum += v; cnt++; }
+        if(typeof v === 'number'){
+          sum += v; cnt++;
+          if(v <= 6) hasLow = true;
+        }
       });
-      avgs[emp][cat.id] = cnt > 0 ? sum/cnt : null;
+      avgs[emp][cat.id]   = cnt > 0 ? sum/cnt : null;
       counts[emp][cat.id] = cnt;
+      lows[emp][cat.id]   = hasLow;
     });
 
     // 找最高分（含主管），算獎金；主管那份蒸發
@@ -945,7 +950,8 @@ function renderManagerResults(records){
       var avg = avgs[emp][cat.id];
       var cnt = counts[emp][cat.id];
       if(avg === null) return '<td class="score empty">—</td>';
-      var cls = 'score' + (avg <= 6 ? ' red' : '');
+      // 只要該格有任何一份評分 ≤ 6 → 紅字（不看平均）
+      var cls = 'score' + (lows[emp][cat.id] ? ' red' : '');
       return '<td class="'+cls+'">'+avg.toFixed(2)
         +'<span class="rate-count">'+cnt+' 人評分</span>'
         +'</td>';
