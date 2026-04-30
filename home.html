@@ -91,6 +91,11 @@ h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 .menu-card.leave:hover .icon-wrap{background:linear-gradient(135deg,#eab308 0%,#facc15 100%);color:#fff;transform:scale(1.05)}
 .menu-card.leave .mgo{color:#ca8a04}
 
+.menu-card.verify .icon-wrap{background:linear-gradient(135deg,#cffafe 0%,#a5f3fc 100%);color:#0e7490}
+.menu-card.verify::after{background:linear-gradient(90deg,#0891b2,#22d3ee)}
+.menu-card.verify:hover .icon-wrap{background:linear-gradient(135deg,#0891b2 0%,#22d3ee 100%);color:#fff;transform:scale(1.05)}
+.menu-card.verify .mgo{color:#0e7490}
+
 .footer{text-align:center;font-size:11px;color:var(--ink-3);letter-spacing:1px;margin-top:1rem}
 .footer .year{font-weight:600;color:var(--ink-2)}
 
@@ -172,6 +177,13 @@ h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
       <span class="mdesc">美食貼文關鍵字搜尋、AI 留言<br>產生器、UGC 蒐集</span>
       <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
     </button>
+    <button class="menu-card verify" onclick="goFlow('salaryVerify')">
+      <span class="num">08</span>
+      <span class="icon-wrap">🧮</span>
+      <span class="mtitle">薪資對帳</span>
+      <span class="mdesc">店長獨立計算頁，資料只存本機<br>不影響主系統，用來和老闆對帳</span>
+      <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+    </button>
   </div>
 
   <p class="footer">© <span class="year">2026</span> · INTERNAL SYSTEM</p>
@@ -183,8 +195,8 @@ h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 var GLOBAL_PASSWORD = 'yuanxin2022';
 
 function goFlow(flow){
-  // 加班費 + 薪水計算 共用全域密碼，一次輸入後到關閉分頁前不再問
-  if((flow === 'overtime' || flow === 'salary')
+  // 加班費 + 薪水計算 + 薪資對帳 共用全域密碼，一次輸入後到關閉分頁前不再問
+  if((flow === 'overtime' || flow === 'salary' || flow === 'salaryVerify')
      && sessionStorage.getItem('cd_global_auth') !== '1'){
     var pw = prompt('請輸入登入密碼：');
     if(pw === null) return;
