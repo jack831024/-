@@ -71,6 +71,18 @@ h3 .step-num{display:inline-flex;align-items:center;justify-content:center;width
 .vendor-group.monthly .vendor-btn:hover{border-color:#7c3aed;color:#7c3aed;box-shadow:0 6px 14px -6px rgba(124,58,237,.25)}
 .vendor-group.other .vendor-btn.active{background:linear-gradient(135deg,#0369a1 0%,#38bdf8 100%);box-shadow:0 6px 16px -6px rgba(3,105,161,.5)}
 .vendor-group.other .vendor-btn:hover{border-color:#0369a1;color:#0369a1;box-shadow:0 6px 14px -6px rgba(3,105,161,.25)}
+/* 自訂廠商分組（每店獨立、存 localStorage） */
+.vendor-group.custom .vendor-group-title{color:#0891b2}
+.vendor-group.custom .vendor-btn.active{background:linear-gradient(135deg,#0891b2 0%,#22d3ee 100%);box-shadow:0 6px 16px -6px rgba(8,145,178,.5)}
+.vendor-group.custom .vendor-btn:hover{border-color:#0891b2;color:#0891b2;box-shadow:0 6px 14px -6px rgba(8,145,178,.25)}
+.vendor-group.custom .vendor-btn-wrap{position:relative;display:flex}
+.vendor-group.custom .vendor-btn-wrap .vendor-btn{flex:1;padding-right:24px}
+.vendor-group.custom .vendor-btn-wrap .del-vendor{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#ef4444;color:#fff;border:2px solid #fff;font-size:11px;line-height:1;cursor:pointer;font-weight:bold;padding:0;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.2);z-index:2;font-family:inherit;opacity:0;transition:opacity .15s}
+.vendor-group.custom .vendor-btn-wrap:hover .del-vendor{opacity:1}
+.vendor-group.custom .vendor-btn-wrap .del-vendor:hover{background:#dc2626;transform:scale(1.15)}
+/* + 新增廠商 按鈕 */
+.add-vendor-btn{padding:10px 8px;border:1.5px dashed #0891b2;border-radius:11px;background:rgba(8,145,178,.05);cursor:pointer;font-size:13px;font-weight:700;color:#0891b2;font-family:inherit;line-height:1.3;text-align:center;min-height:42px;display:flex;align-items:center;justify-content:center;transition:all .15s;letter-spacing:.5px}
+.add-vendor-btn:hover{background:rgba(8,145,178,.12);border-style:solid;color:#0e7490}
 
 .shicheng-placeholder{text-align:center;padding:2rem 1rem;color:var(--ink-3);font-size:13px;line-height:1.8}
 .shicheng-placeholder .big{font-size:36px;display:block;margin-bottom:8px;opacity:.5}
@@ -581,11 +593,79 @@ var STORE_NAME = sessionStorage.getItem('cd_store_name');
 // ============================================
 var currentVendor = null;
 
+// ============================================
+// 自訂廠商：每個門市獨立、存 localStorage
+// ============================================
+function customVendorsKey(){ return 'cd_custom_vendors_' + STORE_ID; }
+
+function getCustomVendors(){
+  try{
+    var raw = localStorage.getItem(customVendorsKey());
+    var arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  }catch(e){ return []; }
+}
+
+function setCustomVendors(arr){
+  localStorage.setItem(customVendorsKey(), JSON.stringify(arr || []));
+}
+
+function addCustomVendor(){
+  var name = prompt('新增廠商名稱：');
+  if(name === null) return;  // 使用者取消
+  name = String(name).trim();
+  if(!name){ alert('廠商名稱不能空白'); return; }
+  // 重複檢查（含內建分組）
+  var allExisting = [];
+  var brand = STORE_ID.indexOf('shicheng') >= 0 ? 'shicheng' : 'chudian';
+  (VENDOR_GROUPS[brand] || []).forEach(function(g){
+    g.vendors.forEach(function(v){ allExisting.push(v); });
+  });
+  getCustomVendors().forEach(function(v){ allExisting.push(v); });
+  if(allExisting.indexOf(name) >= 0){
+    alert('「'+name+'」已存在於廠商清單，不需要重複新增');
+    return;
+  }
+  var list = getCustomVendors();
+  list.push(name);
+  setCustomVendors(list);
+  renderVendorGrid(brand);
+  // 新增完直接選取該廠商
+  setTimeout(function(){
+    var btns = document.querySelectorAll('.vendor-group.custom .vendor-btn');
+    for(var i=0; i<btns.length; i++){
+      if(btns[i].textContent === name){
+        selectVendor(name, btns[i]);
+        break;
+      }
+    }
+  }, 30);
+}
+
+function removeCustomVendor(name, e){
+  if(e){ e.stopPropagation(); e.preventDefault(); }
+  if(!confirm('確定要刪除廠商「'+name+'」嗎？\n\n注意：此操作只移除按鈕，'+name+'\n之前的盤點紀錄仍然保留在本機 + 雲端，要還原直接重新加同名廠商即可。')) return;
+  var list = getCustomVendors().filter(function(v){ return v !== name; });
+  setCustomVendors(list);
+  // 如果剛好刪掉的是當前選中的廠商，把畫面切回未選擇狀態
+  if(currentVendor === name){
+    currentVendor = null;
+    document.getElementById('date-section').style.display = 'none';
+    document.getElementById('upload-section').style.display = 'none';
+    document.getElementById('batch-section').style.display = 'none';
+    document.getElementById('history-section').style.display = 'none';
+    document.getElementById('analysis-section').style.display = 'none';
+  }
+  var brand = STORE_ID.indexOf('shicheng') >= 0 ? 'shicheng' : 'chudian';
+  renderVendorGrid(brand);
+}
+
 function renderVendorGrid(brand){
   brand = brand || 'chudian';
   var groups = VENDOR_GROUPS[brand] || [];
   var container = document.getElementById('vendor-grid');
   container.innerHTML = '';
+  // 內建分組
   groups.forEach(function(group){
     var wrap = document.createElement('div');
     wrap.className = 'vendor-group ' + group.key;
@@ -607,6 +687,43 @@ function renderVendorGrid(brand){
     });
     container.appendChild(wrap);
   });
+
+  // 自訂分組（永遠在最後、永遠顯示「+ 新增」）
+  var customList = getCustomVendors();
+  var customWrap = document.createElement('div');
+  customWrap.className = 'vendor-group custom';
+  customWrap.innerHTML =
+    '<div class="vendor-group-title">'+
+      '<span class="gi">✨</span>'+
+      '<span>自訂廠商</span>'+
+      '<span class="gcount">'+customList.length+' 家</span>'+
+    '</div>'+
+    '<div class="vendor-grid"></div>';
+  var customGrid = customWrap.querySelector('.vendor-grid');
+  customList.forEach(function(name){
+    var w = document.createElement('div');
+    w.className = 'vendor-btn-wrap';
+    var btn = document.createElement('button');
+    btn.className = 'vendor-btn';
+    btn.textContent = name;
+    btn.dataset.group = 'custom';
+    btn.onclick = function(){ selectVendor(name, btn); };
+    w.appendChild(btn);
+    var del = document.createElement('button');
+    del.className = 'del-vendor';
+    del.title = '刪除「'+name+'」';
+    del.innerHTML = '×';
+    del.onclick = function(e){ removeCustomVendor(name, e); };
+    w.appendChild(del);
+    customGrid.appendChild(w);
+  });
+  // + 新增按鈕
+  var addBtn = document.createElement('button');
+  addBtn.className = 'add-vendor-btn';
+  addBtn.textContent = '＋ 新增廠商';
+  addBtn.onclick = addCustomVendor;
+  customGrid.appendChild(addBtn);
+  container.appendChild(customWrap);
 }
 
 function selectVendor(name, btnEl){
