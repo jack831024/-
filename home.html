@@ -211,7 +211,8 @@ function goFlow(flow){
   sessionStorage.setItem('cd_flow', flow);
   sessionStorage.removeItem('cd_store');
   sessionStorage.removeItem('cd_store_name');
-  window.location.href = 'index.html';
+  // cache-buster：避免瀏覽器拿舊版 index.html 的 pageMap 把新 flow 導錯頁面
+  window.location.href = 'index.html?t=' + Date.now();
 }
 
 function goSurvey(){
