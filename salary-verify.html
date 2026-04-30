@@ -241,12 +241,8 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
   <div class="section">
     <h3>
       <span class="step-num">3</span><span class="icon">🏆</span>全勤獎勵金
-      <span class="hint">0/1/2/3 天 → 2500/2000/1000/0</span>
+      <span class="hint">0/1/2/3 天 → 2500/2000/1000/0 · 對帳模式只能手動填</span>
     </h3>
-    <div style="margin-bottom:8px">
-      <button class="btn btn-ghost btn-sm" onclick="importFromOvertime()">🔄 從加班費系統匯入遲到／加班</button>
-      <span id="import-status" style="margin-left:8px;font-size:11.5px;color:var(--ink-3)"></span>
-    </div>
     <table class="grid">
       <thead>
         <tr>
@@ -648,12 +644,10 @@ function onMonthChange(){
   }
   loadState();
   render();
-  // 換月後自動重抓三邊資料
-  doImportOvertime(false);
+  // 對帳模式：不從加班費系統匯入，全部手動
+  // 但仍從小結 / 匿名表 cache 帶資料供參考
   doImportSalesBonus(false);
   doImportSurveyBonus(false);
-  // 嘗試從雲端拉最新
-  pullFromCloud(false);
 }
 
 // ============================================
@@ -1658,8 +1652,7 @@ function openSyncSettings(){
 // ============================================
 loadState();
 render();
-// 初次載入也自動匯入一次（若沒資料會靜默略過）
-doImportOvertime(false);
+// 對帳模式：不從加班費系統匯入；小結 / 匿名表 仍自動帶（供對帳參考）
 doImportSalesBonus(false);
 doImportSurveyBonus(false);
 // 啟動時從雲端拉最新（若有設定）→ 若雲端較新，會覆寫本地
