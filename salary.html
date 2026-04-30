@@ -1615,6 +1615,11 @@ function pullFromCloud(showToast){
       STATE = cloud;
       try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
       render();
+      // 雲端讀完之後再跑一次自動匯入：以加班費/小結/匿名表的最新資料覆蓋雲端裡的舊值
+      // 否則雲端 STATE 會把剛剛 import 進去的 s5 / s2.late 等覆寫回去
+      doImportOvertime(false);
+      doImportSalesBonus(false);
+      doImportSurveyBonus(false);
       var t = res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : '';
       setSyncChip('ok', '☁ 已同步', '從雲端讀取：' + t);
       if(showToast) toast('已從雲端讀取（'+t+'）', 'ok');
