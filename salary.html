@@ -248,12 +248,13 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
       <button class="btn btn-ghost btn-sm" onclick="importFromOvertime()">🔄 從加班費系統重新匯入</button>
       <span id="import-status" style="margin-left:8px;font-size:11.5px;color:var(--ink-3)"></span>
     </div>
-    <div style="margin-bottom:10px;padding:8px 12px;background:rgba(8,145,178,.06);border-left:3px solid var(--info);border-radius:8px;font-size:11.5px;color:var(--ink-2);line-height:1.6">
-      ☁ <b>自動帶入</b>（進頁面、換月、按上方按鈕都會跑）：<br>
+    <div style="margin-bottom:10px;padding:8px 12px;background:rgba(245,158,11,.08);border-left:3px solid var(--warn);border-radius:8px;font-size:11.5px;color:var(--ink-2);line-height:1.6">
+      ⚠ <b>需要點上方按鈕才會匯入</b>（不會自動跑，避免覆蓋你手動改的值）：<br>
       　• 缺卡次數 → 上面「打卡／小結／回收」<br>
       　• 病假 / 事假 / 遲到 → 「全勤獎勵金」<br>
       　• 加班時數 / 休-1 → 各別明細<br>
-      　• PT 月工資 → 各別明細
+      　• PT 月工資 → 各別明細<br>
+      <span style="color:var(--ink-3)">匯入後可以再手動微調，8 秒內自動存到雲端。</span>
     </div>
     <table class="grid">
       <thead>
@@ -655,11 +656,10 @@ function onMonthChange(){
   }
   loadState();
   render();
-  // 換月後自動重抓三邊資料
-  doImportOvertime(false);
+  // 換月只自動帶小結（營業額）+ 匿名表（評分），加班費需手動點按鈕
   doImportSalesBonus(false);
   doImportSurveyBonus(false);
-  // 嘗試從雲端拉最新
+  // 嘗試從雲端拉最新（會以雲端值為準，避免覆蓋手動修改）
   pullFromCloud(false);
 }
 
@@ -1672,9 +1672,9 @@ function pullFromCloud(showToast){
       STATE = cloud;
       try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
       render();
-      // 雲端讀完之後再跑一次自動匯入：以加班費/小結/匿名表的最新資料覆蓋雲端裡的舊值
-      // 否則雲端 STATE 會把剛剛 import 進去的 s5 / s2.late 等覆寫回去
-      doImportOvertime(false);
+      // 雲端讀完後重跑「小結 + 匿名表」自動匯入（這兩個是純讀取算出來的，不會覆蓋人工值）
+      // 加班費(s1/s2/休-1/加班時數/PT工資) 不在這裡跑，避免覆蓋使用者手動修改
+      // 改成必須點「🔄 從加班費系統重新匯入」按鈕才會匯入
       doImportSalesBonus(false);
       doImportSurveyBonus(false);
       var t = res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : '';
@@ -1717,8 +1717,8 @@ function openSyncSettings(){
 // ============================================
 loadState();
 render();
-// 初次載入也自動匯入一次（若沒資料會靜默略過）
-doImportOvertime(false);
+// 初次載入只自動帶小結（營業額）+ 匿名表（評分），加班費需點按鈕
+// 這樣可避免「自動 import 蓋掉手動改、再被推回雲端」的循環問題
 doImportSalesBonus(false);
 doImportSurveyBonus(false);
 // 啟動時從雲端拉最新（若有設定）→ 若雲端較新，會覆寫本地
