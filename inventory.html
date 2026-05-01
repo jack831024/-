@@ -1879,11 +1879,15 @@ async function loadHistory(opts){
             }
           });
           if(cachedCount > 0) console.log('[loadHistory] 雲端 → 本機 cache：' + cachedCount + ' 天');
-          // 如果當前 batch 顯示的日期剛被 cache，重新載入讓本批品項明細顯示
-          var curDate = document.getElementById('inv-date');
-          if(curDate && curDate.value && byDate[curDate.value] && typeof reloadBatchFromStorage === 'function'){
-            reloadBatchFromStorage();
-            renderBatchItems();
+          // ⭐ 寫回 cache 後，所有「依賴 localStorage」的 UI 都要重 render
+          //    1) 「所有廠商成本」(getAllVendorTotals 掃 localStorage) → 之前呼叫的 renderBusinessSummary 是空 localStorage 算的，要重算
+          //    2) 「本批品項明細」(reloadBatchFromStorage 讀 localStorage) → 無條件 reload 避免日期格式微差導致匹配不到
+          if(cachedCount > 0){
+            if(typeof renderBusinessSummary === 'function') renderBusinessSummary();
+            if(typeof reloadBatchFromStorage === 'function'){
+              reloadBatchFromStorage();
+              renderBatchItems();
+            }
           }
         }catch(cacheErr){ console.warn('[loadHistory] 寫回本機 cache 失敗', cacheErr); }
       }
