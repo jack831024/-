@@ -49,6 +49,8 @@ var STATE_SHEET_NAME    = '特休禮金狀態';
 var STATE_HEADERS       = ['更新時間', '店家', 'STATE_JSON'];
 var GIFT_LOG_SHEET_NAME = '禮金交易紀錄';
 var GIFT_LOG_HEADERS    = ['時間', '店家', 'empId', '員工', '類型', '金額', '事由', '圖片FileId', '備註'];
+var OT_LEAVE_SHEET_NAME = '加班費假別';
+var OT_LEAVE_HEADERS    = ['更新時間', '店家', '月份', '員工', '假別', '日期'];
 
 // 舊月份資料表（保留以免破壞舊資料；新介面不再使用）
 var SHEET_NAME = '特休禮金資料';
@@ -100,6 +102,8 @@ function doPost(e) {
       case 'getGiftImage':    res = getGiftImage(args[0], args[1]); break;
       case 'logGift':         res = logGift(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8]); break;
       case 'deleteGiftEntry': res = deleteGiftEntry(args[0], args[1], args[2], args[3]); break;
+      case 'saveOTLeave':     res = saveOTLeave(args[0], args[1], args[2], args[3]); break;
+      case 'loadOTLeave':     res = loadOTLeave(args[0], args[1]); break;
       // 舊介面（保留向後相容）
       case 'saveLeave':  res = saveLeave(args[0], args[1], args[2], args[3]); break;
       case 'loadLeave':  res = loadLeave(args[0], args[1], args[2]);          break;
@@ -253,6 +257,85 @@ function deleteGiftEntry(password, store, empId, entryId) {
 
 
 // ============================================
+// ✈️ saveOTLeave — 加班費系統推來「特休/旅遊假」日期，存進「加班費假別」工作表
+//   args: password, store, ym, byEmp = { name:{annualDates:[...], travelDates:[...]} }
+//   會先刪除該 (store, ym) 的舊資料再寫入新的，等於覆寫。
+// ============================================
+function saveOTLeave(password, store, ym, byEmp) {
+  try {
+    if (VALID_STORES.indexOf(store) === -1) return { ok: false, error: '無效的店家：' + store };
+    if (!_verifyFor(password, store))       return { ok: false, error: 'unauthorized' };
+    if (!/^\d{4}-\d{2}$/.test(String(ym || ''))) return { ok: false, error: 'ym 格式錯誤' };
+    if (!byEmp || typeof byEmp !== 'object') byEmp = {};
+
+    var sheet = getOTLeaveSheet();
+    var data = sheet.getDataRange().getValues();
+    // 先刪除該 (store, ym) 的舊資料
+    var rowsToDelete = [];
+    for (var i = data.length - 1; i >= 1; i--) {
+      if (String(data[i][1]) === store && String(data[i][2]) === ym) {
+        rowsToDelete.push(i + 1);
+      }
+    }
+    rowsToDelete.forEach(function(r){ sheet.deleteRow(r); });
+
+    // 寫入新資料
+    var now = new Date();
+    var newRows = [];
+    Object.keys(byEmp).forEach(function(name){
+      var rec = byEmp[name] || {};
+      (rec.annualDates || []).forEach(function(d){ newRows.push([now, store, ym, name, 'annual', d]); });
+      (rec.travelDates || []).forEach(function(d){ newRows.push([now, store, ym, name, 'travel', d]); });
+    });
+    if (newRows.length > 0) {
+      sheet.getRange(sheet.getLastRow() + 1, 1, newRows.length, OT_LEAVE_HEADERS.length).setValues(newRows);
+      // 月份和日期欄都設為純文字避免被轉 Date
+      var startRow = sheet.getLastRow() - newRows.length + 1;
+      sheet.getRange(startRow, 3, newRows.length, 1).setNumberFormat('@');
+      sheet.getRange(startRow, 6, newRows.length, 1).setNumberFormat('@');
+    }
+    return { ok: true, written: newRows.length, deleted: rowsToDelete.length };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
+
+// ============================================
+// 📥 loadOTLeave — leave-gift 取得整店的特休/旅遊假日期（跨月聚合）
+//   args: password, store
+//   回傳：{ ok, byEmp: { 員工:{ annual:[YYYY-MM-DD,...], travel:[...] } } }
+// ============================================
+function loadOTLeave(password, store) {
+  try {
+    if (VALID_STORES.indexOf(store) === -1) return { ok: false, error: '無效的店家：' + store };
+    if (!_verifyFor(password, store))       return { ok: false, error: 'unauthorized' };
+    var sheet = getOTLeaveSheet();
+    var data = sheet.getDataRange().getValues();
+    var byEmp = {};
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][1]) !== store) continue;
+      var name = String(data[i][3] || '').trim();
+      var type = String(data[i][4] || '').trim();
+      var date = String(data[i][5] || '').trim();
+      if (!name || !date || (type !== 'annual' && type !== 'travel')) continue;
+      if (!byEmp[name]) byEmp[name] = { annual: [], travel: [] };
+      var arr = byEmp[name][type];
+      if (arr.indexOf(date) < 0) arr.push(date);
+    }
+    // 排序
+    Object.keys(byEmp).forEach(function(n){
+      byEmp[n].annual.sort();
+      byEmp[n].travel.sort();
+    });
+    return { ok: true, byEmp: byEmp };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
+
+// ============================================
 // 🧾 logGift — 寫一筆禮金交易到「禮金交易紀錄」
 //   args: password, store, empId, name, type(credit/debit), amount, reason, fileId, note
 // ============================================
@@ -306,6 +389,25 @@ function getGiftLogSheet() {
     sh.setColumnWidth(9, 200);
     sh.getRange(1, 1, 1, GIFT_LOG_HEADERS.length)
       .setBackground('#fce7f3').setFontWeight('bold').setHorizontalAlignment('center');
+  }
+  return sh;
+}
+
+function getOTLeaveSheet() {
+  var ss = SpreadsheetApp.openById(LEAVE_SHEET_ID);
+  var sh = ss.getSheetByName(OT_LEAVE_SHEET_NAME);
+  if (!sh) {
+    sh = ss.insertSheet(OT_LEAVE_SHEET_NAME);
+    sh.appendRow(OT_LEAVE_HEADERS);
+    sh.setFrozenRows(1);
+    sh.setColumnWidth(1, 160);
+    sh.setColumnWidth(2, 130);
+    sh.setColumnWidth(3, 90);
+    sh.setColumnWidth(4, 100);
+    sh.setColumnWidth(5, 70);
+    sh.setColumnWidth(6, 100);
+    sh.getRange(1, 1, 1, OT_LEAVE_HEADERS.length)
+      .setBackground('#e0f2fe').setFontWeight('bold').setHorizontalAlignment('center');
   }
   return sh;
 }

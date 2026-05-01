@@ -1995,6 +1995,40 @@ function persistSalarySummary(y, m){
   try {
     localStorage.setItem('cd_ot_summary_' + (STORE || 'nostore') + '_' + ym, JSON.stringify(payload));
   } catch(e){ console.warn('persistSalarySummary fail', e); }
+
+  // 把特休/旅遊假日期推到「特休/禮金」雲端，讓 leave-gift.html 在其他裝置/瀏覽器也看得到
+  pushOTLeaveToCloud(payload);
+}
+
+// ============================================
+// ☁️ 把分析結果中的「特休/旅遊假」日期推到 leave-gift 的雲端
+// ============================================
+var LEAVE_GIFT_URL = 'https://script.google.com/macros/s/AKfycbxeJRR4Xlt4fSngAwEIAW2FBMEwLuNH9djZKY7LzI7RhX0_Lk9L2TvUM_WyFU-YpEfO6A/exec';
+var STORE_PWS_FOR_LEAVEGIFT = {
+  'chudian-zhonghe':    'a90369287',
+  'chudian-yongchun':   'a94213054',
+  'chudian-xinzhuang':  'a60749791',
+  'shicheng-zhongxiao': 'a61222042'
+};
+function pushOTLeaveToCloud(payload){
+  if(!STORE || !payload || !payload.ym) return;
+  var pwd = STORE_PWS_FOR_LEAVEGIFT[STORE];
+  if(!pwd) return;
+  // 篩出有 annualDates / travelDates 的員工
+  var byEmp = {};
+  Object.keys(payload.employees || {}).forEach(function(name){
+    var rec = payload.employees[name] || {};
+    var a = (rec.annualDates || []).slice();
+    var t = (rec.travelDates || []).slice();
+    if(a.length || t.length) byEmp[name] = { annualDates: a, travelDates: t };
+  });
+  fetch(LEAVE_GIFT_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action:'saveOTLeave', args:[pwd, STORE, payload.ym, byEmp] })
+  }).then(function(r){ return r.json(); })
+    .then(function(res){ if(res && res.ok) console.log('[特休雲端] 已上傳 '+payload.ym+'：', byEmp); })
+    .catch(function(){});
 }
 
 // 診斷：檢查班表月份 vs 打卡月份 / 班表姓名 vs 打卡姓名 不一致之處

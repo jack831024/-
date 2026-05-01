@@ -446,9 +446,13 @@ function travelEntitlement(hireDate){
   return 4;
 }
 
+// 雲端加班費假別資料（pullFromCloud 時填入；跨裝置共用）
+var OT_LEAVE_CLOUD = null; // { empName: { annual:[...], travel:[...] } }
+
 // 從加班費系統匯入的請假紀錄中，找此員工 EFFECTIVE_DATE 之後的特/旅遊日期
-//   key: cd_ot_summary_<store>_<ym>，每個 record 有 employees[name].annualDates / travelDates
-//   回傳排序好的日期陣列（不重複）
+//   1) localStorage cd_ot_summary_<store>_<ym>（同瀏覽器當下分析的）
+//   2) 雲端 OT_LEAVE_CLOUD（其他裝置上分析後同步上來的）
+//   兩邊去重 + 過濾 > EFFECTIVE_DATE + 排序
 function getOvertimeDatesAfter(empName, type){
   var seen = {};
   var prefix = 'cd_ot_summary_' + STORE + '_';
@@ -462,6 +466,10 @@ function getOvertimeDatesAfter(empName, type){
       var dates = type === 'annual' ? (rec.annualDates || []) : (rec.travelDates || []);
       dates.forEach(function(d){ if(d > EFFECTIVE_DATE) seen[d] = 1; });
     } catch(e){}
+  }
+  if(OT_LEAVE_CLOUD && OT_LEAVE_CLOUD[empName]){
+    var arr = OT_LEAVE_CLOUD[empName][type] || [];
+    arr.forEach(function(d){ if(d > EFFECTIVE_DATE) seen[d] = 1; });
   }
   return Object.keys(seen).sort();
 }
@@ -1200,6 +1208,15 @@ function pullFromCloud(){
       maybeAutoCredit();
       if(seedAdded > 0) pushToCloud(false);
       render();
+      // 額外抓雲端加班費假別資料（跨裝置共用）
+      callGAS('loadOTLeave', [getStorePassword(), STORE])
+        .then(function(r){
+          if(r && r.ok){
+            OT_LEAVE_CLOUD = r.byEmp || {};
+            render();
+          }
+        })
+        .catch(function(){});
     })
     .catch(function(err){ setSyncChip('err', '☁ 離線', err.message||''); render(); });
 }
