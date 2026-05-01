@@ -90,9 +90,13 @@ body.vendor-manage-mode .vendor-btn:hover{transform:none;box-shadow:none;backgro
 .add-vendor-btn{padding:10px 8px;border:1.5px dashed #0891b2;border-radius:11px;background:rgba(8,145,178,.05);cursor:pointer;font-size:13px;font-weight:700;color:#0891b2;font-family:inherit;line-height:1.3;text-align:center;min-height:42px;display:flex;align-items:center;justify-content:center;transition:all .15s;letter-spacing:.5px}
 .add-vendor-btn:hover{background:rgba(8,145,178,.12);border-style:solid;color:#0e7490}
 /* 「管理廠商」切換按鈕（在「1 選擇廠商」標題右邊） */
-.manage-vendors-btn{margin-left:auto;padding:5px 12px;border:1px solid #cbd5e1;background:rgba(255,255,255,.8);color:#64748b;font-size:12px;font-weight:600;border-radius:999px;cursor:pointer;font-family:inherit;transition:all .15s;letter-spacing:.5px}
+.manage-vendors-btn{margin-left:6px;padding:5px 12px;border:1px solid #cbd5e1;background:rgba(255,255,255,.8);color:#64748b;font-size:12px;font-weight:600;border-radius:999px;cursor:pointer;font-family:inherit;transition:all .15s;letter-spacing:.5px}
 .manage-vendors-btn:hover{background:#fff;border-color:#94a3b8;color:#475569}
 body.vendor-manage-mode .manage-vendors-btn{background:linear-gradient(135deg,#dc2626 0%,#ef4444 100%);color:#fff;border-color:#dc2626;box-shadow:0 4px 12px -4px rgba(220,38,38,.5)}
+/* 廠商月份選擇器（每月可有不同的自訂/隱藏設定） */
+.vendor-month-picker{margin-left:auto;padding:5px 11px;border:1px solid #cbd5e1;background:rgba(255,255,255,.85);color:#334155;font-size:12px;font-weight:700;border-radius:999px;font-family:inherit;cursor:pointer;letter-spacing:.5px;transition:all .15s}
+.vendor-month-picker:hover{border-color:#94a3b8;background:#fff}
+.vendor-month-picker:focus{outline:none;border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(249,115,22,.1)}
 /* 還原已隱藏廠商 按鈕（自訂分組標題旁邊、接在 gcount 後面） */
 .restore-vendors-btn{margin-left:6px;background:none;border:1px solid #cbd5e1;color:#64748b;font-size:11px;cursor:pointer;font-family:inherit;padding:2px 9px;border-radius:999px;transition:all .15s;font-weight:600;letter-spacing:0.5px}
 .restore-vendors-btn:hover{background:rgba(8,145,178,.08);color:#0891b2;border-color:#0891b2}
@@ -380,6 +384,7 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
   <div class="section" id="vendor-section">
     <h3>
       <span class="step-num">1</span>選擇廠商
+      <input type="month" id="vendor-month-picker" class="vendor-month-picker" onchange="onVendorMonthChange()" title="切換月份（每月廠商清單獨立）">
       <button class="manage-vendors-btn" id="manage-vendors-btn" onclick="toggleVendorManageMode()">🗑 管理</button>
     </h3>
     <div id="vendor-grid"></div>
@@ -601,6 +606,11 @@ var STORE_NAME = sessionStorage.getItem('cd_store_name');
   if(brand === 'shicheng'){
     document.getElementById('u-avatar').textContent = '🏮';
   }
+  // ⭐ 一次性把舊版（不分月）的廠商清單搬到當月
+  if(typeof migrateOldVendorKeys === 'function') migrateOldVendorKeys();
+  // ⭐ 廠商月份選擇器預設當月
+  var vmp = document.getElementById('vendor-month-picker');
+  if(vmp) vmp.value = currentVendorMonth;
   renderVendorGrid(brand);
 
   // 預設日期為今天
@@ -615,10 +625,54 @@ var STORE_NAME = sessionStorage.getItem('cd_store_name');
 var currentVendor = null;
 
 // ============================================
-// 自訂廠商 + 已隱藏的內建廠商：每個門市獨立、存 localStorage
+// 自訂廠商 + 已隱藏的內建廠商：每個門市 × 每月 獨立、存 localStorage
+// 因為每個月實際合作的廠商可能不同，所以按月分開儲存
 // ============================================
-function customVendorsKey(){ return 'cd_custom_vendors_' + STORE_ID; }
-function hiddenVendorsKey(){ return 'cd_hidden_vendors_' + STORE_ID; }
+var currentVendorMonth = todayMonth();  // 'YYYY-MM' 當前廠商清單對應的月份
+
+function todayMonth(){
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+function customVendorsKey(){ return 'cd_custom_vendors_' + STORE_ID + '_' + currentVendorMonth; }
+function hiddenVendorsKey(){ return 'cd_hidden_vendors_' + STORE_ID + '_' + currentVendorMonth; }
+
+// 切月份 → 重畫廠商網格（用該月的自訂/隱藏清單）
+function onVendorMonthChange(){
+  var picker = document.getElementById('vendor-month-picker');
+  if(!picker) return;
+  currentVendorMonth = picker.value || todayMonth();
+  var brand = STORE_ID.indexOf('shicheng') >= 0 ? 'shicheng' : 'chudian';
+  renderVendorGrid(brand);
+}
+
+// 一次性遷移：把舊版（不分月份）的 cd_custom_vendors_{STORE_ID} 搬到當月 key
+// 這樣升級到新版時，使用者原本設好的廠商清單不會憑空消失
+function migrateOldVendorKeys(){
+  ['cd_custom_vendors_', 'cd_hidden_vendors_'].forEach(function(prefix){
+    var oldKey = prefix + STORE_ID;
+    var oldVal = localStorage.getItem(oldKey);
+    if(!oldVal) return;
+    try{
+      var arr = JSON.parse(oldVal);
+      if(Array.isArray(arr) && arr.length > 0){
+        var newKey = prefix + STORE_ID + '_' + todayMonth();
+        var existing = localStorage.getItem(newKey);
+        if(!existing){
+          localStorage.setItem(newKey, oldVal);
+        }else{
+          try{
+            var ex = JSON.parse(existing) || [];
+            arr.forEach(function(v){ if(ex.indexOf(v)<0) ex.push(v); });
+            localStorage.setItem(newKey, JSON.stringify(ex));
+          }catch(e){}
+        }
+      }
+    }catch(e){}
+    localStorage.removeItem(oldKey);
+  });
+}
 
 // 管理模式：切換 body.vendor-manage-mode class，CSS 控制 ❌ 顯示
 function toggleVendorManageMode(){
