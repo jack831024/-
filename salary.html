@@ -1324,10 +1324,24 @@ function doImportOvertime(showToast){
     var empsReg = data.employees || {};
     var empsPT  = data.pt || {};
     var matched = 0;
+    // 把所有「對得上」的名字都記下來，最後拿來算「對不到」的
+    var hitNames = {};
+
+    function tryHit(map, e){
+      // 依 name → nickname → salesAlias 順序找；找到就 mark
+      var keys = [e.name, e.nickname, e.salesAlias];
+      for(var i=0; i<keys.length; i++){
+        if(keys[i] && map.hasOwnProperty(keys[i])){
+          hitNames[keys[i]] = 1;
+          return map[keys[i]];
+        }
+      }
+      return null;
+    }
 
     ALL_EMPLOYEES.forEach(function(e){
       if(isPT(e)){
-        var hitPT = empsPT[e.name] || empsPT[e.nickname||''] || null;
+        var hitPT = tryHit(empsPT, e);
         if(!hitPT) return;
         // 寫入 PT 月度工資快取（STATE.ptWage）+ 加班時數
         if(!STATE.ptWage) STATE.ptWage = {};
@@ -1341,7 +1355,7 @@ function doImportOvertime(showToast){
         return;
       }
       // 正職/主管：讀 overtime / late / sick / personal
-      var hit = empsReg[e.name] || empsReg[e.nickname||''] || null;
+      var hit = tryHit(empsReg, e);
       if(!hit) return;
       if(typeof hit.overtimeMin === 'number'){
         STATE.detail[e.id].otHours = Math.round(hit.overtimeMin / 60 * 10) / 10;
@@ -1369,7 +1383,15 @@ function doImportOvertime(showToast){
     renderDetail();
     if(status){
       var ts = data.savedAt ? new Date(data.savedAt).toLocaleString('zh-TW') : '';
-      status.textContent = '✅ 已匯入 '+matched+' 位員工'+(ts?'（'+ts+' 產出）':'')+' · 可手動調整';
+      // 算「加班費系統有但薪水頁沒對應到的名字」
+      var allOtNames = Object.keys(empsReg).concat(Object.keys(empsPT));
+      var unmatched = allOtNames.filter(function(n){ return !hitNames[n]; });
+      var lines = ['✅ 已匯入 '+matched+' 位員工'+(ts?'（'+ts+' 產出）':'')];
+      if(unmatched.length){
+        lines.push('⚠ 加班費系統有以下姓名薪水頁對不到：「'+unmatched.join('、')
+                   +'」。請告知這些是哪些員工，我幫你把暱稱補進 STORE_CONFIG。');
+      }
+      status.innerHTML = lines.join('<br>');
     }
     if(showToast) toast('加班費匯入完成：'+matched+' 位', 'ok');
     return matched;
