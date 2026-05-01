@@ -306,8 +306,8 @@ var EMP_DATA = {
     { id:'xz_pt2', name:'林詩縈', pt:true, hireDate:'2025-12-01', birthday:'12-08', initialGiftBalance:0 }
   ],
   'shicheng-zhongxiao': [
-    // 十城沒有旅遊假；用戶只提供剩餘特休 → 用公式回算累計、已用 = 累計 - 剩餘
-    { id:'sc1', name:'林梓彥', hireDate:'2025-02-01', birthday:'',      initialAnnualAccrued:10, initialAnnualUsed:1,  initialTravelRemaining:0, initialGiftBalance:0 },
+    // 十城沒有旅遊假；起始已用全部歸 0，由加班費系統 OT 資料當「已用」唯一來源
+    { id:'sc1', name:'林梓彥', hireDate:'2025-02-01', birthday:'',      initialAnnualAccrued:10, initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0 },
     { id:'sc2', name:'王謖',   hireDate:'2026-02-01', birthday:'',      initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0 },
     { id:'sc3', name:'林哲民', hireDate:'2026-02-01', birthday:'',      initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0 },
     { id:'sc4', name:'陳柏維', hireDate:'2026-04-01', birthday:'',      initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0 }
@@ -324,6 +324,13 @@ var HOLIDAYS = {
 //    特休/旅遊假已用 → 用 initialAnnualUsed/initialTravelRemaining 為準
 //    禮金生日/中秋/端午自動加 → 此日後才會發
 var EFFECTIVE_DATE = '2026-04-25';
+// 部分店家 OT 資料即唯一來源（初始已用=0），EFFECTIVE_DATE 拉早讓 OT 全部都算
+var STORE_EFFECTIVE_DATES = {
+  'shicheng-zhongxiao': '2025-01-01'
+};
+function getEffectiveDate(){
+  return STORE_EFFECTIVE_DATES[STORE] || EFFECTIVE_DATE;
+}
 
 // 十城沒有旅遊假
 var STORES_WITHOUT_TRAVEL = { 'shicheng-zhongxiao': true };
@@ -465,6 +472,7 @@ function cleanEmpName(n){
 function getOvertimeDatesAfter(empName, type){
   var seen = {};
   var target = cleanEmpName(empName);
+  var effDate = getEffectiveDate();
   var prefix = 'cd_ot_summary_' + STORE + '_';
   for(var i = 0; i < localStorage.length; i++){
     var key = localStorage.key(i);
@@ -476,7 +484,7 @@ function getOvertimeDatesAfter(empName, type){
         if(cleanEmpName(n) !== target) return;
         var rec = emps[n] || {};
         var dates = type === 'annual' ? (rec.annualDates || []) : (rec.travelDates || []);
-        dates.forEach(function(d){ if(d > EFFECTIVE_DATE) seen[d] = 1; });
+        dates.forEach(function(d){ if(d > effDate) seen[d] = 1; });
       });
     } catch(e){}
   }
@@ -484,7 +492,7 @@ function getOvertimeDatesAfter(empName, type){
     Object.keys(OT_LEAVE_CLOUD).forEach(function(n){
       if(cleanEmpName(n) !== target) return;
       var arr = (OT_LEAVE_CLOUD[n] || {})[type] || [];
-      arr.forEach(function(d){ if(d > EFFECTIVE_DATE) seen[d] = 1; });
+      arr.forEach(function(d){ if(d > effDate) seen[d] = 1; });
     });
   }
   return Object.keys(seen).sort();
