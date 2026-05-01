@@ -224,13 +224,13 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
   <div class="section">
     <h3><span class="step-num">2</span><span class="icon">📋</span>打卡／小結／回收 獎金<span class="hint">主管扣款、正職獎金</span></h3>
 
-    <div class="sub-label">主管階 · 最高失誤 5 次 · 每次職務加給扣 100</div>
+    <div class="sub-label">主管階 · 每次職務加給扣 100 · 5 次以上一律填 5（最高扣 500）</div>
     <table class="grid">
       <thead><tr><th>員工</th><th style="width:200px">缺失次數</th><th style="width:100px">扣款</th></tr></thead>
       <tbody id="tbody-s1-sup"></tbody>
     </table>
 
-    <div class="sub-label">正職 · 最高失誤 4 次 · 0/1/2/3/4 次 → 200/150/100/50/0</div>
+    <div class="sub-label">正職 · 0/1/2/3/4 次 → 200/150/100/50/0 · 5 次以上獎金 0</div>
     <table class="grid">
       <thead><tr><th>員工</th><th style="width:200px">缺失次數</th><th style="width:100px">獎金</th></tr></thead>
       <tbody id="tbody-s1-reg"></tbody>
@@ -768,28 +768,25 @@ function renderS1(){
   var hs=[], hr=[];
   EMPLOYEES.forEach(function(e){
     var n = STATE.s1[e.id] | 0;
+    if(n > 5) n = 5;
+    if(n < 0) n = 0;
+    var input = '<input type="number" min="0" max="5" step="1" value="'+n+'" onchange="onS1Change(\''+e.id+'\', this.value)" style="width:80px">';
     if(isSup(e.id)){
-      // 依目前職級決定次數上限（主管 5 次）
-      if(n > 5) n = 5;
-      var sel = '<select onchange="onS1Change(\''+e.id+'\', this.value)">';
-      for(var i=0; i<=5; i++) sel += opt(i, i+' 次', n);
-      sel += '</select>';
       var amt = s1SupDeduct(n);
-      hs.push('<tr><td class="c-name">'+e.name+'</td><td>'+sel+'</td><td class="c-num '+amtClass(amt)+'">'+fmt(amt)+'</td></tr>');
+      hs.push('<tr><td class="c-name">'+e.name+'</td><td>'+input+'</td><td class="c-num '+amtClass(amt)+'">'+fmt(amt)+'</td></tr>');
     } else {
-      if(n > 4) n = 4;
-      var sel2 = '<select onchange="onS1Change(\''+e.id+'\', this.value)">';
-      for(var j=0; j<=4; j++) sel2 += opt(j, j+' 次', n);
-      sel2 += '</select>';
       var amt2 = s1RegBonus(n);
-      hr.push('<tr><td class="c-name">'+e.name+'</td><td>'+sel2+'</td><td class="c-num '+amtClass(amt2)+'">'+fmt(amt2)+'</td></tr>');
+      hr.push('<tr><td class="c-name">'+e.name+'</td><td>'+input+'</td><td class="c-num '+amtClass(amt2)+'">'+fmt(amt2)+'</td></tr>');
     }
   });
   sup.innerHTML = hs.join('') || '<tr><td colspan="3" style="color:var(--ink-3);text-align:center;padding:10px">本月無主管階</td></tr>';
   reg.innerHTML = hr.join('') || '<tr><td colspan="3" style="color:var(--ink-3);text-align:center;padding:10px">本月無正職</td></tr>';
 }
 function onS1Change(id, v){
-  STATE.s1[id] = v|0;
+  var n = parseInt(v, 10) || 0;
+  if(n < 0) n = 0;
+  if(n > 5) n = 5;
+  STATE.s1[id] = n;
   renderS1();
   renderDetail();
 }
