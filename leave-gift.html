@@ -449,27 +449,43 @@ function travelEntitlement(hireDate){
 // 雲端加班費假別資料（pullFromCloud 時填入；跨裝置共用）
 var OT_LEAVE_CLOUD = null; // { empName: { annual:[...], travel:[...] } }
 
+// 員工姓名正規化（與加班費系統 normalizeName 同邏輯）
+//   「2林梓彥」→「林梓彥」、「張小明 001」→「張小明」
+function cleanEmpName(n){
+  return String(n||'').trim()
+    .replace(/^[\d\s\-_#.．。、:：]+/, '')
+    .replace(/[\s\-_#:：]*\d+\s*$/, '')
+    .trim();
+}
+
 // 從加班費系統匯入的請假紀錄中，找此員工 EFFECTIVE_DATE 之後的特/旅遊日期
 //   1) localStorage cd_ot_summary_<store>_<ym>（同瀏覽器當下分析的）
 //   2) 雲端 OT_LEAVE_CLOUD（其他裝置上分析後同步上來的）
-//   兩邊去重 + 過濾 > EFFECTIVE_DATE + 排序
+//   兩邊用正規化後的姓名比對，去重 + 過濾 > EFFECTIVE_DATE + 排序
 function getOvertimeDatesAfter(empName, type){
   var seen = {};
+  var target = cleanEmpName(empName);
   var prefix = 'cd_ot_summary_' + STORE + '_';
   for(var i = 0; i < localStorage.length; i++){
     var key = localStorage.key(i);
     if(!key || key.indexOf(prefix) !== 0) continue;
     try {
       var p = JSON.parse(localStorage.getItem(key) || '{}');
-      var rec = (p.employees || {})[empName];
-      if(!rec) continue;
-      var dates = type === 'annual' ? (rec.annualDates || []) : (rec.travelDates || []);
-      dates.forEach(function(d){ if(d > EFFECTIVE_DATE) seen[d] = 1; });
+      var emps = p.employees || {};
+      Object.keys(emps).forEach(function(n){
+        if(cleanEmpName(n) !== target) return;
+        var rec = emps[n] || {};
+        var dates = type === 'annual' ? (rec.annualDates || []) : (rec.travelDates || []);
+        dates.forEach(function(d){ if(d > EFFECTIVE_DATE) seen[d] = 1; });
+      });
     } catch(e){}
   }
-  if(OT_LEAVE_CLOUD && OT_LEAVE_CLOUD[empName]){
-    var arr = OT_LEAVE_CLOUD[empName][type] || [];
-    arr.forEach(function(d){ if(d > EFFECTIVE_DATE) seen[d] = 1; });
+  if(OT_LEAVE_CLOUD){
+    Object.keys(OT_LEAVE_CLOUD).forEach(function(n){
+      if(cleanEmpName(n) !== target) return;
+      var arr = (OT_LEAVE_CLOUD[n] || {})[type] || [];
+      arr.forEach(function(d){ if(d > EFFECTIVE_DATE) seen[d] = 1; });
+    });
   }
   return Object.keys(seen).sort();
 }

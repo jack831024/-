@@ -2014,13 +2014,26 @@ function pushOTLeaveToCloud(payload){
   if(!STORE || !payload || !payload.ym) return;
   var pwd = STORE_PWS_FOR_LEAVEGIFT[STORE];
   if(!pwd) return;
-  // 篩出有 annualDates / travelDates 的員工
+  // 正規化員工姓名：剝掉「員編前綴 / 暱稱數字後綴」
+  // 「2林梓彥」→「林梓彥」、「張小明 001」→「張小明」
+  function cleanName(n){
+    return String(n||'').trim()
+      .replace(/^[\d\s\-_#.．。、:：]+/, '')
+      .replace(/[\s\-_#:：]*\d+\s*$/, '')
+      .trim();
+  }
+  // 合併同一員工的不同寫法（「林梓彥」與「2林梓彥」會 merge）
   var byEmp = {};
   Object.keys(payload.employees || {}).forEach(function(name){
     var rec = payload.employees[name] || {};
-    var a = (rec.annualDates || []).slice();
-    var t = (rec.travelDates || []).slice();
-    if(a.length || t.length) byEmp[name] = { annualDates: a, travelDates: t };
+    var a = rec.annualDates || [];
+    var t = rec.travelDates || [];
+    if(!a.length && !t.length) return;
+    var key = cleanName(name);
+    if(!key) return;
+    if(!byEmp[key]) byEmp[key] = { annualDates: [], travelDates: [] };
+    a.forEach(function(d){ if(byEmp[key].annualDates.indexOf(d) < 0) byEmp[key].annualDates.push(d); });
+    t.forEach(function(d){ if(byEmp[key].travelDates.indexOf(d) < 0) byEmp[key].travelDates.push(d); });
   });
   fetch(LEAVE_GIFT_URL, {
     method:'POST',
