@@ -762,6 +762,9 @@ function loadSchedule(){
         autoImportPtList(true);
       }
       maybeEnableAnalyze();
+
+      // 雲端分析結果回填：之前跑過分析就直接顯示，不用再上傳打卡再分析
+      applyCloudAnalysis(data.analysis, ym);
     })
     .catch(function(err){
       setStatus('sched-status','err','❌ 載入失敗：'+err.message);
@@ -769,6 +772,44 @@ function loadSchedule(){
     .finally(function(){
       document.getElementById('btn-load-schedule').disabled = false;
     });
+}
+
+// ============================================
+// 📥 把雲端存的分析結果套回 UI（FT + PT 都顯示）
+//   舊版 Apps Script 沒回 analysis 欄位 → 靜悄悄略過
+// ============================================
+function applyCloudAnalysis(analysis, ym){
+  if(!analysis || !Array.isArray(analysis.ftRows)) return;
+  var hasFT = analysis.ftRows.length > 0;
+  var hasPT = Array.isArray(analysis.ptRows) && analysis.ptRows.length > 0;
+  if(!hasFT && !hasPT) return;
+
+  if(hasFT){
+    ANALYSIS = analysis.ftRows;
+    ACTIVE_FILTER = 'all';
+    renderSummary();
+    renderResults();
+    document.getElementById('filter-chips').style.display = 'flex';
+    document.getElementById('summary-grid').style.display = 'grid';
+    document.getElementById('btn-export').disabled = false;
+    document.getElementById('btn-save-cloud').disabled = false;
+  }
+  if(hasPT){
+    PT_ANALYSIS = analysis.ptRows;
+    if(typeof renderPtSummary === 'function') renderPtSummary();
+    if(typeof renderPtResults === 'function') renderPtResults();
+    document.getElementById('btn-pt-export').disabled = false;
+  }
+
+  // 把 summary 同步寫進 localStorage（給薪水/特休卡讀）
+  if(ym && /^\d{4}-\d{2}$/.test(ym)){
+    var parts = ym.split('-');
+    persistSalarySummary(Number(parts[0]), Number(parts[1]));
+  } else {
+    persistSalarySummary();
+  }
+
+  setStatus('sched-status','ok','✅ 已從雲端載入之前儲存的分析結果（FT '+analysis.ftRows.length+' 筆、PT '+(hasPT?analysis.ptRows.length:0)+' 筆）');
 }
 
 function renderSchedulePreview(){
@@ -2806,6 +2847,8 @@ renderPtList();
         }
         maybeEnableAnalyze();
       }
+      // 之前跑過分析就直接顯示
+      applyCloudAnalysis(data && data.analysis, ym);
       setSyncStatus('ok','已同步','已從雲端套用最新設定');
     })
     .catch(function(err){

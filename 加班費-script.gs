@@ -277,8 +277,96 @@ function getSchedule(params) {
     sheetName: sheet.getName(),
     rows: rows,
     events: collectEvents(values, colToDay),  // 開會 / 消毒 等註記日（給開會日特殊班別用）
-    settings: loadSavedSettings(month)   // 順便回傳雲端儲存的整頁設定（班別、PT 名單等）
+    settings: loadSavedSettings(month),       // 順便回傳雲端儲存的整頁設定（班別、PT 名單等）
+    analysis: loadSavedAnalysis(month)        // 之前跑過的分析結果（FT / PT 每筆）→ 不用再跑
   };
+}
+
+// ============================================
+// 📤 讀取雲端儲存的分析結果
+//   解析「加班費-YYYY-MM」分頁裡的 FT / PT 資料列，反序列化回前端能直接套用的物件
+//   失敗 / 沒資料 → 回 { ftRows: [], ptRows: [] }（前端會自動 fallback：跑一次分析）
+// ============================================
+function loadSavedAnalysis(month) {
+  try {
+    var ss = SCHEDULE_SHEET_ID ? SpreadsheetApp.openById(SCHEDULE_SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = (month && /^\d{4}-\d{2}$/.test(month)) ? ss.getSheetByName('加班費-' + month) : null;
+    if (!sheet) return { ftRows: [], ptRows: [] };
+    var data = sheet.getDataRange().getValues();
+    if (data.length < 2) return { ftRows: [], ptRows: [] };
+
+    var ftRows = [], ptRows = [];
+    for (var i = 1; i < data.length; i++) {
+      var r = data[i];
+      var kind = String(r[0] == null ? '' : r[0]).trim();
+      // 遇到 meta 區（儲存時間 / 設定快照 ...）就停
+      if (kind && kind !== '正職' && kind !== 'PT') break;
+      if (kind !== '正職' && kind !== 'PT') continue;
+
+      var date = String(r[1] == null ? '' : r[1]).trim();
+      var name = String(r[2] == null ? '' : r[2]).trim();
+      if (!name) continue;
+
+      var punchesStr = String(r[6] == null ? '' : r[6]).trim();
+      var punches = punchesStr ? punchesStr.split(/\s*\/\s*/).filter(function(x){ return x; }) : [];
+      var note = String(r[18] == null ? '' : r[18]).trim();
+
+      if (kind === '正職') {
+        var lateMin = Number(r[8]) || 0;
+        var overtimeMin = Number(r[9]) || 0;
+        var missing = String(r[10] == null ? '' : r[10]).trim() === 'Y';
+        var sick = String(r[11] == null ? '' : r[11]).trim() === 'Y';
+        var personal = String(r[12] == null ? '' : r[12]).trim() === 'Y';
+        var leaveType = sick ? 'sick' : (personal ? 'personal' : null);
+        // 從備註推回 leaveType（之前儲存時沒寫 rest/annual/travel 欄位）
+        if (!leaveType) {
+          if (/休-1/.test(note)) leaveType = 'rest';
+          else if (/特休/.test(note)) leaveType = 'annual';
+          else if (/旅遊/.test(note)) leaveType = 'travel';
+        }
+        var flags = [];
+        if (overtimeMin > 0) flags.push('ot');
+        if (lateMin > 0) flags.push('late');
+        if (missing) flags.push('miss');
+        if (leaveType) flags.push(leaveType);
+        if (/開會日/.test(note)) flags.push('meeting');
+        if (!flags.length) flags.push('ok');
+        ftRows.push({
+          name: name,
+          date: date,
+          code: String(r[3] == null ? '' : r[3]).trim(),
+          shiftName: String(r[4] == null ? '' : r[4]).trim(),
+          expectShift: String(r[5] == null ? '' : r[5]).trim(),
+          punches: punches,
+          punchesEff: punches,
+          required: 0,
+          overtimeMin: overtimeMin,
+          lateMin: lateMin,
+          missing: missing,
+          leaveType: leaveType,
+          flags: flags,
+          note: note
+        });
+      } else {
+        // PT 列：工時 / 一般 / 加班 / 時薪 / 工資
+        ptRows.push({
+          name: name,
+          date: date,
+          punches: punches,
+          workMin: 0,
+          hours: Number(r[13]) || 0,
+          normalHours: Number(r[14]) || 0,
+          otHours: Number(r[15]) || 0,
+          hourlyWage: Number(r[16]) || 0,
+          wage: Number(r[17]) || 0,
+          note: note
+        });
+      }
+    }
+    return { ftRows: ftRows, ptRows: ptRows };
+  } catch(err) {
+    return { ftRows: [], ptRows: [], error: String(err) };
+  }
 }
 
 // ============================================
