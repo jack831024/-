@@ -284,6 +284,7 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
         <button class="filter-chip" data-filter="rest">休-1<span class="chip-count" id="cnt-rest">0</span></button>
         <button class="filter-chip" data-filter="annual">特休<span class="chip-count" id="cnt-annual">0</span></button>
         <button class="filter-chip" data-filter="travel">旅遊假<span class="chip-count" id="cnt-travel">0</span></button>
+        <button class="filter-chip" data-filter="meeting">開會日<span class="chip-count" id="cnt-meeting">0</span></button>
       </div>
     </div>
     <div class="summary-grid" id="summary-grid" style="display:none">
@@ -465,6 +466,52 @@ var NAME_MAP_BY_STORE = {
     '陳柏維': 'michael'
   }
 };
+
+// ============================================
+// ⭐ 開會日的特殊班別覆寫表
+// 邏輯：班表底下若有「開會」這一格 → SCHEDULE.events[d] = '開會'
+//   - A 班（code === 'A'）跟「其他人」上下班時間不一樣
+//   - 開會日打卡都是 3 次（不是平常的 2 / 4 次）
+//   - 開會日只看遲到、不算加班費
+//   - code === '休' 的人開會日仍然休息，不套用
+// 火鍋店 = 初殿 3 家（中和 / 永春 / 新莊）
+// ============================================
+var MEETING_DAY_SHIFTS = {
+  'shicheng-zhongxiao': {
+    A:     { workIn:'14:00', workOut:'21:00', punches:3 },
+    other: { workIn:'15:00', workOut:'21:30', punches:3 }
+  },
+  'chudian-zhonghe': {
+    A:     { workIn:'14:30', workOut:'21:00', punches:3 },
+    other: { workIn:'15:00', workOut:'23:00', punches:3 }
+  },
+  'chudian-yongchun': {
+    A:     { workIn:'14:30', workOut:'21:00', punches:3 },
+    other: { workIn:'15:00', workOut:'23:00', punches:3 }
+  },
+  'chudian-xinzhuang': {
+    A:     { workIn:'14:30', workOut:'21:00', punches:3 },
+    other: { workIn:'15:00', workOut:'23:00', punches:3 }
+  }
+};
+
+// 給 (店, 班別代碼) 抓開會日的覆寫班別；找不到就回 null（保持原班別）
+function getMeetingDayShift(store, code){
+  var m = MEETING_DAY_SHIFTS[store];
+  if(!m) return null;
+  if(code === '休') return null; // 休假當天不上工
+  var pick = (code === 'A') ? m.A : m.other;
+  if(!pick) return null;
+  return {
+    code: code,
+    name: '開會(' + (code === 'A' ? 'A' : '其他') + ')',
+    workIn: pick.workIn,
+    workOut: pick.workOut,
+    breakIn: '',
+    breakOut: '',
+    punches: pick.punches
+  };
+}
 
 // 預先建立 normalize 後的對照（提升查找效能；同時也做反向 set 給 PT 篩選用）
 // 使用 normalizeName 確保 key 一致性（也能處理「5. 謝其淇」這類前綴）
@@ -725,6 +772,16 @@ function renderSchedulePreview(){
   Object.keys(shiftCnt).forEach(function(k){
     parts.push('<span class="preview-stat">'+escapeHtml(k)+' × '+shiftCnt[k]+'</span>');
   });
+  // 開會日提醒（從 events 來；舊版 Apps Script 沒回 events 就跳過）
+  if(SCHEDULE.events){
+    var meetDays = Object.keys(SCHEDULE.events)
+      .filter(function(d){ return SCHEDULE.events[d] === '開會'; })
+      .map(Number).sort(function(a,b){return a-b;});
+    if(meetDays.length){
+      parts.push('<span class="preview-stat" style="background:rgba(217,119,6,.12);color:#b45309">📣 開會日：'
+        + meetDays.map(function(d){ return d+'日'; }).join('、') + '（不計加班，僅看遲到）</span>');
+    }
+  }
   document.getElementById('sched-preview').innerHTML = parts.join(' ');
 }
 
@@ -1471,6 +1528,16 @@ function runAnalysis(){
       }
 
       var shift = shiftMap[code];
+
+      // 🟢 開會日覆寫：班表底下有「開會」→ A 班/其他人 上下班時間不同、3 次打卡
+      //   只看遲到、不算加班費（otMin 之後會被歸零）
+      var isMeetingDay = !!(SCHEDULE.events && SCHEDULE.events[dStr] === '開會');
+      var meetingShift = null;
+      if(isMeetingDay){
+        meetingShift = getMeetingDayShift(STORE, code);
+        if(meetingShift) shift = meetingShift; // 覆寫掉原本的班別
+      }
+
       // 未定義的班別代碼 → 仍記一筆，標成 unknown
       // 用內建的「班表中文名 → 打卡英文名」對照查打卡
       var pk = resolvePunchKeyByName(name);
@@ -1548,21 +1615,29 @@ function runAnalysis(){
         }
       }
 
+      // 🟢 開會日不算加班費（業主規則）：只保留遲到 / 缺卡判定
+      if(isMeetingDay && meetingShift){
+        otMin = 0;
+      }
+
       var flags = [];
       if(otMin > 0) flags.push('ot');
       if(lateMin > 0) flags.push('late');
       if(missing) flags.push('miss');
+      if(isMeetingDay && meetingShift) flags.push('meeting');
       if(!flags.length) flags.push('ok');
 
       var dedupNote = (punches.length !== punchesEff.length)
         ? ('原 '+punches.length+' 次 → 合併重複後 '+punchesEff.length+' 次')
         : '';
+      var meetingNote = (isMeetingDay && meetingShift) ? '開會日（不計加班）' : '';
+      var combinedNote = [meetingNote, dedupNote].filter(Boolean).join('；');
       results.push({
         name:name, date:date, code:code, shiftName:shift.name||code,
         expectShift:(shift.workIn||'')+'~'+(shift.workOut||''),
         punches:punches, punchesEff:punchesEff, required:required,
         overtimeMin:otMin, lateMin:lateMin, missing:missing,
-        flags:flags, note:dedupNote
+        flags:flags, note:combinedNote
       });
     });
   });
@@ -1834,6 +1909,9 @@ function renderSummary(){
   if(cntAnnual) cntAnnual.textContent = ' · '+annualCnt;
   var cntTravel = document.getElementById('cnt-travel');
   if(cntTravel) cntTravel.textContent = ' · '+travelCnt;
+  var meetingCnt = ANALYSIS.filter(function(x){ return x.flags.indexOf('meeting') >= 0; }).length;
+  var cntMeeting = document.getElementById('cnt-meeting');
+  if(cntMeeting) cntMeeting.textContent = ' · '+meetingCnt;
 }
 
 function renderResults(){
@@ -1864,6 +1942,7 @@ function renderResults(){
       if(f === 'rest')     return '<span class="tag rest">休-1</span>';
       if(f === 'annual')   return '<span class="tag" style="background:rgba(22,163,74,.12);color:#15803d">特休</span>';
       if(f === 'travel')   return '<span class="tag" style="background:rgba(8,145,178,.12);color:#0e7490">旅遊假</span>';
+      if(f === 'meeting')  return '<span class="tag" style="background:rgba(217,119,6,.12);color:#b45309">開會日</span>';
       return '<span class="tag ok">正常</span>';
     }).join(' ');
     html.push('<tr>',

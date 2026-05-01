@@ -276,8 +276,34 @@ function getSchedule(params) {
     year: y, month: m,
     sheetName: sheet.getName(),
     rows: rows,
+    events: collectEvents(values, colToDay),  // 開會 / 消毒 等註記日（給開會日特殊班別用）
     settings: loadSavedSettings(month)   // 順便回傳雲端儲存的整頁設定（班別、PT 名單等）
   };
+}
+
+// ============================================
+// 📣 掃描所有日期欄位，收集「開會 / 消毒 / 清潔 / 訓練 / 會議 / 活動 / 打球」等事件
+//   會掃整張班表（包含被 EXCLUDE_NAMES_REGEX 過濾掉的「活動」「備註」列），
+//   只要 cell 內容是這些字之一，就把 day 標記成該事件。
+//   優先順序：開會 > 消毒 > 其他（同一天若多筆，開會 / 消毒 會覆蓋掉其他）
+// ============================================
+function collectEvents(values, colToDay) {
+  var events = {};
+  var EVENT_RX = /^(開會|消毒|清潔|訓練|會議|活動|公告|打球)$/;
+  var PRIORITY = { '開會': 3, '消毒': 2 };
+  for (var r = DATA_START_ROW - 1; r < values.length; r++) {
+    var row = values[r];
+    for (var c in colToDay) {
+      if (!colToDay.hasOwnProperty(c)) continue;
+      var dKey = String(colToDay[c]);
+      var cell = String(row[c] == null ? '' : row[c]).trim();
+      if (!EVENT_RX.test(cell)) continue;
+      var prevPri = events[dKey] ? (PRIORITY[events[dKey]] || 1) : 0;
+      var thisPri = PRIORITY[cell] || 1;
+      if (thisPri >= prevPri) events[dKey] = cell;
+    }
+  }
+  return events;
 }
 
 // ============================================
