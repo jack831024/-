@@ -290,7 +290,9 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
 
 @media(max-width:480px){
   .biz-grid{grid-template-columns:1fr}
-  .biz-card.revenue,.biz-card.profit{grid-column:span 1}
+  /* ⭐ !important 強制覆蓋所有 inline style:grid-column:span 2 (例如 vendor card)，
+     避免在窄螢幕還想跨 2 欄把單欄 grid 擠歪、card 變窄條 */
+  .biz-card{grid-column:span 1 !important}
 }
 
 .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
@@ -1764,7 +1766,7 @@ async function loadHistory(opts){
         j.records.forEach(function(row){
           var nd = normalizeDate(row.date);
           var k = nd+'|'+row.name;
-          cloudMap[k] = { date: nd, name: row.name, price: row.price, qty: row.qty };
+          cloudMap[k] = { date: nd, name: row.name, price: row.price, qty: row.qty, unit: row.unit||'' };
         });
         // 合併：先保留 local 的，雲端再蓋過去
         var merged = {};
@@ -1779,6 +1781,49 @@ async function loadHistory(opts){
         srcChip.textContent = '雲端 + 本機';
         renderHistoryTable(box, stat, allRecords);
         renderBusinessSummary();
+
+        // ⭐ 把雲端有但本機缺的「整天」cache 回 localStorage，讓下次切到該日期時
+        //    reloadBatchFromStorage（讀本機）能找到資料 → 本批品項明細顯示出來
+        try{
+          var existingKeys = {};
+          var prefix = 'cd_inv_'+STORE_ID+'_'+currentVendor+'_';
+          for(var i=0;i<localStorage.length;i++){
+            var lk = localStorage.key(i);
+            if(lk && lk.indexOf(prefix) === 0) existingKeys[lk] = 1;
+          }
+          // 用日期分組雲端資料
+          var byDate = {};
+          j.records.forEach(function(row){
+            var nd = normalizeDate(row.date);
+            if(!nd) return;
+            if(!byDate[nd]) byDate[nd] = [];
+            byDate[nd].push({
+              name: row.name,
+              price: Number(row.price) || 0,
+              qty: Number(row.qty) || 0,
+              unit: row.unit || '',
+              date: nd
+            });
+          });
+          // 寫回本機（只寫缺的，不覆蓋已有的避免吃掉本機新編輯）
+          var cachedCount = 0;
+          Object.keys(byDate).forEach(function(d){
+            var key = prefix + d;
+            if(!existingKeys[key]){
+              localStorage.setItem(key, JSON.stringify({
+                vendor: currentVendor, date: d, items: byDate[d], savedAt: new Date().toISOString()
+              }));
+              cachedCount++;
+            }
+          });
+          if(cachedCount > 0) console.log('[loadHistory] 雲端 → 本機 cache：' + cachedCount + ' 天');
+          // 如果當前 batch 顯示的日期剛被 cache，重新載入讓本批品項明細顯示
+          var curDate = document.getElementById('inv-date');
+          if(curDate && curDate.value && byDate[curDate.value] && typeof reloadBatchFromStorage === 'function'){
+            reloadBatchFromStorage();
+            renderBatchItems();
+          }
+        }catch(cacheErr){ console.warn('[loadHistory] 寫回本機 cache 失敗', cacheErr); }
       }
     }catch(e){ console.warn('雲端讀取失敗', e); }
   }
@@ -2082,7 +2127,8 @@ function renderHistoryTable(box, stat, records){
     for(var d=1; d<=daysInMonth; d++){
       var c = pivot[n][d];
       var wk = isWeekend(d) ? ' weekend' : '';
-      var val = (c && c.price > 0) ? formatNum(c.price) : '';
+      // ⭐ input type=number 不接受帶千分號的字串！直接給原始數字（如 1250），不要用 formatNum
+      var val = (c && c.price > 0) ? c.price : '';
       html += '<td class="cell-edit'+wk+'"><input type="number" step="0.01" class="cell-input" value="'+val+'" placeholder="—" onchange="editCell(\''+nEsc+'\','+d+',\'price\',this.value)"></td>';
     }
     // 累計 amount
@@ -2102,7 +2148,8 @@ function renderHistoryTable(box, stat, records){
     for(var d=1; d<=daysInMonth; d++){
       var c = pivot[n][d];
       var wk = isWeekend(d) ? ' weekend' : '';
-      var val = (c && c.qty > 0) ? formatNum(c.qty) : '';
+      // ⭐ input type=number 不接受千分號，直接給原始數字
+      var val = (c && c.qty > 0) ? c.qty : '';
       if(c && c.qty > 0) itemTotalQty += c.qty;
       html += '<td class="cell-edit'+wk+'"><input type="number" step="0.01" class="cell-input" value="'+val+'" placeholder="—" onchange="editCell(\''+nEsc+'\','+d+',\'qty\',this.value)"></td>';
     }
