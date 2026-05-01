@@ -1139,6 +1139,9 @@ async function doAnalyze(filesToAnalyze){
     syncMonthPickerToDate(invoiceDate);
     await loadHistory({skipCloud:true});
 
+    // ⭐ 額外保險：直接重算「所有廠商成本」（loadHistory 內已呼叫，這裡再保險一次）
+    if(typeof renderBusinessSummary === 'function') renderBusinessSummary();
+
     // 重新載入「本批品項明細」區塊（讓使用者立即看到 AI 結果並可編輯）
     if(typeof reloadBatchFromStorage === 'function'){
       reloadBatchFromStorage();
@@ -1220,6 +1223,8 @@ function commitBatch(){
   }));
   // 月度表只用本機資料 render（避免雲端舊值覆蓋剛 commit 的本機值）
   if(typeof loadHistory === 'function') loadHistory({skipCloud:true});
+  // ⭐ 額外保險：直接重算「所有廠商成本」（不依賴 loadHistory 是否成功觸發）
+  if(typeof renderBusinessSummary === 'function') renderBusinessSummary();
   if(typeof cloudSyncOneDay === 'function') cloudSyncOneDay(date, clean, savedAt);
 }
 
@@ -2513,6 +2518,9 @@ async function editCell(repName, day, field, newValue){
 
   // 重畫月度表（只用本機資料，避免「雲端舊值」蓋掉剛剛編輯）
   await loadHistory({skipCloud:true});
+
+  // ⭐ 額外保險：重算「所有廠商成本」（loadHistory 內已呼叫，這裡再保險一次）
+  if(typeof renderBusinessSummary === 'function') renderBusinessSummary();
 
   // 如果這天剛好是「本批品項明細」正在顯示的日期，也跟著刷新
   var curBatchDate = document.getElementById('inv-date');
