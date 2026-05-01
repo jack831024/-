@@ -550,13 +550,15 @@ function s4Bonus(n){
 }
 function s7SupAmt(yes){ return yes ? 0 : -500; }
 function s7RegAmt(yes){ return yes ? 200 : 0; }
+var NEWBIE_BONUS = 4000; // 新人正職 加給（4 家店共用）
 function roleBase(role){
   if(role === 'head') return HEAD_BONUS;
   if(role === 'deputy') return DEPUTY_BONUS;
+  if(role === 'newbie') return NEWBIE_BONUS;
   return 0;
 }
 function roleLabel(role){
-  return role==='head'?'店長':role==='deputy'?'副店長':role==='regular'?'正職':role==='pt'?'PT':'';
+  return role==='head'?'店長':role==='deputy'?'副店長':role==='newbie'?'新人正職':role==='regular'?'正職':role==='pt'?'PT':'';
 }
 // 目前該員工是主管嗎？（依頂端的「員工職級設定」）
 function isSup(empId){
@@ -999,6 +1001,7 @@ function renderRoles(){
       + opt('head', '店長', r)
       + opt('deputy', '副店長', r)
       + opt('regular', '正職', r)
+      + opt('newbie', '新人正職', r)
       + '</select>';
     // 固定加班費：以 STATE.fixedOT[id] 為主，沒設就用該店該職級的預設
     var fxStored = STATE.fixedOT && STATE.fixedOT[e.id];
@@ -1114,12 +1117,13 @@ function calcEmp(e){
     monthPay += b_s1 + b_s7 + b_s6; // 正職：小結/回收、開會、評分表 都併入月薪
   }
 
-  // 職務加給（主管：基礎 - 開會扣 - 小結扣；正職：0）
-  // 用戶規格：職務加給 = 店長/副店長 - 開會獎金 - 小結/回收獎金
-  // 這邊 b_s7 和 b_s1 對主管都是 0 或負值，所以實際是 加 = 基礎 + b_s7 + b_s1
-  var rolePay = 0;
+  // 職務加給：
+  //  - 主管 (店長/副店長): 基礎 + 開會扣(b_s7) + 小結扣(b_s1)（後兩者 ≤ 0）
+  //  - 新人正職: 純加給 4000（不扣，因為 b_s1/b_s7 已併入月薪）
+  //  - 一般正職: 0
+  var rolePay = roleBase(role); // head=20000/15000、deputy=15000/12500、newbie=4000、regular=0
   if(sup){
-    rolePay = roleBase(role) + b_s7 + b_s1; // b_s7 / b_s1 對 sup 是 ≤0
+    rolePay += b_s7 + b_s1; // 主管才再加扣項
   }
 
   var dtDays = STATE.detail[id].dtDays || 0;
@@ -1128,12 +1132,12 @@ function calcEmp(e){
   var personalDays = STATE.detail[id].personalDays || 0;
   var restDays = STATE.detail[id].restDays || 0;
 
-  // 公式基數（正職：月薪；主管：月薪 + 職務加給）
-  //  雙薪       = 基數 / 30 × 天 (中和/永春 的副店長+正職 改用固定 45000 / 30)
+  // 公式基數：月薪 + 職務加給（regular 為 0，沒影響）
+  //  雙薪       = 基數 / 30 × 天 (中和/永春 的副店長+正職+新人正職 改用固定 45000)
   //  延長加班費 = 基數 / 30 / 8 × 1.34 × 時數
   //  事假 / 休-1 = 基數 / 30 × 天（一天扣一天）
   //  病假       = 基數 / 30 / 2 × 天（半薪）
-  var otBase = monthPay + (sup ? rolePay : 0);
+  var otBase = monthPay + rolePay;
   var perDay = otBase / 30;
   // 雙薪特例：中和/永春 的「副店長 + 正職」用固定 45000 為基數
   // 但個別員工可在 STORE_CONFIG 標記 dwUseMonthly:true 來改回月薪基數
@@ -1149,11 +1153,8 @@ function calcEmp(e){
   var personalDeduct = personalDays * perDay;
   var restDeduct = restDays * perDay;
 
-  // 總額
-  var total = monthPay + fixedOT + doubleWage + otPay - sickDeduct - personalDeduct - restDeduct + otherBonus;
-  if(sup){
-    total += rolePay;
-  }
+  // 總額：永遠加 rolePay（regular = 0 沒影響；sup 含 s1/s7 扣；newbie 純 +4000）
+  var total = monthPay + fixedOT + doubleWage + otPay - sickDeduct - personalDeduct - restDeduct + otherBonus + rolePay;
   // 正職：小結/開會/評分表 已全部併入 monthPay，這裡不再加
 
   var realPay = total + insurance;
@@ -1271,12 +1272,18 @@ function renderDetail(){
   }
   html.push(payRow('月薪', c.monthPay, { toggleId:'bd-month-'+emp.id, breakdownHtml: bd }));
 
-  // 職務加給（主管）— 也給個折疊
-  if(c.isSup){
-    var bdRole = bdRow(roleLabel(c.role)+' 加給', c.roleBase)
-      + bdRow('開會', c.b_s7)
-      + bdRow('小結／回收', c.b_s1);
-    html.push(payRow('職務加給', c.rolePay, { toggleId:'bd-role-'+emp.id, breakdownHtml: bdRole }));
+  // 職務加給（主管 / 新人正職 才有）
+  if(c.rolePay !== 0){
+    if(c.isSup){
+      // 主管：基礎 + 開會扣 + 小結扣
+      var bdRole = bdRow(roleLabel(c.role)+' 加給', c.roleBase)
+        + bdRow('開會', c.b_s7)
+        + bdRow('小結／回收', c.b_s1);
+      html.push(payRow('職務加給', c.rolePay, { toggleId:'bd-role-'+emp.id, breakdownHtml: bdRole }));
+    } else {
+      // 新人正職：純 +4000，沒扣項
+      html.push(payRow('新人正職加給', c.rolePay));
+    }
   }
 
   // 固定加班
