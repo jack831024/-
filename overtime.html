@@ -267,11 +267,33 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
     </div>
   </div>
 
+  <!-- Step 3.5: 對應確認 -->
+  <div class="section" id="match-section" style="display:none">
+    <h3><span class="step-num">3.5</span><span class="icon">🔗</span> 確認姓名對應 ＋ 身份</h3>
+    <div style="padding:10px 12px;background:rgba(16,185,129,.04);border:1px dashed rgba(16,185,129,.25);border-radius:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+        <span style="font-weight:700;font-size:13px;color:#047857">📋 員工對應表</span>
+        <span style="font-size:11.5px;color:var(--ink-3)">已預設好對照 → 可手動修改 → 確認後按「開始分析」</span>
+      </div>
+      <table class="shifts-table" id="match-tbl">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding-left:12px">班表 / 打卡 姓名</th>
+            <th style="width:160px">對應打卡名</th>
+            <th style="width:120px">身份</th>
+            <th class="col-time" style="width:120px">時薪 NT$ (PT)</th>
+          </tr>
+        </thead>
+        <tbody id="match-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- Step 4: 分析 -->
   <div class="section">
     <h3><span class="step-num">4</span><span class="icon">📈</span> 分析結果</h3>
     <div class="analysis-toolbar">
-      <button class="btn btn-primary" id="btn-analyze" onclick="runAnalysis()" disabled>🧮 開始分析</button>
+      <button class="btn btn-primary" id="btn-analyze" onclick="runAnalysis()" disabled>🧮 開始分析（FT + PT）</button>
       <button class="btn btn-ghost" id="btn-export" onclick="exportCsv()" disabled>⬇️ 匯出 CSV</button>
       <div class="spacer"></div>
       <div class="filter-chips" id="filter-chips" style="display:none">
@@ -306,25 +328,20 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
     </div>
   </div>
 
-  <!-- Step 5: PT 工時計算 -->
+  <!-- Step 5: PT 工時結果 -->
   <div class="section">
-    <h3><span class="step-num">5</span><span class="icon">💼</span> PT 工時計算</h3>
-
-    <!-- 個別 PT 時薪設定（上傳打卡時自動帶入）-->
-    <div style="padding:10px 12px;background:rgba(59,130,246,.04);border:1px dashed rgba(59,130,246,.2);border-radius:10px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-        <span style="font-weight:700;font-size:13px;color:#1e40af">👤 PT 名單與時薪</span>
-        <span style="font-size:11.5px;color:var(--ink-3)">載入班表後自動帶入未排班員工 → 手動填時薪 → 開始分析</span>
-      </div>
+    <h3><span class="step-num">5</span><span class="icon">💼</span> PT 工時結果</h3>
+    <!-- 舊「PT 名單編輯」隱藏；現在 PT 名單由 Step 3.5 對應表管理 -->
+    <div style="display:none">
       <table class="shifts-table" id="pt-list-tbl">
         <thead><tr><th>姓名</th><th class="col-time">時薪 NT$</th><th class="col-del"></th></tr></thead>
         <tbody id="pt-list-tbody"></tbody>
       </table>
-      <div class="add-row"><button onclick="addPtRow()">+ 手動新增 PT</button></div>
     </div>
 
     <div class="analysis-toolbar" style="margin-top:12px">
-      <button class="btn btn-primary" id="btn-pt-analyze" onclick="runPtAnalysis()" disabled style="background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%);box-shadow:0 6px 16px -6px rgba(59,130,246,.45)">💼 PT 開始分析</button>
+      <!-- 「PT 開始分析」改由 Step 4「開始分析」一次跑完，這顆按鈕保留隱藏為了相容性 -->
+      <button class="btn btn-primary" id="btn-pt-analyze" onclick="runPtAnalysis()" disabled style="display:none">💼 PT 開始分析</button>
       <button class="btn btn-ghost" id="btn-pt-export" onclick="exportPtCsv()" disabled>⬇️ 匯出 PT CSV</button>
     </div>
     <div class="summary-grid" id="pt-summary-grid" style="display:none">
@@ -1467,11 +1484,195 @@ function maybeEnableAnalyze(){
   document.getElementById('btn-analyze').disabled = !(SCHEDULE && PUNCHES && PUNCHES.rows && PUNCHES.rows.length);
   // PT 分析只需要打卡，不需要班表（PT = 打卡有但班表沒有的人）
   document.getElementById('btn-pt-analyze').disabled = !(PUNCHES && PUNCHES.rows && PUNCHES.rows.length);
-  // 班表 + 打卡 都齊 → 自動匯入 PT 名單（在 loadSchedule 也會呼叫一次，
-  // 這裡是當「先載班表再上傳打卡」的順序也能觸發）
+  // 班表 + 打卡 都齊 → 自動匯入 PT 名單 + 構建對應確認表
   if(SCHEDULE && PUNCHES && PUNCHES.rows && PUNCHES.rows.length){
     autoImportPtList(true);
+    buildMatchTable();
   }
+}
+
+// ============================================
+// 🔗 員工對應表（Step 3.5）
+//   把班表所有員工 + 打卡裡多出來的人 列成一張表
+//   每筆：班表姓名 / 對應打卡英文名 dropdown / 身份(FT/PT) radio / 時薪 (PT only)
+//   預設值：
+//     對應打卡 = NAME_MAP_BY_STORE[STORE][zh] 或 normalize(zh) 配對到的 punch name
+//     身份 = isScheduleRowPT(row) ? PT : FT；打卡有班表沒的 = PT
+//     時薪 = 之前 PT_LIST 撈得到的就用
+// ============================================
+function buildMatchTable(){
+  if(!SCHEDULE || !PUNCHES) return;
+  var tbody = document.getElementById('match-tbody');
+  if(!tbody) return;
+  document.getElementById('match-section').style.display = 'block';
+
+  // 收集打卡裡所有 unique 名字
+  var punchNameSet = {};
+  PUNCHES.rows.forEach(function(p){
+    if(!p.name) return;
+    punchNameSet[p.name] = true;
+  });
+  var punchNames = Object.keys(punchNameSet).sort();
+
+  // 既有 PT 名單裡的時薪（保留之前填過的）
+  var existingPtWage = {};
+  readPtListFromDom().forEach(function(p){
+    var k = normalizeName(p.name);
+    if(k) existingPtWage[k] = Number(p.wage) || 0;
+  });
+
+  // 既有 match table 裡的選擇（如果重新 build，要保留使用者剛改的）
+  var prevSelections = {};
+  tbody.querySelectorAll('tr').forEach(function(tr){
+    var key = tr.getAttribute('data-key');
+    if(!key) return;
+    var sel = tr.querySelector('select.match-punch');
+    var role = tr.querySelector('input[type=radio]:checked');
+    var wageInput = tr.querySelector('input.match-wage');
+    prevSelections[key] = {
+      punch: sel ? sel.value : '',
+      role:  role ? role.value : '',
+      wage:  wageInput ? Number(wageInput.value) : 0
+    };
+  });
+
+  // 收哪些 punch 已被某個班表員工指定 → 用來判斷誰是「打卡有但班表沒有」的人
+  var usedPunches = {};
+
+  // ---- 第一段：班表員工 ----
+  var schedRows = (SCHEDULE.rows || []).slice();
+  // 加一個 sentinel：班表 cell 是時間 → 預設 PT
+  var rowsHtml = [];
+  schedRows.forEach(function(row){
+    var schedName = String(row.name || '').trim();
+    if(!schedName) return;
+    var key = 'sched|' + schedName;
+    var prev = prevSelections[key];
+
+    // 預設配對打卡名
+    var defaultPunch;
+    if(prev && prev.punch){
+      defaultPunch = prev.punch;
+    } else {
+      // 先用內建 NAME_MAP
+      var mapped = (NAME_MAP_NORMALIZED[STORE] || {})[normalizeName(schedName)];
+      if(mapped){
+        // 在 punchNames 裡找到 normalize 後等於 mapped 的
+        var hit = punchNames.find(function(pn){ return normalizeName(pn) === mapped; });
+        defaultPunch = hit || mapped;
+      } else {
+        // normalize 後相同的就配
+        var nz = normalizeName(schedName);
+        var hit2 = punchNames.find(function(pn){ return normalizeName(pn) === nz; });
+        defaultPunch = hit2 || '';
+      }
+    }
+    if(defaultPunch) usedPunches[normalizeName(defaultPunch)] = true;
+
+    // 預設身份
+    var defaultRole;
+    if(prev && prev.role){
+      defaultRole = prev.role;
+    } else {
+      defaultRole = isScheduleRowPT(row) ? 'pt' : 'ft';
+    }
+
+    // 時薪
+    var defaultWage = (prev && prev.wage) || existingPtWage[normalizeName(schedName)] || 0;
+
+    rowsHtml.push(renderMatchRow(key, schedName, '班表', defaultPunch, defaultRole, defaultWage, punchNames));
+  });
+
+  // ---- 第二段：打卡有但班表沒有的人 → 預設 PT ----
+  punchNames.forEach(function(pn){
+    if(usedPunches[normalizeName(pn)]) return;
+    var key = 'punch|' + pn;
+    var prev = prevSelections[key];
+    var defaultPunch = (prev && prev.punch) || pn;
+    var defaultRole  = (prev && prev.role)  || 'pt';
+    var defaultWage  = (prev && prev.wage)  || existingPtWage[normalizeName(pn)] || 0;
+    rowsHtml.push(renderMatchRow(key, pn, '打卡', defaultPunch, defaultRole, defaultWage, punchNames));
+  });
+
+  tbody.innerHTML = rowsHtml.join('');
+
+  // 綁定 change → 自動同步（雲端設定 / disabled 時薪欄等）
+  tbody.querySelectorAll('input[type=radio]').forEach(function(rad){
+    rad.addEventListener('change', function(){
+      var tr = rad.closest('tr');
+      var wageInput = tr.querySelector('input.match-wage');
+      if(wageInput){
+        wageInput.disabled = (rad.value !== 'pt');
+      }
+    });
+  });
+}
+
+function renderMatchRow(key, name, sourceTag, defaultPunch, defaultRole, defaultWage, punchNames){
+  var safeKey = String(key).replace(/"/g,'&quot;');
+  var safeName = escapeHtml(name);
+  var radioName = 'role_' + Math.random().toString(36).slice(2, 8);
+  var options = ['<option value="">— 不對應 —</option>'];
+  punchNames.forEach(function(pn){
+    var sel = (pn === defaultPunch) ? ' selected' : '';
+    options.push('<option value="'+escapeHtml(pn)+'"'+sel+'>'+escapeHtml(pn)+'</option>');
+  });
+  // 若 defaultPunch 不在 punchNames 裡（NAME_MAP 寫的英文名打卡裡找不到），也加進選項
+  if(defaultPunch && punchNames.indexOf(defaultPunch) < 0){
+    options.unshift('<option value="'+escapeHtml(defaultPunch)+'" selected>'+escapeHtml(defaultPunch)+'（打卡裡沒有）</option>');
+  }
+  var ftChecked = defaultRole === 'ft' ? ' checked' : '';
+  var ptChecked = defaultRole === 'pt' ? ' checked' : '';
+  var wageDisabled = defaultRole === 'pt' ? '' : ' disabled';
+  var srcStyle = sourceTag === '班表' ? 'background:rgba(59,130,246,.1);color:#1e40af' : 'background:rgba(245,158,11,.12);color:#b45309';
+  return '<tr data-key="'+safeKey+'">'
+    +   '<td style="text-align:left;padding-left:12px">'
+    +     '<span style="font-size:10px;padding:2px 6px;border-radius:6px;margin-right:6px;'+srcStyle+'">'+sourceTag+'</span>'
+    +     '<span style="font-weight:600">'+safeName+'</span>'
+    +   '</td>'
+    +   '<td><select class="match-punch" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:12px;font-family:inherit">'+options.join('')+'</select></td>'
+    +   '<td>'
+    +     '<label style="margin-right:8px;font-size:12px"><input type="radio" name="'+radioName+'" value="ft"'+ftChecked+'> FT</label>'
+    +     '<label style="font-size:12px"><input type="radio" name="'+radioName+'" value="pt"'+ptChecked+'> PT</label>'
+    +   '</td>'
+    +   '<td><input type="number" class="match-wage" min="0" step="1" value="'+(defaultWage||'')+'"'+wageDisabled+' placeholder="—" style="width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:12px;text-align:right;font-family:inherit"></td>'
+    + '</tr>';
+}
+
+// 從對應表讀出資料
+function readMatchTable(){
+  var rows = [];
+  document.querySelectorAll('#match-tbody tr').forEach(function(tr){
+    var key = tr.getAttribute('data-key');
+    if(!key) return;
+    var nameEl = tr.querySelector('span:last-of-type');
+    var sel = tr.querySelector('select.match-punch');
+    var role = tr.querySelector('input[type=radio]:checked');
+    var wage = tr.querySelector('input.match-wage');
+    var parts = key.split('|');
+    rows.push({
+      source: parts[0],   // 'sched' | 'punch'
+      name:   parts.slice(1).join('|'),
+      punchName: sel ? sel.value : '',
+      role:   role ? role.value : 'ft',
+      wage:   wage ? (Number(wage.value) || 0) : 0
+    });
+  });
+  return rows;
+}
+
+// 給 (班表姓名) → 對應的打卡 key （normalize 後）
+// 優先讀對應表，沒找到才 fallback NAME_MAP_BY_STORE
+function resolvePunchKeyFromMatch(schedName){
+  var nz = normalizeName(schedName);
+  var rows = readMatchTable();
+  for(var i = 0; i < rows.length; i++){
+    if(rows[i].source === 'sched' && normalizeName(rows[i].name) === nz){
+      return rows[i].punchName ? normalizeName(rows[i].punchName) : nz;
+    }
+  }
+  // fallback 到原本的內建對照
+  return resolvePunchKeyByName(schedName);
 }
 
 function runAnalysis(){
@@ -1494,11 +1695,20 @@ function runAnalysis(){
   var y = Number(ym.split('-')[0]), m = Number(ym.split('-')[1]);
   var results = [];
 
+  // 從對應表撈：哪些班表員工被標成 PT → 跳過 FT 分析
+  var matchRows = readMatchTable();
+  var matchByName = {};
+  matchRows.forEach(function(mr){
+    if(mr.source === 'sched') matchByName[normalizeName(mr.name)] = mr;
+  });
+
   SCHEDULE.rows.forEach(function(row){
     var name = String(row.name||'').trim();
     if(!name) return;
-    // 班表 cell 是時間非代碼 → PT，跳過 FT 分析（留給 Step 5 PT 工時計算處理）
-    if(isScheduleRowPT(row)) return;
+    var mr = matchByName[normalizeName(name)];
+    // 對應表標記為 PT → 跳過 FT 分析（這人會在 PT 分析裡處理）
+    // 對應表沒這人 → fallback 到 isScheduleRowPT 自動偵測
+    if(mr ? (mr.role === 'pt') : isScheduleRowPT(row)) return;
     var days = row.days || {};
     Object.keys(days).forEach(function(dStr){
       var d = Number(dStr);
@@ -1539,8 +1749,13 @@ function runAnalysis(){
       }
 
       // 未定義的班別代碼 → 仍記一筆，標成 unknown
-      // 用內建的「班表中文名 → 打卡英文名」對照查打卡
-      var pk = resolvePunchKeyByName(name);
+      // 找對應的打卡 key：優先用對應表的 punchName，再 fallback 內建 NAME_MAP
+      var pk;
+      if(mr && mr.punchName){
+        pk = normalizeName(mr.punchName);
+      } else {
+        pk = resolvePunchKeyByName(name);
+      }
       var punches = (punchMap[pk+'|'+date]||[]).slice().sort();
       // 永遠把打卡合併到「應有 N 次」，每筆對應一個排定時段（取最有利於員工的時間）
       // 員工忘記是否打過卡而連按兩下，會被自動合併避免假加班
@@ -1653,13 +1868,19 @@ function runAnalysis(){
   renderSummary();
   renderDiagnostics(y, m);
   renderResults();
-  persistSalarySummary(y, m);
   document.getElementById('btn-export').disabled = !results.length;
   document.getElementById('btn-save-cloud').disabled = !results.length;
-  // FT 分析跑完 → 自動同步到雲端
-  scheduleAutoSync();
   document.getElementById('filter-chips').style.display = 'flex';
   document.getElementById('summary-grid').style.display = 'grid';
+
+  // 🔗 一鍵同時跑 PT 工時（用對應表標 PT 的人）
+  if(PUNCHES && PUNCHES.rows && PUNCHES.rows.length){
+    try { runPtAnalysis(true); } catch(e){ console.warn('runPtAnalysis failed', e); }
+  }
+
+  // 兩個分析都做完才寫入 summary（給薪水/特休讀），最後自動同步雲端
+  persistSalarySummary(y, m);
+  scheduleAutoSync();
 }
 
 // 把分析結果以「每人一筆」的方式寫進 localStorage，供 salary.html 匯入
@@ -2125,11 +2346,28 @@ function savePtList(){
   if(typeof scheduleAutoSync === 'function') scheduleAutoSync();
 }
 function readPtListFromDom(){
+  // 優先讀對應表（Step 3.5），fallback 才讀舊的隱藏 PT 名單
+  var matchTbody = document.getElementById('match-tbody');
+  if(matchTbody && matchTbody.children.length > 0){
+    return readMatchTable()
+      .filter(function(r){ return r.role === 'pt'; })
+      .map(function(r){
+        return {
+          name:     r.name,         // 顯示用：sched 來源 = 中文，punch 來源 = 英文
+          wage:     r.wage,
+          punchKey: r.punchName     // 找打卡用，可能空
+        };
+      });
+  }
+  // 舊邏輯（在對應表還沒 build 出來前用）
   var rows = document.querySelectorAll('#pt-list-tbody tr');
   var out = [];
   rows.forEach(function(tr){
-    var name = tr.querySelector('input[data-k="name"]').value.trim();
-    var wage = Number(tr.querySelector('input[data-k="wage"]').value) || 0;
+    var nameEl = tr.querySelector('input[data-k="name"]');
+    var wageEl = tr.querySelector('input[data-k="wage"]');
+    if(!nameEl || !wageEl) return;
+    var name = nameEl.value.trim();
+    var wage = Number(wageEl.value) || 0;
     if(name) out.push({ name: name, wage: wage });
   });
   return out;
@@ -2299,9 +2537,9 @@ function calcWorkMin(punches, snap15){
   return Math.max(0, Tout(t[t.length-1]) - Tin(t[0]));
 }
 
-function runPtAnalysis(){
+function runPtAnalysis(silent){
   if(!PUNCHES || !PUNCHES.rows.length){
-    alert('請先上傳打卡 Excel/PDF');
+    if(!silent) alert('請先上傳打卡 Excel/PDF');
     return;
   }
   savePtList();
@@ -2309,11 +2547,11 @@ function runPtAnalysis(){
   var otMult  = PT_OT_MULT;
   var snap15  = PT_SNAP15;
 
-  // 檢查是否有 PT 沒填時薪
+  // 檢查是否有 PT 沒填時薪（自動模式不擋，靜悄悄記）
   var missingWage = readPtListFromDom().filter(function(p){
     return p.name && !(Number(p.wage) > 0);
   });
-  if(missingWage.length){
+  if(missingWage.length && !silent){
     var go = confirm('⚠️ 以下 ' + missingWage.length + ' 位 PT 還沒填時薪：\n\n  '
       + missingWage.map(function(p){return p.name;}).join('、')
       + '\n\n沒填時薪的人工資會算 0。確定要繼續分析嗎？');
@@ -2349,10 +2587,14 @@ function runPtAnalysis(){
     if(!ptName) return;
     var personWage = Number(pt.wage) || 0;
 
-    // 找對應的打卡 key：先試原名 normalize、再試 NAME_MAP 對照後的英文名
+    // 找對應的打卡 key：優先用對應表填的 punchKey，再 fallback 到 normalize / NAME_MAP
     var keysToTry = [];
+    if(pt.punchKey){
+      var pk = normalizeName(pt.punchKey);
+      if(pk) keysToTry.push(pk);
+    }
     var nz = normalizeName(ptName);
-    if(nz) keysToTry.push(nz);
+    if(nz && keysToTry.indexOf(nz) < 0) keysToTry.push(nz);
     var mapped = resolvePunchKeyByName(ptName);
     if(mapped && keysToTry.indexOf(mapped) < 0) keysToTry.push(mapped);
 
