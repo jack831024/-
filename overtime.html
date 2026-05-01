@@ -282,6 +282,8 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
         <button class="filter-chip" data-filter="sick">病假<span class="chip-count" id="cnt-sick">0</span></button>
         <button class="filter-chip" data-filter="personal">事假<span class="chip-count" id="cnt-personal">0</span></button>
         <button class="filter-chip" data-filter="rest">休-1<span class="chip-count" id="cnt-rest">0</span></button>
+        <button class="filter-chip" data-filter="annual">特休<span class="chip-count" id="cnt-annual">0</span></button>
+        <button class="filter-chip" data-filter="travel">旅遊假<span class="chip-count" id="cnt-travel">0</span></button>
       </div>
     </div>
     <div class="summary-grid" id="summary-grid" style="display:none">
@@ -292,6 +294,8 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
       <div class="sum-card" style="border-left:3px solid #f43f5e"><div class="k">病假</div><div class="v" id="s-sick">0<span class="u"> 天</span></div></div>
       <div class="sum-card" style="border-left:3px solid #a855f7"><div class="k">事假</div><div class="v" id="s-personal">0<span class="u"> 天</span></div></div>
       <div class="sum-card" style="border-left:3px solid #1d4ed8"><div class="k">休-1</div><div class="v" id="s-rest">0<span class="u"> 天</span></div></div>
+      <div class="sum-card" style="border-left:3px solid #16a34a"><div class="k">特休</div><div class="v" id="s-annual">0<span class="u"> 天</span></div></div>
+      <div class="sum-card" style="border-left:3px solid #0891b2"><div class="k">旅遊假</div><div class="v" id="s-travel">0<span class="u"> 天</span></div></div>
     </div>
     <div id="results-container">
       <div class="empty-state">
@@ -1795,7 +1799,7 @@ function isEnglishName(n){
 
 function renderSummary(){
   if(!ANALYSIS){ return; }
-  var pplSet = {}, otMin = 0, lateCnt = 0, missCnt = 0, sickCnt = 0, personalCnt = 0, restCnt = 0;
+  var pplSet = {}, otMin = 0, lateCnt = 0, missCnt = 0, sickCnt = 0, personalCnt = 0, restCnt = 0, annualCnt = 0, travelCnt = 0;
   ANALYSIS.forEach(function(r){
     pplSet[r.name] = 1;
     if(r.overtimeMin > 0){ otMin += r.overtimeMin; }
@@ -1804,6 +1808,8 @@ function renderSummary(){
     if(r.leaveType === 'sick'){ sickCnt++; }
     else if(r.leaveType === 'personal'){ personalCnt++; }
     else if(r.leaveType === 'rest'){ restCnt++; }
+    else if(r.leaveType === 'annual'){ annualCnt++; }
+    else if(r.leaveType === 'travel'){ travelCnt++; }
   });
   document.getElementById('s-ppl').textContent      = Object.keys(pplSet).length;
   document.getElementById('s-ot').innerHTML         = (otMin/60).toFixed(1)+'<span class="u"> 小時</span>';
@@ -1813,6 +1819,10 @@ function renderSummary(){
   document.getElementById('s-personal').innerHTML   = personalCnt+'<span class="u"> 天</span>';
   var restEl = document.getElementById('s-rest');
   if(restEl) restEl.innerHTML = restCnt+'<span class="u"> 天</span>';
+  var annualEl = document.getElementById('s-annual');
+  if(annualEl) annualEl.innerHTML = annualCnt+'<span class="u"> 天</span>';
+  var travelEl = document.getElementById('s-travel');
+  if(travelEl) travelEl.innerHTML = travelCnt+'<span class="u"> 天</span>';
   document.getElementById('cnt-ot').textContent       = ' · '+(ANALYSIS.filter(function(x){return x.overtimeMin>0;}).length);
   document.getElementById('cnt-late').textContent     = ' · '+lateCnt;
   document.getElementById('cnt-miss').textContent     = ' · '+missCnt;
@@ -1820,6 +1830,10 @@ function renderSummary(){
   document.getElementById('cnt-personal').textContent = ' · '+personalCnt;
   var cntRest = document.getElementById('cnt-rest');
   if(cntRest) cntRest.textContent = ' · '+restCnt;
+  var cntAnnual = document.getElementById('cnt-annual');
+  if(cntAnnual) cntAnnual.textContent = ' · '+annualCnt;
+  var cntTravel = document.getElementById('cnt-travel');
+  if(cntTravel) cntTravel.textContent = ' · '+travelCnt;
 }
 
 function renderResults(){
@@ -1848,6 +1862,8 @@ function renderResults(){
       if(f === 'sick')     return '<span class="tag sick">病假</span>';
       if(f === 'personal') return '<span class="tag personal">事假</span>';
       if(f === 'rest')     return '<span class="tag rest">休-1</span>';
+      if(f === 'annual')   return '<span class="tag" style="background:rgba(22,163,74,.12);color:#15803d">特休</span>';
+      if(f === 'travel')   return '<span class="tag" style="background:rgba(8,145,178,.12);color:#0e7490">旅遊假</span>';
       return '<span class="tag ok">正常</span>';
     }).join(' ');
     html.push('<tr>',
