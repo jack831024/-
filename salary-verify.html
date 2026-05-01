@@ -211,10 +211,15 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
 
   <!-- 0. 員工職級設定 -->
   <div class="section">
-    <h3><span class="step-num">1</span><span class="icon">👔</span>員工職級設定<span class="hint">決定各區獎金規則與職務加給</span></h3>
+    <h3><span class="step-num">1</span><span class="icon">👔</span>員工職級設定<span class="hint">決定各區獎金規則 / 職務加給 / 固定加班費</span></h3>
     <table class="grid">
       <thead>
-        <tr><th>員工</th><th style="width:180px">職級</th><th style="width:160px">職務加給基礎</th></tr>
+        <tr>
+          <th>員工</th>
+          <th style="width:160px">職級</th>
+          <th style="width:130px">職務加給基礎</th>
+          <th style="width:130px">固定加班費</th>
+        </tr>
       </thead>
       <tbody id="tbody-role"></tbody>
     </table>
@@ -570,6 +575,7 @@ function blankState(){
     detail: {},        // {empId: {dtDays,otHours,sickDays,personalDays,latePunch}}
     ptWage: {},        // 對帳模式：{empId: {hours, hourlyWage}} — 店長手動輸入
     otherBonuses: {},  // {entryId: {empId, label, amount}}
+    fixedOT: {},       // {empId: number} — 固定加班費 override，0 = 用該店該職級預設
     activeEmp: EMPLOYEES[0].id,
     notes: {}          // {empId: 備註字串}
   };
@@ -610,7 +616,7 @@ function loadState(){
       var obj = JSON.parse(raw);
       // 補齊缺項（避免新增員工後 key 缺失）
       var def = blankState();
-      ['s1','s2','s3','s4','s5','s6','s7','insurance','roles','detail','notes','ptWage','otherBonuses'].forEach(function(k){
+      ['s1','s2','s3','s4','s5','s6','s7','insurance','roles','detail','notes','ptWage','otherBonuses','fixedOT'].forEach(function(k){
         obj[k] = Object.assign({}, def[k], obj[k] || {});
       });
       if(!obj.activeEmp) obj.activeEmp = EMPLOYEES[0].id;
@@ -982,10 +988,23 @@ function renderRoles(){
       + opt('deputy', '副店長', r)
       + opt('regular', '正職', r)
       + '</select>';
+    var fxStored = STATE.fixedOT && STATE.fixedOT[e.id];
+    var fxValue = (typeof fxStored === 'number' && fxStored > 0)
+      ? fxStored
+      : fixedOTForRole(r);
+    var fxInput = '<input type="number" min="0" step="500" value="'+fxValue+'" '
+      + 'onchange="onFixedOTChange(\''+e.id+'\',this.value)" '
+      + 'style="width:110px;text-align:right">';
     return '<tr><td class="c-name">'+e.name+'</td><td>'+sel+'</td>'
-      + '<td class="c-num">'+fmtPlain(roleBase(r))+'</td></tr>';
+      + '<td class="c-num">'+fmtPlain(roleBase(r))+'</td>'
+      + '<td>'+fxInput+'</td></tr>';
   });
   tb.innerHTML = rows.join('');
+}
+function onFixedOTChange(id, v){
+  if(!STATE.fixedOT) STATE.fixedOT = {};
+  STATE.fixedOT[id] = parseInt(v, 10) || 0;
+  renderDetail();
 }
 function onRoleChange(id, v){
   STATE.roles[id] = v;
@@ -1066,7 +1085,11 @@ function calcEmp(e){
   var b_s6 = sup ? 0 : (STATE.s6[id]|0);
   var b_s7 = sup ? s7SupAmt(!!STATE.s7[id]) : s7RegAmt(!!STATE.s7[id]);
   var insurance = STATE.insurance[id] | 0;
-  var fixedOT = fixedOTForRole(role);
+  // 固定加班費：以「員工職級設定」那欄手動填的為主，沒設就用該店該職級的預設
+  var fxOverride = STATE.fixedOT && STATE.fixedOT[id];
+  var fixedOT = (typeof fxOverride === 'number' && fxOverride > 0)
+    ? fxOverride
+    : fixedOTForRole(role);
   // 其他獎金 / 懲罰：累加該員工所有 entries
   var otherBonus = 0;
   if(STATE.otherBonuses){
@@ -1627,7 +1650,7 @@ function pullFromCloud(showToast){
       // 雲端有資料 → 合併到 STATE（以雲端為主）
       var cloud = res.state || {};
       var def = blankState();
-      ['s1','s2','s3','s4','s5','s6','s7','insurance','roles','detail','notes','ptWage','otherBonuses'].forEach(function(k){
+      ['s1','s2','s3','s4','s5','s6','s7','insurance','roles','detail','notes','ptWage','otherBonuses','fixedOT'].forEach(function(k){
         cloud[k] = Object.assign({}, def[k], cloud[k] || {});
       });
       if(!cloud.activeEmp) cloud.activeEmp = EMPLOYEES[0].id;
