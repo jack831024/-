@@ -307,7 +307,7 @@ var EMP_DATA = {
   ],
   'shicheng-zhongxiao': [
     // 十城沒有旅遊假；起始已用全部歸 0，由加班費系統 OT 資料當「已用」唯一來源
-    { id:'sc1', name:'林梓彥', hireDate:'2025-02-01', birthday:'',      initialAnnualAccrued:10, initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0 },
+    { id:'sc1', name:'林梓彥', hireDate:'2025-02-01', birthday:'',      initialAnnualAccrued:10, initialAnnualUsed:1,  initialTravelRemaining:0, initialGiftBalance:0 },
     { id:'sc2', name:'王謖',   hireDate:'2026-02-01', birthday:'',      initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0 },
     { id:'sc3', name:'林哲民', hireDate:'2026-02-01', birthday:'',      initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0 },
     { id:'sc4', name:'陳柏維', hireDate:'2026-04-01', birthday:'',      initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0 }
@@ -320,17 +320,13 @@ var HOLIDAYS = {
   midAutumn:  { 2024:'09-17', 2025:'10-06', 2026:'09-25', 2027:'09-15', 2028:'10-03' }
 };
 
-// ⚠️ 系統正式啟用日：在此之前的紀錄都不回補
-//    特休/旅遊假已用 → 用 initialAnnualUsed/initialTravelRemaining 為準
+// ⚠️ 系統正式啟用日：在此之前的紀錄為「初始已用」，之後由加班費系統 OT 自動扣
 //    禮金生日/中秋/端午自動加 → 此日後才會發
-var EFFECTIVE_DATE = '2026-04-25';
-// 部分店家 OT 資料即唯一來源（初始已用=0），EFFECTIVE_DATE 拉早讓 OT 全部都算
-var STORE_EFFECTIVE_DATES = {
-  'shicheng-zhongxiao': '2025-01-01'
-};
-function getEffectiveDate(){
-  return STORE_EFFECTIVE_DATES[STORE] || EFFECTIVE_DATE;
-}
+//    使用 '2026-03-31' 為界，>= 2026-04-01 的 OT 日期才會被計入
+var EFFECTIVE_DATE = '2026-03-31';
+function getEffectiveDate(){ return EFFECTIVE_DATE; }
+// 顯示用的「分界月份」標籤（2026/4 以前 vs 之後）
+var EFFECTIVE_LABEL = '2026/4';
 
 // 十城沒有旅遊假
 var STORES_WITHOUT_TRAVEL = { 'shicheng-zhongxiao': true };
@@ -664,16 +660,15 @@ function renderAnnual(){
   var rows = ft.map(function(e){
     var c = calcAnnual(e);
     var cls = c.remaining === 0 ? 'bal-zero' : (c.remaining < 3 ? 'bal-warn' : 'bal-pos');
-    var usedTag = '';
-    if(c.fromOT > 0){
-      var chips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini">'+fmtMD(d)+'</span>'; }).join('');
-      usedTag = '<div class="tag-line">＋'+c.fromOT+' 自動匯入</div><div class="date-chips">'+chips+'</div>';
-    }
+    var preLine = c.initialUsed > 0 ? '<div class="tag-line">'+EFFECTIVE_LABEL+' 以前已使用 '+c.initialUsed+' 天</div>' : '';
+    var chips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini">'+fmtMD(d)+'</span>'; }).join('');
+    var chipBlock = chips ? '<div class="date-chips">'+chips+'</div>' : '';
+    var mainLine = '<div>已使用 '+c.fromOT+' 天</div>';
     return '<tr>'
       + '<td class="c-name">'+e.name+'</td>'
       + '<td>'+e.hireDate+'<div class="tag-line">年資 '+tenureYears(e.hireDate).toFixed(1)+' 年</div></td>'
       + '<td class="c-num">'+c.accrued+' 天</td>'
-      + '<td>'+c.used+' 天'+usedTag+'</td>'
+      + '<td>'+preLine+mainLine+chipBlock+'</td>'
       + '<td class="c-num big '+cls+'">'+c.remaining+' 天</td>'
       + '</tr>';
   });
@@ -700,16 +695,17 @@ function renderTravel(){
     var months = tenureMonths(e.hireDate);
     var cls = c.remaining === 0 ? 'bal-zero' : 'bal-pos';
     var note = months < 6 ? '<div class="tag-line">未滿半年</div>' : '';
-    var usedTag = '';
-    if(c.fromOT > 0){
-      var chips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini travel">'+fmtMD(d)+'</span>'; }).join('');
-      usedTag = '<div class="tag-line">＋'+c.fromOT+' 自動匯入</div><div class="date-chips">'+chips+'</div>';
-    }
+    // 計算 4 月前已用 = entitlement - initialRemaining
+    var preUsed = Math.max(0, c.entitlement - (e.initialTravelRemaining || 0));
+    var preLine = preUsed > 0 ? '<div class="tag-line">'+EFFECTIVE_LABEL+' 以前已使用 '+preUsed+' 天</div>' : '';
+    var chips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini travel">'+fmtMD(d)+'</span>'; }).join('');
+    var chipBlock = chips ? '<div class="date-chips">'+chips+'</div>' : '';
+    var mainLine = '<div>已使用 '+c.fromOT+' 天</div>';
     return '<tr>'
       + '<td class="c-name">'+e.name+'</td>'
       + '<td>'+e.hireDate+note+'</td>'
       + '<td class="c-num">'+c.entitlement+' 天</td>'
-      + '<td>'+c.used+' 天'+usedTag+'</td>'
+      + '<td>'+preLine+mainLine+chipBlock+'</td>'
       + '<td class="c-num big '+cls+'">'+c.remaining+' 天</td>'
       + '</tr>';
   });
