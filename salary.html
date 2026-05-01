@@ -1327,8 +1327,26 @@ function doImportOvertime(showToast){
     // 把所有「對得上」的名字都記下來，最後拿來算「對不到」的
     var hitNames = {};
 
-    function tryHit(map, e){
-      // 依 name → nickname → salesAlias 順序找；找到就 mark
+    // 名字正規化：去掉所有非中文/英文字元（數字、空格、編號等）
+    // 例：'3梓彥' → '梓彥'、'01 林梓彥' → '林梓彥'、'wang su' → 'wangsu'
+    function normName(s){
+      if(!s) return '';
+      return String(s).toLowerCase().replace(/[^一-龥a-z]+/g, '');
+    }
+    // 預先把 OT 資料的 key 都正規化好，方便查找
+    function buildNormIndex(map){
+      var idx = {};
+      Object.keys(map).forEach(function(k){
+        var n = normName(k);
+        if(n) idx[n] = k; // 正規化後的名字 → 原始 key
+      });
+      return idx;
+    }
+    var regNormIdx = buildNormIndex(empsReg);
+    var ptNormIdx  = buildNormIndex(empsPT);
+
+    function tryHit(map, normIdx, e){
+      // 1) 先試原始 name / nickname / salesAlias
       var keys = [e.name, e.nickname, e.salesAlias];
       for(var i=0; i<keys.length; i++){
         if(keys[i] && map.hasOwnProperty(keys[i])){
@@ -1336,12 +1354,20 @@ function doImportOvertime(showToast){
           return map[keys[i]];
         }
       }
+      // 2) 退一步用正規化（吃掉數字前綴 / 編號後綴）再比對
+      for(var j=0; j<keys.length; j++){
+        var nk = normName(keys[j]);
+        if(nk && normIdx[nk]){
+          hitNames[normIdx[nk]] = 1;
+          return map[normIdx[nk]];
+        }
+      }
       return null;
     }
 
     ALL_EMPLOYEES.forEach(function(e){
       if(isPT(e)){
-        var hitPT = tryHit(empsPT, e);
+        var hitPT = tryHit(empsPT, ptNormIdx, e);
         if(!hitPT) return;
         // 寫入 PT 月度工資快取（STATE.ptWage）+ 加班時數
         if(!STATE.ptWage) STATE.ptWage = {};
@@ -1355,7 +1381,7 @@ function doImportOvertime(showToast){
         return;
       }
       // 正職/主管：讀 overtime / late / sick / personal
-      var hit = tryHit(empsReg, e);
+      var hit = tryHit(empsReg, regNormIdx, e);
       if(!hit) return;
       if(typeof hit.overtimeMin === 'number'){
         STATE.detail[e.id].otHours = Math.round(hit.overtimeMin / 60 * 10) / 10;
