@@ -1965,10 +1965,10 @@ function persistSalarySummary(y, m){
       byPT[n].otHours += (r.otHours || 0);
       byPT[n].wage    += (r.wage || 0);
     });
-    // 四捨五入避免小數點雜訊
+    // 取 2 位小數精度（避免 0.75 被四捨五入成 0.8、同時去掉浮點雜訊）
     Object.keys(byPT).forEach(function(n){
-      byPT[n].hours   = Math.round(byPT[n].hours * 10) / 10;
-      byPT[n].otHours = Math.round(byPT[n].otHours * 10) / 10;
+      byPT[n].hours   = Math.round(byPT[n].hours * 100) / 100;
+      byPT[n].otHours = Math.round(byPT[n].otHours * 100) / 100;
       byPT[n].wage    = Math.round(byPT[n].wage);
     });
   }

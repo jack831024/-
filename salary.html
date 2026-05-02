@@ -1403,7 +1403,7 @@ function doImportOvertime(showToast){
       var hit = tryHit(empsReg, regNormIdx, e);
       if(!hit) return;
       if(typeof hit.overtimeMin === 'number'){
-        STATE.detail[e.id].otHours = Math.round(hit.overtimeMin / 60 * 10) / 10;
+        STATE.detail[e.id].otHours = Math.round(hit.overtimeMin / 60 * 100) / 100;
       }
       if(typeof hit.lateDays === 'number')    STATE.s2[e.id].late     = hit.lateDays;
       if(typeof hit.sickDays === 'number'){
