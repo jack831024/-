@@ -446,7 +446,7 @@ document.addEventListener('keydown', function(e){
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.04.29-03';
+var APP_VERSION = '2026.05.01-01';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -517,9 +517,21 @@ async function checkForUpdate(silent){
 setTimeout(function(){ checkForUpdate(true); }, 3000);
 // 之後每 2 分鐘再檢查
 setInterval(function(){ checkForUpdate(true); }, 120000);
-// 從背景回到前景時立即檢查
+// 從背景回到前景時立即檢查 + ⭐ 自動從雲端拉最新資料（同步其他裝置的更新）
 document.addEventListener('visibilitychange', function(){
-  if(!document.hidden) checkForUpdate(true);
+  if(document.hidden) return;
+  checkForUpdate(true);
+  // 自動從雲端拉最新（其他裝置剛改的紀錄會被同步進本機）
+  // 30 秒 cooldown 避免頻繁切 app 觸發太多次 fetch
+  try{
+    var saving = (typeof _autoSaving !== 'undefined' && _autoSaving);
+    var initing = (typeof _initLoading !== 'undefined' && _initLoading);
+    var lastPull = (typeof _lastCloudPullAt !== 'undefined' ? _lastCloudPullAt : 0);
+    if(typeof syncFromCloud === 'function' && !saving && !initing && (Date.now() - lastPull > 30000)){
+      _lastCloudPullAt = Date.now();
+      syncFromCloud().catch(function(e){ console.warn('回前景同步失敗', e); });
+    }
+  }catch(syncE){ /* 安靜失敗 */ }
 });
 // ============================================
 
@@ -2226,18 +2238,28 @@ async function doAutoSave(){
   }
 }
 
-// 重新同步（強制把圖片也一起重傳 + 重拉雲端）
+// 重新同步（雙向：先把當前畫面 push 到雲端，再 pull 雲端最新到本機）
+// 修使用者反映「電腦改了過往紀錄、手機沒同步」的問題 — 點這個按鈕一次完成雙向同步
 async function manualResync(){
   setAutoSaveStatus('saving');
   try{
-    await saveRecord({ silent: true });  // 不 skipImages，強制重推圖片
-    _imagesDirty = false;  // 重推成功，清旗標
+    // ⬆️ Step 1: 把當前畫面 push 到雲端（含圖片）
+    await saveRecord({ silent: true });
+    _imagesDirty = false;
+    // ⬇️ Step 2: 從雲端拉最新（同步其他裝置在這段時間的更新進來）
+    if(typeof syncFromCloud === 'function'){
+      _lastCloudPullAt = Date.now();
+      await syncFromCloud();
+    }
     setAutoSaveStatus('cloud');
   }catch(e){
     console.warn('手動同步失敗', e);
     setAutoSaveStatus('error');
   }
 }
+
+// 上次從雲端 pull 的時間戳（避免 visibilitychange 太頻繁拉雲端）
+var _lastCloudPullAt = 0;
 
 // ⭐ 防呆：圖片還在上傳 / 還沒同步時關頁 → 跳瀏覽器警告
 //    這樣使用者上傳完馬上想關頁，瀏覽器會擋一下，避免圖片漏傳
