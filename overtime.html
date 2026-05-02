@@ -2270,8 +2270,15 @@ function renderResults(){
              r.required ? ' <span style="color:#94a3b8;font-size:11px">('+r.punches.length+'/'+r.required+')</span>' : '',
              r.note ? ' <span style="color:#0369a1;font-size:11px;background:rgba(3,105,161,.08);padding:2px 7px;border-radius:999px;margin-left:4px">' + escapeHtml(r.note) + '</span>' : '',
              '</td>',
-      '<td class="c-num">', r.lateMin>0 ? (r.lateMin+' 分') : '—', '</td>',
-      '<td class="c-num">', r.overtimeMin>0 ? (r.overtimeMin+' 分') : '—', '</td>',
+      // 遲到 / 加班 改成可手動編輯的數字輸入框
+      '<td class="c-num"><input type="number" min="0" step="1" value="', r.lateMin||0,
+        '" onchange="editFtMin(', idx, ',\'lateMin\',this.value)" title="可手動修改遲到分數"',
+        ' style="width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:12px;text-align:right;font-family:inherit;background:#fff',
+        (r.lateMin>0?';color:#dc2626;font-weight:700':''), '"> 分</td>',
+      '<td class="c-num"><input type="number" min="0" step="1" value="', r.overtimeMin||0,
+        '" onchange="editFtMin(', idx, ',\'overtimeMin\',this.value)" title="可手動修改加班分數"',
+        ' style="width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:12px;text-align:right;font-family:inherit;background:#fff',
+        (r.overtimeMin>0?';color:#b45309;font-weight:700':''), '"> 分</td>',
       '<td>', tags, '</td>',
       '</tr>');
   });
@@ -2320,6 +2327,40 @@ function removeFlag(rowIdx, flag){
   renderSummary();
   renderResults();
   // 同步給薪水/特休卡 + 雲端
+  persistSalarySummary();
+  if(typeof scheduleAutoSync === 'function') scheduleAutoSync();
+}
+
+// ✏️ 手動修改 FT 結果裡某筆的「遲到分鐘 / 加班分鐘」
+//   - lateMin / overtimeMin 直接寫入
+//   - 自動重算 flags（>0 加 tag、=0 移除 tag）
+//   - 在備註加「手動修改」標記
+//   - re-render summary + 表 + 持久化 localStorage + 自動同步雲端
+function editFtMin(rowIdx, field, val){
+  if(!ANALYSIS || !ANALYSIS[rowIdx]) return;
+  var r = ANALYSIS[rowIdx];
+  var v = Math.max(0, Math.round(Number(val) || 0));   // 整數分鐘
+
+  if(field === 'lateMin')          r.lateMin = v;
+  else if(field === 'overtimeMin') r.overtimeMin = v;
+  else return;
+
+  // 重算 flags
+  r.flags = [];
+  if(r.overtimeMin > 0) r.flags.push('ot');
+  if(r.lateMin > 0)     r.flags.push('late');
+  if(r.missing)         r.flags.push('miss');
+  if(r.leaveType)       r.flags.push(r.leaveType);
+  if(/開會日/.test(r.note || '')) r.flags.push('meeting');
+  if(!r.flags.length)   r.flags.push('ok');
+
+  // 在備註標記為手動修改（保留之前的「手動排除X」「開會日」等備註）
+  if((r.note || '').indexOf('手動修改') < 0){
+    r.note = (r.note ? r.note + '；' : '') + '手動修改';
+  }
+
+  renderSummary();
+  renderResults();
   persistSalarySummary();
   if(typeof scheduleAutoSync === 'function') scheduleAutoSync();
 }
