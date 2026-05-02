@@ -1841,19 +1841,12 @@ function runAnalysis(){
         }
       }
 
-      // (1b) 上班早到加班：第一筆早於排定 ≥ 15 分（例：排定 11:00 上班，10:45 就打卡 → +15 分）
-      if(shift.workIn && punchesEff.length){
-        var firstP2  = toMin(punchesEff[0]);
-        var workInM2 = toMin(shift.workIn);
-        var earlyIn  = workInM2 - firstP2;
-        if(earlyIn >= th.otStart){
-          otMin += Math.floor(earlyIn / u) * u;
-        }
-      }
+      // (1b) 上班早到加班 → 不算！（業主規則：第一次打卡早到不算加班費）
 
-      // (2) 午休時間加班：晚進休 + 早出休
-      //   晚進休 = 午休開始時間晚於排定（例：排定 14:00 休，14:15 才打卡 → +15 分）
-      //   早出休 = 午休結束時間早於排定（例：排定 15:00 上工，14:45 就打卡 → +15 分）
+      // (2) 午休時間：晚進休加班 + 早出休加班 + 晚出休遲到
+      //   晚進休 = 午休開始時間晚於排定（例：排定 14:00 休，14:15 才打卡 → +15 分加班）
+      //   早出休 = 午休結束時間早於排定（例：排定 15:00 上工，14:45 就打卡 → +15 分加班）
+      //   晚出休 = 午休結束時間晚於排定（例：排定 15:00 上工，15:01 才打卡 → +1 分遲到）
       //   需有 breakIn/breakOut 設定且合併後至少 4 次打卡，依時間順序定位（p[1]=進休, p[2]=出休）
       if(shift.breakIn && shift.breakOut && punchesEff.length >= 4){
         var breakInM  = toMin(shift.breakIn);
@@ -1861,13 +1854,17 @@ function runAnalysis(){
         var p2 = toMin(punchesEff[1]);
         var p3 = toMin(punchesEff[2]);
 
-        var overBI = p2 - breakInM;   // 晚進休
+        var overBI = p2 - breakInM;   // 晚進休 → 加班
         if(overBI >= th.otStart){
           otMin += Math.floor(overBI / u) * u;
         }
-        var earlyBO = breakOutM - p3; // 早出休
+        var earlyBO = breakOutM - p3; // 早出休 → 加班
         if(earlyBO >= th.otStart){
           otMin += Math.floor(earlyBO / u) * u;
+        }
+        var lateBO = p3 - breakOutM;  // 晚出休 → 遲到（不論幾分鐘都算）
+        if(lateBO > 0){
+          lateMin += lateBO;
         }
       }
 
