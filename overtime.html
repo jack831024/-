@@ -2227,10 +2227,12 @@ function renderResults(){
       '<div class="empty-state"><span class="big">📭</span><div>沒有資料可顯示</div></div>';
     return;
   }
-  var filtered = ANALYSIS.filter(function(r){
-    if(ACTIVE_FILTER === 'all') return true;
-    return r.flags.indexOf(ACTIVE_FILTER) >= 0;
-  });
+  // 連 index 一起記，給「✕ 手動移除標記」按鈕用
+  var filtered = ANALYSIS.map(function(r, idx){ return { r:r, idx:idx }; })
+                          .filter(function(x){
+                            if(ACTIVE_FILTER === 'all') return true;
+                            return x.r.flags.indexOf(ACTIVE_FILTER) >= 0;
+                          });
   if(!filtered.length){
     document.getElementById('results-container').innerHTML =
       '<div class="empty-state"><span class="big">✨</span><div>此分類沒有異常紀錄</div></div>';
@@ -2239,16 +2241,23 @@ function renderResults(){
   var html = ['<div class="results-wrap"><table class="results"><thead><tr>',
     '<th>日期</th><th>姓名</th><th>班別</th><th>時段</th>',
     '<th>打卡</th><th>遲到</th><th>加班</th><th>標記</th></tr></thead><tbody>'];
-  filtered.forEach(function(r){
+  filtered.forEach(function(x){
+    var r = x.r;
+    var idx = x.idx;
+    function xBtn(flag, tip){
+      return ' <a href="javascript:void(0)" onclick="removeFlag('+idx+',\''+flag+'\')" '
+        + 'style="margin-left:4px;color:rgba(0,0,0,.45);text-decoration:none;font-weight:700;cursor:pointer" '
+        + 'title="'+tip+'">✕</a>';
+    }
     var tags = r.flags.map(function(f){
-      if(f === 'ot')       return '<span class="tag ot">加班</span>';
-      if(f === 'late')     return '<span class="tag late">遲到</span>';
-      if(f === 'miss')     return '<span class="tag miss">缺卡</span>';
-      if(f === 'sick')     return '<span class="tag sick">病假</span>';
-      if(f === 'personal') return '<span class="tag personal">事假</span>';
-      if(f === 'rest')     return '<span class="tag rest">休-1</span>';
-      if(f === 'annual')   return '<span class="tag" style="background:rgba(22,163,74,.12);color:#15803d">特休</span>';
-      if(f === 'travel')   return '<span class="tag" style="background:rgba(8,145,178,.12);color:#0e7490">旅遊假</span>';
+      if(f === 'ot')       return '<span class="tag ot">加班'    + xBtn('ot',   '移除（加班分鐘歸零）') + '</span>';
+      if(f === 'late')     return '<span class="tag late">遲到'  + xBtn('late', '移除（遲到分鐘歸零）') + '</span>';
+      if(f === 'miss')     return '<span class="tag miss">缺卡'  + xBtn('miss', '移除缺卡標記') + '</span>';
+      if(f === 'sick')     return '<span class="tag sick">病假'  + xBtn('sick', '移除病假標記') + '</span>';
+      if(f === 'personal') return '<span class="tag personal">事假' + xBtn('personal', '移除事假標記') + '</span>';
+      if(f === 'rest')     return '<span class="tag rest">休-1'  + xBtn('rest', '移除休-1 標記') + '</span>';
+      if(f === 'annual')   return '<span class="tag" style="background:rgba(22,163,74,.12);color:#15803d">特休' + xBtn('annual', '移除特休標記') + '</span>';
+      if(f === 'travel')   return '<span class="tag" style="background:rgba(8,145,178,.12);color:#0e7490">旅遊假' + xBtn('travel', '移除旅遊假標記') + '</span>';
       if(f === 'meeting')  return '<span class="tag" style="background:rgba(217,119,6,.12);color:#b45309">開會日</span>';
       return '<span class="tag ok">正常</span>';
     }).join(' ');
@@ -2268,6 +2277,51 @@ function renderResults(){
   });
   html.push('</tbody></table></div>');
   document.getElementById('results-container').innerHTML = html.join('');
+}
+
+// ============================================
+// 🗑️ 手動移除某筆 FT 結果的某個標記（按 ✕ 觸發）
+//   - late / ot：把對應分鐘數歸零
+//   - miss：missing = false
+//   - sick / personal / rest / annual / travel：leaveType = null
+//   - 自動重算 flags、重 render、寫回 localStorage、自動同步雲端
+//   - 在備註欄加上「手動排除：xxx」標記，下次從雲端 reload 也會保留
+// ============================================
+function removeFlag(rowIdx, flag){
+  if(!ANALYSIS || !ANALYSIS[rowIdx]) return;
+  var r = ANALYSIS[rowIdx];
+  var labelMap = { ot:'加班', late:'遲到', miss:'缺卡', sick:'病假', personal:'事假', rest:'休-1', annual:'特休', travel:'旅遊假' };
+  var label = labelMap[flag];
+  if(!label) return; // 不可移除的 flag（meeting / ok）
+
+  if(flag === 'late')      r.lateMin = 0;
+  else if(flag === 'ot')   r.overtimeMin = 0;
+  else if(flag === 'miss') r.missing = false;
+  else if(['sick','personal','rest','annual','travel'].indexOf(flag) >= 0){
+    r.leaveType = null;
+  }
+
+  // 重算 flags
+  r.flags = [];
+  if(r.overtimeMin > 0) r.flags.push('ot');
+  if(r.lateMin > 0)     r.flags.push('late');
+  if(r.missing)         r.flags.push('miss');
+  if(r.leaveType)       r.flags.push(r.leaveType);
+  // 開會日 flag 從備註重新偵測（meeting 不可手動移除，所以保留）
+  if(/開會日/.test(r.note || '')) r.flags.push('meeting');
+  if(!r.flags.length)   r.flags.push('ok');
+
+  // 在備註標記移除歷史（給人看 + 雲端 reload 後也知道這筆被改過）
+  var tag = '手動排除' + label;
+  if((r.note || '').indexOf(tag) < 0){
+    r.note = (r.note ? r.note + '；' : '') + tag;
+  }
+
+  renderSummary();
+  renderResults();
+  // 同步給薪水/特休卡 + 雲端
+  persistSalarySummary();
+  if(typeof scheduleAutoSync === 'function') scheduleAutoSync();
 }
 
 document.getElementById('filter-chips').addEventListener('click', function(e){
