@@ -1314,6 +1314,8 @@ function onDtChange(id, field, v){
   if(field === 'sickDays'){ STATE.s2[id].sick = STATE.detail[id].sickDays; renderS2(); }
   if(field === 'personalDays'){ STATE.s2[id].personal = STATE.detail[id].personalDays; renderS2(); }
   renderDetail();
+  // 立刻觸發雲端 push（內部已 debounce 500ms，不會打爆 API）
+  pushToCloud(false);
 }
 function onNoteChange(id, v){ STATE.notes[id] = v; }
 
