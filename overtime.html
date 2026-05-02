@@ -488,27 +488,28 @@ var NAME_MAP_BY_STORE = {
 // ⭐ 開會日的特殊班別覆寫表
 // 邏輯：班表底下若有「開會」這一格 → SCHEDULE.events[d] = '開會'
 //   - A 班（code === 'A'）跟「其他人」上下班時間不一樣
-//   - 開會日打卡都是 3 次（不是平常的 2 / 4 次）
+//   - 火鍋店（初殿）：開會日打卡 2 次（上班 + 下班，無休息卡）
+//   - 滷肉飯店（十城）：開會日打卡 3 次
 //   - 開會日只看遲到、不算加班費
 //   - code === '休' 的人開會日仍然休息，不套用
-// 火鍋店 = 初殿 3 家（中和 / 永春 / 新莊）
 // ============================================
 var MEETING_DAY_SHIFTS = {
   'shicheng-zhongxiao': {
     A:     { workIn:'14:00', workOut:'21:00', punches:3 },
     other: { workIn:'15:00', workOut:'21:30', punches:3 }
   },
+  // 火鍋店改 2 次打卡（一次上班、一次下班）
   'chudian-zhonghe': {
-    A:     { workIn:'14:30', workOut:'21:00', punches:3 },
-    other: { workIn:'15:00', workOut:'23:00', punches:3 }
+    A:     { workIn:'14:30', workOut:'21:00', punches:2 },
+    other: { workIn:'15:00', workOut:'23:00', punches:2 }
   },
   'chudian-yongchun': {
-    A:     { workIn:'14:30', workOut:'21:00', punches:3 },
-    other: { workIn:'15:00', workOut:'23:00', punches:3 }
+    A:     { workIn:'14:30', workOut:'21:00', punches:2 },
+    other: { workIn:'15:00', workOut:'23:00', punches:2 }
   },
   'chudian-xinzhuang': {
-    A:     { workIn:'14:30', workOut:'21:00', punches:3 },
-    other: { workIn:'15:00', workOut:'23:00', punches:3 }
+    A:     { workIn:'14:30', workOut:'21:00', punches:2 },
+    other: { workIn:'15:00', workOut:'23:00', punches:2 }
   }
 };
 
