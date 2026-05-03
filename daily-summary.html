@@ -446,7 +446,7 @@ document.addEventListener('keydown', function(e){
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.05.01-01';
+var APP_VERSION = '2026.05.01-02';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -1315,26 +1315,61 @@ async function handleDepositFile(input){
   if(btxt) btxt.textContent = 'AI 讀取中...';
 
   try{
-    var prompt = '這是存款憑證／ATM 收據／銀行轉帳截圖。' +
-      '請找出「存入金額」或「本次交易金額」或「存款金額」或「入帳金額」。' +
-      '常見標示：存入、存款、現金存入、入帳、轉入、金額、Deposit、Amount。' +
-      '若有多筆交易，請取「本次」或「當筆」那一筆；若不能判斷就取最大的那筆存款金額。' +
-      '只回傳純數字（不要單位、不要逗號、不要說明、不要 JSON）。';
+    var prompt =
+      '這是「存款憑證 / ATM 收據 / 銀行轉帳截圖 / 網銀匯款證明」。請找出實際「存入或轉出的金額」。\n\n' +
+      '【優先抓這些欄位的金額】（任一找到就用它）：\n' +
+      '  存款金額、存入金額、現金存款、現金存入、實存金額\n' +
+      '  交易金額、本次交易金額、本次金額、當筆金額\n' +
+      '  轉帳金額、轉入金額、轉出金額、匯款金額、匯出金額、匯入金額\n' +
+      '  入帳金額、扣款金額、Amount、Deposit、Transfer、Credit\n\n' +
+      '【絕對不要當成存款金額】：\n' +
+      '  ❌ 帳戶餘額、現有餘額、可用餘額、Balance\n' +
+      '  ❌ 累計金額、累計總額、月累計\n' +
+      '  ❌ 手續費、Fee、服務費\n' +
+      '  ❌ 帳號數字、卡號數字、日期、時間\n\n' +
+      '【判斷規則】：\n' +
+      '  - 多筆交易 → 取「本次」「當筆」「最近」「Today」那筆；無法判斷取最大金額\n' +
+      '  - 同時有存款金額和餘額 → 只取存款金額\n' +
+      '  - 數字可能含 NT$、$、TWD、元、,（千分號）→ 都要去掉只回數字\n' +
+      '  - 存款金額通常是字體最大、最顯眼或紅字的那個數字\n\n' +
+      '【只回 JSON 不要 markdown】：\n' +
+      '  {"amount": 數字, "label": "你抓的欄位名稱"}\n' +
+      '  例：{"amount": 12500, "label": "存款金額"}\n' +
+      '  例：{"amount": 8000, "label": "Transfer Amount"}\n' +
+      '  找不到才回：{"amount": 0, "label": ""}';
     var raw = await geminiCall([file], prompt);
     console.log('[Deposit] Gemini 回應：', raw);
-    var cleaned = String(raw).replace(/,/g, '').replace(/[^0-9.]/g, '');
-    var n = parseFloat(cleaned);
-    console.log('[Deposit] 清理後數字：', n);
+    // 嘗試解析 JSON，失敗就回退到「拿最大數字」
+    var n = 0, label = '';
+    try{
+      var parsed = parseJson(raw);
+      if(parsed && typeof parsed.amount !== 'undefined'){
+        n = Number(parsed.amount) || 0;
+        label = String(parsed.label || '').trim();
+      }
+    }catch(parseErr){
+      // JSON 解析失敗 → 從原文抽出數字（向下相容舊行為）
+      var cleaned = String(raw).replace(/[,\s]/g, '');
+      var nums = cleaned.match(/\d+(\.\d+)?/g) || [];
+      if(nums.length){
+        // 取最大的那個（通常是金額而非帳號）
+        n = Math.max.apply(null, nums.map(function(x){ return Number(x) || 0; }));
+      }
+    }
+    console.log('[Deposit] 解析結果：amount=' + n + ', label=' + label);
     if(!isNaN(n) && n > 0){
       document.getElementById('i-deposit').value = n;
       recalcNextDay();
+      // 如果這個欄位是 INPUT_IDS 之一，autoSave 會被 input event 觸發
+      // 但保險：手動觸發一次（防止 element.value 設值不會 fire 事件）
+      if(typeof autoSaveNow === 'function') autoSaveNow();
       if(line) line.className = 'ai-status-line done';
       if(spin) spin.className = 'spinner';
-      if(btxt) btxt.textContent = '✓ 讀取完成：NT$ ' + n;
+      if(btxt) btxt.textContent = '✓ 讀取完成：NT$ ' + n + (label ? '（' + label + '）' : '');
     } else {
       if(line) line.className = 'ai-status-line err';
       if(spin) spin.className = 'spinner';
-      if(btxt) btxt.textContent = 'AI 無法辨識金額，請手動填入';
+      if(btxt) btxt.textContent = '⚠️ AI 無法辨識金額，請手動填入';
     }
   } catch(e){
     console.error('[Deposit] 讀取錯誤：', e);
