@@ -819,9 +819,7 @@ function renderS2(){
 }
 function onS2Change(id, field, v){
   STATE.s2[id][field] = Math.max(0, v|0);
-  // 同步到明細的對應欄位（病假/事假）
-  if(field === 'sick') STATE.detail[id].sickDays = STATE.s2[id].sick;
-  if(field === 'personal') STATE.detail[id].personalDays = STATE.s2[id].personal;
+  // 全勤獎勵金 與 各別明細 互相獨立：不再連動 detail.sickDays / personalDays
   renderS2();
   renderDetail();
 }
@@ -1305,9 +1303,7 @@ function renderDetail(){
 function onDtChange(id, field, v){
   if(!STATE.detail[id]) STATE.detail[id] = {};
   STATE.detail[id][field] = parseFloat(v) || 0;
-  // 同步病/事假回全勤獎勵金區
-  if(field === 'sickDays'){ STATE.s2[id].sick = STATE.detail[id].sickDays; renderS2(); }
-  if(field === 'personalDays'){ STATE.s2[id].personal = STATE.detail[id].personalDays; renderS2(); }
+  // 全勤獎勵金 與 各別明細 互相獨立：不再回寫 s2.sick / s2.personal
   renderDetail();
 }
 function onNoteChange(id, v){ STATE.notes[id] = v; }
