@@ -25,6 +25,12 @@
 // 若班表在另一份試算表，把 /d/ 後那一長串 ID 貼這裡；否則留空
 var SCHEDULE_SHEET_ID   = '';
 
+// 🔒 加班費資料專用試算表 ID（避免存到班表 → 員工薪水會被看到）
+//   留空 → 第一次儲存時自動在你的 Google Drive 建一份新試算表（命名為「{店名} - 加班費資料」）
+//          之後 ID 會記錄在 PropertiesService，每次存取都用同一份
+//   填值 → 直接用你指定的試算表（記得分享給你自己 google 帳號可編輯）
+var OVERTIME_SHEET_ID   = '';
+
 // 預設班表分頁名稱（可用 {月} 代入月份數字，如 '{月}月' → 4月 / '班表-{月}' → 班表-4）
 // 也可直接寫死，如 '班表'
 var SCHEDULE_SHEET_NAME = '{月}月';
@@ -83,6 +89,35 @@ function doPost(e) {
 //   會在班表試算表裡建立（或覆蓋）一個分頁「加班費-YYYY-MM」
 //   params: { store, month, ftRows, ptRows, savedBy }
 // ============================================
+// ============================================
+// 🔒 取得「加班費資料」試算表（私密：不放員工薪水給班表觀眾看到）
+//   優先順序：
+//     1) 程式碼裡硬寫的 OVERTIME_SHEET_ID
+//     2) 之前自動建立過、存在 PropertiesService 的 ID
+//     3) 兩者都沒 → 自動建一份新的、命名為「{班表名稱} - 加班費資料」
+// ============================================
+function getOvertimeSpreadsheet() {
+  // 1. 程式碼有指定 ID
+  if (OVERTIME_SHEET_ID) {
+    return SpreadsheetApp.openById(OVERTIME_SHEET_ID);
+  }
+  // 2. 之前自動建立過的
+  var props = PropertiesService.getScriptProperties();
+  var savedId = props.getProperty('OVERTIME_SHEET_ID');
+  if (savedId) {
+    try { return SpreadsheetApp.openById(savedId); }
+    catch(e) { /* 試算表被刪 → 落到 3 重建 */ }
+  }
+  // 3. 自動建一份新的
+  var schedSs = SCHEDULE_SHEET_ID
+    ? SpreadsheetApp.openById(SCHEDULE_SHEET_ID)
+    : SpreadsheetApp.getActiveSpreadsheet();
+  var newName = (schedSs ? schedSs.getName() : '門市') + ' - 加班費資料';
+  var newSs = SpreadsheetApp.create(newName);
+  props.setProperty('OVERTIME_SHEET_ID', newSs.getId());
+  return newSs;
+}
+
 function saveAnalysis(params) {
   var store = params.store || '';
   var month = params.month || '';  // 'YYYY-MM'
@@ -97,9 +132,8 @@ function saveAnalysis(params) {
   var savedBy = params.savedBy || '';
   var savedAt = new Date();
 
-  var ss = SCHEDULE_SHEET_ID
-    ? SpreadsheetApp.openById(SCHEDULE_SHEET_ID)
-    : SpreadsheetApp.getActiveSpreadsheet();
+  // 🔒 寫到「加班費資料」獨立試算表（不要放到班表，避免薪水洩漏）
+  var ss = getOvertimeSpreadsheet();
 
   // 分頁名稱「加班費-2026-04」。若已存在則覆蓋（避免累積舊資料）
   var sheetName = '加班費-' + month;
@@ -289,8 +323,14 @@ function getSchedule(params) {
 // ============================================
 function loadSavedAnalysis(month) {
   try {
-    var ss = SCHEDULE_SHEET_ID ? SpreadsheetApp.openById(SCHEDULE_SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
+    // 🔒 從「加班費資料」獨立試算表讀
+    var ss = getOvertimeSpreadsheet();
     var sheet = (month && /^\d{4}-\d{2}$/.test(month)) ? ss.getSheetByName('加班費-' + month) : null;
+    // 向後相容：新試算表還沒搬資料 → fallback 去班表試算表找
+    if (!sheet) {
+      var schedSs = SCHEDULE_SHEET_ID ? SpreadsheetApp.openById(SCHEDULE_SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
+      if (schedSs && month) sheet = schedSs.getSheetByName('加班費-' + month);
+    }
     if (!sheet) return { ftRows: [], ptRows: [] };
     var data = sheet.getDataRange().getValues();
     if (data.length < 2) return { ftRows: [], ptRows: [] };
@@ -401,9 +441,8 @@ function collectEvents(values, colToDay) {
 // ============================================
 function loadSavedSettings(month) {
   try {
-    var ss = SCHEDULE_SHEET_ID
-      ? SpreadsheetApp.openById(SCHEDULE_SHEET_ID)
-      : SpreadsheetApp.getActiveSpreadsheet();
+    // 🔒 從「加班費資料」獨立試算表讀（向後相容：舊資料還在班表時也找得到，靠 fallback）
+    var ss = getOvertimeSpreadsheet();
 
     // 先試指定月份
     var sheet = (month && /^\d{4}-\d{2}$/.test(month)) ? ss.getSheetByName('加班費-' + month) : null;
@@ -514,17 +553,56 @@ function json(obj) {
 
 // ============================================
 // ⭐ 手動授權（只需跑一次）
+//   會順便建立加班費獨立試算表（如果還沒），並印出網址
 // ============================================
 function forceAuth() {
   var ss = SCHEDULE_SHEET_ID
     ? SpreadsheetApp.openById(SCHEDULE_SHEET_ID)
     : SpreadsheetApp.getActiveSpreadsheet();
-  Logger.log('已讀取試算表：' + ss.getName());
+  Logger.log('已讀取班表試算表：' + ss.getName());
   var sheets = ss.getSheets();
   sheets.forEach(function(s){
     Logger.log(' - 分頁：' + s.getName() + '（' + s.getLastRow() + ' 列 × ' + s.getLastColumn() + ' 欄）');
   });
-  Logger.log('✅ 授權完成。請記得 Deploy → Web app → Anyone，並把 /exec 網址貼進 overtime.html 設定。');
+  // 順便建立加班費獨立試算表
+  var otSs = getOvertimeSpreadsheet();
+  Logger.log('✅ 加班費獨立試算表：' + otSs.getName());
+  Logger.log('   URL：' + otSs.getUrl());
+  Logger.log('✅ 授權完成。');
+}
+
+// ============================================
+// 🚚 一鍵搬遷舊「加班費-*」分頁：班表試算表 → 加班費獨立試算表
+//   如果之前的資料還在班表裡，跑這個一次就能把全部「加班費-YYYY-MM」分頁
+//   複製到新試算表，並把班表那邊的舊分頁刪掉（避免薪水繼續被看到）
+//   ⚠️ 會覆蓋新試算表裡同名分頁，先確認沒衝突再跑
+// ============================================
+function migrateOldData() {
+  var schedSs = SCHEDULE_SHEET_ID
+    ? SpreadsheetApp.openById(SCHEDULE_SHEET_ID)
+    : SpreadsheetApp.getActiveSpreadsheet();
+  var otSs = getOvertimeSpreadsheet();
+  if (schedSs.getId() === otSs.getId()) {
+    Logger.log('⚠️ 班表跟加班費是同一份試算表，沒有東西要搬。請先把 OVERTIME_SHEET_ID 留空 + 刪掉 PropertiesService 的 OVERTIME_SHEET_ID，或填一個新的 ID。');
+    return;
+  }
+  var moved = 0;
+  var sheets = schedSs.getSheets();
+  for (var i = 0; i < sheets.length; i++) {
+    var s = sheets[i];
+    var name = s.getName();
+    if (!/^加班費-\d{4}-\d{2}$/.test(name)) continue;
+    // 在新試算表建同名分頁（如果已存在就先刪）
+    var existing = otSs.getSheetByName(name);
+    if (existing) otSs.deleteSheet(existing);
+    var copied = s.copyTo(otSs);
+    copied.setName(name);
+    // 從班表刪掉
+    schedSs.deleteSheet(s);
+    moved++;
+    Logger.log(' ✓ 搬遷分頁：' + name);
+  }
+  Logger.log('🚚 完成，共搬遷 ' + moved + ' 個分頁。新試算表：' + otSs.getUrl());
 }
 
 // ============================================
