@@ -1691,8 +1691,12 @@ doImportSalesBonus(false);
 doImportSurveyBonus(false);
 // 啟動時從對帳的雲端拉最新（試算表 10KO8v5...）
 pullFromCloud(false);
-// 啟動時從雲端拉最新（若有設定）→ 若雲端較新，會覆寫本地
-pullFromCloud(false);
+
+// 防呆：如果 cd_store 沒設（例如直接打開 salary-verify.html，沒從 index 進入），
+// 給使用者明確訊息而不是默默失敗
+if(!STORE){
+  setSyncChip('err', '☁ 未選店', '請從主頁 → 選店 → 進入薪資對帳');
+}
 
 // 自動儲存（每 8 秒：本機 + 推雲端）
 setInterval(function(){
