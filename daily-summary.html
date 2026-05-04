@@ -447,7 +447,7 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.05.04-03';
+var APP_VERSION = '2026.05.04-04';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -2204,11 +2204,12 @@ async function manualResync(){
 // 上次從雲端 pull 的時間戳（避免 visibilitychange 太頻繁拉雲端）
 var _lastCloudPullAt = 0;
 
-// ⭐ 防呆：圖片還在上傳 / 還沒同步時關頁 → 跳瀏覽器警告
-//    這樣使用者上傳完馬上想關頁，瀏覽器會擋一下，避免圖片漏傳
+// ⭐ 防呆：任何未儲存的變更（欄位、圖片、提現代收）→ 關頁前跳瀏覽器警告
+// _hasUnsavedChanges 由 markDirty() 維護，涵蓋所有 input/change/上傳/刪除/AI 完成等情境
 window.addEventListener('beforeunload', function(e){
-  if(_autoSaving || _autoSavePending || _imagesDirty){
-    var msg = '圖片還在上傳到雲端，現在關閉可能會漏掉，確定要離開嗎？';
+  if(_hasUnsavedChanges || _imagesDirty || _autoSaving){
+    // ⚠️ 現代瀏覽器會忽略自訂訊息，只看你有沒有 set returnValue；訊息留著當註解用
+    var msg = '你有未儲存的變更（含上傳的圖片）！\n關閉頁面會丟失，確定要離開嗎？';
     e.preventDefault();
     e.returnValue = msg;
     return msg;
