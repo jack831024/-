@@ -332,8 +332,8 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
     <span id="u-store">—</span>
   </div>
   <span class="spacer"></span>
-  <button class="back-btn" id="resync-btn" onclick="manualResync()" title="重新同步：手動把目前資料再推一次到雲端、重新拉歷史" style="width:auto;padding:0 12px;font-size:12px;font-weight:500;gap:6px">
-    🔄 重新同步
+  <button class="back-btn" id="resync-btn" onclick="manualResync()" title="把目前所有未儲存的變更（AI 辨識結果、欄位編輯、月度表改動）一次推到雲端" style="width:auto;padding:0 12px;font-size:12px;font-weight:500;gap:6px">
+    💾 點此儲存到雲端
   </button>
   <button class="back-btn" onclick="openInvSettings()" title="設定雲端同步網址" style="width:auto;padding:0 12px;font-size:12px;font-weight:500;gap:6px">
     ⚙️ 設定
@@ -422,7 +422,7 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
     <h3><span class="step-num">4</span>本批品項明細
       <span style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:999px;background:rgba(59,130,246,.1);color:var(--brand);font-weight:600">📅 <span id="batch-date-badge">—</span></span>
     </h3>
-    <p style="font-size:11.5px;color:var(--ink-2);background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.12);border-radius:10px;padding:9px 12px;margin-bottom:10px;line-height:1.6">💡 AI 辨識完會列在這。可直接修改採購價／進貨量，或刪除錯誤列、補打 AI 漏掉的品項。任何變動會自動同步到月度表 + 雲端。</p>
+    <p style="font-size:11.5px;color:var(--ink-2);background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.12);border-radius:10px;padding:9px 12px;margin-bottom:10px;line-height:1.6">💡 AI 辨識完會列在這。可直接修改採購價／進貨量，或刪除錯誤列、補打 AI 漏掉的品項。<br>⚠️ <b>自動同步已關閉</b> — 編輯完請按右上角 <b>「💾 點此儲存到雲端」</b> 才會帶入月度盤點表並推到雲端。</p>
     <div id="batch-items-list"></div>
     <button class="add-batch-btn" onclick="addBatchItem()">＋ 新增一列</button>
   </div>
@@ -444,9 +444,9 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
     <div style="font-size:11.5px;color:var(--ink-2);background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:10px;padding:9px 12px;margin-bottom:10px;line-height:1.6;display:flex;gap:6px;align-items:flex-start">
       <span>💡</span>
       <span>
-        <b>修正數字錯誤：</b>直接點任一格子的數字輸入框，改完按 Enter 或點別處就會自動儲存到本機 + 雲端。<br>
+        <b>修正數字錯誤：</b>直接點任一格子的數字輸入框，改完按 Enter 或點別處會先存到本機；<b>請按右上「💾 點此儲存到雲端」才會推上雲端</b>（自動同步已關閉）。<br>
         <b>自動合併近似品項：</b>字元相似度 ≥ 75%（例「速食麵」vs「迷食麵」=82%）會自動歸為同品項，該列會顯示綠色 <span style="display:inline-block;font-size:10px;padding:1px 6px;border-radius:999px;background:rgba(16,185,129,.15);color:#047857;font-weight:700">＋N</span> 徽章（懸停可看合併的別名）。差異較大的（如「鴨肉丸」vs「上等縣肉丸」=33%）請手動點品項名重新命名合併。<br>
-        <b>手動合併品項：</b>點品項名稱（會顯示 ✎ 圖示）可重新命名，所有日期同名項目會一起合併並同步雲端。
+        <b>手動合併品項：</b>點品項名稱（會顯示 ✎ 圖示）可重新命名，所有日期同名項目會一起合併（合併動作會立即同步雲端）。
       </span>
     </div>
     <div id="hist-container"></div>
@@ -1189,7 +1189,7 @@ async function doAnalyze(filesToAnalyze){
     stat.className = 'ai-status ok on';
     stat.innerHTML = '✓ 辨識完成，新增 ' + newItems.length + ' 筆品項到 ' + invoiceDate + '（請至下方核對）';
 
-    // 同步月份 + 重畫月度表（只用本機資料，避免雲端舊值蓋掉剛 AI 識別出的新品項）
+    // 同步月份 + 重畫月度表（只用本機資料，雲端推送等使用者手動按）
     syncMonthPickerToDate(invoiceDate);
     await loadHistory({skipCloud:true});
 
@@ -1205,8 +1205,8 @@ async function doAnalyze(filesToAnalyze){
       if(batchSec) batchSec.scrollIntoView({behavior:'smooth',block:'start'});
     }
 
-    // 同步到雲端（背景）
-    cloudSyncOneDay(invoiceDate, combined, savedAt);
+    // ⚠️ 自動同步已關閉：只標記該日 dirty，使用者按「💾 點此儲存到雲端」才會推
+    markDateDirty(invoiceDate);
   }catch(e){
     console.error(e);
     stat.className = 'ai-status err on';
@@ -1275,11 +1275,12 @@ function commitBatch(){
   localStorage.setItem(key, JSON.stringify({
     vendor: currentVendor, date: date, items: clean, savedAt: savedAt
   }));
-  // 月度表只用本機資料 render（避免雲端舊值覆蓋剛 commit 的本機值）
+  // 月度表只用本機資料 render（雲端推送等使用者手動按）
   if(typeof loadHistory === 'function') loadHistory({skipCloud:true});
   // ⭐ 額外保險：直接重算「所有廠商成本」（不依賴 loadHistory 是否成功觸發）
   if(typeof renderBusinessSummary === 'function') renderBusinessSummary();
-  if(typeof cloudSyncOneDay === 'function') cloudSyncOneDay(date, clean, savedAt);
+  // ⚠️ 自動同步已關閉：只標記該日 dirty，等使用者按「💾 點此儲存到雲端」
+  markDateDirty(date);
 }
 
 function scheduleBatchSave(){
@@ -1408,14 +1409,17 @@ function upd(idx, field, val){
   if(field === 'price' || field === 'qty') items[idx][field] = Number(val) || 0;
   else items[idx][field] = val;
   updateSummary();
-  autoSave();
+  // ⚠️ 自動同步已關閉：標記當前編輯日期 dirty
+  var d = document.getElementById('inv-date');
+  if(d && d.value) markDateDirty(d.value);
 }
 
 function delRow(idx){
   items.splice(idx, 1);
   renderTable();
   updateSummary();
-  autoSave();
+  var d = document.getElementById('inv-date');
+  if(d && d.value) markDateDirty(d.value);
 }
 
 function addRow(){
@@ -1427,29 +1431,45 @@ function addRow(){
 }
 
 // =============================================================
-// 自動儲存（debounce 600ms：使用者連續編輯時不會每鍵都打雲端）
+// 手動儲存（自動同步已關閉）
+// 任何寫 localStorage 的動作都只 markDateDirty(date) 標記「該日待推雲」
+// 使用者按右上角「💾 點此儲存到雲端」才會把所有 dirty 日期推到雲端
 // =============================================================
-var _autoSaveTimer = null;
-var _autoSaving = false;
+var _autoSaveTimer = null;        // 保留變數避免其他地方參照壞掉（已不使用）
+var _autoSaving = false;          // 手動儲存中旗標
+var _autoSavePending = false;     // 儲存中又被呼叫 → 跑完補一次
+var _dirtyDates = {};             // { 'YYYY-MM-DD': true }，待推雲的日期
 
-// 同步狀態直接顯示在右上角「重新同步」按鈕
 function nowHMS(){
   var d = new Date();
   return String(d.getHours()).padStart(2,'0')+':'+
          String(d.getMinutes()).padStart(2,'0')+':'+
          String(d.getSeconds()).padStart(2,'0');
 }
+
+// 標記某日待推雲端，並把右上角按鈕變黃警示
+function markDateDirty(dateStr){
+  if(!dateStr) return;
+  _dirtyDates[dateStr] = true;
+  setAutoSaveStatus('dirty');
+}
+function hasDirty(){
+  for(var k in _dirtyDates){ if(_dirtyDates[k]) return true; }
+  return false;
+}
+
 function setAutoSaveStatus(state){
   var btn = document.getElementById('resync-btn');
   if(!btn) return;
   var green = { bg:'rgba(16,185,129,.12)', fg:'#047857', bd:'#6ee7b7' };
   var map = {
-    idle:    { text:'🟢 ✓ 已同步',            bg:green.bg, fg:green.fg, bd:green.bd },
-    typing:  { text:'🟢 ✓ 已同步',            bg:green.bg, fg:green.fg, bd:green.bd },  // 打字中保留綠色，避免閃爍
-    saving:  { text:'🔵 ⟲ 同步中…',          bg:'rgba(59,130,246,.12)', fg:'#1e40af', bd:'#93c5fd' },
-    saved:   { text:'🟢 ✓ 已同步 '+nowHMS(), bg:green.bg, fg:green.fg, bd:green.bd },
-    cloud:   { text:'🟢 ✓ 已同步 '+nowHMS(), bg:green.bg, fg:green.fg, bd:green.bd },
-    error:   { text:'🔴 ❌ 同步失敗',         bg:'rgba(220,38,38,.1)',   fg:'#b91c1c', bd:'#fca5a5' }
+    idle:    { text:'💾 點此儲存到雲端',                       bg:green.bg, fg:green.fg, bd:green.bd },
+    typing:  { text:'💾 點此儲存到雲端',                       bg:green.bg, fg:green.fg, bd:green.bd },
+    dirty:   { text:'⚠️ 有未儲存的變更 — 點此儲存到雲端',      bg:'rgba(245,158,11,.18)', fg:'#b45309', bd:'#fbbf24' },
+    saving:  { text:'🔵 ⟲ 儲存中…',                           bg:'rgba(59,130,246,.12)', fg:'#1e40af', bd:'#93c5fd' },
+    saved:   { text:'🟢 ✓ 已儲存 '+nowHMS(),                  bg:green.bg, fg:green.fg, bd:green.bd },
+    cloud:   { text:'🟢 ✓ 已儲存 '+nowHMS(),                  bg:green.bg, fg:green.fg, bd:green.bd },
+    error:   { text:'🔴 ❌ 儲存失敗 — 請再點一次',             bg:'rgba(220,38,38,.1)',   fg:'#b91c1c', bd:'#fca5a5' }
   };
   var s = map[state] || map.idle;
   btn.innerHTML = s.text;
@@ -1458,56 +1478,86 @@ function setAutoSaveStatus(state){
   btn.style.borderColor = s.bd || '';
 }
 
-function autoSave(){
-  if(!currentVendor) return;
-  if(items.length === 0) return; // 空資料不主動存
-  setAutoSaveStatus('typing');
-  if(_autoSaveTimer) clearTimeout(_autoSaveTimer);
-  _autoSaveTimer = setTimeout(doAutoSave, 600);
-}
+// 舊 autoSave 入口保留為 no-op，避免其他殘留呼叫炸錯
+function autoSave(){ /* 自動同步已關閉；改由各觸發點呼叫 markDateDirty */ }
 
-var _autoSavePending = false;  // 在儲存中又被呼叫 → 標記，跑完再跑一次
-async function doAutoSave(){
-  if(_autoSaving){
-    // ⭐ 已有 save 在跑（例如 cloud sync 還沒回來），先記下「結束後再跑一次」
-    // 這樣 AI 辨識完的新 items[] 不會被跳過
-    _autoSavePending = true;
+// 💾 手動儲存（右上「💾 點此儲存到雲端」按鈕）
+// 把所有 _dirtyDates 裡的日期讀本機資料一次性推雲端
+// 不主動 pull 雲端 — 避免覆蓋使用者剛改的東西（要拉其他裝置的改動請手動重新整理頁面）
+async function manualResync(){
+  if(!currentVendor){ alert('請先選擇廠商'); return; }
+  if(_autoSaving){ _autoSavePending = true; return; }
+  var url = localStorage.getItem('cd_inv_sync_url');
+  if(!url){
+    alert('⚠️ 尚未設定雲端網址 — 請先點右上「⚙️ 設定」填入 Apps Script /exec 網址');
     return;
   }
+
+  // 沒有 dirty 但使用者還是按了：把當前廠商當月所有日期都推一遍（保險）
+  var dates = Object.keys(_dirtyDates);
+  if(dates.length === 0){
+    var picker = document.getElementById('month-picker');
+    var ym = picker && picker.value;
+    var prefix = 'cd_inv_'+STORE_ID+'_'+currentVendor+'_';
+    if(ym){
+      for(var i=0;i<localStorage.length;i++){
+        var k = localStorage.key(i);
+        if(!k || k.indexOf(prefix) !== 0) continue;
+        var d = k.substring(prefix.length);
+        if(d.indexOf(ym) === 0) dates.push(d);
+      }
+    }
+  }
+  if(dates.length === 0){
+    setAutoSaveStatus('cloud');
+    return;
+  }
+
   _autoSaving = true;
   setAutoSaveStatus('saving');
   try{
-    var url = localStorage.getItem('cd_inv_sync_url');
-    var hasCloud = !!url;
-    await saveInv({ silent: true });
-    setAutoSaveStatus(hasCloud ? 'cloud' : 'saved');
+    var savedAt = new Date().toISOString();
+    var promises = dates.map(function(d){
+      var key = 'cd_inv_'+STORE_ID+'_'+currentVendor+'_'+d;
+      var data = {};
+      try{ data = JSON.parse(localStorage.getItem(key) || '{}'); }catch(e){}
+      var its = (data.items || []).map(function(it){
+        return { name: it.name, price: it.price, qty: it.qty, unit: it.unit || '', date: d };
+      });
+      return fetch(url, {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({
+          action:'saveInventory',
+          store: STORE_ID,
+          vendor: currentVendor,
+          date: d,
+          items: its,
+          savedAt: data.savedAt || savedAt
+        })
+      }).then(function(r){ return r.json(); }).catch(function(e){ console.warn('雲端 '+d+' 失敗', e); return null; });
+    });
+    var results = await Promise.all(promises);
+    var okDates = [];
+    results.forEach(function(r, idx){ if(r && r.ok) okDates.push(dates[idx]); });
+    // 推成功的日期才從 dirty 清掉；失敗的留著下次重推
+    okDates.forEach(function(d){ delete _dirtyDates[d]; });
+    if(okDates.length === dates.length){
+      setAutoSaveStatus('cloud');
+    }else{
+      setAutoSaveStatus('error');
+      alert('❌ 部分日期儲存失敗('+(dates.length-okDates.length)+'/'+dates.length+')— 請檢查網路後再點一次');
+    }
   }catch(e){
-    console.warn('自動儲存失敗', e);
+    console.warn('手動儲存失敗', e);
     setAutoSaveStatus('error');
+    alert('❌ 儲存失敗：'+(e.message || '未知錯誤')+'\n\n請檢查網路連線後再點一次儲存。');
   }finally{
     _autoSaving = false;
-    // 在剛才儲存中又被呼叫 → 立刻再跑一次（用最新的 items[]）
     if(_autoSavePending){
       _autoSavePending = false;
-      setTimeout(doAutoSave, 0);
+      setTimeout(manualResync, 0);
     }
-  }
-}
-
-// 手動重新同步（右上「🔄 重新同步」按鈕）
-// 強制把目前 items[] 推雲端、並重新從雲端拉歷史，相當於一次完整同步
-async function manualResync(){
-  if(!currentVendor){ alert('請先選擇廠商'); return; }
-  setAutoSaveStatus('saving');
-  try{
-    if(items.length > 0){
-      await saveInv({ silent: true });
-    }
-    await loadHistory();  // 把歷史資料重新拉一次
-    setAutoSaveStatus('cloud');
-  }catch(e){
-    console.warn('重新同步失敗', e);
-    setAutoSaveStatus('error');
   }
 }
 
@@ -2571,8 +2621,8 @@ async function editCell(repName, day, field, newValue){
     localStorage.setItem(key, JSON.stringify(data));
   }
 
-  // 雲端同步（背景進行）
-  cloudSyncOneDay(dateStr, data.items, data.savedAt);
+  // ⚠️ 自動同步已關閉：只標記該日 dirty，等使用者按「💾 點此儲存到雲端」
+  markDateDirty(dateStr);
 
   // 重畫月度表（只用本機資料，避免「雲端舊值」蓋掉剛剛編輯）
   await loadHistory({skipCloud:true});
@@ -2763,6 +2813,16 @@ document.addEventListener('keydown', function(e){
   if(e.key === 'Escape'){
     closeInvSettings();
     document.getElementById('lightbox').classList.remove('on');
+  }
+});
+
+// ⭐ 防呆：有未儲存的變更時關頁 → 跳瀏覽器警告
+//    避免使用者 AI 辨識 / 編輯完忘記按「💾 點此儲存到雲端」就關掉，雲端漏資料
+window.addEventListener('beforeunload', function(e){
+  if(hasDirty()){
+    e.preventDefault();
+    e.returnValue = '有未儲存的變更尚未推到雲端，確定要離開嗎？';
+    return e.returnValue;
   }
 });
 </script>
