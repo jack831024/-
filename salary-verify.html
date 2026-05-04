@@ -1049,13 +1049,16 @@ function calcEmp(e){
     var ptRegularPay  = Math.round(ptHours * ptHourlyWage);
     var ptOtPay       = Math.round(ptOtHours * ptHourlyWage * 1.34);
     var ptWage        = ptRegularPay + ptOtPay;
-    // PT 也支援其他獎金 / 懲罰
+    // PT 也支援其他獎金 / 懲罰（含每筆說明）
     var ptOther = 0;
+    var ptOtherEntries = [];
     if(STATE.otherBonuses){
       Object.keys(STATE.otherBonuses).forEach(function(eid){
         var ent = STATE.otherBonuses[eid];
         if(ent && ent.empId === id){
-          ptOther += Math.round(parseFloat(ent.amount) || 0);
+          var amt = Math.round(parseFloat(ent.amount) || 0);
+          ptOther += amt;
+          ptOtherEntries.push({ label: ent.label || '其他', amount: amt });
         }
       });
     }
@@ -1070,6 +1073,7 @@ function calcEmp(e){
       ptOtPay: ptOtPay,
       ptWage: ptWage,
       otherBonus: ptOther,
+      otherEntries: ptOtherEntries,
       total: ptTotal,
       realPay: ptTotal + insurance,
       note: STATE.notes[id] || ''
@@ -1091,13 +1095,16 @@ function calcEmp(e){
   var fixedOT = (typeof fxOverride === 'number' && fxOverride > 0)
     ? fxOverride
     : fixedOTForRole(role);
-  // 其他獎金 / 懲罰：累加該員工所有 entries
+  // 其他獎金 / 懲罰：累加該員工所有 entries（同時保留每筆說明供明細顯示）
   var otherBonus = 0;
+  var otherEntries = [];
   if(STATE.otherBonuses){
     Object.keys(STATE.otherBonuses).forEach(function(eid){
       var ent = STATE.otherBonuses[eid];
       if(ent && ent.empId === id){
-        otherBonus += Math.round(parseFloat(ent.amount) || 0);
+        var amt = Math.round(parseFloat(ent.amount) || 0);
+        otherBonus += amt;
+        otherEntries.push({ label: ent.label || '其他', amount: amt });
       }
     });
   }
@@ -1156,6 +1163,7 @@ function calcEmp(e){
     personalDays: personalDays, personalDeduct: personalDeduct,
     restDays: restDays, restDeduct: restDeduct,
     otherBonus: otherBonus,
+    otherEntries: otherEntries,
     insurance: insurance,
     total: total, realPay: realPay,
     note: STATE.notes[id] || ''
@@ -1195,6 +1203,12 @@ function bdRow(label, val){
   return '<div class="bd-row"><span>'+label+'</span><span class="val '+cls+'">'+sign+fmtPlain(Math.abs(val))+'</span></div>';
 }
 
+function escHtml(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
 function renderDetail(){
   // 明細變動時，總表也要同步更新
   renderSummaryTable();
@@ -1220,8 +1234,12 @@ function renderDetail(){
       html.push(payRow('加班費（×1.34）', c.ptOtPay));
     }
     html.push(payRow('當月總工資', c.ptWage));
-    if(c.otherBonus){
+    if(c.otherEntries && c.otherEntries.length){
       html.push(payRow('其他獎金／懲罰', c.otherBonus));
+      var bdOther = c.otherEntries.map(function(e){
+        return bdRow(escHtml(e.label), e.amount);
+      }).join('');
+      html.push('<div class="breakdown open" style="margin-top:-2px">'+bdOther+'</div>');
     }
     html.push(payRow('總額', c.total, {rowCls:'total'}));
     html.push(payRow('勞健保', c.insurance));
@@ -1274,9 +1292,13 @@ function renderDetail(){
   // 延長加班費
   html.push(payRow('延長加班費', c.otPay));
 
-  // 其他獎金 / 懲罰（有設定才顯示）
-  if(c.otherBonus){
+  // 其他獎金 / 懲罰：每筆都顯示說明，員工才看得懂為什麼加錢/扣錢
+  if(c.otherEntries && c.otherEntries.length){
     html.push(payRow('其他獎金／懲罰', c.otherBonus));
+    var bdOther = c.otherEntries.map(function(e){
+      return bdRow(escHtml(e.label), e.amount);
+    }).join('');
+    html.push('<div class="breakdown open" style="margin-top:-2px">'+bdOther+'</div>');
   }
 
   // 扣款
