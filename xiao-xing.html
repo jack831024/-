@@ -481,7 +481,7 @@ const DEFAULT_MONTHS = [
       'IG 上傳標 @初殿鍋物 截圖換贈飲',
     ],
     copy: [
-      '「這禮拜不是 girls\\' night out，是 girls\\' night IN（餐廳裡的鍋）。」',
+      '「這禮拜不是 girls’ night out，是 girls’ night IN（餐廳裡的鍋）。」',
       '「粉紅鍋裡有櫻花，桌邊有合照／#姊妹解放週 你解放什麼？」',
     ],
     forecast: { weekday: '+20%', weekend: '+10%', aov: '雙人 ~700 / 4 人 ~1,300',
@@ -519,7 +519,7 @@ const DEFAULT_MONTHS = [
       { name: '母親節套餐', original: '原 NT$399 系列', price: '拉高定價', content: '依現行海報執行，配對 1 元加購肉蛋糕作為主記憶點' },
     ],
     hook: { name: '母親節肉蛋糕', price: '1 元加購',
-      desc: '兩層肉片堆疊成蛋糕造型＋立體 Happy Mother\\'s Day 蛋糕牌＋干冰煙霧。已被證明是高記憶點 / 高分享率的加購品，是日後所有月份的範本。' },
+      desc: '兩層肉片堆疊成蛋糕造型＋立體 Happy Mother’s Day 蛋糕牌＋干冰煙霧。已被證明是高記憶點 / 高分享率的加購品，是日後所有月份的範本。' },
     ops: [
       '攜母同行加購甜點半價，操作回頭客',
       '延長場至 21:30 推「下班帶媽媽吃」，附媽媽手寫卡',
@@ -1085,7 +1085,7 @@ document.getElementById('import-file').addEventListener('change', e => {
 
 // reset
 document.getElementById('reset-btn').addEventListener('click', () => {
-  if(!confirm('確定要把所有月份重置為預設值？\\n\\n已編輯的內容會消失（建議先按「匯出」備份）。')) return;
+  if(!confirm('確定要把所有月份重置為預設值？\n\n已編輯的內容會消失（建議先按「匯出」備份）。')) return;
   localStorage.removeItem(STORAGE_KEY);
   MONTHS = JSON.parse(JSON.stringify(DEFAULT_MONTHS));
   renderMonths();
