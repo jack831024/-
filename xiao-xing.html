@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>小行 · 行銷企劃 AI 顧問</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --rose:#e11d48;
+  --rose-dark:#be123c;
+  --rose-soft:#fecdd3;
+  --rose-bg:#fff1f2;
+  --gold:#d97706;
+  --ink:#0f172a;
+  --ink-2:#475569;
+  --ink-3:#94a3b8;
+  --ink-4:#cbd5e1;
+  --line:#e2e8f0;
+  --bg:#f8fafc;
+  --green:#059669;
+  --green-bg:#d1fae5;
+  --blue:#2563eb;
+  --blue-bg:#dbeafe;
+  --amber:#d97706;
+  --amber-bg:#fef3c7;
+}
+html,body{height:100%}
+body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;padding:1.5rem 1.25rem 3rem;position:relative;overflow-x:hidden;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #ffe4e6 0%, transparent 50%),
+    radial-gradient(900px 500px at 110% 10%, #fef3c7 0%, transparent 55%),
+    radial-gradient(800px 600px at 50% 120%, #fce7f3 0%, transparent 60%),
+    linear-gradient(180deg,#fff7f7 0%,#f8fafc 100%);
+}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;background:
+  radial-gradient(circle at 50% 50%, transparent 0, rgba(255,255,255,0) 70%, rgba(15,23,42,0.04) 100%);}
+
+.stage{max-width:1180px;margin:0 auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem}
+.back-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:rgba(255,255,255,.7);backdrop-filter:blur(10px);border:1px solid rgba(15,23,42,.08);border-radius:999px;font-size:13px;color:var(--ink-2);text-decoration:none;cursor:pointer;font-family:inherit;transition:all .2s}
+.back-btn:hover{background:#fff;color:var(--ink);transform:translateX(-2px)}
+.brand-tag{display:flex;align-items:center;gap:8px;color:var(--ink-3);font-size:11px;letter-spacing:2px;font-weight:500;text-transform:uppercase}
+.brand-tag .dot{width:6px;height:6px;border-radius:50%;background:var(--rose);box-shadow:0 0 12px var(--rose)}
+
+/* HERO */
+.hero{display:grid;grid-template-columns:auto 1fr;gap:1.5rem;align-items:center;background:rgba(255,255,255,.65);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.8);border-radius:24px;padding:1.75rem 2rem;margin-bottom:1.5rem;box-shadow:0 1px 2px rgba(15,23,42,.04),0 12px 36px -16px rgba(225,29,72,.18)}
+.avatar{width:84px;height:84px;border-radius:24px;background:linear-gradient(135deg,#fecdd3 0%,#fda4af 60%,#fb7185 100%);display:flex;align-items:center;justify-content:center;font-size:48px;line-height:1;box-shadow:0 12px 30px -10px rgba(225,29,72,.45),inset 0 1px 0 rgba(255,255,255,.7)}
+.hero-text h1{font-size:30px;font-weight:800;letter-spacing:-0.02em;background:linear-gradient(135deg,#e11d48 0%,#9f1239 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+.hero-text .role{font-size:13px;color:var(--ink-2);margin-bottom:10px;font-weight:500}
+.hero-text .tagline{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:5px;background:rgba(225,29,72,.08);color:var(--rose-dark);font-size:11.5px;font-weight:500;padding:4px 10px;border-radius:999px;letter-spacing:0.02em}
+.chip.gold{background:rgba(217,119,6,.08);color:#b45309}
+.chip.ink{background:rgba(15,23,42,.06);color:var(--ink-2)}
+
+/* STATUS GRID */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.75rem}
+.stat-card{background:rgba(255,255,255,.7);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.7);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.stat-card .lbl{font-size:11px;color:var(--ink-3);letter-spacing:1.5px;text-transform:uppercase;font-weight:600}
+.stat-card .val{font-size:24px;font-weight:800;color:var(--ink);line-height:1.1}
+.stat-card .sub{font-size:11.5px;color:var(--ink-2)}
+
+/* SECTION */
+.section{margin-bottom:2rem}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1rem;padding-bottom:8px;border-bottom:1px solid rgba(15,23,42,.06)}
+.section-title{font-size:18px;font-weight:700;letter-spacing:-0.01em;display:flex;align-items:center;gap:8px}
+.section-title .em{font-size:20px}
+.section-sub{font-size:12px;color:var(--ink-3)}
+
+/* TIMELINE */
+.timeline{position:relative;padding-left:24px;margin-left:6px}
+.timeline::before{content:"";position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:linear-gradient(180deg,var(--rose) 0%,#fecdd3 100%);border-radius:2px}
+.tl-item{position:relative;padding:6px 0 18px;font-size:13.5px;line-height:1.6}
+.tl-item::before{content:"";position:absolute;left:-24px;top:11px;width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--rose);box-shadow:0 0 0 3px rgba(225,29,72,.12)}
+.tl-item.done::before{background:var(--green);border-color:var(--green)}
+.tl-item.now::before{background:var(--rose);animation:pulse 2s infinite}
+.tl-item.wait::before{background:#fff;border-color:var(--ink-4);box-shadow:none}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(225,29,72,.12)}50%{box-shadow:0 0 0 6px rgba(225,29,72,.05)}}
+.tl-date{font-size:11.5px;color:var(--ink-3);font-weight:600;letter-spacing:0.5px;margin-bottom:2px}
+.tl-title{font-weight:600;color:var(--ink)}
+.tl-desc{color:var(--ink-2);margin-top:2px}
+
+/* FILTER BAR */
+.filter-bar{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;background:rgba(255,255,255,.65);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.7);border-radius:14px;padding:10px 14px;margin-bottom:1rem}
+.filter-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.filter-group .lbl{font-size:11.5px;color:var(--ink-3);font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.fchip{padding:5px 12px;border-radius:999px;background:rgba(15,23,42,.04);border:1px solid transparent;font-size:12.5px;color:var(--ink-2);cursor:pointer;font-family:inherit;transition:all .15s;font-weight:500}
+.fchip:hover{background:rgba(15,23,42,.07)}
+.fchip.active{background:var(--rose);color:#fff;border-color:var(--rose)}
+.fchip.active.alt{background:var(--green);border-color:var(--green)}
+#search{flex:1;min-width:120px;padding:6px 12px;border:1px solid rgba(15,23,42,.08);border-radius:999px;font-size:13px;font-family:inherit;background:rgba(255,255,255,.8)}
+#search:focus{outline:none;border-color:var(--rose);background:#fff}
+
+/* MONTH GRID */
+.month-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.month-card{background:rgba(255,255,255,.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.85);border-radius:18px;padding:18px 20px;cursor:pointer;transition:all .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;gap:10px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -16px rgba(15,23,42,.1)}
+.month-card:hover{transform:translateY(-3px);box-shadow:0 1px 2px rgba(15,23,42,.04),0 20px 44px -18px rgba(225,29,72,.2)}
+.month-card.expanded{transform:translateY(-2px);box-shadow:0 1px 2px rgba(15,23,42,.04),0 24px 50px -16px rgba(225,29,72,.25);border-color:rgba(225,29,72,.25);grid-column:1/-1}
+.month-card .mhead{display:flex;align-items:center;gap:14px}
+.mn{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:42px;font-weight:800;line-height:1;letter-spacing:-0.05em;background:linear-gradient(135deg,#e11d48 0%,#9f1239 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;min-width:60px}
+.mhead-text{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+.mtitle{font-size:15.5px;font-weight:700;letter-spacing:-0.005em;line-height:1.3}
+.mdate{font-size:11.5px;color:var(--ink-3);font-weight:500}
+.status-tag{padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:0.5px;background:var(--ink-bg);color:var(--ink-2);align-self:flex-start;flex-shrink:0}
+.status-tag.done{background:var(--green-bg);color:var(--green)}
+.status-tag.pending{background:var(--blue-bg);color:var(--blue)}
+
+.mrow{display:flex;flex-wrap:wrap;gap:5px}
+.mtag{display:inline-flex;align-items:center;gap:4px;font-size:11px;background:rgba(15,23,42,.05);color:var(--ink-2);padding:3px 9px;border-radius:6px;font-weight:500}
+.mtag.store{background:rgba(225,29,72,.08);color:var(--rose-dark)}
+.mtag.store.yc{background:rgba(37,99,235,.08);color:#1d4ed8}
+.mtag.store.zh{background:rgba(5,150,105,.08);color:var(--green)}
+.mtag.store.xz{background:rgba(217,119,6,.08);color:#b45309}
+.mtag.all{background:rgba(15,23,42,.06);color:var(--ink)}
+
+.mrow-quick{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--ink-2);line-height:1.5}
+.mrow-quick b{color:var(--ink);font-weight:600}
+
+.mexp-toggle{margin-top:auto;display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--rose);font-weight:600;letter-spacing:0.5px;padding-top:6px}
+.mexp-toggle svg{transition:transform .2s}
+.month-card.expanded .mexp-toggle svg{transform:rotate(180deg)}
+
+/* EXPANDED CONTENT */
+.mexp{display:none;padding-top:14px;margin-top:10px;border-top:1px dashed rgba(15,23,42,.1);font-size:13px;line-height:1.7}
+.month-card.expanded .mexp{display:grid;grid-template-columns:1fr 1fr;gap:18px 28px}
+.mexp h4{font-size:11.5px;color:var(--rose);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid rgba(225,29,72,.15)}
+.mexp .full{grid-column:1/-1}
+.mexp ul{list-style:none;padding:0}
+.mexp li{padding:3px 0;color:var(--ink-2);position:relative;padding-left:14px}
+.mexp li::before{content:"·";position:absolute;left:4px;color:var(--rose);font-weight:700}
+.mexp .price{display:flex;justify-content:space-between;padding:6px 10px;background:rgba(225,29,72,.04);border-radius:8px;margin-bottom:4px;font-size:12.5px}
+.mexp .price s{color:var(--ink-3)}
+.mexp .price b{color:var(--rose-dark)}
+.mexp .copy{background:rgba(15,23,42,.03);border-left:3px solid var(--rose);padding:8px 12px;margin:4px 0;font-style:italic;color:var(--ink);font-size:12.5px;border-radius:0 8px 8px 0}
+.mexp .hook-card{background:linear-gradient(135deg,#fff1f2 0%,#fef3c7 100%);border-radius:12px;padding:12px 14px;border:1px solid rgba(225,29,72,.15)}
+.mexp .hook-name{font-weight:700;font-size:14px;color:var(--rose-dark);margin-bottom:3px}
+.mexp .hook-price{display:inline-block;background:var(--rose);color:#fff;font-weight:700;padding:2px 10px;border-radius:999px;font-size:11.5px;margin-bottom:8px}
+.mexp .hook-desc{color:var(--ink-2);font-size:12.5px;line-height:1.6}
+.mexp .store-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.mexp .store-cell{background:rgba(255,255,255,.7);border:1px solid rgba(15,23,42,.06);border-radius:10px;padding:10px 12px}
+.mexp .store-cell .stname{font-size:11px;font-weight:700;letter-spacing:1px;color:var(--rose-dark);margin-bottom:4px;text-transform:uppercase}
+.mexp .store-cell .stop{font-size:12px;color:var(--ink-2);line-height:1.55}
+.mexp .forecast-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.mexp .fc-cell{background:rgba(255,255,255,.6);border-radius:8px;padding:6px 10px;font-size:12px}
+.mexp .fc-cell .fclbl{font-size:10.5px;color:var(--ink-3);font-weight:600;letter-spacing:0.5px;text-transform:uppercase}
+.mexp .fc-cell .fcval{font-weight:600;color:var(--ink)}
+.mexp .risk{background:rgba(217,119,6,.06);border-left:3px solid var(--amber);padding:8px 12px;color:#92400e;font-size:12px;border-radius:0 8px 8px 0;margin-top:4px}
+
+/* KNOWLEDGE BASE */
+.kb-card{background:rgba(255,255,255,.65);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.8);border-radius:18px;padding:20px 24px;margin-bottom:1rem;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.kb-card details{cursor:pointer}
+.kb-card summary{font-size:14px;font-weight:700;color:var(--ink);list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.kb-card summary::-webkit-details-marker{display:none}
+.kb-card summary svg{transition:transform .2s}
+.kb-card details[open] summary svg{transform:rotate(180deg)}
+.kb-content{padding-top:16px;font-size:13px;line-height:1.7;color:var(--ink-2)}
+.kb-content h4{font-size:12px;color:var(--rose);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid rgba(225,29,72,.15)}
+.kb-content table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px}
+.kb-content th,.kb-content td{padding:6px 10px;border-bottom:1px solid rgba(15,23,42,.06);text-align:left;vertical-align:top}
+.kb-content th{font-weight:700;color:var(--ink);background:rgba(225,29,72,.04);font-size:11.5px}
+.kb-content .principle{padding-left:18px;position:relative;margin:6px 0}
+.kb-content .principle::before{content:"✦";position:absolute;left:0;color:var(--rose);font-weight:700}
+
+/* FOOTER */
+.foot{text-align:center;font-size:11px;color:var(--ink-3);letter-spacing:1px;margin-top:2rem;padding-top:1rem}
+.foot .name{color:var(--rose);font-weight:600}
+
+@media(max-width:980px){
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+  .month-grid{grid-template-columns:repeat(2,1fr)}
+  .month-card.expanded .mexp{grid-template-columns:1fr}
+}
+@media(max-width:640px){
+  body{padding:1rem}
+  .hero{grid-template-columns:1fr;text-align:center;padding:1.5rem}
+  .avatar{margin:0 auto}
+  .month-grid{grid-template-columns:1fr}
+  .hero-text h1{font-size:24px}
+  .filter-bar{padding:10px}
+  .stat-card .val{font-size:20px}
+  .mn{font-size:34px;min-width:48px}
+  .mexp .store-grid{grid-template-columns:1fr}
+  .mexp .forecast-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <a class="back-btn" href="home.html">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      返回主頁
+    </a>
+    <div class="brand-tag">
+      <span class="dot"></span>
+      <span>MARKETING · AI</span>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="avatar">🤖</div>
+    <div class="hero-text">
+      <h1>小行</h1>
+      <p class="role">初殿鍋物 · 行銷企劃 AI 顧問　／　Xiao-Xing, the Marketing Strategist</p>
+      <div class="tagline">
+        <span class="chip">客單 500</span>
+        <span class="chip">25-39 女性 65%</span>
+        <span class="chip gold">三店差異化</span>
+        <span class="chip ink">主套餐 + 1 元加購</span>
+        <span class="chip ink">寵物友善</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUS GRID -->
+  <div class="stat-grid">
+    <div class="stat-card">
+      <span class="lbl">涵蓋月份</span>
+      <span class="val">12 / 12</span>
+      <span class="sub">2026 全年完整年曆</span>
+    </div>
+    <div class="stat-card">
+      <span class="lbl">已執行</span>
+      <span class="val">1 個</span>
+      <span class="sub">5 月 · 母親節肉蛋糕</span>
+    </div>
+    <div class="stat-card">
+      <span class="lbl">待執行</span>
+      <span class="val">11 個</span>
+      <span class="sub">已備好套餐＋加購＋文案</span>
+    </div>
+    <div class="stat-card">
+      <span class="lbl">服務門市</span>
+      <span class="val">3 店</span>
+      <span class="sub">永春 / 中和 / 新莊</span>
+    </div>
+  </div>
+
+  <!-- TIMELINE: 他做了什麼 -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title"><span class="em">📋</span>小行做了什麼</div>
+      <span class="section-sub">工作軌跡 · 由近至遠</span>
+    </div>
+    <div class="timeline" id="timeline"></div>
+  </div>
+
+  <!-- KNOWLEDGE BASE -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title"><span class="em">📚</span>小行的知識庫</div>
+      <span class="section-sub">所有建議都基於這幾個變數</span>
+    </div>
+    <div class="kb-card">
+      <details>
+        <summary>
+          <span>🎯 品牌、客群、三店定位、設計原則</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        <div class="kb-content">
+          <h4>品牌定位</h4>
+          <p>初殿鍋物 · 平日 299 套餐 + 60 種自助吧。招牌：<b>牛奶鍋、麻辣鍋、被火鍋耽誤的滷肉飯</b>。寵物友善、最後收客 21:00。客單價約 500 元（套餐＋加購＋10%）。</p>
+
+          <h4>客群輪廓</h4>
+          <p>主力：<b>25-39 歲女性占 65%</b>。次群：家庭客（爸媽帶小孩）、情侶、朋友/同事聚餐。女性主導決策 → 視覺與儀式感是傳播關鍵；家庭與情侶混合 → 套餐要彈性 2-6 人。</p>
+
+          <h4>三店差異化指引</h4>
+          <table>
+            <thead><tr><th>元素</th><th>永春</th><th>中和</th><th>新莊</th></tr></thead>
+            <tbody>
+              <tr><td>主訴求</td><td>下班犒賞、商業包桌</td><td>家庭、寵物、回頭</td><td>連假人流、IG、限時快閃</td></tr>
+              <tr><td>主時段</td><td>平日午餐 + 晚高峰</td><td>假日午餐 + 假日晚餐</td><td>假日晚高峰 + 演出夜</td></tr>
+              <tr><td>套餐人數</td><td>1-2 人為主</td><td>4-6 人為主</td><td>2-4 人為主</td></tr>
+              <tr><td>包桌資源</td><td>主要</td><td>中等</td><td>中等</td></tr>
+              <tr><td>寵物友善訴求</td><td>弱</td><td>強（主場）</td><td>中</td></tr>
+              <tr><td>IG 投放比重</td><td>中</td><td>中</td><td>高（主場）</td></tr>
+            </tbody>
+          </table>
+
+          <h4>活動設計核心原則</h4>
+          <p class="principle"><b>主套餐拉價 ＋ 1 元加購記憶點</b>是已驗證模式（5/母親節肉蛋糕案）。1 元只是話術錨點，可改 9/19/29/39，但「銅板價＋反差」的張力不能丟。</p>
+          <p class="principle"><b>主套餐定價 ≈ 500 × 1.3 ~ 1.5 = 650 ~ 750</b>。客人感受是「升級值得」，不是「被加價」。加購誘餌成本 ≤ 套餐毛利的 20%。</p>
+          <p class="principle">加購品必須有<b>視覺爆點</b>（造型、煙霧、高度），讓客人有理由拍照打卡。</p>
+          <p class="principle"><b>三條傳播線</b>：視覺記憶點（IG/Threads 分享）／儀式感（命名＋揭蓋／敲擊／合照動作）／限時稀缺（檔期短、加購數量限制）。</p>
+          <p class="principle"><b>鬼月（農曆 7 月，多在 8 月）禁忌</b>：避免黑紅暗色、血滴造型、煮人形聯想。</p>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- MONTH GRID + FILTER -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title"><span class="em">📅</span>2026 年度行銷年曆</div>
+      <span class="section-sub" id="filter-summary">12 個月，點任一張展開完整詳案</span>
+    </div>
+
+    <div class="filter-bar">
+      <div class="filter-group">
+        <span class="lbl">門市</span>
+        <button class="fchip active" data-store="all">全部</button>
+        <button class="fchip" data-store="永春">永春</button>
+        <button class="fchip" data-store="中和">中和</button>
+        <button class="fchip" data-store="新莊">新莊</button>
+      </div>
+      <div class="filter-group">
+        <span class="lbl">狀態</span>
+        <button class="fchip alt" data-status="all">全部</button>
+        <button class="fchip" data-status="done">已執行</button>
+        <button class="fchip" data-status="pending">待執行</button>
+      </div>
+      <input id="search" type="text" placeholder="搜尋月份／主題／關鍵字...">
+    </div>
+
+    <div class="month-grid" id="month-grid"></div>
+  </div>
+
+  <p class="foot">小行 / <span class="name">XIAO-XING</span> · 初殿鍋物 行銷企劃 AI 顧問 · 2026</p>
+
+</div>
+
+<script>
+// =====================================================
+// 小行的工作軌跡
+// =====================================================
+const TIMELINE = [
+  { date: '2026-05-04', status: 'done', title: '建立 12 個月年度行銷年曆',
+    desc: '每月含主題、套餐定價、1 元加購記憶點、三店差異化、社群文案、預估翻桌與風險。' },
+  { date: '2026-05-04', status: 'done', title: '寫入品牌定位與客群輪廓',
+    desc: '客單 500、25-39 女性占 65%、家庭/情侶/朋友同事，鎖死所有建議的判斷基準。' },
+  { date: '2026-05-04', status: 'done', title: '建立三店差異化規則',
+    desc: '永春商圈型／中和社區型／新莊熱門商圈。每月活動套用對應主推門市與在地操作。' },
+  { date: '2026-05', status: 'now', title: '5 月母親節活動 · 執行中',
+    desc: '母親節套餐＋1 元加購肉蛋糕已上線（4/24 ~ 5/17）。等待蒐集當期實績。' },
+  { date: 'NEXT', status: 'wait', title: '下一步 · 等候 5 月實績回填',
+    desc: '請於 5/17 後回傳：當期客數、母親節套餐選擇率、肉蛋糕加購率、IG 熱度、客訴。小行會用這些數據校準後續每月估算。' },
+];
+
+// =====================================================
+// 12 個月資料（以 marketing/2026年度行銷年曆.md 為準）
+// =====================================================
+const MONTHS = [
+  // ───── 1 月 ─────
+  { month: 1, title: '跨年回溫＋尾牙圍爐', date: '1/1 – 1/31', status: 'pending',
+    stores: ['永春','中和','新莊'], mainStore: '永春',
+    audience: '公司聚餐（永春）、家庭跨年餘溫（中和）、年輕朋友揪團（新莊）',
+    packages: [
+      { name: '尾牙圍爐 · 雙人套', original: 899, price: 699, content: '招牌牛奶鍋＋雙人和牛盤＋自助吧' },
+      { name: '尾牙圍爐 · 五人套', original: 2999, price: 2499, content: '雙鍋（牛奶＋麻辣）＋肉盤升級＋滷肉飯桶＋自助吧無限' },
+    ],
+    hook: { name: '金元寶滷肉飯', price: '1 元加購',
+      desc: '把招牌滷肉飯做成元寶造型，上桌前淋蛋黃醬畫財神紋。每張套餐限購一份；同桌可多份。' },
+    storeOps: {
+      永春: '開放 10 人以上企業尾牙包桌專案，附「全員紅包合照框」，可開發票。',
+      中和: '5 人圍爐多送一份壓歲錢造型甜點，主打回頭客。',
+      新莊: '1/1 跨年延長至 23:00 收客，主打「跨完年來吃熱的」。',
+    },
+    copy: [
+      '「跨年那杯香檳記不記得喝了？來吃 2026 第一鍋。」',
+      '「金元寶 1 元解鎖／家人圍著一鍋的時候才像新年」',
+    ],
+    forecast: { weekday: '+15%', weekend: '+10%', aov: '永春 ~800 / 中和 ~600',
+      cost: '< 15 元/份', risk: '尾牙旺季人手吃緊，需提前 2 週開放包桌預訂避免散客排隊衝突。' }
+  },
+
+  // ───── 2 月 ─────
+  { month: 2, title: '春節圍爐＋情人節雙檔', date: '2/14 情人節 / 2/15-2/22 春節 / 2/24+ 開工', status: 'pending',
+    stores: ['永春','中和','新莊'], mainStore: '中和',
+    audience: '家庭圍爐、情人節情侶、開工同事聚',
+    packages: [
+      { name: '龍年圍爐桌（5 人）', original: 3099, price: 2599, content: '雙鍋＋肉盤升級＋年菜風自助吧（佛跳牆湯／長年菜）' },
+      { name: '情人節雙人套', original: 999, price: 799, content: '心形和牛盤＋玫瑰湯底（限情人節當週）' },
+      { name: '開工回血雙人套', original: 799, price: 599, content: '限 2/24-2/28 平日中午，主打外帶肉盤＋滷肉飯' },
+    ],
+    hook: { name: '龍年發財金鍋蓋 / 玫瑰肉盤捲', price: '1 元加購',
+      desc: '春節週：金色鏡面鍋蓋揭開瞬間有乾冰，附「揭金蓋」儀式說明卡。情人節週末：和牛捲成玫瑰造型，搭配冰塊乾冰桌面服務。' },
+    storeOps: {
+      永春: '開工後三天平日商業午餐 399（限 11:30-13:30），主打慰勞自己。',
+      中和: '年初二「回娘家圍爐」優惠（5 人桌再送一壺紅棗茶），呼應社區家庭客。',
+      新莊: '情人節當週與體育館場館合作宣傳；如有演唱會推「演完來吃」延長場至 22:30。',
+    },
+    copy: [
+      '「龍年第一掀／金鍋蓋下藏著什麼？」',
+      '「情人節不要再吃西餐了。鴛鴦鍋一邊一個剛好。」',
+    ],
+    forecast: { weekday: '+25%（情人節）', weekend: '+30%（春節）', aov: '圍爐桌 ~650/人 / 情人節 ~1100/桌',
+      cost: '< 20 元/份', risk: '春節期間員工排休與客流尖峰錯位，需提早排班；玫瑰肉盤需培訓擺盤動作。' }
+  },
+
+  // ───── 3 月 ─────
+  { month: 3, title: '婦女節 · 姊妹解放週', date: '3/2 – 3/15（婦女節 3/8 為核心）', status: 'pending',
+    stores: ['永春','中和','新莊'], mainStore: '全店',
+    audience: '閨蜜／姊妹／同事女性聚（女性主場主檔）',
+    packages: [
+      { name: '姊妹解放雙人套', original: 799, price: 599, content: '粉紅櫻花牛奶鍋＋低脂雞肉盤＋蔬果自助吧' },
+      { name: '姊妹解放四人套', original: 1499, price: 1099, content: '兩鍋（粉紅牛奶＋清爽蔬菜）＋四人肉盤＋現切水果塔' },
+    ],
+    hook: { name: '粉紅櫻花牛奶鍋升級', price: '39 元升級',
+      desc: '招牌牛奶鍋染成粉色（火龍果天然色素），漂浮可食用櫻花瓣。原本選任何鍋底皆可加 39 元升級；可拍照上傳 IG 標 @初殿鍋物 截圖換贈飲。' },
+    storeOps: {
+      永春: '主推「來合照／不必互傳」桌邊拍立得服務（合照 1 張 50 元，4 張 150 元）。',
+      中和: '寵物友善加碼，攜帶寵物贈寵物零食杯。',
+      新莊: '「下班姊妹專場」週四五延長至 22:00 還有 9 折。',
+    },
+    copy: [
+      '「這禮拜不是 girls\' night out，是 girls\' night IN（餐廳裡的鍋）。」',
+      '「粉紅鍋裡有櫻花，桌邊有合照／#姊妹解放週 你解放什麼？」',
+    ],
+    forecast: { weekday: '+20%', weekend: '+10%', aov: '雙人 ~700 / 4 人 ~1300',
+      cost: '< 25 元/份', risk: '粉紅色食物對男性客接受度較低，主打週中女性聚而非家庭日。' }
+  },
+
+  // ───── 4 月 ─────
+  { month: 4, title: '兒童節＋清明連假', date: '4/3 – 4/12（連假 4/3-4/6）', status: 'pending',
+    stores: ['永春','中和','新莊'], mainStore: '中和',
+    audience: '親子家庭、回鄉前後家族聚、平日上班族',
+    packages: [
+      { name: '親子四人套', original: 1599, price: 1299, content: '兒童牛奶鍋＋大人麻辣鍋＋兒童肉鬆飯糰＋自助吧；兒童（130cm 以下）免費吃自助吧；12 歲以下贈圍裙＋恐龍貼紙' },
+    ],
+    hook: { name: '小小廚師肉造型恐龍', price: '1 元加購',
+      desc: '肉片摺成恐龍造型擺盤，附小朋友自己擺蔬菜配菜的「動手做」說明卡。每位 12 歲以下兒童限購一份。' },
+    storeOps: {
+      永春: '連假內如有上班族客群，主推「連假還在上班犒賞自己 雙人 599」。',
+      中和: '兒童節當天（4/4）小朋友穿動物裝來再贈飲料，呼應家庭客社群擴散。',
+      新莊: '連假期間每日 14:00-16:00 開「下午鍋場」，吸收連假人流避開正餐尖峰。',
+    },
+    copy: [
+      '「肉變恐龍，孩子的眼睛變星星。」',
+      '「下午也想吃鍋的，舉手——新莊店為你開了下午場。」',
+    ],
+    forecast: { weekday: '+8%', weekend: '+25%（連假主導）', aov: '4 人桌 ~1500',
+      cost: '< 20 元/份', risk: '兒童客占比高時翻桌時間拉長 15%，需控制兒童節當天訂位筆數。' }
+  },
+
+  // ───── 5 月（已執行） ─────
+  { month: 5, title: '母親節肉蛋糕（已執行 · 基礎版）', date: '4/24 – 5/17', status: 'done',
+    stores: ['永春','中和','新莊'], mainStore: '全店',
+    audience: '家庭客（媽媽日）',
+    packages: [
+      { name: '母親節套餐', original: '原 NT$399 系列', price: '拉高定價', content: '依現行海報執行，配對 1 元加購肉蛋糕作為主記憶點' },
+    ],
+    hook: { name: '母親節肉蛋糕', price: '1 元加購',
+      desc: '兩層肉片堆疊成蛋糕造型＋立體 Happy Mother\'s Day 蛋糕牌＋干冰煙霧。已被證明是高記憶點 / 高分享率的加購品，是日後所有月份的範本。' },
+    storeOps: {
+      永春: '建議延長場至 21:30 推「下班帶媽媽吃」，附媽媽手寫卡。',
+      中和: '攜母同行加購半價甜點操作回頭客。',
+      新莊: '5/10 母女合照打卡牆 + 上傳 IG @初殿鍋物 抽下次套餐。',
+    },
+    copy: [
+      '（請補上活動實際使用的文案）',
+    ],
+    forecast: {
+      weekday: '待回填', weekend: '待回填', aov: '待回填',
+      cost: '待回填',
+      risk: '結束後請小行回填以下 5 項數據以校準下一輪估算：（1）各店活動期客數 vs 去年同期；（2）母親節套餐 vs 平日 299 的選擇比例；（3）肉蛋糕每桌平均加購數；（4）IG/Threads 該期間 hashtag 數量；（5）客訴／反饋（甜膩、份量、等候時間）。'
+    }
+  },
+
+  // ───── 6 月 ─────
+  { month: 6, title: '端午粽情＋畢業犒賞', date: '6/12 – 6/30（端午 6/19）', status: 'pending',
+    stores: ['永春','中和','新莊'], mainStore: '永春',
+    audience: '畢業學生、家庭、朋友揪團',
+    packages: [
+      { name: '粽情家庭桌（4 人）', original: 1799, price: 1499, content: '兩鍋＋肉盤＋雙人份招牌滷肉飯' },
+      { name: '畢業犒賞學生套（4 人）', original: 1399, price: 1099, content: '須出示學生證（含 6 月底前畢業生）' },
+    ],
+    hook: { name: '肉粽造型滷肉飯', price: '19 元加購',
+      desc: '用葉片包覆造型呈現，呼應招牌滷肉飯，桌邊「拆粽」儀式。學生套限加購一份；家庭桌不限。' },
+    storeOps: {
+      永春: '搭信義／忠孝商圈大學群（世新／實踐／東吳），「謝師宴 8 人桌」優惠 2 折扣抵。',
+      中和: '端午當天（6/19）攜立蛋成功照片到店打卡贈飲（社群病毒操作）。',
+      新莊: '與輔大／真理大學畢典時間綁定，畢業當週延長場到 22:30。',
+    },
+    copy: [
+      '「畢業前最後一頓鍋，吃過記得回來。」',
+      '「肉粽真的能吃，但拆開才有真章。」',
+    ],
+    forecast: { weekday: '+10%', weekend: '+15-30%（永春畢業生）', aov: '學生 ~350/人 / 家庭 ~500/人',
+      cost: '< 20 元/份', risk: '學生客單較低需控制肉盤升級成本；6 月梅雨季影響到店率，包桌訂金可降低 No-Show。' }
+  },
+
+  // ───── 7 月 ─────
+  { month: 7, title: '夏夜消暑 · 牛奶鍋祭', date: '7/1 – 7/31（全月）', status: 'pending',
+    stores: ['永春','中和','新莊'], mainStore: '全店',
+    audience: '女性、親子、暑假學生（IG 視覺主場）',
+    packages: [
+      { name: '夏夜消暑雙人套', original: 799, price: 599, content: '升級版冰淇淋牛奶鍋＋低脂肉盤＋當季蔬果自助吧' },
+      { name: '夏夜閨蜜四人套', original: '—', price: 1199, content: '兩鍋（牛奶＋柚子昆布）＋四人肉＋自助甜點吧延長' },
+    ],
+    hook: { name: '乾冰仙女牛奶鍋盤', price: '1 元加購',
+      desc: '牛奶鍋上桌時附乾冰 + 鮮花裝飾盤，桌邊乾冰升起儀式。每桌限購 1 份。' },
+    storeOps: {
+      永春: '全店每週四「冷氣鍋之夜」女性飲品 9 折。',
+      中和: '暑期親子日（每週日中午）兒童 130cm 以下贈冰品。',
+      新莊: '拍乾冰 IG 短影音標 @初殿鍋物 抽下次免費升級。',
+    },
+    copy: [
+      '「外面 36 度，鍋裡卻像下著奶霧。」',
+      '「夏天吃鍋是反派，仙女吃鍋才是主角。」',
+    ],
+    forecast: { weekday: '+20%', weekend: '+20%', aov: '雙人 ~750',
+      cost: '< 30 元/份', risk: '乾冰需員工受訓避免客人手碰；要備抗熱主視覺替代方案（萬一颱風月推遲）。' }
+  },
+
+  // ───── 8 月 ─────
+  { month: 8, title: '父親節＋七夕雙線', date: '8/1-8/8 父親節 / 8/15-8/19 七夕', status: 'pending',
+    stores: ['永春','中和','新莊'], mainStore: '中和 + 新莊',
+    audience: '家庭（父親節）、情侶（七夕）。注意：8 月為農曆鬼月，主視覺避忌黑紅暗色與血滴造型',
+    packages: [
+      { name: '父親節爸氣雙人套', original: 999, price: 799, content: '頂級牛肉盤＋麻辣鍋＋啤酒一杯＋滷肉飯' },
+      { name: '七夕鴛鴦雙人套', original: 1099, price: 899, content: '鴛鴦鍋（牛奶＋麻辣）＋玫瑰肉盤＋情侶共飲果茶' },
+    ],
+    hook: { name: '爸氣麻辣肉塔 / 七夕鴛鴦鍋玫瑰盤', price: '1 元加購',
+      desc: '父親節：肉盤堆疊成塔，桌邊淋麻辣油點火（短暫火焰秀）。七夕：肉片捲成玫瑰，盤緣寫情人手寫卡。' },
+    storeOps: {
+      永春: '父親節走「下班帶爸吃」延長場 21:30；七夕走「上班族犒賞情人」午夜場。',
+      中和: '父親節當天攜父親到店，父親免費吃自助吧（家庭擴散最有效）。',
+      新莊: '七夕當週與體育館旁咖啡廳合作「鍋＋咖啡甜點」雙店票券（情侶 deal）。',
+    },
+    copy: [
+      '「不會說『我愛你』的爸爸，會說『這肉真嫩』。」',
+      '「鴛鴦鍋一邊清淡一邊辣，剛好像我們倆。」',
+    ],
+    forecast: { weekday: '+15%（七夕）', weekend: '+18%（父親節）', aov: '父節 ~1000/桌 / 七夕 ~1100/桌',
+      cost: '< 25 元/份', risk: '8 月鬼月禁忌——避免黑紅暗色／血滴造型；火焰秀需消防演練。' }
+  },
+
+  // ───── 9 月 ─────
+  { month: 9, title: '中秋團圓＋謝師宴', date: '9/14 – 9/30（中秋 9/25 週五）', status: 'pending',
+    stores: ['永春','中和','新莊'], mainStore: '永春',
+    audience: '家庭、教師節同事聚、開學後家族團聚',
+    packages: [
+      { name: '中秋團圓四人套', original: 1799, price: 1499, content: '雙鍋＋四人肉＋月餅造型甜點＋滷肉飯' },
+      { name: '教師節謝師六人套', original: '—', price: 2199, content: '含敬師酒一壺＋謝卡道具' },
+    ],
+    hook: { name: '月之鏡牛奶湯', price: '1 元加購',
+      desc: '牛奶鍋面用乾冰營造月升效果，附「賞月儀式說明卡」。' },
+    storeOps: {
+      永春: '與信義商圈周邊大學合作「謝師宴 8 人桌」95 折，發票可開。',
+      中和: '中秋當天（9/25）家族 6 人桌附「月餅造型滷肉飯」一份。',
+      新莊: '連假三天延長場到 22:30，主打「賽季開打前的最後一頓圓鍋」。',
+    },
+    copy: [
+      '「鍋裡的月亮不會缺，家人圍著的時候才圓。」',
+      '「謝師宴吃西餐已經夠多次了。」',
+    ],
+    forecast: { weekday: '+15%（教師節）', weekend: '+25%（中秋週）', aov: '4 人團圓桌 ~1800',
+      cost: '< 20 元/份', risk: '月餅造型滷肉飯需培訓擺盤；中秋連假可能與烤肉場景搶客，需主打「室內冷氣＋不用洗碗」。' }
+  },
+
+  // ───── 10 月 ─────
+  { month: 10, title: '國慶連假＋萬聖鍋夜', date: '10/9-10/12 國慶連假 / 10/24-10/31 萬聖週', status: 'pending',
+    stores: ['永春','中和','新莊'], mainStore: '新莊',
+    audience: '朋友聚、親子變裝、IG 客群（新莊 IG 主場）',
+    packages: [
+      { name: '萬聖鍋夜雙人套', original: 899, price: 699, content: '南瓜湯底＋黑色義大利麵造型麵條＋特製麻辣鍋' },
+      { name: '親子變裝家庭桌（4 人）', original: '—', price: 1299, content: '兒童變裝可贈兒童糖果包' },
+    ],
+    hook: { name: '南瓜湯底＋眼球魚丸組', price: '9 元加購',
+      desc: '南瓜造型湯底冒煙登場＋眼球造型魚丸（白底黑點）。每桌限購一份。' },
+    storeOps: {
+      永春: '國慶連假期間商業午餐「秋日下班鍋」雙人 599。',
+      中和: '「親子變裝日」（10/31 當天）兒童變裝免費吃自助吧。',
+      新莊: '萬聖週末店內佈置 IG 打卡牆（蜘蛛網／墓碑造型／南瓜燈），延長場到 23:00。',
+    },
+    copy: [
+      '「南瓜不騙人，眼球魚丸也不會。」',
+      '「萬聖節吃糖會蛀牙。吃鍋不會。」',
+    ],
+    forecast: { weekday: '+10%', weekend: '+20%（國慶）/ +35%（新莊萬聖）', aov: '萬聖雙人 ~800',
+      cost: '< 30 元/份', risk: '南瓜造型成本較高需要週前備料；眼球魚丸要避免造型影響進食體驗。' }
+  },
+
+  // ───── 11 月 ─────
+  { month: 11, title: '雙 11 回饋＋下班犒賞', date: '11/1 – 11/11 主檔 / 11/12 – 11/30 延長', status: 'pending',
+    stores: ['永春','中和','新莊'], mainStore: '永春',
+    audience: '上班族、會員回頭客、數位族群',
+    packages: [
+      { name: '雙 11 單人犒賞套', original: 499, price: 399, content: '限平日 18:00 – 21:00 單人入店' },
+      { name: '雙 11 雙人套', original: 899, price: 699, content: '雙人；含一杯氣泡飲' },
+    ],
+    hook: { name: '頂級肉品升級', price: '11 元升級',
+      desc: '限 11/1 – 11/11 共 11 天。原平價肉盤升級為頂級和牛或豬五花。每張套餐限升級 1 份；11/11 當天限購 11 份/店。' },
+    storeOps: {
+      永春: '「平日下班犒賞」單人鍋 399 為該店量身定做；通勤族可單人快進快出。',
+      中和: '「會員回饋日」舊會員兩人同行 9 折（用線上抽券機制）。',
+      新莊: '與 11 月可能的賽事檔期綁定（如有 SBL 主場）做「散場 9 折」。',
+    },
+    copy: [
+      '「雙 11 別人在搶下單，你在搶下班。」',
+      '「11 元升級頂級肉，只有 11 天，這次真的不騙。」',
+    ],
+    forecast: { weekday: '+30%（永春晚場）', weekend: '+15%', aov: '單人 ~450 / 雙人 ~800',
+      cost: '< 50 元/份（升級肉品成本）', risk: '單人鍋需備獨立小型鍋具，平日晚高峰人手要支援；11 元升級毛利壓縮，要算清楚每店每日上限。' }
+  },
+
+  // ───── 12 月 ─────
+  { month: 12, title: '聖誕＋跨年＋尾牙三線', date: '12/15-12/25 聖誕 / 12/26-12/31 跨年 / 全月尾牙', status: 'pending',
+    stores: ['永春','中和','新莊'], mainStore: '全店',
+    audience: '情侶（聖誕）、家庭（聖誕＆冬至 12/22）、公司（尾牙）、朋友（跨年）',
+    packages: [
+      { name: '聖誕雙人套', original: 1099, price: 899, content: '和牛盤＋玫瑰肉捲＋情侶共飲＋甜點塔' },
+      { name: '冬至團圓五人桌', original: 2999, price: 2599, content: '雙鍋＋肉＋湯圓 DIY 站' },
+      { name: '公司尾牙包桌套（10 人）', original: 7999, price: 6999, content: '含飲料無限＋紅包合照框＋尾牙抽獎主持稿模板' },
+    ],
+    hook: { name: '聖誕樹肉塔 / 冬至湯圓 DIY', price: '1 元加購',
+      desc: '聖誕：肉盤堆成樹形，桌邊淋乾冰雪景，搭配星形蔬菜頂飾。冬至（5 人桌限定）：1 元加購湯圓 DIY 組（湯圓粉＋餡料桌邊搓）。' },
+    storeOps: {
+      永春: '尾牙包桌主場（重複 1 月經驗 + 整合 12 月開單），主打「公司提前尾牙」12 月就能訂。',
+      中和: '聖誕家庭日（12/24、12/25 中午）小朋友扮聖誕老人贈兒童套餐 8 折。',
+      新莊: '跨年夜（12/31）延長場到隔日凌晨 1:00（限該店）；附跨年倒數小卡。',
+    },
+    copy: [
+      '「2026 不要倒，但鍋的乾冰可以。」',
+      '「聖誕樹下的禮物會被吃掉，但乾冰雪景會被拍下來。」',
+      '「公司尾牙不一定要大酒店。十人吃飽 6,999，老闆會被讚。」',
+    ],
+    forecast: { weekday: '+25%（聖誕週）', weekend: '+40%（新莊跨年夜）', aov: '聖誕 ~1100 / 尾牙 ~700/人',
+      cost: '< 30 元/份', risk: '12 月人手最緊、需提前 1 個月排班；跨年延長場員工加班費要併入成本估算；尾牙包桌訂金需先收 30%。' }
+  },
+];
+
+// =====================================================
+// RENDER · TIMELINE
+// =====================================================
+function renderTimeline(){
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = TIMELINE.map(t => `
+    <div class="tl-item ${t.status}">
+      <div class="tl-date">${t.date}</div>
+      <div class="tl-title">${t.title}</div>
+      <div class="tl-desc">${t.desc}</div>
+    </div>
+  `).join('');
+}
+
+// =====================================================
+// RENDER · MONTH CARDS
+// =====================================================
+function storeClass(s){
+  if (s === '永春') return 'yc';
+  if (s === '中和') return 'zh';
+  if (s === '新莊') return 'xz';
+  return 'all';
+}
+function renderMonths(filterStore='all', filterStatus='all', q=''){
+  const grid = document.getElementById('month-grid');
+  const sum = document.getElementById('filter-summary');
+  q = q.trim().toLowerCase();
+  const list = MONTHS.filter(m => {
+    if (filterStatus !== 'all' && m.status !== filterStatus) return false;
+    if (filterStore !== 'all' && !m.mainStore.includes(filterStore) && !m.stores.includes(filterStore)) return false;
+    if (q) {
+      const blob = JSON.stringify(m).toLowerCase();
+      if (!blob.includes(q)) return false;
+    }
+    return true;
+  });
+  sum.textContent = `符合 ${list.length} / 12 個月` + (q ? ` · 關鍵字「${q}」` : '');
+  grid.innerHTML = list.map((m, i) => `
+    <div class="month-card" data-idx="${MONTHS.indexOf(m)}">
+      <div class="mhead">
+        <div class="mn">${m.month}月</div>
+        <div class="mhead-text">
+          <div class="mtitle">${m.title}</div>
+          <div class="mdate">${m.date}</div>
+        </div>
+        <span class="status-tag ${m.status}">${m.status === 'done' ? '已執行' : '待執行'}</span>
+      </div>
+      <div class="mrow">
+        <span class="mtag store ${storeClass(m.mainStore)}">主推 · ${m.mainStore}</span>
+        ${m.stores.length === 3 ? '<span class="mtag all">三店通用</span>' : ''}
+      </div>
+      <div class="mrow-quick">
+        <span><b>套餐：</b>${m.packages[0].name}（活動 ${typeof m.packages[0].price === 'number' ? 'NT$'+m.packages[0].price : m.packages[0].price}）</span>
+      </div>
+      <div class="mrow-quick">
+        <span><b>記憶點：</b>${m.hook.price} · ${m.hook.name}</span>
+      </div>
+      <div class="mexp-toggle">
+        <span>展開完整詳案</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      ${renderExpand(m)}
+    </div>
+  `).join('');
+  // Bind click events
+  grid.querySelectorAll('.month-card').forEach(c => {
+    c.addEventListener('click', e => {
+      // Don't toggle when clicking links inside (none currently, but safe)
+      c.classList.toggle('expanded');
+    });
+  });
+}
+
+function renderExpand(m){
+  const pricesHtml = m.packages.map(p => `
+    <div class="price">
+      <span>${p.name}</span>
+      <span>${typeof p.original === 'number' ? `<s>NT$${p.original}</s> → ` : (p.original ? p.original + ' → ' : '')}<b>${typeof p.price === 'number' ? 'NT$'+p.price : p.price}</b></span>
+    </div>
+    <li style="font-size:11.5px;color:var(--ink-3);padding:0 0 4px 0">${p.content}</li>
+  `).join('');
+
+  const copyHtml = m.copy.map(c => `<div class="copy">${c}</div>`).join('');
+
+  return `
+    <div class="mexp" onclick="event.stopPropagation()">
+      <div>
+        <h4>套餐設計</h4>
+        <ul>${pricesHtml}</ul>
+      </div>
+      <div>
+        <h4>1 元加購記憶點</h4>
+        <div class="hook-card">
+          <div class="hook-name">${m.hook.name}</div>
+          <span class="hook-price">${m.hook.price}</span>
+          <div class="hook-desc">${m.hook.desc}</div>
+        </div>
+      </div>
+      <div class="full">
+        <h4>三店差異化操作</h4>
+        <div class="store-grid">
+          <div class="store-cell"><div class="stname">永春</div><div class="stop">${m.storeOps.永春}</div></div>
+          <div class="store-cell"><div class="stname">中和</div><div class="stop">${m.storeOps.中和}</div></div>
+          <div class="store-cell"><div class="stname">新莊</div><div class="stop">${m.storeOps.新莊}</div></div>
+        </div>
+      </div>
+      <div class="full">
+        <h4>宣傳文案 / Hook</h4>
+        ${copyHtml}
+      </div>
+      <div class="full">
+        <h4>預估與風險</h4>
+        <div class="forecast-grid">
+          <div class="fc-cell"><div class="fclbl">平日翻桌</div><div class="fcval">${m.forecast.weekday}</div></div>
+          <div class="fc-cell"><div class="fclbl">假日翻桌</div><div class="fcval">${m.forecast.weekend}</div></div>
+          <div class="fc-cell"><div class="fclbl">客單變化</div><div class="fcval">${m.forecast.aov}</div></div>
+          <div class="fc-cell"><div class="fclbl">加購補貼成本</div><div class="fcval">${m.forecast.cost}</div></div>
+        </div>
+        <div class="risk">⚠ <b>風險：</b>${m.forecast.risk}</div>
+      </div>
+      <div class="full" style="text-align:right;font-size:11px;color:var(--ink-3)">— 小行 / Xiao-Xing</div>
+    </div>
+  `;
+}
+
+// =====================================================
+// FILTERS
+// =====================================================
+let curStore = 'all', curStatus = 'all', curQ = '';
+
+function bindFilters(){
+  document.querySelectorAll('.fchip[data-store]').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.fchip[data-store]').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      curStore = b.dataset.store;
+      renderMonths(curStore, curStatus, curQ);
+    });
+  });
+  document.querySelectorAll('.fchip[data-status]').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.fchip[data-status]').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      curStatus = b.dataset.status;
+      renderMonths(curStore, curStatus, curQ);
+    });
+  });
+  document.getElementById('search').addEventListener('input', e => {
+    curQ = e.target.value;
+    renderMonths(curStore, curStatus, curQ);
+  });
+}
+
+// =====================================================
+// INIT
+// =====================================================
+renderTimeline();
+renderMonths();
+bindFilters();
+</script>
+</body>
+</html>
