@@ -133,11 +133,20 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
 .btn-row button.primary:hover{background:#357abd}
 .btn-row button.danger{color:#d93025;border-color:#f5b7b1}
 .btn-row button.danger:hover{background:#fdecea}
-/* 同步狀態大膠囊（取代原本的「💾 儲存」按鈕；點一下會強制重新同步 + 重推圖片） */
-.sync-status-pill{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px 14px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid #6ee7b7;background:rgba(16,185,129,.12);color:#047857;transition:all .15s;user-select:none;text-align:center;line-height:1.3}
+/* 手動儲存按鈕（已取消自動同步，改成全部由使用者手動按） */
+.sync-status-pill{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px 14px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;border:1.5px solid #6ee7b7;background:rgba(16,185,129,.12);color:#047857;transition:all .15s;user-select:none;text-align:center;line-height:1.3}
 .sync-status-pill:hover{filter:brightness(1.04);box-shadow:0 4px 10px -4px rgba(15,23,42,.12)}
 .sync-status-pill:active{transform:translateY(1px)}
+.sync-status-pill.dirty{background:rgba(245,158,11,.15);border-color:#fbbf24;color:#b45309;animation:pulseDirty 1.6s ease-in-out infinite}
+@keyframes pulseDirty{0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,.6)}50%{box-shadow:0 0 0 8px rgba(251,191,36,0)}}
 .saved-tag{font-size:11px;color:#888;margin-top:6px;display:block;text-align:center}
+/* 全螢幕 LOADING 視窗（載入每天資料 / 從雲端拉圖時擋住畫面，避免使用者中途互動造成資料錯亂） */
+.loading-modal{position:fixed;inset:0;background:rgba(15,23,42,.65);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:99999;padding:1rem}
+.loading-modal.on{display:flex}
+.loading-box{background:#fff;border-radius:16px;padding:2rem 2.5rem;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.35);min-width:240px;max-width:340px}
+.loading-spinner{width:52px;height:52px;border:4px solid #e2e8f0;border-top-color:#4a90d9;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
+.loading-title{font-size:16px;font-weight:700;color:#0f172a;margin-bottom:6px}
+.loading-detail{font-size:13px;color:#64748b;line-height:1.5;min-height:18px}
 @media(max-width:480px){
   .grid2{grid-template-columns:1fr}
   .add-manual{flex-direction:column}
@@ -166,31 +175,8 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
     <p class="mdesc">AI 模型固定使用 <b>gemini-2.0-flash</b>（免費配額較多：每天 1500 次）</p>
 
     <hr style="border:none;border-top:1px solid #eee;margin:14px 0">
-    <h2 style="margin-bottom:6px">🚀 Cloudflare Worker 代理網址（最快、推薦）</h2>
-    <p class="mdesc">填入後，AI 直接走 Cloudflare Worker（比 Apps Script 快 3~5 秒），key 藏在 Worker 裡不外洩</p>
-    <div class="field">
-      <label>Worker URL <span class="api-status" id="worker-url-status">未設定</span></label>
-      <input type="text" id="worker-url-input" placeholder="https://gemini-proxy.你帳號.workers.dev">
-    </div>
-
-    <hr style="border:none;border-top:1px solid #eee;margin:14px 0">
-    <h2 style="margin-bottom:6px">⚡ Gemini 直呼叫金鑰（加速用）</h2>
-    <p class="mdesc">填入後，AI 識別會直接打 Google API（比走 Apps Script 快 3~5 秒）。失敗時會自動退回走 Apps Script 代理</p>
-    <div class="hint" style="background:#fff5e6;color:#8a5a00">
-      ⚠️ 此金鑰會存在瀏覽器裡，請務必到 Google Cloud Console 加上「HTTP 來源限制」：<br>
-      • APIs &amp; Services → Credentials → 編輯該金鑰<br>
-      • Application restrictions 選「HTTP referrers」<br>
-      • 新增 <code>https://jack831024.github.io/*</code><br>
-      • API restrictions 只勾選「Generative Language API」
-    </div>
-    <div class="field">
-      <label>Gemini API Key <span class="api-status" id="direct-key-status">未設定</span></label>
-      <input type="password" id="direct-key-input" placeholder="AIzaSy... (留空則只走 Apps Script)">
-    </div>
-
-    <hr style="border:none;border-top:1px solid #eee;margin:14px 0">
-    <h2 style="margin-bottom:6px">☁️ Apps Script 代理（後備 + 同步）</h2>
-    <p class="mdesc">直呼叫壞掉時的後備路徑，也用來同步歷史紀錄到 Google Sheet</p>
+    <h2 style="margin-bottom:6px">☁️ Apps Script 同步網址</h2>
+    <p class="mdesc">同步歷史紀錄與圖片到 Google Sheet / Drive 的後端網址</p>
     <div class="field">
       <label>Google Apps Script 網址 <span class="api-status" id="sync-status">未設定</span></label>
       <input type="text" id="sync-url-input" placeholder="https://script.google.com/macros/s/..../exec">
@@ -425,6 +411,15 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
   <img id="lightbox-img" src="" alt="">
 </div>
 
+<!-- 全螢幕 LOADING 視窗（載入每天資料時擋住畫面） -->
+<div class="loading-modal" id="loading-modal">
+  <div class="loading-box">
+    <div class="loading-spinner"></div>
+    <div class="loading-title" id="loading-title">載入中...</div>
+    <div class="loading-detail" id="loading-detail">請稍候</div>
+  </div>
+</div>
+
 <script>
 // ==== 縮圖點擊放大 ====
 document.addEventListener('click', function(e){
@@ -439,6 +434,27 @@ function closeLightbox(){
 document.addEventListener('keydown', function(e){
   if(e.key === 'Escape') closeLightbox();
 });
+
+// ==== 全螢幕 LOADING 視窗 ====
+// 載入每天資料時把畫面鎖住，等資料 + 圖片都載入完才關
+// 避免「半載入狀態下使用者上傳新圖被舊資料覆蓋掉」這種 race condition
+function showLoading(title, detail){
+  var m = document.getElementById('loading-modal');
+  if(!m) return;
+  var t = document.getElementById('loading-title');
+  var d = document.getElementById('loading-detail');
+  if(t) t.textContent = title || '載入中...';
+  if(d) d.textContent = detail || '請稍候';
+  m.classList.add('on');
+}
+function updateLoadingDetail(detail){
+  var d = document.getElementById('loading-detail');
+  if(d) d.textContent = detail || '';
+}
+function hideLoading(){
+  var m = document.getElementById('loading-modal');
+  if(m) m.classList.remove('on');
+}
 </script>
 
 <script>
@@ -446,32 +462,30 @@ document.addEventListener('keydown', function(e){
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.05.01-02';
+var APP_VERSION = '2026.05.04-01';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
 // ============================================
-// ⭐ Cloudflare Worker 代理網址（最快路徑，藏 key 用）
-// 部署步驟見 worker.js 檔案上方註解，部署完把 workers.dev URL 填到下面引號
-// 目前留空：舊網址子網域含 '@' 會被瀏覽器視為 credentials 而拒絕 fetch
-// 如未來重部 Worker 請填回新網址（不能包含 '@'）
-var BUILTIN_WORKER_URL = "";
-
-// Apps Script 代理網址（Worker 失敗時的後備 + Sheet 同步）
+// Apps Script 後端網址（同步紀錄 + 上傳/下載圖片到 Drive，AI 識別也走這條後備路徑）
 var BUILTIN_SYNC_URL   = "https://script.google.com/macros/s/AKfycbzQweLpmQ_5SPxr90Iu-GnqleHUFPbJph8RZuFeasAEKIEWA3xBr_MAdenIkIdciYmQDA/exec";
 // 使用 gemini-2.0-flash（免費配額較多：每天 1500 次）
 var BUILTIN_MODEL      = "gemini-2.0-flash";
 
-// Gemini API 金鑰（直呼叫用，僅建議在私人裝置手動設定，不要 hardcode）
-var BUILTIN_GEMINI_KEY = "";
+// ⚠️⚠️⚠️ Gemini API 金鑰（直呼叫用，全店共用、寫死在這） ⚠️⚠️⚠️
+// 把你的 KEY 貼到下面引號裡，例：var BUILTIN_GEMINI_KEY = "AIzaSyABC...XYZ";
+// 為了安全，請到 Google Cloud Console 把這把 KEY 加上「HTTP referrers」限制：
+//   • Application restrictions → HTTP referrers → 加入 https://jack831024.github.io/*
+//   • API restrictions → 只勾「Generative Language API」
+var BUILTIN_GEMINI_KEY = "";  // ⬅️ 把你現在用的 AIzaSy... 那串貼這裡
 
 // 每次載入都強制套用內建設定
 (function applyBuiltinConfig(){
-  // Worker URL：有值寫入、空值主動清掉（避免上一版的壞網址殘留在裝置上）
-  if(BUILTIN_WORKER_URL) localStorage.setItem('cd_worker_url', BUILTIN_WORKER_URL);
-  else                   localStorage.removeItem('cd_worker_url');
+  // Worker URL 已停用，主動清掉避免舊版殘留壞網址
+  localStorage.removeItem('cd_worker_url');
   if(BUILTIN_SYNC_URL)   localStorage.setItem('cd_sync_url', BUILTIN_SYNC_URL);
   localStorage.setItem('cd_gemini_model', BUILTIN_MODEL);
+  // 有寫死 key 就強制覆蓋；沒寫死才保留瀏覽器原本存的（讓你還沒貼 key 之前能繼續用）
   if(BUILTIN_GEMINI_KEY) localStorage.setItem('cd_gemini_direct_key', BUILTIN_GEMINI_KEY);
   localStorage.removeItem('cd_gemini_key');
 })();
@@ -517,21 +531,12 @@ async function checkForUpdate(silent){
 setTimeout(function(){ checkForUpdate(true); }, 3000);
 // 之後每 2 分鐘再檢查
 setInterval(function(){ checkForUpdate(true); }, 120000);
-// 從背景回到前景時立即檢查 + ⭐ 自動從雲端拉最新資料（同步其他裝置的更新）
+// 從背景回到前景時：只檢查版本更新；
+// ⚠️ 已移除「自動從雲端拉最新資料」— 之前是這個導致剛上傳的圖被雲端舊資料覆蓋，
+// 改成只在使用者按「💾 儲存到雲端」時才同步雲端
 document.addEventListener('visibilitychange', function(){
   if(document.hidden) return;
   checkForUpdate(true);
-  // 自動從雲端拉最新（其他裝置剛改的紀錄會被同步進本機）
-  // 30 秒 cooldown 避免頻繁切 app 觸發太多次 fetch
-  try{
-    var saving = (typeof _autoSaving !== 'undefined' && _autoSaving);
-    var initing = (typeof _initLoading !== 'undefined' && _initLoading);
-    var lastPull = (typeof _lastCloudPullAt !== 'undefined' ? _lastCloudPullAt : 0);
-    if(typeof syncFromCloud === 'function' && !saving && !initing && (Date.now() - lastPull > 30000)){
-      _lastCloudPullAt = Date.now();
-      syncFromCloud().catch(function(e){ console.warn('回前景同步失敗', e); });
-    }
-  }catch(syncE){ /* 安靜失敗 */ }
 });
 // ============================================
 
@@ -656,17 +661,11 @@ function switchStore(){
   }
 }
 
-// ==== 設定（direct key 加速 + Apps Script 代理後備）====
+// ==== 設定（只剩 Apps Script 同步網址；Gemini Key 已寫死在 BUILTIN_GEMINI_KEY）====
 function openSettings(){
-  var workerInput = document.getElementById('worker-url-input');
-  if(workerInput) workerInput.value = localStorage.getItem('cd_worker_url') || '';
   var syncInput = document.getElementById('sync-url-input');
   if(syncInput) syncInput.value = localStorage.getItem('cd_sync_url') || '';
-  var directInput = document.getElementById('direct-key-input');
-  if(directInput) directInput.value = localStorage.getItem('cd_gemini_direct_key') || '';
-  updateWorkerUrlStatus();
   updateSyncStatus();
-  updateDirectKeyStatus();
   document.getElementById('settings-modal').className = 'modal-bg on';
 }
 function closeSettings(){
@@ -676,36 +675,12 @@ function closeSettings(){
 function listModels(){ /* 已移除，由 Apps Script 統一管理 */ }
 
 function saveApiKey(){
-  // 處理 Worker URL + direct key + 代理網址
-  var workerInputEl = document.getElementById('worker-url-input');
-  var workerUrl = workerInputEl ? workerInputEl.value.trim() : '';
-  if(workerUrl) localStorage.setItem('cd_worker_url', workerUrl);
-  else localStorage.removeItem('cd_worker_url');
-
   var syncInputEl = document.getElementById('sync-url-input');
   var syncUrl = syncInputEl ? syncInputEl.value.trim() : '';
   if(syncUrl) localStorage.setItem('cd_sync_url', syncUrl);
   else localStorage.removeItem('cd_sync_url');
-
-  var directInputEl = document.getElementById('direct-key-input');
-  var directKey = directInputEl ? directInputEl.value.trim() : '';
-  if(directKey){
-    localStorage.setItem('cd_gemini_direct_key', directKey);
-    DIRECT_CALL_DISABLED = false;
-  } else {
-    localStorage.removeItem('cd_gemini_direct_key');
-  }
-
   closeSettings();
-  var msgParts = [];
-  if(workerUrl) msgParts.push('🚀 Cloudflare Worker 已啟用');
-  if(directKey) msgParts.push('⚡ Gemini 直呼叫已啟用');
-  if(syncUrl)   msgParts.push('☁️ Apps Script 代理已啟用');
-  alert(msgParts.length ? ('設定已儲存\n' + msgParts.join('\n')) : '設定已儲存');
-
-  if(syncUrl){
-    syncFromCloud().then(function(){ renderHistoryList(); });
-  }
+  alert(syncUrl ? '✅ 同步網址已儲存' : '已清除同步網址');
 }
 
 function updateSyncStatus(){
@@ -720,57 +695,24 @@ function updateSyncStatus(){
   }
 }
 
-function updateDirectKeyStatus(){
-  var el = document.getElementById('direct-key-status');
-  if(!el) return;
-  if(localStorage.getItem('cd_gemini_direct_key')){
-    el.textContent = '已啟用';
-    el.className = 'api-status set';
-  } else {
-    el.textContent = '未設定';
-    el.className = 'api-status unset';
-  }
-}
-
-function updateWorkerUrlStatus(){
-  var el = document.getElementById('worker-url-status');
-  if(!el) return;
-  if(localStorage.getItem('cd_worker_url')){
-    el.textContent = '已啟用';
-    el.className = 'api-status set';
-  } else {
-    el.textContent = '未設定';
-    el.className = 'api-status unset';
-  }
-}
-
 function clearApiKey(){
-  if(confirm('確定要清除 Worker / 直呼叫金鑰 / Apps Script 代理 的設定嗎？（只影響當前裝置，資料不會丟）')){
-    localStorage.removeItem('cd_worker_url');
+  if(confirm('確定要清除 Apps Script 同步網址嗎？（只影響當前裝置，資料不會丟）')){
     localStorage.removeItem('cd_sync_url');
-    localStorage.removeItem('cd_gemini_direct_key');
-    DIRECT_CALL_DISABLED = false;
-    var workerInput = document.getElementById('worker-url-input');
-    if(workerInput) workerInput.value = '';
     var syncInput = document.getElementById('sync-url-input');
     if(syncInput) syncInput.value = '';
-    var directInput = document.getElementById('direct-key-input');
-    if(directInput) directInput.value = '';
-    updateWorkerUrlStatus();
     updateSyncStatus();
-    updateDirectKeyStatus();
   }
 }
 function updateApiStatus(){
-  // 金鑰已移到 Apps Script，這個函式保留空殼避免舊呼叫報錯
+  // 金鑰已寫死，保留空殼避免舊呼叫報錯
   var el = document.getElementById('api-status');
   if(!el) return;
   el.textContent = '後端管理';
   el.className = 'api-status set';
 }
 function hasApiKey(){
-  // 有 Worker、direct key 或 Apps Script 代理網址其中一個就能用 AI
-  if(!localStorage.getItem('cd_worker_url') && !localStorage.getItem('cd_gemini_direct_key') && !localStorage.getItem('cd_sync_url')){
+  // 有寫死 KEY 或同步網址其中一個就能用 AI
+  if(!localStorage.getItem('cd_gemini_direct_key') && !localStorage.getItem('cd_sync_url')){
     alert('尚未設定任何 Gemini 路徑，請聯絡管理員');
     return false;
   }
@@ -813,44 +755,16 @@ function parseGeminiResponse(d, model){
 }
 
 async function callModelOnce(model, key, parts){
-  var workerUrl = localStorage.getItem('cd_worker_url');
   var directKey = localStorage.getItem('cd_gemini_direct_key');
   var proxyUrl  = localStorage.getItem('cd_sync_url');
-  if(!workerUrl && !directKey && !proxyUrl){
+  if(!directKey && !proxyUrl){
     throw new Error('尚未設定任何 Gemini 路徑');
   }
 
   // 給所有路徑通用的低 temperature 設定（讓辨識數字更穩定）
   var genConfig = { temperature: 0, topP: 0.1, topK: 1 };
 
-  // ========== 0) 最優先：Cloudflare Worker 代理（低延遲、藏 key）==========
-  if(workerUrl){
-    try{
-      var wr = await fetch(workerUrl, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ model: model, parts: parts, generationConfig: genConfig })
-      });
-      var wd = await wr.json();
-      console.log('[' + model + '] Worker 回應：', wd);
-      if(!wr.ok && !wd.error){
-        var wHErr = new Error('Worker HTTP ' + wr.status);
-        wHErr.code = wr.status;
-        throw wHErr;
-      }
-      return parseGeminiResponse(wd, model);
-    } catch(we){
-      var wmsg = (we.message || '').toLowerCase();
-      var wIsBusy = we.code === 503 || we.code === 429
-                  || wmsg.indexOf('overloaded') >= 0
-                  || wmsg.indexOf('unavailable') >= 0
-                  || wmsg.indexOf('rate') >= 0;
-      if(wIsBusy) throw we;
-      console.warn('[' + model + '] Worker 失敗（' + we.message + '），改走下一路徑');
-    }
-  }
-
-  // ========== 1) 次選：直接呼叫 Gemini（有 key 的裝置）==========
+  // ========== 1) 優先：直接呼叫 Gemini（KEY 已寫死在 BUILTIN_GEMINI_KEY）==========
   if(directKey && !DIRECT_CALL_DISABLED){
     try{
       var directUrl = 'https://generativelanguage.googleapis.com/v1beta/models/'
@@ -915,9 +829,9 @@ async function callModelOnce(model, key, parts){
 }
 
 async function geminiCall(imageFiles, promptText){
-  // 可用 Worker、direct key、或 Apps Script 代理（擇一即可）
+  // 可用 direct key（寫死在 BUILTIN_GEMINI_KEY）或 Apps Script 代理（擇一即可）
   var key = 'via-proxy';
-  if(!localStorage.getItem('cd_worker_url') && !localStorage.getItem('cd_gemini_direct_key') && !localStorage.getItem('cd_sync_url')){
+  if(!localStorage.getItem('cd_gemini_direct_key') && !localStorage.getItem('cd_sync_url')){
     throw new Error('尚未設定任何 Gemini 路徑，請聯絡管理員');
   }
 
@@ -985,10 +899,10 @@ function handleFiles(input, key){
   renderThumbs(key);
   var btn = document.getElementById('btn-' + key);
   if(btn) btn.disabled = imgs[key].length === 0;
-  // ⭐ 標記有新圖片未上傳，立刻觸發自動同步（不 debounce 等 800ms）
+  // ⚠️ 自動同步已關閉 — 圖片只會留在記憶體，使用者必須按「💾 儲存到雲端」才會上傳到 Drive
   if(newFiles.length > 0){
     _imagesDirty = true;
-    if(typeof autoSaveNow === 'function') autoSaveNow({immediate:true});
+    markDirty();
   }
   // 自動觸發 AI 識別（只在有新增檔案時）
   // ⚠️ 對於會累加到 store[key] 陣列的 'w' / 'd'，一定要只送「新上傳」的檔案給 AI，
@@ -1030,10 +944,10 @@ function removeImage(key, idx){
   renderThumbs(key);
   var btn = document.getElementById('btn-' + key);
   if(btn) btn.disabled = imgs[key].length === 0;
-  // ⭐ 圖片有變動，下次 auto-save 重推 Drive；立刻觸發自動存
+  // 圖片有變動 → 標記未儲存（手動按按鈕才會推 Drive）
   _imagesDirty = true;
   if(key === 'deposit' && typeof checkDepositStatus === 'function') checkDepositStatus();
-  if(typeof autoSaveNow === 'function') autoSaveNow({immediate:true});
+  markDirty();
 }
 
 function handlePayFile(input, key){
@@ -1045,8 +959,7 @@ function handlePayFile(input, key){
   _imagesDirty = true;
   // 用統一的 renderThumbs 重畫整列縮圖（每張帶 × 刪除鈕）
   renderThumbs(key);
-  // 立刻觸發自動同步（圖片立刻推到 Drive，不 debounce 防漏傳）
-  if(typeof autoSaveNow === 'function') autoSaveNow({immediate:true});
+  markDirty();
   // AI 只讀「最後一張新上傳的」，避免舊圖重讀
   analyzePayFile(key, newFiles[newFiles.length - 1]);
 }
@@ -1145,13 +1058,11 @@ async function analyzeSummary(filesToAnalyze){
     });
     console.log('[analyzeSummary] 已填入：', filled, '；AI 沒抓到：', missing, '；跳過：', skipped);
     recalc(); recalcNextDay(); onOpeningChange();
-    // ⭐ AI 完成後改用立即同步（之前是 800ms debounce，使用者切頁/關頁會丟失資料）
-    //    純文字 skipImages=true（圖片在上傳階段已經推過）
-    try{ await saveRecord({ silent:true, skipImages:true }); }
-    catch(syncErr){ console.warn('[analyzeSummary] AI 完成後立即同步失敗，會由下次 autoSave 補', syncErr); }
+    // 自動同步已關閉 — 標記 dirty，使用者按「💾 儲存到雲端」才會推上去
+    markDirty();
     line.className = 'ai-status-line done';
     spin.className = 'spinner';
-    btxt.textContent = '✓ 讀取完成（已自動儲存）';
+    btxt.textContent = '✓ 讀取完成（請記得按下方「💾 儲存到雲端」）';
   } catch(e){
     console.error(e);
     line.className = 'ai-status-line err';
@@ -1193,10 +1104,8 @@ async function analyzePayFile(key, file){
       recalc();
       if(line) line.className = 'ai-status-line done';
       if(spin) spin.className = 'spinner';
-      if(btxt) btxt.textContent = '✓ 讀取完成：'+label+' '+n;
-      // ⭐ 立即同步 (避免 user 切頁導致 800ms debounce 失效)
-      try{ await saveRecord({ silent:true, skipImages:true }); }
-      catch(syncErr){ console.warn('[analyzePayFile] AI 完成後立即同步失敗', syncErr); }
+      if(btxt) btxt.textContent = '✓ 讀取完成：'+label+' '+n+'（請按「💾 儲存到雲端」）';
+      markDirty();
     } else {
       if(line) line.className = 'ai-status-line err';
       if(spin) spin.className = 'spinner';
@@ -1233,12 +1142,10 @@ async function analyzeReceipts(key, filesToAnalyze){
       }
     });
     renderAll(); recalc();
-    // ⭐ 立即同步 (避免 user 切頁導致 800ms debounce 失效)
-    try{ await saveRecord({ silent:true, skipImages:true }); }
-    catch(syncErr){ console.warn('[analyzeReceipts] AI 完成後立即同步失敗', syncErr); }
+    markDirty();
     line.className = 'ai-status-line done';
     spin.className = 'spinner';
-    btxt.textContent = '✓ 辨識完成（已自動儲存）';
+    btxt.textContent = '✓ 辨識完成（請按「💾 儲存到雲端」）';
   } catch(e){
     console.error(e);
     line.className = 'ai-status-line err';
@@ -1300,8 +1207,7 @@ async function handleDepositFile(input){
   // 統一用 renderThumbs（每張帶 × 刪除鈕）
   renderThumbs('deposit');
   checkDepositStatus();  // 有照片了，清除異常警告
-  // 立刻觸發自動同步（圖片立刻推到 Drive，不 debounce 防漏傳）
-  if(typeof autoSaveNow === 'function') autoSaveNow({immediate:true});
+  markDirty();
   // AI 只讀最新上傳的最後一張
   var file = newFiles[newFiles.length - 1];
   if(!hasApiKey()) return;
@@ -1360,12 +1266,10 @@ async function handleDepositFile(input){
     if(!isNaN(n) && n > 0){
       document.getElementById('i-deposit').value = n;
       recalcNextDay();
-      // 如果這個欄位是 INPUT_IDS 之一，autoSave 會被 input event 觸發
-      // 但保險：手動觸發一次（防止 element.value 設值不會 fire 事件）
-      if(typeof autoSaveNow === 'function') autoSaveNow();
+      markDirty();
       if(line) line.className = 'ai-status-line done';
       if(spin) spin.className = 'spinner';
-      if(btxt) btxt.textContent = '✓ 讀取完成：NT$ ' + n + (label ? '（' + label + '）' : '');
+      if(btxt) btxt.textContent = '✓ 讀取完成：NT$ ' + n + (label ? '（' + label + '）' : '') + '（請按「💾 儲存到雲端」）';
     } else {
       if(line) line.className = 'ai-status-line err';
       if(spin) spin.className = 'spinner';
@@ -1418,12 +1322,10 @@ async function analyzeRefund(filesToAnalyze){
       recalc();
       if(line) line.className = 'ai-status-line done';
       if(spin) spin.className = 'spinner';
-      if(btxt) btxt.textContent = filesToAnalyze
+      if(btxt) btxt.textContent = (filesToAnalyze
         ? '✓ 新增退單 ' + addAmount + '（合計 ' + refundEl.value + '）'
-        : '✓ 讀取完成：退單 ' + addAmount;
-      // ⭐ 立即同步 (避免 user 切頁導致 800ms debounce 失效)
-      try{ await saveRecord({ silent:true, skipImages:true }); }
-      catch(syncErr){ console.warn('[analyzeRefund] AI 完成後立即同步失敗', syncErr); }
+        : '✓ 讀取完成：退單 ' + addAmount) + '（請按「💾 儲存到雲端」）';
+      markDirty();
     } else {
       if(line) line.className = 'ai-status-line err';
       if(spin) spin.className = 'spinner';
@@ -1474,12 +1376,10 @@ async function analyzeCancel(filesToAnalyze){
       recalc();
       if(line) line.className = 'ai-status-line done';
       if(spin) spin.className = 'spinner';
-      if(btxt) btxt.textContent = filesToAnalyze
+      if(btxt) btxt.textContent = (filesToAnalyze
         ? '✓ 新增取消單 ' + addAmount + '（合計 ' + cancelEl.value + '）'
-        : '✓ 讀取完成：取消單 ' + addAmount;
-      // ⭐ 立即同步 (避免 user 切頁導致 800ms debounce 失效)
-      try{ await saveRecord({ silent:true, skipImages:true }); }
-      catch(syncErr){ console.warn('[analyzeCancel] AI 完成後立即同步失敗', syncErr); }
+        : '✓ 讀取完成：取消單 ' + addAmount) + '（請按「💾 儲存到雲端」）';
+      markDirty();
     } else {
       if(line) line.className = 'ai-status-line err';
       if(spin) spin.className = 'spinner';
@@ -1501,13 +1401,13 @@ function addItem(key){
   document.getElementById(key + '-desc').value = '';
   document.getElementById(key + '-amt').value = '';
   renderAll(); recalc();
-  if(typeof autoSaveNow === 'function') autoSaveNow();
+  markDirty();
 }
 
 function removeItem(key, i){
   store[key].splice(i, 1);
   renderAll(); recalc();
-  if(typeof autoSaveNow === 'function') autoSaveNow();
+  markDirty();
 }
 
 function renderList(key){
@@ -2182,9 +2082,10 @@ var _autoSaveTimer = null;
 var _autoSaving = false;
 var _autoSavePending = false;  // 上一次 autoSave 進行中時又被觸發 → 結束後補跑一次
 var _loadingRecord = false;  // applyData 時設為 true，避免載入觸發 autoSave
-var _imagesDirty = false;    // 有新上傳的圖片 → 下次 autoSave 要帶圖（上雲 Drive）
+var _imagesDirty = false;    // 有新上傳的圖片 → 下次手動儲存要帶圖（上雲 Drive）
 var _imagesLoaded = true;    // ⭐ 當前日期的雲端圖片是否已載入完成；false 時嚴禁送 keepImages=false（會誤刪 Drive 檔）
 var _initLoading = true;     // ⭐ 頁面 init 期間（雲端資料還沒拉完）禁止 autoSave，避免空畫面被推到雲端覆蓋當天紀錄
+var _hasUnsavedChanges = false;  // 「有未儲存變更」旗標 — 控制按鈕黃色警示 + 切日期/關頁警告
 
 function nowHMS(){
   var d = new Date();
@@ -2192,51 +2093,59 @@ function nowHMS(){
          String(d.getMinutes()).padStart(2,'0')+':'+
          String(d.getSeconds()).padStart(2,'0');
 }
-// 同步狀態直接顯示在右上角「🔄 重新同步」按鈕
+// 手動儲存按鈕的狀態顯示（自動同步已移除，按鈕只是 idle / dirty / saving / saved / error）
 function setAutoSaveStatus(state){
   var btn = document.getElementById('resync-btn');
   if(!btn) return;
   var green = { bg:'rgba(16,185,129,.12)', fg:'#047857', bd:'#6ee7b7' };
   var map = {
-    idle:    { text:'🟢 ✓ 已同步',            bg:green.bg, fg:green.fg, bd:green.bd },
-    typing:  { text:'🟢 ✓ 已同步',            bg:green.bg, fg:green.fg, bd:green.bd },  // 打字中保留綠色
-    saving:  { text:'🔵 ⟲ 同步中…',          bg:'rgba(59,130,246,.12)', fg:'#1e40af', bd:'#93c5fd' },
-    saved:   { text:'🟢 ✓ 已同步 '+nowHMS(), bg:green.bg, fg:green.fg, bd:green.bd },
-    cloud:   { text:'🟢 ✓ 已同步 '+nowHMS(), bg:green.bg, fg:green.fg, bd:green.bd },
-    error:   { text:'🔴 ❌ 同步失敗',         bg:'rgba(220,38,38,.1)',   fg:'#b91c1c', bd:'#fca5a5' }
+    idle:    { text:'💾 點此儲存到雲端',                       bg:green.bg, fg:green.fg, bd:green.bd },
+    typing:  { text:'💾 點此儲存到雲端',                       bg:green.bg, fg:green.fg, bd:green.bd },
+    dirty:   { text:'⚠️ 有未儲存的變更 — 點此儲存到雲端',      bg:'rgba(245,158,11,.18)', fg:'#b45309', bd:'#fbbf24' },
+    saving:  { text:'🔵 ⟲ 儲存中…',                           bg:'rgba(59,130,246,.12)', fg:'#1e40af', bd:'#93c5fd' },
+    saved:   { text:'🟢 ✓ 已儲存 '+nowHMS(),                  bg:green.bg, fg:green.fg, bd:green.bd },
+    cloud:   { text:'🟢 ✓ 已儲存 '+nowHMS(),                  bg:green.bg, fg:green.fg, bd:green.bd },
+    error:   { text:'🔴 ❌ 儲存失敗 — 請再點一次',             bg:'rgba(220,38,38,.1)',   fg:'#b91c1c', bd:'#fca5a5' }
   };
   var s = map[state] || map.idle;
   btn.innerHTML = s.text;
   btn.style.background = s.bg || '';
   btn.style.color = s.fg || '';
   btn.style.borderColor = s.bd || '';
+  // 黃色警示時加 .dirty class 觸發脈衝動畫
+  if(state === 'dirty') btn.classList.add('dirty');
+  else                  btn.classList.remove('dirty');
 }
 
+// ⚠️ 自動同步已關閉
+// autoSaveNow 改成「只標記未儲存」，不真的呼叫雲端 — 由使用者按「💾 儲存到雲端」手動觸發
+// 這樣可以徹底避開「圖片上傳一半被另一個 autoSave 覆蓋」的 race condition
 function autoSaveNow(opts){
-  if(_loadingRecord) return;  // 剛載入舊紀錄時不要自動存一次
-  if(_initLoading) return;    // ⭐ init 期間（雲端還沒拉完）絕對不能存（會推空白覆蓋雲端）
+  if(_loadingRecord) return;
+  if(_initLoading) return;
   var date = document.getElementById('record-date');
   if(!date || !date.value) return;
-  setAutoSaveStatus('typing');
-  if(_autoSaveTimer) clearTimeout(_autoSaveTimer);
-  // ⭐ 圖片上傳要立刻同步（不 debounce），避免使用者上傳完馬上關頁圖片漏傳
-  if(opts && opts.immediate){
-    _autoSaveTimer = null;
-    doAutoSave();
-  } else {
-    _autoSaveTimer = setTimeout(doAutoSave, 800);
-  }
+  _hasUnsavedChanges = true;
+  setAutoSaveStatus('dirty');
 }
 
-// 全域 input / change 監聽：任何 INPUT_IDS 欄位改動都觸發 autoSave
+// 全域 input / change 監聽：任何欄位改動 → 標記未儲存（不自動存）
 document.addEventListener('input', function(e){
   var t = e.target; if(!t || !t.id) return;
-  if(INPUT_IDS.indexOf(t.id) >= 0) autoSaveNow();
+  if(INPUT_IDS.indexOf(t.id) >= 0) markDirty();
 });
 document.addEventListener('change', function(e){
   var t = e.target; if(!t || !t.id) return;
-  if(INPUT_IDS.indexOf(t.id) >= 0 || t.id === 'no-deposit' || t.id === 'i-shift-a') autoSaveNow();
+  if(INPUT_IDS.indexOf(t.id) >= 0 || t.id === 'no-deposit' || t.id === 'i-shift-a') markDirty();
 });
+
+// 標記「有未儲存的變更」— 同時更新右上角按鈕成黃色警示色
+function markDirty(){
+  if(_loadingRecord) return;
+  if(_initLoading) return;
+  _hasUnsavedChanges = true;
+  setAutoSaveStatus('dirty');
+}
 
 async function doAutoSave(){
   // 已經在儲存 → 標記等等補跑一次（之前是直接 return，會丟失「還有圖要傳」的狀態）
@@ -2273,23 +2182,37 @@ async function doAutoSave(){
   }
 }
 
-// 重新同步（雙向：先把當前畫面 push 到雲端，再 pull 雲端最新到本機）
-// 修使用者反映「電腦改了過往紀錄、手機沒同步」的問題 — 點這個按鈕一次完成雙向同步
+// 💾 手動儲存到雲端（唯一的儲存路徑，自動同步已移除）
+//   1. 把當前畫面（含本批新圖）push 到雲端
+//   2. 不主動 pull 雲端 — 避免覆蓋使用者剛改的東西
+//      若需要拉其他裝置改的紀錄，請按右上角「🔄」或重新整理頁面
 async function manualResync(){
+  // 防呆：圖片還在等載入完（剛切換日期、雲端圖還沒下載完）就不准存
+  if(!_imagesLoaded){
+    alert('⚠️ 雲端圖片還在載入中，請等載入完再儲存（避免把已上傳的圖蓋掉）');
+    return;
+  }
+  var hasNewImages = _imagesDirty;
+  if(hasNewImages){
+    var imgCount = 0;
+    Object.keys(imgs).forEach(function(k){ imgCount += (imgs[k] || []).length; });
+    showLoading('💾 儲存中', '正在上傳 ' + imgCount + ' 張圖片到 Drive，請勿關閉頁面...');
+  } else {
+    showLoading('💾 儲存中', '正在儲存欄位資料到雲端...');
+  }
   setAutoSaveStatus('saving');
   try{
-    // ⬆️ Step 1: 把當前畫面 push 到雲端（含圖片）
-    await saveRecord({ silent: true });
+    // 沒上傳新圖時 skipImages=true → Apps Script 後端會保留 Drive 上既有的圖（不刪不重傳）
+    await saveRecord({ silent: true, skipImages: !hasNewImages });
     _imagesDirty = false;
-    // ⬇️ Step 2: 從雲端拉最新（同步其他裝置在這段時間的更新進來）
-    if(typeof syncFromCloud === 'function'){
-      _lastCloudPullAt = Date.now();
-      await syncFromCloud();
-    }
+    _hasUnsavedChanges = false;
     setAutoSaveStatus('cloud');
+    hideLoading();
   }catch(e){
-    console.warn('手動同步失敗', e);
+    console.warn('手動儲存失敗', e);
     setAutoSaveStatus('error');
+    hideLoading();
+    alert('❌ 儲存失敗：' + (e.message || '未知錯誤') + '\n\n請檢查網路連線後再點一次儲存。');
   }
 }
 
@@ -2365,6 +2288,7 @@ async function loadRecord(date){
   // ⭐ 載入新紀錄前先標記「圖還沒載入」，避免任何 autoSave 在這空檔送出 keepImages=false 誤刪 Drive 檔
   _imagesLoaded = false;
   _imagesDirty = false;
+  showLoading('📅 載入 ' + date + ' 的資料', '正在載入欄位資料...');
   applyData(r.data);
   document.getElementById('record-date').value = date;
   document.getElementById('history-select').value = date;
@@ -2379,24 +2303,35 @@ async function loadRecord(date){
 
   // 如果這筆有圖片，從雲端拉下來
   if(r.imageFileId && localStorage.getItem('cd_sync_url')){
+    updateLoadingDetail('正在從雲端下載圖片...');
     setSyncBadge('⏳ 下載圖片...');
     try{
       var images = await cloudGetImages(r.imageFileId);
+      var totalCount = 0;
+      if(images){ Object.keys(images).forEach(function(k){ totalCount += (images[k] || []).length; }); }
+      updateLoadingDetail('正在還原 ' + totalCount + ' 張圖片到畫面...');
       await applyImages(images);
-      var count = 0;
-      if(images){ Object.keys(images).forEach(function(k){ count += (images[k] || []).length; }); }
-      setSyncBadge('☁️ 已載入' + (count ? '（' + count + ' 張圖）' : ''));
+      setSyncBadge('☁️ 已載入' + (totalCount ? '（' + totalCount + ' 張圖）' : ''));
       _imagesLoaded = true;  // ⭐ 載入成功才允許後續送 keepImages=false
     } catch(e){
       setSyncBadge('⚠️ 圖片載入失敗');
       console.warn(e);
+      hideLoading();
+      alert('⚠️ 圖片載入失敗：' + (e.message || '未知錯誤') + '\n\n為了避免儲存時誤刪雲端圖片，「💾 儲存到雲端」按鈕暫時無法使用。\n請重新整理頁面再試。');
       // _imagesLoaded 維持 false，保護 Drive 檔不被誤刪（直到使用者重新整理或載入成功）
+      _hasUnsavedChanges = false;
+      setAutoSaveStatus('error');
+      return true;
     }
   } else {
     // 沒圖片紀錄或沒設雲端 → imgs 清空、_imagesLoaded=true（已知狀態：沒圖）
     await applyImages(null);
     _imagesLoaded = true;
   }
+  // 載入完成 → 清掉「未儲存變更」狀態（剛載入的資料當然是已儲存的）
+  _hasUnsavedChanges = false;
+  setAutoSaveStatus('idle');
+  hideLoading();
   return true;
 }
 
@@ -2404,12 +2339,26 @@ async function loadSelectedRecord(){
   var sel = document.getElementById('history-select');
   var date = sel.value;
   if(!date) return;
+  if(!confirmLoseUnsaved()){ sel.value = document.getElementById('record-date').value || ''; return; }
   var ok = await loadRecord(date);
   if(!ok) alert('找不到這筆紀錄');
 }
 
+// 切換日期/載入舊紀錄前的防呆：若有未儲存變更就先警告
+function confirmLoseUnsaved(){
+  if(!_hasUnsavedChanges) return true;
+  return confirm('⚠️ 你有未儲存的變更（含上傳的圖片）！\n\n切換日期會把畫面換成另一天的資料，本日未儲存的內容會消失。\n\n確定要繼續嗎？\n（建議先按「💾 儲存到雲端」再切日期）');
+}
+
 async function onDateChange(){
   var date = document.getElementById('record-date').value;
+  // 防呆：若使用者剛改了東西還沒儲存就切日期，先警告
+  if(!confirmLoseUnsaved()){
+    // 使用者按取消 → 把日期改回去
+    var prev = document.getElementById('history-select').value;
+    if(prev) document.getElementById('record-date').value = prev;
+    return;
+  }
   var records = getAllRecords();
   if(records[date]){
     // ⭐ 自動載入，不再 confirm（避免使用者選「取消」造成畫面 vs 日期 mismatch、autoSave 把殘留資料寫到新日期覆蓋既有紀錄）
@@ -2434,6 +2383,9 @@ async function onDateChange(){
   updateSavedTag(date);
   recalcMonthly();
   recalcStaffBonus();
+  // 切日期完畢 → 清掉 dirty 狀態（剛載入的資料是已儲存的）
+  _hasUnsavedChanges = false;
+  setAutoSaveStatus('idle');
 }
 
 // 自動帶入前一天的「隔日開箱金額」→ 今日開箱金額
@@ -2754,7 +2706,9 @@ async function syncFromCloud(){
     setAllRecords(merged);
     renderHistoryList();
     var today = document.getElementById('record-date').value || todayStr();
-    if(merged[today]) loadRecord(today);
+    // ⚠️ 必須 await — 否則 loadRecord 還在拉圖時，外層 initRecords 的 .finally 已經 hide 掉 LOADING 視窗，
+    //     使用者會看到半載入的畫面、可能在圖還沒回來時就上傳新圖造成 race
+    if(merged[today]) await loadRecord(today);
     else updateSavedTag(today);
     setSyncBadge('☁️ 已同步（' + Object.keys(merged).length + ' 筆'
       + (newerLocalCount > 0 ? '，' + newerLocalCount + ' 筆本機較新已保留' : '') + '）');
@@ -2765,7 +2719,7 @@ async function syncFromCloud(){
   }
 }
 
-// 初始化
+// 初始化（用 LOADING 視窗包住，雲端資料 + 圖片全部載入完才關）
 (function initRecords(){
   var today = todayStr();
   document.getElementById('record-date').value = today;
@@ -2776,11 +2730,13 @@ async function syncFromCloud(){
   var syncUrl = localStorage.getItem('cd_sync_url');
   if(syncUrl){
     // 有同步：從雲端拉最新資料
+    showLoading('☁️ 載入雲端資料', '正在從 Google Sheet 拉取所有歷史紀錄...');
     setSyncBadge('⏳ 載入雲端資料...');
     syncFromCloud().catch(function(){
       // 失敗時用本機資料
+      updateLoadingDetail('⚠️ 雲端載入失敗，改用本機資料');
       var records = getAllRecords();
-      if(records[today]) loadRecord(today);
+      if(records[today]) return loadRecord(today);
       else updateSavedTag(today);
     }).finally(function(){
       // 雲端資料拉回來後也再跑一次修正（setAllRecords 內已統一 key，但保險再跑）
@@ -2789,18 +2745,39 @@ async function syncFromCloud(){
       autoFillOpening(today);
       recalcMonthly();
       recalcStaffBonus();
-      // ⭐ 雲端資料載入完成後才解除 _initLoading，期間使用者改任何欄位都不會觸發 autoSave 推空白覆蓋
-      //    多等 300ms 確保 loadRecord 內的 applyData / setTimeout 鎖也釋放
-      setTimeout(function(){ _initLoading = false; }, 300);
+      // ⭐ 雲端資料載入完成後才解除 _initLoading
+      setTimeout(function(){
+        _initLoading = false;
+        _hasUnsavedChanges = false;
+        setAutoSaveStatus('idle');
+        hideLoading();
+      }, 300);
     });
   } else {
     setSyncBadge('📱 僅本機');
     var records = getAllRecords();
-    if(records[today]) loadRecord(today);
-    else updateSavedTag(today);
-    autoFillOpening(today);
-    recalcMonthly();
-    setTimeout(function(){ _initLoading = false; }, 300);
+    if(records[today]){
+      showLoading('📅 載入今日資料', '請稍候...');
+      loadRecord(today).finally(function(){
+        autoFillOpening(today);
+        recalcMonthly();
+        setTimeout(function(){
+          _initLoading = false;
+          _hasUnsavedChanges = false;
+          setAutoSaveStatus('idle');
+          hideLoading();
+        }, 300);
+      });
+    } else {
+      updateSavedTag(today);
+      autoFillOpening(today);
+      recalcMonthly();
+      setTimeout(function(){
+        _initLoading = false;
+        _hasUnsavedChanges = false;
+        setAutoSaveStatus('idle');
+      }, 300);
+    }
   }
 })();
 </script>
