@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>佈達資訊</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#4f46e5;
+  --brand-dark:#4338ca;
+  --accent:#6366f1;
+  --ink:#0f172a;
+  --ink-2:#475569;
+  --ink-3:#94a3b8;
+  --line:#e2e8f0;
+  --danger:#dc2626;
+  --ok:#10b981;
+}
+html,body{height:100%}
+body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;padding:1rem;
+  background:
+    radial-gradient(1000px 500px at 10% -10%, #e0e7ff 0%, transparent 50%),
+    radial-gradient(800px 500px at 110% 10%, #f1f5f9 0%, transparent 55%),
+    linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+}
+
+.topbar{max-width:820px;margin:0 auto 14px;display:flex;align-items:center;gap:10px;padding:4px 4px;flex-wrap:wrap}
+.back-btn{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.8);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);transition:all .2s;box-shadow:0 4px 12px -4px rgba(15,23,42,.08);flex-shrink:0;font-family:inherit}
+.back-btn:hover{background:#fff;color:var(--brand);transform:translateX(-2px)}
+.back-btn svg{width:17px;height:17px}
+
+.store-chip{display:flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;background:rgba(255,255,255,.8);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);border-radius:999px;font-size:13px;color:var(--ink);font-weight:600;box-shadow:0 4px 12px -4px rgba(15,23,42,.06)}
+.store-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--accent));color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px}
+.spacer{flex:1}
+
+.wrap{max-width:820px;margin:0 auto;padding:0 0 3rem}
+
+.hero-card{background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);border:1px solid rgba(79,70,229,.18);border-radius:20px;padding:1.25rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(79,70,229,.06),0 8px 24px -12px rgba(79,70,229,.2)}
+.hero-icon{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--brand) 0%,var(--accent) 100%);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 8px 20px -8px rgba(79,70,229,.5);flex-shrink:0}
+.hero-text h1{font-size:20px;font-weight:700;letter-spacing:-0.02em;margin-bottom:3px}
+.hero-text p{font-size:12.5px;color:var(--ink-2);line-height:1.55}
+
+.section{background:rgba(255,255,255,.78);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.9);border-radius:18px;padding:1.1rem 1.25rem;margin-bottom:14px;box-shadow:0 1px 2px rgba(15,23,42,.03),0 6px 18px -10px rgba(15,23,42,.08)}
+h3{font-size:13px;font-weight:700;color:var(--ink-2);margin-bottom:12px;display:flex;align-items:center;gap:6px;letter-spacing:0.01em;flex-wrap:wrap}
+h3 .icon{font-size:15px}
+
+.field{margin-bottom:10px}
+.field label{display:block;font-size:11.5px;font-weight:700;color:var(--ink-2);margin-bottom:5px;letter-spacing:.5px;text-transform:uppercase}
+.field input[type=text], .field textarea, .field select{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:rgba(255,255,255,.8);font-size:14px;outline:none;font-family:inherit;color:var(--ink);transition:all .15s;resize:vertical}
+.field input[type=text]:focus, .field textarea:focus, .field select:focus{border-color:var(--brand);background:#fff;box-shadow:0 0 0 3px rgba(79,70,229,.12)}
+.field textarea{min-height:78px;line-height:1.55}
+
+.add-btn{width:100%;padding:11px;border:none;border-radius:11px;background:linear-gradient(135deg,var(--brand) 0%,var(--accent) 100%);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.02em;box-shadow:0 6px 16px -6px rgba(79,70,229,.5);transition:all .18s}
+.add-btn:hover{transform:translateY(-1px);box-shadow:0 10px 22px -6px rgba(79,70,229,.55)}
+.add-btn:disabled{background:#cbd5e1;cursor:not-allowed;box-shadow:none}
+
+.empty{text-align:center;color:var(--ink-3);font-size:13px;padding:2.5rem 1rem;font-style:italic;line-height:1.7}
+.empty .big{font-size:40px;display:block;margin-bottom:8px;opacity:.5;font-style:normal}
+
+.ann-card{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:1rem 1.1rem;margin-bottom:12px;transition:all .18s}
+.ann-card:hover{border-color:rgba(79,70,229,.3);box-shadow:0 4px 12px -4px rgba(79,70,229,.15)}
+.ann-card.all-confirmed{border-color:rgba(16,185,129,.35);background:linear-gradient(135deg,#fff 0%,#ecfdf5 100%)}
+
+.ann-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+.ann-title-wrap{flex:1;min-width:0}
+.ann-title{font-size:15.5px;font-weight:700;color:var(--ink);letter-spacing:-0.01em;margin-bottom:3px;line-height:1.4;cursor:text;border:1.5px solid transparent;border-radius:8px;padding:3px 6px;margin-left:-6px}
+.ann-title:hover{background:rgba(15,23,42,.03)}
+.ann-title:focus{outline:none;border-color:var(--brand);background:#fff;box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+.ann-meta{font-size:11px;color:var(--ink-3);font-weight:600;letter-spacing:.5px}
+.ann-meta .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(15,23,42,.05);margin-right:5px;font-weight:700}
+.ann-meta .badge.ok{background:rgba(16,185,129,.12);color:#047857}
+.ann-meta .badge.pending{background:rgba(245,158,11,.15);color:#b45309}
+.ann-del{flex-shrink:0;width:30px;height:30px;border:none;background:rgba(220,38,38,.08);color:var(--danger);border-radius:8px;font-size:15px;cursor:pointer;font-family:inherit;font-weight:bold;line-height:1;transition:all .15s;display:flex;align-items:center;justify-content:center}
+.ann-del:hover{background:rgba(220,38,38,.16);transform:scale(1.05)}
+
+.ann-content{font-size:13.5px;color:var(--ink-2);line-height:1.65;background:rgba(15,23,42,.025);border-radius:10px;padding:9px 12px;margin-bottom:12px;white-space:pre-wrap;word-break:break-word;cursor:text;border:1.5px solid transparent;transition:all .15s;min-height:1.65em}
+.ann-content:hover{background:rgba(15,23,42,.04)}
+.ann-content:focus{outline:none;border-color:var(--brand);background:#fff;box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+.ann-content.empty-placeholder{color:var(--ink-3);font-style:italic}
+
+.confirm-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.confirm-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1.5px solid var(--line);border-radius:11px;background:rgba(255,255,255,.7);cursor:pointer;transition:all .15s;user-select:none;font-family:inherit}
+.confirm-item:hover{border-color:rgba(79,70,229,.4);background:#fff}
+.confirm-item.checked{border-color:#10b981;background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%);box-shadow:0 2px 6px -2px rgba(16,185,129,.25)}
+.confirm-item input[type=checkbox]{width:18px;height:18px;cursor:pointer;accent-color:#10b981;flex-shrink:0;margin:0}
+.confirm-item .name{flex:1;min-width:0;font-size:13.5px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.confirm-item.checked .name{color:#047857}
+.confirm-item .ts{font-size:10.5px;color:var(--ink-3);font-family:ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:.5px}
+.confirm-item.checked .ts{color:#059669;font-weight:600}
+
+.confirm-bulk{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.confirm-bulk button{padding:5px 11px;font-size:11.5px;font-weight:600;color:var(--ink-2);background:rgba(255,255,255,.8);border:1.5px solid var(--line);border-radius:999px;cursor:pointer;font-family:inherit;letter-spacing:.5px;transition:all .15s}
+.confirm-bulk button:hover{background:#fff;border-color:var(--brand);color:var(--brand)}
+
+.saved-tag{font-size:12px;color:var(--ok);margin-top:6px;display:block;text-align:right;font-weight:500;min-height:16px}
+
+#settings-modal{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:100;padding:1rem}
+#settings-modal.on{display:flex}
+.modal-card{background:#fff;border-radius:18px;padding:1.75rem;max-width:480px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto}
+.modal-card h2{font-size:18px;font-weight:700;margin-bottom:6px}
+.modal-card .desc{font-size:13px;color:var(--ink-2);margin-bottom:1rem;line-height:1.6}
+.modal-card .info-box{background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;padding:12px 14px;font-size:12px;color:#3730a3;line-height:1.6;margin-bottom:14px}
+.modal-card label.lbl{font-size:12px;color:var(--ink-2);margin-bottom:6px;display:block;font-weight:600}
+.modal-card input.url{width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;background:rgba(255,255,255,.7);font-size:13px;outline:none;font-family:ui-monospace,Menlo,monospace;margin-bottom:14px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.modal-actions button{padding:9px 16px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit}
+.modal-actions .cancel{border:1.5px solid var(--line);background:#fff;color:var(--ink-2)}
+.modal-actions .clear{border:1.5px solid rgba(220,38,38,.2);background:#fff;color:var(--danger)}
+.modal-actions .save{border:none;background:linear-gradient(135deg,var(--brand) 0%,var(--accent) 100%);color:#fff;box-shadow:0 4px 12px -4px rgba(79,70,229,.5)}
+
+@media(max-width:520px){
+  body{padding:.75rem}
+  .hero-card{padding:1rem}
+  .hero-icon{width:44px;height:44px;font-size:22px}
+  .hero-text h1{font-size:18px}
+  .confirm-list{grid-template-columns:1fr 1fr}
+}
+@media(max-width:380px){
+  .confirm-list{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="location.href='home.html'" title="返回主頁">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+  </button>
+  <div class="store-chip">
+    <div class="store-avatar">📣</div>
+    <span id="u-store">—</span>
+  </div>
+  <span class="spacer"></span>
+  <button class="back-btn" id="save-btn" onclick="manualSave()" title="把目前所有變更（新增/勾選/編輯/刪除）一次推到雲端" style="width:auto;padding:0 12px;font-size:12px;font-weight:500;gap:6px">
+    💾 點此儲存到雲端
+  </button>
+  <button class="back-btn" onclick="openSettings()" title="設定雲端同步網址" style="width:auto;padding:0 12px;font-size:12px;font-weight:500;gap:6px">
+    ⚙️ 設定
+  </button>
+  <button class="back-btn" onclick="location.href='index.html'" title="切換門市" style="width:auto;padding:0 14px;font-size:12px;font-weight:500;gap:6px">
+    🏪 切換門市
+  </button>
+</div>
+
+<div id="settings-modal">
+  <div class="modal-card">
+    <h2>⚙️ 佈達資訊雲端同步設定</h2>
+    <p class="desc">填入<b>佈達資訊專用</b>的 Apps Script 網址。留空則只存本機（同一台裝置使用）。</p>
+    <div class="info-box">
+      📌 部署步驟：<br>
+      1. 打開 <code>佈達資訊-script.gs</code> 檔案<br>
+      2. 貼到新的 Apps Script 專案<br>
+      3. 部署 → 新增部署 → Web app → 任何人皆可使用<br>
+      4. 把 <code>/exec</code> 網址貼到下方
+    </div>
+    <label class="lbl">Apps Script 網址</label>
+    <input type="text" class="url" id="sync-input" placeholder="https://script.google.com/macros/s/..../exec">
+    <div class="modal-actions">
+      <button class="cancel" onclick="closeSettings()">取消</button>
+      <button class="clear" onclick="clearSync()">清除網址</button>
+      <button class="save" onclick="saveSync()">儲存網址</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="hero-card">
+    <div class="hero-icon">📣</div>
+    <div class="hero-text">
+      <h1>佈達資訊</h1>
+      <p>店長把要佈達的事項寫下來，面對面跟每位同仁確認後逐一勾選，留下確認時間紀錄。</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3><span class="icon">➕</span>新增佈達事項</h3>
+    <div class="field">
+      <label>標題</label>
+      <input type="text" id="new-title" placeholder="例：12 月新菜單上線、收銀流程調整、出勤規範…">
+    </div>
+    <div class="field">
+      <label>內容（可留空）</label>
+      <textarea id="new-content" placeholder="完整佈達內容，可貼上 LINE 群公告原文"></textarea>
+    </div>
+    <button class="add-btn" onclick="addAnnouncement()">新增佈達事項</button>
+    <p style="font-size:11.5px;color:var(--ink-2);margin-top:10px;line-height:1.6;background:rgba(79,70,229,.06);border:1px solid rgba(79,70,229,.15);border-radius:10px;padding:9px 12px">💡 新增後會出現在下方，每位同仁旁邊有勾選框。<b>所有變更都只存在本機，請按右上「💾 點此儲存到雲端」才會推到雲端。</b></p>
+  </div>
+
+  <div class="section">
+    <h3>
+      <span class="icon">📋</span>佈達清單
+      <span id="ann-count" style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:999px;background:rgba(79,70,229,.1);color:var(--brand);font-weight:600">— 則</span>
+    </h3>
+    <div id="ann-list"></div>
+    <span class="saved-tag" id="saved-tag"></span>
+  </div>
+</div>
+
+<script>
+// ============================================
+// 內建設定
+// ============================================
+var BUILTIN_ANNOUNCE_SYNC_URL = ""; // 部署完 佈達資訊-script.gs 後填入
+(function(){
+  if(BUILTIN_ANNOUNCE_SYNC_URL){
+    localStorage.setItem('cd_announce_sync_url', BUILTIN_ANNOUNCE_SYNC_URL);
+  }
+})();
+
+// ============================================
+// 員工名單（與 daily-summary.html 同一份；新增同仁時記得兩邊一起更新）
+// ============================================
+var STAFF_LISTS = {
+  'chudian-zhonghe':    ['李文少','褚心榆','劉濡瑜','施偉祥'],
+  'chudian-yongchun':   ['謝其淇','林韋翔','洪文祥','呂直宸','吳孟澤','邱昊勳'],
+  'chudian-xinzhuang':  ['蔡鈺豪','李嘉真','洪仕賢','蘇奕誠'],
+  'shicheng-zhongxiao': ['林哲民','林梓彥','王謖','陳柏維']
+};
+var STORE_NAMES = {
+  'chudian-zhonghe':    '初殿中和店',
+  'chudian-yongchun':   '初殿永春店',
+  'chudian-xinzhuang':  '初殿新莊店',
+  'shicheng-zhongxiao': '十城忠孝店'
+};
+
+var STORE = sessionStorage.getItem('cd_store') || '';
+var STORE_NAME = sessionStorage.getItem('cd_store_name') || STORE_NAMES[STORE] || '';
+if(!STORE){
+  alert('請先從首頁進入並選擇門市');
+  location.href = 'home.html';
+}
+var STAFF = STAFF_LISTS[STORE] || [];
+document.getElementById('u-store').textContent = STORE_NAME || STORE || '—';
+
+// ============================================
+// State
+// ============================================
+var LS_KEY = 'cd_announce_' + STORE;
+var STATE = loadLocal();
+var DIRTY = false;
+
+function loadLocal(){
+  try{
+    var raw = localStorage.getItem(LS_KEY);
+    if(!raw) return { announcements: [] };
+    var obj = JSON.parse(raw);
+    if(!obj || !Array.isArray(obj.announcements)) return { announcements: [] };
+    return obj;
+  }catch(e){ return { announcements: [] }; }
+}
+function saveLocal(){
+  localStorage.setItem(LS_KEY, JSON.stringify(STATE));
+}
+function markDirty(){
+  DIRTY = true;
+  saveLocal();
+  refreshSaveBtn();
+}
+
+// ============================================
+// 渲染
+// ============================================
+function fmtDateTime(iso){
+  if(!iso) return '';
+  var d = new Date(iso);
+  if(isNaN(d.getTime())) return '';
+  var y = d.getFullYear();
+  var m = String(d.getMonth()+1).padStart(2,'0');
+  var dd = String(d.getDate()).padStart(2,'0');
+  var hh = String(d.getHours()).padStart(2,'0');
+  var mm = String(d.getMinutes()).padStart(2,'0');
+  return y+'/'+m+'/'+dd+' '+hh+':'+mm;
+}
+function fmtTimeOnly(iso){
+  if(!iso) return '';
+  var d = new Date(iso);
+  if(isNaN(d.getTime())) return '';
+  var m = String(d.getMonth()+1).padStart(2,'0');
+  var dd = String(d.getDate()).padStart(2,'0');
+  var hh = String(d.getHours()).padStart(2,'0');
+  var mm = String(d.getMinutes()).padStart(2,'0');
+  return m+'/'+dd+' '+hh+':'+mm;
+}
+
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, function(c){
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+
+function render(){
+  var list = document.getElementById('ann-list');
+  var arr = STATE.announcements || [];
+  document.getElementById('ann-count').textContent = arr.length + ' 則';
+
+  if(arr.length === 0){
+    list.innerHTML = '<div class="empty"><span class="big">📭</span>目前沒有佈達事項<br>從上方「新增佈達事項」開始</div>';
+    return;
+  }
+
+  var sorted = arr.slice().sort(function(a, b){
+    return (b.createdAt || '').localeCompare(a.createdAt || '');
+  });
+
+  list.innerHTML = sorted.map(function(a){
+    var confirms = a.confirms || {};
+    var done = STAFF.filter(function(n){ return confirms[n] && confirms[n].confirmed; }).length;
+    var total = STAFF.length;
+    var allDone = total > 0 && done === total;
+
+    var items = STAFF.map(function(name){
+      var c = confirms[name] || {};
+      var checked = !!c.confirmed;
+      var ts = checked ? fmtTimeOnly(c.at) : '';
+      return '<label class="confirm-item' + (checked ? ' checked' : '') + '" data-id="'+a.id+'" data-name="'+escapeHtml(name)+'">'
+           +   '<input type="checkbox" '+(checked?'checked':'')+' onchange="onToggle(\''+a.id+'\', \''+escapeHtml(name).replace(/'/g,"\\'")+'\', this.checked)">'
+           +   '<span class="name">'+escapeHtml(name)+'</span>'
+           +   '<span class="ts">'+ts+'</span>'
+           + '</label>';
+    }).join('');
+
+    if(STAFF.length === 0){
+      items = '<div style="grid-column:1/-1;padding:12px;background:#fff3cd;color:#856404;border-radius:8px;font-size:12.5px;text-align:center;font-weight:500">⚠️ 本店員工名單尚未設定，請至 announce.html 頂端 STAFF_LISTS 補齊</div>';
+    }
+
+    var contentRaw = a.content || '';
+    var contentHtml = contentRaw
+      ? escapeHtml(contentRaw)
+      : '<span class="empty-placeholder">（沒有內容，可點此編輯）</span>';
+
+    return '<div class="ann-card' + (allDone ? ' all-confirmed' : '') + '">'
+         +   '<div class="ann-head">'
+         +     '<div class="ann-title-wrap">'
+         +       '<div class="ann-title" contenteditable="true" data-id="'+a.id+'" data-field="title" onblur="onEditField(this)">' + escapeHtml(a.title || '（未命名）') + '</div>'
+         +       '<div class="ann-meta">'
+         +         '<span class="badge ' + (allDone ? 'ok' : 'pending') + '">' + done + ' / ' + total + ' 已確認</span>'
+         +         '建立：' + fmtDateTime(a.createdAt)
+         +       '</div>'
+         +     '</div>'
+         +     '<button class="ann-del" onclick="onDelete(\''+a.id+'\')" title="刪除這則佈達">✕</button>'
+         +   '</div>'
+         +   '<div class="ann-content' + (contentRaw ? '' : ' empty-placeholder') + '" contenteditable="true" data-id="'+a.id+'" data-field="content" onblur="onEditField(this)">' + contentHtml + '</div>'
+         +   '<div class="confirm-bulk">'
+         +     '<button onclick="onBulkAll(\''+a.id+'\', true)">✅ 全部已確認</button>'
+         +     '<button onclick="onBulkAll(\''+a.id+'\', false)">↺ 全部清除</button>'
+         +   '</div>'
+         +   '<div class="confirm-list">' + items + '</div>'
+         + '</div>';
+  }).join('');
+}
+
+// ============================================
+// 行為
+// ============================================
+function uid(){ return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+function addAnnouncement(){
+  var title = document.getElementById('new-title').value.trim();
+  var content = document.getElementById('new-content').value.trim();
+  if(!title){ alert('請輸入標題'); return; }
+  STATE.announcements = STATE.announcements || [];
+  STATE.announcements.push({
+    id: uid(),
+    title: title,
+    content: content,
+    createdAt: new Date().toISOString(),
+    confirms: {}
+  });
+  document.getElementById('new-title').value = '';
+  document.getElementById('new-content').value = '';
+  markDirty();
+  render();
+}
+
+function onToggle(id, name, checked){
+  var a = (STATE.announcements || []).find(function(x){ return x.id === id; });
+  if(!a) return;
+  a.confirms = a.confirms || {};
+  if(checked){
+    a.confirms[name] = { confirmed: true, at: new Date().toISOString() };
+  } else {
+    delete a.confirms[name];
+  }
+  markDirty();
+  render();
+}
+
+function onBulkAll(id, val){
+  var a = (STATE.announcements || []).find(function(x){ return x.id === id; });
+  if(!a) return;
+  a.confirms = a.confirms || {};
+  if(val){
+    var now = new Date().toISOString();
+    STAFF.forEach(function(n){
+      if(!a.confirms[n] || !a.confirms[n].confirmed){
+        a.confirms[n] = { confirmed: true, at: now };
+      }
+    });
+  } else {
+    a.confirms = {};
+  }
+  markDirty();
+  render();
+}
+
+function onDelete(id){
+  var a = (STATE.announcements || []).find(function(x){ return x.id === id; });
+  if(!a) return;
+  if(!confirm('確定要刪除「' + (a.title || '此佈達事項') + '」？')) return;
+  STATE.announcements = STATE.announcements.filter(function(x){ return x.id !== id; });
+  markDirty();
+  render();
+}
+
+function onEditField(el){
+  var id = el.getAttribute('data-id');
+  var field = el.getAttribute('data-field');
+  var a = (STATE.announcements || []).find(function(x){ return x.id === id; });
+  if(!a) return;
+  // 取純文字（避免使用者貼進來的 HTML）
+  var text = (el.innerText || el.textContent || '').replace(/ /g, ' ').trim();
+  // title 不可空
+  if(field === 'title'){
+    if(!text){
+      // 還原回原值
+      el.textContent = a.title || '（未命名）';
+      return;
+    }
+  }
+  if(field === 'title' && a.title === text) return;
+  if(field === 'content' && (a.content || '') === text) return;
+  if(field === 'title')   a.title = text;
+  if(field === 'content') a.content = text;
+  markDirty();
+  render();
+}
+
+// ============================================
+// 雲端同步
+// ============================================
+function syncUrl(){ return localStorage.getItem('cd_announce_sync_url') || ''; }
+
+function callGAS(action, payload){
+  var url = syncUrl();
+  if(!url) return Promise.reject(new Error('尚未設定雲端網址'));
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(Object.assign({ action: action, store: STORE }, payload || {}))
+  }).then(function(r){ return r.json(); });
+}
+
+function pullFromCloud(){
+  if(!syncUrl()) return Promise.resolve();
+  return callGAS('getAnnouncements', {}).then(function(res){
+    if(res && res.ok && Array.isArray(res.announcements)){
+      // 雲端 > 本機（不合併，以雲端為準）
+      STATE.announcements = res.announcements;
+      saveLocal();
+      DIRTY = false;
+      refreshSaveBtn();
+      render();
+      flash('已從雲端載入 ' + res.announcements.length + ' 則佈達');
+    }
+  }).catch(function(err){
+    console.warn('pull failed:', err);
+    // 雲端拉不下來不要擋使用者，繼續用本機
+  });
+}
+
+function manualSave(){
+  if(!syncUrl()){
+    alert('⚠️ 尚未設定雲端網址，請按右上「⚙️ 設定」貼上 Apps Script 網址。\n（目前資料只存在本機，換裝置看不到）');
+    return;
+  }
+  setSaveBtn('saving');
+  callGAS('saveAnnouncements', {
+    announcements: STATE.announcements || []
+  }).then(function(res){
+    if(res && res.ok){
+      DIRTY = false;
+      refreshSaveBtn();
+      flash('✅ 已儲存到雲端（' + (STATE.announcements || []).length + ' 則）');
+    } else {
+      throw new Error((res && res.error) || '雲端回應錯誤');
+    }
+  }).catch(function(err){
+    setSaveBtn('dirty');
+    alert('❌ 儲存失敗：' + err.message + '\n\n資料仍保留在本機，可稍後再試。');
+  });
+}
+
+// ============================================
+// 儲存按鈕狀態
+// ============================================
+function setSaveBtn(state){
+  var btn = document.getElementById('save-btn');
+  if(!btn) return;
+  var green = { bg:'rgba(16,185,129,.12)', fg:'#047857', bd:'#10b981' };
+  var states = {
+    idle:   { text:'💾 點此儲存到雲端',                    bg:green.bg, fg:green.fg, bd:green.bd },
+    dirty:  { text:'⚠️ 有未儲存的變更 — 點此儲存到雲端',   bg:'rgba(245,158,11,.18)', fg:'#b45309', bd:'#fbbf24' },
+    saving: { text:'⏳ 儲存中…',                           bg:'rgba(59,130,246,.15)', fg:'#1d4ed8', bd:'#60a5fa' }
+  };
+  var s = states[state] || states.idle;
+  btn.textContent = s.text;
+  btn.style.background = s.bg;
+  btn.style.color = s.fg;
+  btn.style.border = '1px solid ' + s.bd;
+}
+function refreshSaveBtn(){
+  setSaveBtn(DIRTY ? 'dirty' : 'idle');
+}
+
+function flash(msg){
+  var el = document.getElementById('saved-tag');
+  if(!el) return;
+  el.textContent = msg;
+  setTimeout(function(){ if(el.textContent === msg) el.textContent = ''; }, 3500);
+}
+
+// ============================================
+// 設定視窗
+// ============================================
+function openSettings(){
+  document.getElementById('sync-input').value = syncUrl();
+  document.getElementById('settings-modal').classList.add('on');
+}
+function closeSettings(){
+  document.getElementById('settings-modal').classList.remove('on');
+}
+function saveSync(){
+  var v = document.getElementById('sync-input').value.trim();
+  if(v) localStorage.setItem('cd_announce_sync_url', v);
+  else  localStorage.removeItem('cd_announce_sync_url');
+  closeSettings();
+  flash('✅ 已儲存設定');
+  pullFromCloud();
+}
+function clearSync(){
+  if(!confirm('清除雲端網址後，本頁將只存本機資料。確定？')) return;
+  localStorage.removeItem('cd_announce_sync_url');
+  document.getElementById('sync-input').value = '';
+  closeSettings();
+  flash('已清除雲端網址');
+}
+
+// ============================================
+// beforeunload 防呆：有未儲存變更時提醒
+// ============================================
+window.addEventListener('beforeunload', function(e){
+  if(DIRTY){
+    e.preventDefault();
+    e.returnValue = '有未儲存的變更，確定要離開？';
+    return e.returnValue;
+  }
+});
+
+// ============================================
+// 初始化
+// ============================================
+refreshSaveBtn();
+render();
+pullFromCloud();
+</script>
+</body>
+</html>
+
