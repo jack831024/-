@@ -9,10 +9,11 @@
 // ============================================
 // 📌 設定：佈達資訊要存到哪份試算表
 // ============================================
-// 打開新的 Google 試算表，複製它的 ID（網址 /d/ 後那一長串）
-// 把 ID 貼到下方 ANNOUNCE_SHEET_ID
-// 或留空（''）代表用「此 Apps Script 綁定」的那份試算表
+// 留空（''）代表用「此 Apps Script 綁定」的那份試算表
 var ANNOUNCE_SHEET_ID = '';
+
+// 照片上傳的根資料夾名稱（每店一個子資料夾）
+var ANNOUNCE_PHOTO_ROOT = '佈達資訊-照片';
 
 // ============================================
 // 🚪 入口
@@ -43,6 +44,32 @@ function doPost(e) {
       return json({ ok: true, count: arr.length, store: store });
     }
 
+    // 上傳照片到 Drive
+    if (body.action === 'uploadPhoto') {
+      var dataUrl = String(body.dataUrl || '');
+      var filename = String(body.filename || ('photo-' + Date.now() + '.jpg'));
+      var m = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (!m) return json({ error: 'bad dataUrl format' });
+      var contentType = m[1];
+      var bytes = Utilities.base64Decode(m[2]);
+      var blob = Utilities.newBlob(bytes, contentType, filename);
+      var folder = getAnnounceFolder(store);
+      var file = folder.createFile(blob);
+      // 任何有連結的人都可看（announce.html 才能直接 <img> 顯示）
+      try {
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      } catch (shareErr) {
+        // 部分 Workspace 帳號禁止 ANYONE_WITH_LINK，退而求其次讓網址至少能顯示縮圖
+      }
+      return json({
+        ok: true,
+        fileId: file.getId(),
+        name: filename,
+        thumb: 'https://drive.google.com/thumbnail?id=' + file.getId() + '&sz=w800',
+        view:  'https://drive.google.com/uc?export=view&id=' + file.getId()
+      });
+    }
+
     return json({ error: 'unknown action: ' + body.action });
   } catch (err) {
     return json({ error: String(err) });
@@ -55,28 +82,31 @@ function doPost(e) {
 function readAnnouncements(store) {
   var sheet = getAnnounceSheet(store);
   var data = sheet.getDataRange().getValues();
-  // 欄位：id | title | content | createdAt | confirmsJson
+  // 欄位：id | 佈達者 | 內容 | 建立時間 | 確認紀錄(JSON) | 照片(JSON)
   var out = [];
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
     if (!row[0]) continue;
-    var confirms = {};
-    try {
-      var raw = row[4];
-      if (raw) {
-        var parsed = (typeof raw === 'string') ? JSON.parse(raw) : raw;
-        if (parsed && typeof parsed === 'object') confirms = parsed;
-      }
-    } catch (e) { confirms = {}; }
+    var confirms = parseJsonSafe(row[4], {});
+    var photos   = parseJsonSafe(row[5], []);
+    if (!Array.isArray(photos)) photos = [];
     out.push({
       id: String(row[0]),
+      // 佈達者（前端仍叫 title 以維持舊欄位）
       title: row[1] || '',
       content: row[2] || '',
       createdAt: toIso(row[3]),
-      confirms: confirms
+      confirms: (confirms && typeof confirms === 'object') ? confirms : {},
+      photos: photos
     });
   }
   return out;
+}
+
+function parseJsonSafe(v, fallback) {
+  if (v === null || v === undefined || v === '') return fallback;
+  if (typeof v === 'object') return v;
+  try { return JSON.parse(String(v)); } catch (e) { return fallback; }
 }
 
 // ============================================
@@ -84,29 +114,32 @@ function readAnnouncements(store) {
 // ============================================
 function writeAnnouncements(store, announcements) {
   var sheet = getAnnounceSheet(store);
+  ensureSheetSchema(sheet);
   // 清掉除了標頭以外的資料
   var lastRow = sheet.getLastRow();
   if (lastRow > 1) {
-    sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
+    sheet.getRange(2, 1, lastRow - 1, 6).clearContent();
   }
   if (!announcements || announcements.length === 0) return;
   var rows = announcements.map(function(a){
     return [
       String(a.id || ''),
-      String(a.title || ''),
+      String(a.title || ''),                  // 佈達者
       String(a.content || ''),
       String(a.createdAt || ''),
-      JSON.stringify(a.confirms || {})
+      JSON.stringify(a.confirms || {}),
+      JSON.stringify(a.photos || [])
     ];
   });
-  sheet.getRange(2, 1, rows.length, 5).setValues(rows);
-  // 確保 createdAt / confirmsJson 都當成純文字
+  sheet.getRange(2, 1, rows.length, 6).setValues(rows);
+  // 確保 JSON / 時間欄位都當文字
   sheet.getRange(2, 4, rows.length, 1).setNumberFormat('@');
   sheet.getRange(2, 5, rows.length, 1).setNumberFormat('@');
+  sheet.getRange(2, 6, rows.length, 1).setNumberFormat('@');
 }
 
 // ============================================
-// 🗂️ 工作表取得 / 建立（一店一個 sheet）
+// 🗂️ 工作表 / 資料夾
 // ============================================
 function getAnnounceSheet(store) {
   var ss = ANNOUNCE_SHEET_ID
@@ -116,19 +149,52 @@ function getAnnounceSheet(store) {
   var sheet = ss.getSheetByName(name);
   if (!sheet) {
     sheet = ss.insertSheet(name);
-    sheet.appendRow(['id', '標題', '內容', '建立時間', '確認紀錄(JSON)']);
+    sheet.appendRow(['id', '佈達者', '內容', '建立時間', '確認紀錄(JSON)', '照片(JSON)']);
     sheet.setFrozenRows(1);
     sheet.setColumnWidth(1, 130);
-    sheet.setColumnWidth(2, 220);
+    sheet.setColumnWidth(2, 120);
     sheet.setColumnWidth(3, 360);
     sheet.setColumnWidth(4, 170);
     sheet.setColumnWidth(5, 380);
-    sheet.getRange(1, 1, 1, 5)
+    sheet.setColumnWidth(6, 380);
+    sheet.getRange(1, 1, 1, 6)
       .setBackground('#eef2ff')
       .setFontWeight('bold')
       .setHorizontalAlignment('center');
+  } else {
+    ensureSheetSchema(sheet);
   }
   return sheet;
+}
+
+// 把舊版 5 欄表升級成 6 欄；舊「標題」header 改成「佈達者」
+function ensureSheetSchema(sheet) {
+  var lastCol = sheet.getLastColumn();
+  if (lastCol < 6) {
+    sheet.getRange(1, 6).setValue('照片(JSON)');
+    sheet.getRange(1, 6)
+      .setBackground('#eef2ff')
+      .setFontWeight('bold')
+      .setHorizontalAlignment('center');
+    sheet.setColumnWidth(6, 380);
+  }
+  // header 改名
+  var headers = sheet.getRange(1, 1, 1, 6).getValues()[0];
+  var expected = ['id', '佈達者', '內容', '建立時間', '確認紀錄(JSON)', '照片(JSON)'];
+  for (var i = 0; i < expected.length; i++) {
+    if (headers[i] !== expected[i]) {
+      sheet.getRange(1, i + 1).setValue(expected[i]);
+    }
+  }
+}
+
+function getAnnounceFolder(store) {
+  // 一店一個子資料夾，根資料夾建在 My Drive 根目錄
+  var roots = DriveApp.getFoldersByName(ANNOUNCE_PHOTO_ROOT);
+  var root = roots.hasNext() ? roots.next() : DriveApp.createFolder(ANNOUNCE_PHOTO_ROOT);
+  var subName = storeToSheetName(store);
+  var subs = root.getFoldersByName(subName);
+  return subs.hasNext() ? subs.next() : root.createFolder(subName);
 }
 
 function storeToSheetName(store) {
@@ -160,20 +226,20 @@ function json(obj) {
 }
 
 // ============================================
-// ⭐ 手動授權（只需跑一次）
+// ⭐ 手動授權（只需跑一次；新增 Drive 權限後請再跑一次）
 // ============================================
 // 1. 檔案存檔 (Ctrl+S)
 // 2. 上方函式下拉選單 → 選「forceAuth」
-// 3. 按 ▶️ 執行，跳出授權視窗 → 允許
-// 4. Deploy → New deployment → Web app → Execute as Me / Who has access: Anyone
-// 5. 把 /exec 網址貼進 announce.html 的「⚙️ 設定」
-//    （或寫死到 announce.html 頂端的 BUILTIN_ANNOUNCE_SYNC_URL）
+// 3. 按 ▶️ 執行，跳出授權視窗 → 允許 Drive 權限
+// 4. Deploy → 管理部署作業 → 編輯目前部署 → 版本：「新版本」→ 部署
+//    （URL 不變，announce.html 不用改任何設定）
 // ============================================
 function forceAuth() {
   var stores = ['chudian-zhonghe', 'chudian-yongchun', 'chudian-xinzhuang', 'shicheng-zhongxiao'];
   stores.forEach(function(s){
     var sh = getAnnounceSheet(s);
-    Logger.log('✓ 佈達工作表已就緒：' + sh.getName());
+    var fd = getAnnounceFolder(s);
+    Logger.log('✓ 佈達工作表已就緒：' + sh.getName() + '；照片資料夾：' + fd.getName());
   });
   Logger.log('全部完成');
 }

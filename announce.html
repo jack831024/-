@@ -101,6 +101,28 @@ h3 .icon{font-size:15px}
 
 .saved-tag{font-size:12px;color:var(--ok);margin-top:6px;display:block;text-align:right;font-weight:500;min-height:16px}
 
+/* 照片區 */
+.photo-section{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.photo-section .ps-title{font-size:11.5px;font-weight:700;color:var(--ink-3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.photo-section .ps-status{margin-left:auto;font-weight:500;text-transform:none;letter-spacing:0;color:var(--brand);font-size:11px}
+.photo-row{display:flex;flex-wrap:wrap;gap:8px}
+.photo-thumb{position:relative;display:inline-block}
+.photo-thumb img{display:block;width:90px;height:90px;object-fit:cover;border-radius:10px;border:1.5px solid var(--line);cursor:zoom-in;transition:all .15s;background:#f1f5f9}
+.photo-thumb img:hover{transform:scale(1.04);border-color:var(--brand)}
+.photo-thumb .pt-del{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:#ef4444;color:#fff;border:2px solid #fff;font-size:12px;line-height:1;cursor:pointer;font-weight:bold;padding:0;font-family:inherit;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.photo-thumb .pt-del:hover{background:#dc2626;transform:scale(1.1)}
+.photo-add{width:90px;height:90px;border:2px dashed var(--brand);border-radius:10px;background:rgba(79,70,229,.05);color:var(--brand);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:all .15s;letter-spacing:.5px;position:relative;overflow:hidden}
+.photo-add:hover{background:rgba(79,70,229,.13);border-color:var(--brand-dark)}
+.photo-add input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.photo-add .pa-icon{font-size:22px}
+.photo-add.uploading{background:rgba(59,130,246,.08);border-color:#60a5fa;color:#1d4ed8;cursor:wait}
+.photo-add.uploading input{pointer-events:none}
+
+/* Lightbox */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;z-index:9999;cursor:zoom-out;padding:20px}
+.lightbox.on{display:flex}
+.lightbox img{max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 20px 50px rgba(0,0,0,.6);background:#1e293b}
+
 #settings-modal{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:100;padding:1rem}
 #settings-modal.on{display:flex}
 .modal-card{background:#fff;border-radius:18px;padding:1.75rem;max-width:480px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto}
@@ -190,7 +212,7 @@ h3 .icon{font-size:15px}
       <textarea id="new-content" placeholder="完整佈達內容，可貼上 LINE 群公告原文"></textarea>
     </div>
     <button class="add-btn" onclick="addAnnouncement()">新增佈達事項</button>
-    <p style="font-size:11.5px;color:var(--ink-2);margin-top:10px;line-height:1.6;background:rgba(79,70,229,.06);border:1px solid rgba(79,70,229,.15);border-radius:10px;padding:9px 12px">💡 新增後會出現在下方，每位同仁旁邊有勾選框。<b>所有變更都只存在本機，請按右上「💾 點此儲存到雲端」才會推到雲端。</b></p>
+    <p style="font-size:11.5px;color:var(--ink-2);margin-top:10px;line-height:1.6;background:rgba(79,70,229,.06);border:1px solid rgba(79,70,229,.15);border-radius:10px;padding:9px 12px">💡 新增後會出現在下方，每位同仁旁邊有勾選框。每則佈達可在卡片內按「+ 新增照片」加照片（會即時上傳到雲端 Drive）。<b>勾選 / 編輯 / 移除照片等變更只存在本機，請按右上「💾 點此儲存到雲端」才會推到雲端。</b></p>
   </div>
 
   <div class="section">
@@ -201,6 +223,11 @@ h3 .icon{font-size:15px}
     <div id="ann-list"></div>
     <span class="saved-tag" id="saved-tag"></span>
   </div>
+</div>
+
+<!-- 照片放大檢視 -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" alt="">
 </div>
 
 <script>
@@ -350,6 +377,28 @@ function render(){
     // title 欄位被當成佈達者使用（雲端欄位名稱不變，避免重新部署 GAS）
     var announcerName = a.title || '（未指定佈達者）';
 
+    // 照片區
+    var photos = Array.isArray(a.photos) ? a.photos : [];
+    var photoThumbs = photos.map(function(p, idx){
+      var src = p.thumb || p.view || '';
+      var fullSrc = p.view || p.thumb || '';
+      return '<div class="photo-thumb">'
+           +   '<img src="'+escapeHtml(src)+'" alt="" loading="lazy" onclick="openLightbox(\''+escapeHtml(fullSrc).replace(/\x27/g,"\\\x27")+'\')" onerror="this.onerror=null;this.src=\''+escapeHtml(p.view || '')+'\'">'
+           +   '<button class="pt-del" onclick="onRemovePhoto(\''+a.id+'\','+idx+')" title="移除這張照片（不會刪除雲端檔案）">✕</button>'
+           + '</div>';
+    }).join('');
+    var photoSection = '<div class="photo-section">'
+                     +   '<div class="ps-title">📷 照片<span class="ps-status" id="ps-status-'+a.id+'">'+(photos.length>0 ? photos.length+' 張' : '可加照片')+'</span></div>'
+                     +   '<div class="photo-row">'
+                     +     photoThumbs
+                     +     '<label class="photo-add" id="photo-add-'+a.id+'">'
+                     +       '<span class="pa-icon">+</span>'
+                     +       '<span>新增照片</span>'
+                     +       '<input type="file" accept="image/*" multiple onchange="onAddPhotos(\''+a.id+'\', this)">'
+                     +     '</label>'
+                     +   '</div>'
+                     + '</div>';
+
     return '<div class="ann-card' + (allDone ? ' all-confirmed' : '') + '">'
          +   '<div class="ann-head">'
          +     '<div class="ann-title-wrap">'
@@ -362,6 +411,7 @@ function render(){
          +     '<button class="ann-del" onclick="onDelete(\''+a.id+'\')" title="刪除這則佈達">✕</button>'
          +   '</div>'
          +   '<div class="ann-content' + (contentRaw ? '' : ' empty-placeholder') + '" contenteditable="true" data-id="'+a.id+'" data-field="content" onblur="onEditField(this)">' + contentHtml + '</div>'
+         +   photoSection
          +   '<div class="confirm-bulk">'
          +     '<button onclick="onBulkAll(\''+a.id+'\', true)">✅ 全部已確認</button>'
          +     '<button onclick="onBulkAll(\''+a.id+'\', false)">↺ 全部清除</button>'
@@ -388,7 +438,8 @@ function addAnnouncement(){
     title: announcer,
     content: content,
     createdAt: new Date().toISOString(),
-    confirms: {}
+    confirms: {},
+    photos: []
   });
   // announcer 維持上次選擇，方便連續新增；只清空內容
   document.getElementById('new-content').value = '';
@@ -440,6 +491,119 @@ function onBulkAll(id, val){
   markDirty();
   render();
 }
+
+// ============================================
+// 照片：上傳 / 移除 / 放大檢視
+// ============================================
+function compressImage(file, maxDim, quality){
+  return new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onload = function(){
+      var img = new Image();
+      img.onload = function(){
+        var w = img.naturalWidth, h = img.naturalHeight;
+        if(w > maxDim || h > maxDim){
+          var ratio = Math.min(maxDim/w, maxDim/h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0,0,w,h);
+        ctx.drawImage(img, 0, 0, w, h);
+        try{
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        }catch(e){ reject(e); }
+      };
+      img.onerror = function(){ reject(new Error('image decode failed')); };
+      img.src = reader.result;
+    };
+    reader.onerror = function(){ reject(new Error('file read failed')); };
+    reader.readAsDataURL(file);
+  });
+}
+
+function onAddPhotos(announcementId, inputEl){
+  if(!syncUrl()){
+    alert('⚠️ 尚未設定雲端網址，沒辦法上傳照片。請先到右上「⚙️ 設定」貼網址。');
+    inputEl.value = '';
+    return;
+  }
+  var files = Array.from(inputEl.files || []);
+  inputEl.value = '';
+  if(files.length === 0) return;
+  var a = (STATE.announcements || []).find(function(x){ return x.id === announcementId; });
+  if(!a) return;
+  if(!Array.isArray(a.photos)) a.photos = [];
+
+  var addBtn = document.getElementById('photo-add-' + announcementId);
+  var statusEl = document.getElementById('ps-status-' + announcementId);
+  if(addBtn) addBtn.classList.add('uploading');
+
+  var done = 0, total = files.length, succeeded = 0;
+  files.forEach(function(file, idx){
+    if(statusEl) statusEl.textContent = '上傳中 ' + (done+1) + '/' + total + '…';
+    compressImage(file, 1600, 0.85).then(function(dataUrl){
+      return callGAS('uploadPhoto', {
+        filename: file.name || ('photo-'+Date.now()+'.jpg'),
+        dataUrl: dataUrl
+      });
+    }).then(function(res){
+      if(res && res.ok && res.fileId){
+        a.photos.push({
+          fileId: res.fileId,
+          name: res.name || file.name || '',
+          thumb: res.thumb || '',
+          view: res.view || '',
+          uploadedAt: new Date().toISOString()
+        });
+        succeeded++;
+        markDirty();
+      } else {
+        console.warn('upload failed', res);
+        flash('❌ ' + (file.name||'') + ' 上傳失敗：' + ((res && res.error) || '未知錯誤'));
+      }
+    }).catch(function(err){
+      console.warn('upload err', err);
+      flash('❌ ' + (file.name||'') + ' 上傳失敗：' + err.message);
+    }).then(function(){
+      done++;
+      if(done === total){
+        if(addBtn) addBtn.classList.remove('uploading');
+        render();
+        if(succeeded > 0){
+          flash('✅ 已上傳 ' + succeeded + ' 張照片到雲端，記得按右上「💾 點此儲存到雲端」把連結存下來');
+        }
+      }
+    });
+  });
+}
+
+function onRemovePhoto(announcementId, idx){
+  var a = (STATE.announcements || []).find(function(x){ return x.id === announcementId; });
+  if(!a || !Array.isArray(a.photos)) return;
+  if(!confirm('要從這則佈達移除這張照片嗎？\n（雲端 Drive 上的檔案不會刪除）')) return;
+  a.photos.splice(idx, 1);
+  markDirty();
+  render();
+}
+
+function openLightbox(src){
+  if(!src) return;
+  var lb = document.getElementById('lightbox');
+  var img = document.getElementById('lightbox-img');
+  img.src = src;
+  lb.classList.add('on');
+}
+function closeLightbox(){
+  document.getElementById('lightbox').classList.remove('on');
+  document.getElementById('lightbox-img').src = '';
+}
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape') closeLightbox();
+});
 
 function onDelete(id){
   var a = (STATE.announcements || []).find(function(x){ return x.id === id; });
