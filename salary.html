@@ -303,8 +303,11 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
   <div class="section">
     <h3>
       <span class="step-num">6</span><span class="icon">💵</span>營業額獎金
-      <span class="hint">自動從該店小結報表計算（A 班 × 該店獎金 %）</span>
+      <span class="hint" id="s5-hint">自動從該店小結報表計算（A 班 × 該店獎金 %）</span>
     </h3>
+    <div id="s5-button-row" style="margin-bottom:8px;display:none">
+      <button class="btn btn-ghost btn-sm" onclick="importSalesBonus()">🔄 從小結報表匯入營業額獎金</button>
+    </div>
     <div id="sales-import-status" style="font-size:11.5px;color:var(--ink-3);margin-bottom:8px"></div>
     <table class="grid">
       <thead><tr><th>員工</th><th style="width:160px">營業額獎金</th></tr></thead>
@@ -671,8 +674,8 @@ function onMonthChange(){
   }
   loadState();
   render();
-  // 換月只自動帶小結（營業額）+ 匿名表（評分），加班費需手動點按鈕
-  doImportSalesBonus(false);
+  // 換月只自動帶小結（營業額，十城手動）+ 匿名表（評分），加班費需手動按鈕
+  autoImportSalesBonusIfAllowed();
   doImportSurveyBonus(false);
   // 嘗試從雲端拉最新（會以雲端值為準，避免覆蓋手動修改）
   pullFromCloud(false);
@@ -1555,6 +1558,26 @@ function doImportSalesBonus(showToast){
   if(showToast) toast(hasRecords ? ('營業額獎金已計算，共 '+matched+' 人') : '本店本月無小結資料', hasRecords ? 'ok' : 'err');
   return matched;
 }
+function importSalesBonus(){ doImportSalesBonus(true); }
+
+// 自動匯入入口：十城店改成手動，避免被覆蓋
+function autoImportSalesBonusIfAllowed(){
+  if(STORE === 'shicheng-zhongxiao') return; // 十城手動：使用者按按鈕才匯入
+  doImportSalesBonus(false);
+}
+
+// 視店家顯示「自動」 vs 「手動」的提示與按鈕
+function setupSalesBonusUI(){
+  var hint   = document.getElementById('s5-hint');
+  var btnRow = document.getElementById('s5-button-row');
+  if(STORE === 'shicheng-zhongxiao'){
+    if(hint) hint.textContent = '十城店：手動點按鈕才會匯入，可避免覆蓋手動修改的數字';
+    if(btnRow) btnRow.style.display = 'block';
+  } else {
+    if(hint) hint.textContent = '自動從該店小結報表計算（A 班 × 該店獎金 %）';
+    if(btnRow) btnRow.style.display = 'none';
+  }
+}
 
 // ============================================
 // 從匿名表匯入（評分表獎金）
@@ -1746,10 +1769,10 @@ function pullFromCloud(showToast){
       STATE = cloud;
       try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
       render();
-      // 雲端讀完後重跑「小結 + 匿名表」自動匯入（這兩個是純讀取算出來的，不會覆蓋人工值）
-      // 加班費(s1/s2/休-1/加班時數/PT工資) 不在這裡跑，避免覆蓋使用者手動修改
-      // 改成必須點「🔄 從加班費系統重新匯入」按鈕才會匯入
-      doImportSalesBonus(false);
+      // 雲端讀完後重跑「小結（十城除外）+ 匿名表」自動匯入
+      // 十城店因為老闆會手動覆蓋營業額獎金，不在 pull 後自動覆蓋掉
+      // 加班費(s1/s2/休-1/加班時數/PT工資) 也是手動才匯入
+      autoImportSalesBonusIfAllowed();
       doImportSurveyBonus(false);
       markSynced();
       var t = res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : '';
@@ -1794,8 +1817,10 @@ loadState();
 render();
 // 載入後先把當前狀態當成「已同步」基準（pullFromCloud 成功會再覆寫成雲端版）
 markSynced();
-// 初次載入只自動帶小結（營業額）+ 匿名表（評分），加班費需點按鈕
-doImportSalesBonus(false);
+// 依店家顯示「自動 / 手動」按鈕（十城手動）
+setupSalesBonusUI();
+// 初次載入：小結（十城除外，需手動）+ 匿名表（自動）
+autoImportSalesBonusIfAllowed();
 doImportSurveyBonus(false);
 // 啟動時從雲端拉最新（若有設定）→ 若雲端較新，會覆寫本地
 pullFromCloud(false);
