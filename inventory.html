@@ -2268,7 +2268,9 @@ function renderHistoryTable(box, stat, records){
       }
     }
     grandTotal += itemTotalAmt;
-    html += '<td class="c-sum zero">—</td><td class="c-sum">'+formatNum(itemTotalAmt)+'</td></tr>';
+    // 該品項月累計金額：負數（退貨多於進貨）→ 紅色粗體
+    var itemAmtStyle = itemTotalAmt < 0 ? ' style="color:#dc2626;font-weight:700"' : '';
+    html += '<td class="c-sum zero">—</td><td class="c-sum"'+itemAmtStyle+'>'+formatNum(itemTotalAmt)+'</td></tr>';
 
     // qty row
     html += '<tr class="qty-row"><td class="c-type">進貨量</td>';
@@ -2280,21 +2282,27 @@ function renderHistoryTable(box, stat, records){
       if(c && c.qty) itemTotalQty += c.qty;  // 負數會自然抵銷（退貨從累計量扣回）
       html += '<td class="cell-edit'+wk+'"><input type="text" inputmode="decimal" class="cell-input" value="'+val+'" placeholder="—" onchange="editCell(\''+nEsc+'\','+d+',\'qty\',this.value)" title="可填負數（退貨）"></td>';
     }
-    html += '<td class="c-sum">'+formatNum(itemTotalQty)+'</td><td class="c-sum zero">—</td></tr>';
+    // 該品項月累計進貨量：負數 → 紅色（整月淨退貨）
+    var itemQtyStyle = itemTotalQty < 0 ? ' style="color:#dc2626;font-weight:700"' : '';
+    html += '<td class="c-sum"'+itemQtyStyle+'>'+formatNum(itemTotalQty)+'</td><td class="c-sum zero">—</td></tr>';
   });
   html += '</tbody>';
 
-  // tfoot：送貨款金額
+  // tfoot：送貨款金額（含退貨負數）
   html += '<tfoot><tr><th colspan="2">送貨款金額</th>';
   for(var d=1; d<=daysInMonth; d++){
     var wk = isWeekend(d) ? ' weekend' : '';
-    if(dailySum[d] > 0){
-      html += '<td class="'+wk.trim()+'">'+formatNum(dailySum[d])+'</td>';
+    if(dailySum[d] !== 0){
+      // 退貨日（負金額）→ 紅色粗體，一眼看出來
+      var negStyle = dailySum[d] < 0 ? ' style="color:#dc2626;font-weight:700"' : '';
+      html += '<td class="'+wk.trim()+'"'+negStyle+'>'+formatNum(dailySum[d])+'</td>';
     }else{
       html += '<td class="zero'+wk+'">—</td>';
     }
   }
-  html += '<td class="c-sum-foot zero">—</td><td class="c-sum-foot">'+formatNum(grandTotal)+'</td></tr></tfoot>';
+  // 月總計：負數也用紅色顯示
+  var grandStyle = grandTotal < 0 ? ' style="color:#dc2626;font-weight:700"' : '';
+  html += '<td class="c-sum-foot zero">—</td><td class="c-sum-foot"'+grandStyle+'>'+formatNum(grandTotal)+'</td></tr></tfoot>';
 
   html += '</table></div>';
   box.innerHTML = html;
