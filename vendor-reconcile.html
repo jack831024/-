@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>廠商對帳（店長版）</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#0284c7;
+  --brand-dark:#0369a1;
+  --brand-light:#e0f2fe;
+  --ink:#0f172a;
+  --ink-2:#475569;
+  --ink-3:#94a3b8;
+  --line:#e2e8f0;
+  --danger:#dc2626;
+  --ok:#10b981;
+  --warn:#f59e0b;
+}
+html,body{height:100%}
+body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;padding:1rem;
+  background:
+    radial-gradient(1000px 500px at 10% -10%, #e0f2fe 0%, transparent 50%),
+    radial-gradient(800px 500px at 110% 10%, #fef3c7 0%, transparent 55%),
+    linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+}
+
+.topbar{max-width:1100px;margin:0 auto 14px;display:flex;align-items:center;gap:10px;padding:4px;flex-wrap:wrap}
+.back-btn{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.85);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);transition:all .2s;box-shadow:0 4px 12px -4px rgba(15,23,42,.08);flex-shrink:0}
+.back-btn:hover{background:#fff;color:var(--brand);transform:translateX(-2px)}
+.back-btn svg{width:17px;height:17px}
+.title-chip{display:flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;background:rgba(255,255,255,.85);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);border-radius:999px;font-size:13px;color:var(--ink);font-weight:600;box-shadow:0 4px 12px -4px rgba(15,23,42,.06)}
+.title-chip .ic{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--brand),#38bdf8);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px}
+.spacer{flex:1}
+.month-picker{padding:8px 12px;font-size:14px;border:1.5px solid var(--line);border-radius:10px;background:rgba(255,255,255,.9);cursor:pointer;color:var(--ink);font-family:inherit;font-weight:600;outline:none;transition:all .18s}
+.month-picker:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(2,132,199,.15)}
+
+.wrap{max-width:1100px;margin:0 auto;padding:0 0 3rem}
+
+.hero-card{background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);border:1px solid rgba(2,132,199,.18);border-radius:20px;padding:1.1rem 1.4rem;margin-bottom:1rem;display:flex;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(2,132,199,.06),0 8px 24px -12px rgba(2,132,199,.2)}
+.hero-icon{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--brand) 0%,#38bdf8 100%);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 8px 20px -8px rgba(2,132,199,.5);flex-shrink:0}
+.hero-text h1{font-size:20px;font-weight:700;letter-spacing:-0.02em;margin-bottom:3px}
+.hero-text p{font-size:12.5px;color:var(--ink-2);line-height:1.55}
+
+.section{background:rgba(255,255,255,.85);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.95);border-radius:18px;padding:1.1rem 1.25rem;margin-bottom:14px;box-shadow:0 1px 2px rgba(15,23,42,.03),0 6px 18px -10px rgba(15,23,42,.08)}
+.section-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.section-head h3{font-size:13px;font-weight:700;color:var(--ink-2);display:flex;align-items:center;gap:6px;letter-spacing:0.01em}
+.section-head h3 .icon{font-size:15px}
+.section-head .grow{flex:1}
+
+.btn{padding:8px 14px;font-size:13px;border:none;border-radius:10px;cursor:pointer;font-family:inherit;font-weight:600;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);color:#fff;box-shadow:0 6px 16px -6px rgba(2,132,199,.45)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 10px 22px -6px rgba(2,132,199,.55)}
+.btn-ghost{background:rgba(255,255,255,.7);border:1.5px solid var(--line);color:var(--ink-2)}
+.btn-ghost:hover{background:#fff;border-color:var(--brand);color:var(--brand)}
+.btn-warn{background:#fef3c7;border:1.5px solid #fbbf24;color:#92400e}
+.btn-warn:hover{background:#fde68a}
+.btn-sm{padding:6px 11px;font-size:12px;border-radius:8px}
+
+.table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line)}
+table.recon{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px;min-width:640px}
+table.recon th{position:sticky;top:0;background:linear-gradient(180deg,#f8fafc 0%,#f1f5f9 100%);text-align:center;padding:10px 8px;font-size:12px;font-weight:700;color:var(--ink-2);border-bottom:2px solid var(--line);white-space:nowrap}
+table.recon th.col-vendor{text-align:left;min-width:140px}
+table.recon th .store-name{display:block;font-size:13px;color:var(--ink);font-weight:700}
+table.recon th .store-tag{font-size:10px;color:var(--ink-3);font-weight:500;letter-spacing:1px}
+table.recon td{padding:6px 8px;border-bottom:1px solid rgba(226,232,240,.6);vertical-align:middle}
+table.recon tbody tr:hover{background:rgba(2,132,199,.03)}
+table.recon tbody tr:last-child td{border-bottom:none}
+
+table.recon td.c-vendor{font-weight:600;color:var(--ink);font-size:13.5px}
+table.recon td.c-vendor input.vendor-input{width:100%;padding:6px 10px;border:1.5px dashed transparent;border-radius:8px;background:transparent;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink);outline:none;transition:all .15s}
+table.recon td.c-vendor input.vendor-input:hover{border-color:var(--line);background:#fff}
+table.recon td.c-vendor input.vendor-input:focus{border-style:solid;border-color:var(--brand);background:#fff;box-shadow:0 0 0 3px rgba(2,132,199,.1)}
+
+table.recon td.c-amt{text-align:right}
+table.recon td.c-amt input.amt-input{width:100%;padding:6px 10px;border:1.5px solid transparent;border-radius:8px;background:transparent;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:13.5px;font-variant-numeric:tabular-nums;text-align:right;color:var(--ink);outline:none;transition:all .15s;min-width:80px}
+table.recon td.c-amt input.amt-input:hover{border-color:var(--line);background:#fff}
+table.recon td.c-amt input.amt-input:focus{border-color:var(--brand);background:#fff;box-shadow:0 0 0 3px rgba(2,132,199,.1)}
+table.recon td.c-amt input.amt-input::placeholder{color:#cbd5e1;font-weight:400}
+
+table.recon td.c-del{width:38px;text-align:center}
+table.recon .del-btn{width:28px;height:28px;border-radius:8px;border:1.5px solid var(--line);background:#fff;color:var(--ink-3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;font-size:14px}
+table.recon .del-btn:hover{border-color:var(--danger);color:var(--danger);background:#fef2f2}
+
+table.recon tfoot td{background:linear-gradient(135deg,rgba(2,132,199,.06) 0%,rgba(2,132,199,.12) 100%);border-top:2px solid var(--brand);padding:10px 8px;font-weight:700}
+table.recon tfoot .ft-label{font-weight:700;color:var(--brand-dark)}
+table.recon tfoot .ft-sum{text-align:right;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:14.5px;font-variant-numeric:tabular-nums;color:var(--brand-dark)}
+
+.add-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
+.add-row input[type=text]{flex:1;min-width:160px;padding:8px 12px;border:1.5px solid var(--line);border-radius:10px;background:#fff;font-family:inherit;font-size:13.5px;color:var(--ink);outline:none;transition:all .15s}
+.add-row input[type=text]:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(2,132,199,.12)}
+
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:6px}
+.summary-grid .stat{background:linear-gradient(135deg,#fff 0%,#f8fafc 100%);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.summary-grid .stat .lbl{font-size:11px;color:var(--ink-3);font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.summary-grid .stat .val{font-size:20px;font-weight:700;color:var(--brand-dark);font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+.summary-grid .stat.zhonghe{border-color:#fdba74}
+.summary-grid .stat.zhonghe .val{color:#c2410c}
+.summary-grid .stat.yongchun{border-color:#fcd34d}
+.summary-grid .stat.yongchun .val{color:#a16207}
+.summary-grid .stat.xinzhuang{border-color:#86efac}
+.summary-grid .stat.xinzhuang .val{color:#15803d}
+.summary-grid .stat.zhongxiao{border-color:#7dd3fc}
+.summary-grid .stat.zhongxiao .val{color:#0369a1}
+
+.note-area{width:100%;margin-top:6px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit;font-size:13px;color:var(--ink);outline:none;resize:vertical;min-height:70px;background:#fff}
+.note-area:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(2,132,199,.1)}
+
+.action-bar{display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+
+/* 雲端同步狀態 chip */
+.sync-chip{padding:7px 13px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;user-select:none;border:1px solid transparent}
+.sync-chip.idle{background:rgba(16,185,129,.14);color:#047857;border-color:#10b981}
+.sync-chip.idle:hover{background:rgba(16,185,129,.22)}
+.sync-chip.dirty{background:rgba(245,158,11,.18);color:#b45309;border-color:#fbbf24;animation:saveBlink 1.4s ease-in-out infinite}
+.sync-chip.dirty:hover{background:rgba(245,158,11,.28)}
+.sync-chip.saving{background:rgba(59,130,246,.15);color:#1d4ed8;border-color:#60a5fa}
+.sync-chip.err{background:rgba(220,38,38,.15);color:#b91c1c;border-color:#fca5a5}
+.sync-chip.off{background:rgba(148,163,184,.18);color:var(--ink-2);border-color:#cbd5e1}
+.sync-chip.off:hover{background:rgba(148,163,184,.28);color:var(--brand-dark);border-color:var(--brand)}
+@keyframes saveBlink{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.5)}50%{box-shadow:0 0 0 6px rgba(245,158,11,0)}}
+
+.gear-btn{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.85);border:1px solid var(--line);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--ink-2);transition:all .15s;font-size:15px}
+.gear-btn:hover{background:#fff;color:var(--brand);border-color:var(--brand)}
+
+/* 設定 modal */
+.modal-mask{position:fixed;inset:0;background:rgba(15,23,42,.42);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:200;padding:1rem}
+.modal-mask.on{display:flex}
+.modal-box{background:#fff;border-radius:18px;padding:1.4rem 1.5rem;max-width:540px;width:100%;box-shadow:0 24px 60px -16px rgba(15,23,42,.32)}
+.modal-box h2{font-size:17px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.modal-box .modal-desc{font-size:12.5px;color:var(--ink-2);line-height:1.7;margin-bottom:14px}
+.modal-box .modal-desc code{background:#f1f5f9;padding:1px 6px;border-radius:4px;font-size:11.5px;font-family:ui-monospace,Menlo,monospace}
+.modal-box input.url-input{width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;outline:none;color:var(--ink);transition:all .15s}
+.modal-box input.url-input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(2,132,199,.12)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);padding:12px 22px;border-radius:12px;background:var(--ink);color:#fff;font-size:13px;font-weight:600;opacity:0;transition:all .28s;pointer-events:none;z-index:100;box-shadow:0 10px 30px -10px rgba(15,23,42,.4)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--danger)}
+.toast.ok{background:var(--ok)}
+
+.hint-row{font-size:12px;color:var(--ink-3);margin-top:6px;line-height:1.6}
+.hint-row b{color:var(--ink-2)}
+
+.hidden-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:rgba(148,163,184,.12);color:var(--ink-2);font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .15s;margin:3px}
+.hidden-pill:hover{background:rgba(2,132,199,.12);color:var(--brand-dark)}
+
+@media print{
+  body{background:#fff;padding:0}
+  .topbar,.btn,.action-bar,.add-row,.del-btn,.note-area{display:none !important}
+  .section{break-inside:avoid;box-shadow:none;border:1px solid #ddd}
+}
+
+@media(max-width:720px){
+  .summary-grid{grid-template-columns:repeat(2,1fr)}
+  .hero-card{padding:1rem 1.1rem}
+  .hero-text h1{font-size:18px}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="goBack()" aria-label="返回">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+  </button>
+  <div class="title-chip">
+    <span class="ic">💵</span>
+    <span>廠商對帳</span>
+  </div>
+  <span class="spacer"></span>
+  <button class="sync-chip off" id="sync-btn" onclick="onSyncBtnClick()" title="儲存到雲端">⛅ 尚未連雲端</button>
+  <button class="gear-btn" onclick="openSettings()" title="雲端網址設定">⚙️</button>
+  <input type="month" id="month-picker" class="month-picker" onchange="onMonthChange()" title="切換月份">
+</div>
+
+<!-- 雲端設定 modal -->
+<div class="modal-mask" id="settings-modal">
+  <div class="modal-box">
+    <h2>⚙️ 雲端同步設定</h2>
+    <p class="modal-desc">
+      把你部署好的 Apps Script <code>/exec</code> 網址貼進來。<br>
+      （腳本檔：<code>廠商對帳-script.gs</code> → 部署為網路應用程式 → Anyone）<br>
+      <b>留空</b>則維持只存本機 localStorage。
+    </p>
+    <input type="text" id="sync-input" class="url-input" placeholder="https://script.google.com/macros/s/AKfyc.../exec">
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeSettings()">取消</button>
+      <button class="btn btn-warn btn-sm" onclick="clearSyncUrl()">清除網址</button>
+      <button class="btn btn-primary btn-sm" onclick="saveSyncUrl()">💾 儲存</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="hero-card">
+    <div class="hero-icon">💵</div>
+    <div class="hero-text">
+      <h1>廠商對帳（店長版）</h1>
+      <p>各家門市每月廠商金額彙整，資料只存在本機 localStorage、不會上傳雲端，<br>切換月份可獨立保存每個月的對帳資料。</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <h3><span class="icon">🚚</span>廠商金額（每月獨立）</h3>
+      <span class="grow"></span>
+      <button class="btn btn-ghost btn-sm" onclick="copyFromLastMonth()" title="把上個月的廠商清單與金額複製過來">📋 從上月複製</button>
+      <button class="btn btn-warn btn-sm" onclick="resetSeedVendors()" title="把廠商清單還原成預設">↻ 還原預設清單</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="recon" id="recon-table">
+        <thead>
+          <tr>
+            <th class="col-vendor">廠商</th>
+            <th><span class="store-tag">CHUDIAN</span><span class="store-name">中和店</span></th>
+            <th><span class="store-tag">CHUDIAN</span><span class="store-name">永春店</span></th>
+            <th><span class="store-tag">CHUDIAN</span><span class="store-name">新莊店</span></th>
+            <th><span class="store-tag">SHICHENG</span><span class="store-name">忠孝店</span></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="recon-tbody"></tbody>
+        <tfoot>
+          <tr>
+            <td class="ft-label">合計</td>
+            <td class="ft-sum" id="sum-zhonghe">0</td>
+            <td class="ft-sum" id="sum-yongchun">0</td>
+            <td class="ft-sum" id="sum-xinzhuang">0</td>
+            <td class="ft-sum" id="sum-zhongxiao">0</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="add-row">
+      <input type="text" id="new-vendor" placeholder="新增廠商名稱…（按 Enter 或點 ＋）" onkeydown="if(event.key==='Enter')addVendor()">
+      <button class="btn btn-primary btn-sm" onclick="addVendor()">＋ 新增廠商</button>
+    </div>
+
+    <div class="hint-row" id="hidden-list"></div>
+    <div class="hint-row">
+      <b>提醒：</b>金額欄可直接輸入數字，會自動儲存。點廠商名稱可直接改名。<span style="color:var(--danger)">×</span> 是隱藏該廠商（之後可從上方還原）。
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <h3><span class="icon">📊</span>每家店總金額</h3>
+    </div>
+    <div class="summary-grid">
+      <div class="stat zhonghe">
+        <span class="lbl">中和店</span>
+        <span class="val" id="card-zhonghe">$0</span>
+      </div>
+      <div class="stat yongchun">
+        <span class="lbl">永春店</span>
+        <span class="val" id="card-yongchun">$0</span>
+      </div>
+      <div class="stat xinzhuang">
+        <span class="lbl">新莊店</span>
+        <span class="val" id="card-xinzhuang">$0</span>
+      </div>
+      <div class="stat zhongxiao">
+        <span class="lbl">忠孝店</span>
+        <span class="val" id="card-zhongxiao">$0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <h3><span class="icon">📝</span>本月備註（選填）</h3>
+    </div>
+    <textarea class="note-area" id="month-note" placeholder="例：某家廠商本月有退貨、調整、或附註說明…" oninput="saveNote()"></textarea>
+  </div>
+
+  <div class="action-bar">
+    <button class="btn btn-ghost" onclick="exportCSV()">📥 匯出 CSV</button>
+    <button class="btn btn-ghost" onclick="window.print()">🖨️ 列印 / 存成 PDF</button>
+    <button class="btn btn-warn" onclick="clearMonth()">🧹 清空本月金額</button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================
+// 廠商對帳 · 店長版
+// 本機 localStorage + 雲端 Google 試算表（透過 Apps Script）
+// ============================================
+
+// 部署好 Apps Script 後可把 /exec 網址寫死在這裡，使用者首次打開就有雲端
+// 例：var BUILTIN_RECONCILE_SYNC_URL = "https://script.google.com/macros/s/AKfyc.../exec";
+var BUILTIN_RECONCILE_SYNC_URL = "https://script.google.com/macros/s/AKfycbxnXtK4WUjGBxDDXFWXlbAZ0yLbXgf94yFCyFtUERnOCthbHM2-Txv-geYvuhn3zlI/exec";
+(function bootstrapBuiltinUrl(){
+  if(BUILTIN_RECONCILE_SYNC_URL && !localStorage.getItem('cd_reconcile_sync_url')){
+    localStorage.setItem('cd_reconcile_sync_url', BUILTIN_RECONCILE_SYNC_URL);
+  }
+})();
+
+// 預設廠商清單：取自盤點表 VENDOR_GROUPS（chudian + shicheng）
+// 已排除：開元、同賀、西北，以及十城的「其他廠商」整組
+var SEED_VENDORS = [
+  '菜商','能源','雜費','潔盈','三億','和興',
+  '巨倉','冰淇淋','歐嘉','養殖人生',
+  '新燁','正順','瑞騰','泰安','以曜','美福'
+];
+
+var STORES = [
+  {key:'zhonghe',   name:'中和店'},
+  {key:'yongchun',  name:'永春店'},
+  {key:'xinzhuang', name:'新莊店'},
+  {key:'zhongxiao', name:'忠孝店'}
+];
+
+// localStorage keys
+var KEY_VENDORS = 'cd_reconcile_vendors';                // 全域廠商清單（不分月）：[{name, hidden}]
+function amountKey(month){ return 'cd_reconcile_amt_' + month; }
+function noteKey(month){ return 'cd_reconcile_note_' + month; }
+
+var currentMonth = todayMonth();
+var vendors = loadVendors();   // [{name, hidden}]
+var amounts = loadAmounts(currentMonth); // {vendorName: {zhonghe, yongchun, xinzhuang, zhongxiao}}
+
+function todayMonth(){
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+function loadVendors(){
+  try{
+    var raw = localStorage.getItem(KEY_VENDORS);
+    if(!raw){
+      // 初始化：用 SEED_VENDORS 灌入
+      var seed = SEED_VENDORS.map(function(n){ return {name:n, hidden:false}; });
+      localStorage.setItem(KEY_VENDORS, JSON.stringify(seed));
+      return seed;
+    }
+    var arr = JSON.parse(raw);
+    if(!Array.isArray(arr)) throw new Error('bad');
+    return arr.map(function(x){
+      return { name:String(x.name||'').trim(), hidden: !!x.hidden };
+    }).filter(function(x){ return x.name; });
+  }catch(e){
+    var seed = SEED_VENDORS.map(function(n){ return {name:n, hidden:false}; });
+    localStorage.setItem(KEY_VENDORS, JSON.stringify(seed));
+    return seed;
+  }
+}
+
+function saveVendors(){
+  localStorage.setItem(KEY_VENDORS, JSON.stringify(vendors));
+  markDirty();
+}
+
+function loadAmounts(month){
+  try{
+    var raw = localStorage.getItem(amountKey(month));
+    if(!raw) return {};
+    var obj = JSON.parse(raw);
+    return (obj && typeof obj === 'object') ? obj : {};
+  }catch(e){ return {}; }
+}
+
+function saveAmounts(){
+  localStorage.setItem(amountKey(currentMonth), JSON.stringify(amounts));
+  markDirty();
+}
+
+function getAmt(vendorName, storeKey){
+  var row = amounts[vendorName];
+  if(!row) return 0;
+  var v = row[storeKey];
+  return (typeof v === 'number' && !isNaN(v)) ? v : 0;
+}
+
+function setAmt(vendorName, storeKey, val){
+  if(!amounts[vendorName]) amounts[vendorName] = {};
+  amounts[vendorName][storeKey] = val;
+  saveAmounts();
+}
+
+// ============================================
+// 渲染
+// ============================================
+function render(){
+  var tbody = document.getElementById('recon-tbody');
+  tbody.innerHTML = '';
+
+  var visible = vendors.filter(function(v){ return !v.hidden; });
+  if(visible.length === 0){
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="6" style="text-align:center;color:#94a3b8;padding:24px 0;font-size:13px">目前沒有顯示中的廠商，請從下方新增或還原預設清單</td>';
+    tbody.appendChild(tr);
+  } else {
+    visible.forEach(function(v, idx){
+      var tr = document.createElement('tr');
+      tr.dataset.vendor = v.name;
+      var cells = '';
+      cells += '<td class="c-vendor"><input class="vendor-input" type="text" value="'+escapeAttr(v.name)+'" '+
+               'onchange="renameVendor(\''+escapeJsAttr(v.name)+'\', this.value)" title="點此修改廠商名稱"></td>';
+      STORES.forEach(function(st){
+        var val = getAmt(v.name, st.key);
+        cells += '<td class="c-amt"><input class="amt-input" type="number" inputmode="decimal" step="1" '+
+                 'value="'+(val ? val : '')+'" placeholder="0" '+
+                 'oninput="onAmtInput(\''+escapeJsAttr(v.name)+'\', \''+st.key+'\', this.value)"></td>';
+      });
+      cells += '<td class="c-del"><button class="del-btn" onclick="hideVendor(\''+escapeJsAttr(v.name)+'\')" title="隱藏此廠商">×</button></td>';
+      tr.innerHTML = cells;
+      tbody.appendChild(tr);
+    });
+  }
+
+  renderHiddenList();
+  renderTotals();
+  renderNote();
+}
+
+function renderHiddenList(){
+  var box = document.getElementById('hidden-list');
+  var hidden = vendors.filter(function(v){ return v.hidden; });
+  if(hidden.length === 0){
+    box.innerHTML = '';
+    return;
+  }
+  var html = '<b>已隱藏（點一下還原）：</b>';
+  hidden.forEach(function(v){
+    html += ' <button class="hidden-pill" onclick="restoreVendor(\''+escapeJsAttr(v.name)+'\')">↻ '+escapeHtml(v.name)+'</button>';
+  });
+  box.innerHTML = html;
+}
+
+function renderTotals(){
+  var totals = { zhonghe:0, yongchun:0, xinzhuang:0, zhongxiao:0 };
+  vendors.forEach(function(v){
+    if(v.hidden) return;
+    STORES.forEach(function(st){
+      totals[st.key] += getAmt(v.name, st.key);
+    });
+  });
+  STORES.forEach(function(st){
+    document.getElementById('sum-' + st.key).textContent = formatNum(totals[st.key]);
+    document.getElementById('card-' + st.key).textContent = '$' + formatNum(totals[st.key]);
+  });
+}
+
+function renderNote(){
+  var raw = localStorage.getItem(noteKey(currentMonth)) || '';
+  document.getElementById('month-note').value = raw;
+}
+
+// ============================================
+// 互動
+// ============================================
+function onAmtInput(vendorName, storeKey, raw){
+  var n = parseFloat(String(raw).replace(/,/g,''));
+  if(isNaN(n)) n = 0;
+  setAmt(vendorName, storeKey, n);
+  renderTotals();
+}
+
+function renameVendor(oldName, newRaw){
+  var newName = String(newRaw||'').trim();
+  if(!newName){
+    showToast('廠商名稱不能空白', 'err');
+    render();
+    return;
+  }
+  if(newName === oldName) return;
+  // 檢查重複
+  var dup = vendors.some(function(v){ return v.name === newName; });
+  if(dup){
+    showToast('「'+newName+'」已存在', 'err');
+    render();
+    return;
+  }
+  // 改名
+  vendors = vendors.map(function(v){
+    if(v.name === oldName) return { name:newName, hidden:v.hidden };
+    return v;
+  });
+  // 把該月的金額 key 也搬過去
+  if(amounts[oldName]){
+    amounts[newName] = amounts[oldName];
+    delete amounts[oldName];
+    saveAmounts();
+  }
+  saveVendors();
+  render();
+  showToast('已改名為「'+newName+'」', 'ok');
+}
+
+function addVendor(){
+  var input = document.getElementById('new-vendor');
+  var name = String(input.value||'').trim();
+  if(!name){ showToast('請輸入廠商名稱', 'err'); return; }
+  // 已存在但被隱藏 → 還原
+  var existing = vendors.find(function(v){ return v.name === name; });
+  if(existing){
+    if(existing.hidden){
+      existing.hidden = false;
+      saveVendors();
+      input.value = '';
+      render();
+      showToast('已還原「'+name+'」', 'ok');
+    } else {
+      showToast('「'+name+'」已存在', 'err');
+    }
+    return;
+  }
+  vendors.push({ name:name, hidden:false });
+  saveVendors();
+  input.value = '';
+  render();
+  showToast('已新增「'+name+'」', 'ok');
+}
+
+function hideVendor(name){
+  var v = vendors.find(function(x){ return x.name === name; });
+  if(!v) return;
+  v.hidden = true;
+  saveVendors();
+  render();
+}
+
+function restoreVendor(name){
+  var v = vendors.find(function(x){ return x.name === name; });
+  if(!v) return;
+  v.hidden = false;
+  saveVendors();
+  render();
+  showToast('已還原「'+name+'」', 'ok');
+}
+
+function resetSeedVendors(){
+  if(!confirm('確定把廠商清單還原成預設嗎？\n\n• 你之前手動新增 / 改名的廠商會被覆蓋\n• 已輸入的金額不會消失（仍按廠商名儲存在每月資料）\n• 預設清單已排除：開元、同賀、西北')) return;
+  vendors = SEED_VENDORS.map(function(n){ return {name:n, hidden:false}; });
+  saveVendors();
+  render();
+  showToast('已還原預設清單', 'ok');
+}
+
+function copyFromLastMonth(){
+  var d = parseMonth(currentMonth);
+  d.setMonth(d.getMonth() - 1);
+  var prev = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  var prevAmt = loadAmounts(prev);
+  if(!prevAmt || Object.keys(prevAmt).length === 0){
+    showToast(prev + ' 沒有資料可複製', 'err');
+    return;
+  }
+  if(!confirm('把 '+prev+' 的金額複製到 '+currentMonth+' 嗎？\n\n• 會覆蓋本月已輸入的金額\n• 廠商清單是全域共用的，不會被改動')) return;
+  amounts = JSON.parse(JSON.stringify(prevAmt));
+  saveAmounts();
+  render();
+  showToast('已從 ' + prev + ' 複製金額', 'ok');
+}
+
+function parseMonth(m){
+  var p = m.split('-');
+  return new Date(parseInt(p[0],10), parseInt(p[1],10)-1, 1);
+}
+
+function onMonthChange(){
+  var picker = document.getElementById('month-picker');
+  currentMonth = picker.value || todayMonth();
+  amounts = loadAmounts(currentMonth);
+  render();
+}
+
+function saveNote(){
+  var v = document.getElementById('month-note').value || '';
+  localStorage.setItem(noteKey(currentMonth), v);
+  markDirty();
+}
+
+// ============================================
+// 🌥️ 雲端同步（Apps Script /exec）
+// ============================================
+var DIRTY = false;
+
+function syncUrl(){ return localStorage.getItem('cd_reconcile_sync_url') || ''; }
+
+function markDirty(){
+  if(DIRTY) return;
+  DIRTY = true;
+  refreshSyncBtn();
+}
+function markClean(){
+  DIRTY = false;
+  refreshSyncBtn();
+}
+
+function refreshSyncBtn(){
+  var btn = document.getElementById('sync-btn');
+  if(!btn) return;
+  if(!syncUrl()){
+    btn.className = 'sync-chip off';
+    btn.textContent = '⛅ 尚未連雲端';
+    btn.title = '點此設定雲端網址';
+    return;
+  }
+  if(DIRTY){
+    btn.className = 'sync-chip dirty';
+    btn.textContent = '⚠️ 有變更 — 點此存到雲端';
+    btn.title = '把目前資料推到 Google 試算表';
+  } else {
+    btn.className = 'sync-chip idle';
+    btn.textContent = '☁️ 已同步';
+    btn.title = '點此重新推送 / 拉取雲端';
+  }
+}
+
+function onSyncBtnClick(){
+  if(!syncUrl()){
+    openSettings();
+    return;
+  }
+  pushToCloud();
+}
+
+function callGAS(action, payload){
+  var url = syncUrl();
+  if(!url) return Promise.reject(new Error('尚未設定雲端網址'));
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(Object.assign({ action: action }, payload || {}))
+  }).then(function(r){ return r.json(); });
+}
+
+// 把目前所有月份的資料整批推上雲端
+function pushToCloud(){
+  if(!syncUrl()){
+    showToast('尚未設定雲端網址', 'err');
+    return;
+  }
+  var btn = document.getElementById('sync-btn');
+  btn.className = 'sync-chip saving';
+  btn.textContent = '⏳ 上傳中…';
+  callGAS('saveReconcile', { data: collectAllForCloud() }).then(function(res){
+    if(res && res.ok){
+      markClean();
+      showToast('✅ 已存到雲端', 'ok');
+    } else {
+      throw new Error((res && res.error) || '雲端回應錯誤');
+    }
+  }).catch(function(err){
+    btn.className = 'sync-chip err';
+    btn.textContent = '❌ 上傳失敗';
+    setTimeout(function(){ refreshSyncBtn(); btn.className = 'sync-chip dirty'; }, 1800);
+    alert('❌ 上傳失敗：' + err.message + '\n\n資料仍保留在本機，可稍後再試。');
+  });
+}
+
+// 從雲端拉，蓋掉本機（雲端為準）
+function pullFromCloud(silent){
+  if(!syncUrl()) return Promise.resolve();
+  return callGAS('getReconcile', {}).then(function(res){
+    if(!res || !res.ok || !res.data) throw new Error((res && res.error) || '雲端回應錯誤');
+    applyCloudData(res.data);
+    markClean();
+    if(!silent) showToast('☁️ 已從雲端載入', 'ok');
+  }).catch(function(err){
+    if(!silent) showToast('❌ 拉取失敗：' + err.message, 'err');
+    console.warn('pullFromCloud:', err);
+  });
+}
+
+// 蒐集所有月份的資料（掃 localStorage）
+function collectAllForCloud(){
+  var months = {};
+  for(var i = 0; i < localStorage.length; i++){
+    var k = localStorage.key(i);
+    if(!k) continue;
+    var m = k.match(/^cd_reconcile_amt_(\d{4}-\d{2})$/);
+    if(m){
+      try{
+        var amt = JSON.parse(localStorage.getItem(k)) || {};
+        if(!months[m[1]]) months[m[1]] = { amounts: {}, note: '' };
+        // 過濾全 0 的條目
+        Object.keys(amt).forEach(function(vn){
+          var entry = amt[vn] || {};
+          var has = false;
+          STORES.forEach(function(st){
+            var n = Number(entry[st.key]);
+            if(!isNaN(n) && n !== 0) has = true;
+          });
+          if(has) months[m[1]].amounts[vn] = entry;
+        });
+        continue;
+      }catch(e){}
+    }
+    var n = k.match(/^cd_reconcile_note_(\d{4}-\d{2})$/);
+    if(n){
+      var note = localStorage.getItem(k) || '';
+      if(!months[n[1]]) months[n[1]] = { amounts: {}, note: '' };
+      months[n[1]].note = note;
+    }
+  }
+  return {
+    vendors: vendors,
+    months: months
+  };
+}
+
+// 把雲端拉下來的資料寫回 localStorage + 重新渲染
+function applyCloudData(data){
+  // 清掉舊的 cd_reconcile_amt_* 與 cd_reconcile_note_*
+  var toRemove = [];
+  for(var i = 0; i < localStorage.length; i++){
+    var k = localStorage.key(i);
+    if(!k) continue;
+    if(/^cd_reconcile_(amt|note)_\d{4}-\d{2}$/.test(k)) toRemove.push(k);
+  }
+  toRemove.forEach(function(k){ localStorage.removeItem(k); });
+
+  // 廠商清單
+  if(Array.isArray(data.vendors)){
+    vendors = data.vendors.map(function(v){
+      return { name: String(v.name || '').trim(), hidden: !!v.hidden };
+    }).filter(function(v){ return v.name; });
+    if(vendors.length === 0){
+      vendors = SEED_VENDORS.map(function(n){ return {name:n, hidden:false}; });
+    }
+    localStorage.setItem(KEY_VENDORS, JSON.stringify(vendors));
+  }
+
+  // 月份資料
+  var months = (data.months && typeof data.months === 'object') ? data.months : {};
+  Object.keys(months).forEach(function(m){
+    var entry = months[m] || {};
+    if(entry.amounts && typeof entry.amounts === 'object'){
+      localStorage.setItem(amountKey(m), JSON.stringify(entry.amounts));
+    }
+    if(entry.note){
+      localStorage.setItem(noteKey(m), String(entry.note));
+    }
+  });
+
+  // 重新讀當月並渲染
+  amounts = loadAmounts(currentMonth);
+  render();
+}
+
+// ============================================
+// ⚙️ 設定 modal
+// ============================================
+function openSettings(){
+  document.getElementById('sync-input').value = syncUrl();
+  document.getElementById('settings-modal').classList.add('on');
+}
+function closeSettings(){
+  document.getElementById('settings-modal').classList.remove('on');
+}
+function saveSyncUrl(){
+  var v = String(document.getElementById('sync-input').value || '').trim();
+  if(v && !/^https:\/\/script\.google\.com\/.+\/exec$/.test(v)){
+    if(!confirm('網址格式看起來不像 Apps Script /exec 網址，仍要儲存嗎？')) return;
+  }
+  if(v) localStorage.setItem('cd_reconcile_sync_url', v);
+  else  localStorage.removeItem('cd_reconcile_sync_url');
+  closeSettings();
+  refreshSyncBtn();
+  if(v){
+    showToast('已儲存 — 正在同步雲端…', 'ok');
+    pullFromCloud(true).then(function(){
+      // 第一次設定：本機若有資料、雲端是空的，就把本機推上去
+      if(DIRTY) pushToCloud();
+    });
+  } else {
+    showToast('已清除雲端網址', 'ok');
+  }
+}
+function clearSyncUrl(){
+  if(!confirm('確定清除雲端網址嗎？\n\n• 之後改成只存本機\n• 雲端的資料不會被刪除')) return;
+  localStorage.removeItem('cd_reconcile_sync_url');
+  closeSettings();
+  refreshSyncBtn();
+  showToast('已清除', 'ok');
+}
+
+function clearMonth(){
+  if(!confirm('確定清空 '+currentMonth+' 的所有金額嗎？\n\n• 廠商清單保留\n• 備註保留\n• 此操作不影響其他月份')) return;
+  amounts = {};
+  saveAmounts();
+  render();
+  showToast('已清空 ' + currentMonth + ' 的金額', 'ok');
+}
+
+function exportCSV(){
+  var headers = ['廠商'].concat(STORES.map(function(s){ return s.name; })).concat(['小計']);
+  var rows = [headers];
+  var totals = {zhonghe:0, yongchun:0, xinzhuang:0, zhongxiao:0};
+  vendors.forEach(function(v){
+    if(v.hidden) return;
+    var rowSum = 0;
+    var line = [v.name];
+    STORES.forEach(function(st){
+      var n = getAmt(v.name, st.key);
+      totals[st.key] += n;
+      rowSum += n;
+      line.push(n);
+    });
+    line.push(rowSum);
+    rows.push(line);
+  });
+  var totalLine = ['合計'];
+  var grand = 0;
+  STORES.forEach(function(st){
+    totalLine.push(totals[st.key]);
+    grand += totals[st.key];
+  });
+  totalLine.push(grand);
+  rows.push(totalLine);
+
+  var csv = rows.map(function(r){
+    return r.map(function(c){
+      var s = String(c == null ? '' : c);
+      if(/[",\n]/.test(s)) s = '"' + s.replace(/"/g,'""') + '"';
+      return s;
+    }).join(',');
+  }).join('\n');
+
+  var bom = '﻿';
+  var blob = new Blob([bom + csv], {type:'text/csv;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '廠商對帳_' + currentMonth + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  showToast('已匯出 CSV', 'ok');
+}
+
+// ============================================
+// 工具
+// ============================================
+function formatNum(n){
+  if(!n) return '0';
+  return Number(n).toLocaleString('en-US', {maximumFractionDigits:2});
+}
+
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, function(c){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+  });
+}
+function escapeAttr(s){ return escapeHtml(s); }
+function escapeJsAttr(s){
+  return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"');
+}
+
+function showToast(msg, type){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type || '');
+  clearTimeout(showToast._tm);
+  showToast._tm = setTimeout(function(){ t.className = 'toast'; }, 1800);
+}
+
+function goBack(){
+  // 若有 sessionStorage 來自 home，回 home；否則 history.back
+  if(document.referrer && document.referrer.indexOf('home.html') >= 0){
+    window.location.href = 'home.html';
+  } else {
+    window.location.href = 'home.html';
+  }
+}
+
+// ============================================
+// 啟動
+// ============================================
+(function init(){
+  document.getElementById('month-picker').value = currentMonth;
+  render();
+  refreshSyncBtn();
+  // 已設定雲端網址 → 自動拉一次（雲端為準）
+  if(syncUrl()){
+    pullFromCloud(true);
+  }
+  // 點 modal 外面關閉
+  document.getElementById('settings-modal').addEventListener('click', function(e){
+    if(e.target === this) closeSettings();
+  });
+  // 離開頁面前提醒未存
+  window.addEventListener('beforeunload', function(e){
+    if(DIRTY && syncUrl()){
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+})();
+</script>
+</body>
+</html>
