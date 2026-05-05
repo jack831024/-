@@ -319,7 +319,7 @@ const DEFAULT_STATE = {
     chips: [
       { text: '客單 500', cls: '' },
       { text: '25-39 女性 65%', cls: '' },
-      { text: '三店活動統一', cls: 'gold' },
+      { text: '三店彈性執行', cls: 'gold' },
       { text: '特色記憶點 + UGC + KOL', cls: 'ink' },
       { text: '寵物友善', cls: 'ink' },
     ],
@@ -366,7 +366,7 @@ const DEFAULT_STATE = {
         '八種特色記憶點類型：加購／升級（1 元肉蛋糕）、桌邊秀（揭金蓋、火焰、月升、乾冰瀑布）、節慶挑戰（立蛋、許願池）、DIY 體驗（湯圓、南瓜、擺盤）、變裝主題（兒童動物裝、員工萬聖）、打卡道具（紅包牆、合照框、感謝牆）、限量／搶購（11:11、跨年倒數鍋）、集體儀式（倒數、零點加肉）。',
         'KOL／UGC 友善 4 條件（合格鉤子要過這 4 關）：(1) 30 秒內可拍完（IG Reels／TikTok 時長）(2) 視覺有差別（不是普通火鍋）(3) 可重現（KOL + 客人都能體驗到一樣的）(4) 有故事或挑戰（讓 KOL 有 caption 寫）。',
         '主套餐定價 ≈ 500 × 1.3 ~ 1.5 = 650 ~ 750。客人感受是「升級值得」，不是「被加價」。鉤子總成本（道具＋人力＋KOL 配合費）≤ 套餐毛利的 20%。',
-        '三店活動統一執行：每檔期同樣的套餐、同樣的鉤子、同樣的文案。差異只在「主推門市」（資源傾斜方向）。',
+        '三店活動可彈性：預設全店一致（簡化執行、KOL 拍一次三店都能用）；但某店若有獨特機會（例如新莊體育館有大演唱會、永春突有商圈活動），該店可獨立加碼或單做活動。',
         '特色鉤子必須有視覺爆點（造型、煙霧、高度、火焰、變裝、道具），讓客人有理由拍照打卡。',
         '三條傳播線：視覺記憶點（IG/Threads/小紅書 分享）／儀式感（命名＋揭蓋／敲擊／合照動作）／限時稀缺（檔期短、限量限時、月底抽獎）。',
         '鬼月（農曆 7 月，多在 8 月）禁忌：避免黑紅暗色、血滴造型、煮人形聯想。',
@@ -786,7 +786,6 @@ function renderMonthCard(m, idx){
       </div>
       <div class="mrow">
         <span class="mtag store ${storeClass(m.mainStore)}">主推 · <span data-path="months.${idx}.mainStore" data-single="1">${escapeHtml(m.mainStore)}</span></span>
-        ${(m.stores||[]).length === 3 ? '<span class="mtag all">三店活動統一</span>' : ''}
       </div>
       <div class="mrow-quick">
         <span><b>套餐：</b><span data-path="months.${idx}.packages.0.name" data-single="1">${escapeHtml(m.packages[0]?.name || '')}</span>（活動 <span data-path="months.${idx}.packages.0.price" data-single="1">${escapeHtml(m.packages[0]?.price || '')}</span>）</span>
@@ -842,13 +841,12 @@ function renderExpand(m, idx){
         <h4>特色記憶點（UGC / KOL 鉤子）</h4>
         <div class="hook-card">
           <div class="hook-name" data-path="months.${idx}.hook.name" data-single="1">${escapeHtml(m.hook.name)}</div>
-          <span class="hook-price" data-path="months.${idx}.hook.price" data-single="1">${escapeHtml(m.hook.price)}</span>
           <div class="hook-desc" data-path="months.${idx}.hook.desc">${escapeHtml(m.hook.desc)}</div>
           <div class="hook-kol" data-path="months.${idx}.hook.kolAngle"><b>📹 KOL 拍攝角度：</b>${escapeHtml(m.hook.kolAngle || '（待補）')}</div>
         </div>
       </div>
       <div class="full">
-        <h4>全店通用操作（三店一致）</h4>
+        <h4>操作要點（可分店執行）</h4>
         <ul class="editlist">${opsHtml}</ul>
         <button class="add-btn" data-action="add-op" data-idx="${idx}">+ 新增操作</button>
       </div>
