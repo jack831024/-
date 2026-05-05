@@ -231,12 +231,13 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
       </div>
       <div class="row"><span class="label">淨銷售額</span><input class="amt-input ai-only" id="b-net" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
       <div class="row"><span class="label">預期錢櫃金額</span><input class="amt-input ai-only" id="i-expected" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
-      <div class="row"><span class="label">小結提現</span><input class="amt-input ai-only" id="i-withdrawal" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
-      <div class="row"><span class="label">小結代收</span><input class="amt-input ai-only" id="i-daishuo" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
-      <div class="row"><span class="label">全支付（小結）</span><input class="amt-input ai-only" id="b-jkopay" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
-      <div class="row"><span class="label">街口（小結）</span><input class="amt-input ai-only" id="b-jko" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
-      <div class="row"><span class="label">退單金額</span><input class="amt-input ai-only" id="b-refund" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
-      <div class="row"><span class="label">取消金額</span><input class="amt-input ai-only" id="b-cancel" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
+      <div class="row"><span class="label">提現</span><input class="amt-input ai-only" id="i-withdrawal" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
+      <div class="row"><span class="label">代收</span><input class="amt-input ai-only" id="i-daishuo" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
+      <div class="row"><span class="label">代支</span><input class="amt-input ai-only" id="b-daizhi" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
+      <div class="row"><span class="label">全支付</span><input class="amt-input ai-only" id="b-jkopay" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
+      <div class="row"><span class="label">街口</span><input class="amt-input ai-only" id="b-jko" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
+      <div class="row"><span class="label">退單</span><input class="amt-input ai-only" id="b-refund" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
+      <div class="row"><span class="label">取消單</span><input class="amt-input ai-only" id="b-cancel" type="number" placeholder="🔒 等待 AI 讀取" readonly></div>
       <div class="row" style="align-items:flex-start;padding-top:10px">
         <span class="label">📝 備註</span>
         <textarea id="i-remark" placeholder="今日備註（可留空）" rows="2" style="flex:1;min-height:50px;font-size:13px;padding:6px 8px;border:1px solid #ddd;border-radius:8px;background:#fafafa;outline:none;resize:vertical;font-family:inherit"></textarea>
@@ -282,6 +283,11 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
     </div>
     <div class="thumb-row" id="thumbs-refund"></div>
     <div class="ai-status-line" id="ai-status-refund" style="display:none"><span class="spinner" id="spin-refund"></span><span id="btxt-refund">AI 讀取中...</span></div>
+    <div class="row sep">
+      <span class="label">截圖 AI 合計</span>
+      <input class="amt-input" id="i-refund-app" type="number" placeholder="—" oninput="recalc()">
+      <span class="status neutral" id="s-refund">—</span>
+    </div>
     <div class="row sep" style="border-bottom:none;align-items:flex-start;padding-top:10px">
       <span class="label" style="padding-top:7px">備註</span>
       <textarea id="i-refund-note" placeholder="退單原因、單號、說明..." style="flex:1;min-width:0;min-height:52px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;background:#fafafa;font-size:13px;font-family:inherit;outline:none;resize:vertical;line-height:1.5"></textarea>
@@ -296,9 +302,33 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
     </div>
     <div class="thumb-row" id="thumbs-cancel"></div>
     <div class="ai-status-line" id="ai-status-cancel" style="display:none"><span class="spinner" id="spin-cancel"></span><span id="btxt-cancel">AI 讀取中...</span></div>
+    <div class="row sep">
+      <span class="label">截圖 AI 合計</span>
+      <input class="amt-input" id="i-cancel-app" type="number" placeholder="—" oninput="recalc()">
+      <span class="status neutral" id="s-cancel">—</span>
+    </div>
     <div class="row sep" style="border-bottom:none;align-items:flex-start;padding-top:10px">
       <span class="label" style="padding-top:7px">備註</span>
       <textarea id="i-cancel-note" placeholder="取消原因、單號、說明..." style="flex:1;min-width:0;min-height:52px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;background:#fafafa;font-size:13px;font-family:inherit;outline:none;resize:vertical;line-height:1.5"></textarea>
+    </div>
+  </div>
+  <div class="section">
+    <h3>代支截圖 <span class="ai-tag">AI 自動讀取</span></h3>
+    <div class="upload-zone">
+      <input type="file" accept="image/*" multiple onchange="handleFiles(this,'daizhi')">
+      <span class="uz-icon">💸</span>
+      <span class="uz-label">上傳代支單據（可多張）</span>
+    </div>
+    <div class="thumb-row" id="thumbs-daizhi"></div>
+    <div class="ai-status-line" id="ai-status-daizhi" style="display:none"><span class="spinner" id="spin-daizhi"></span><span id="btxt-daizhi">AI 讀取中...</span></div>
+    <div class="row sep">
+      <span class="label">截圖 AI 合計</span>
+      <input class="amt-input" id="i-daizhi-app" type="number" placeholder="—" oninput="recalc()">
+      <span class="status neutral" id="s-daizhi">—</span>
+    </div>
+    <div class="row sep" style="border-bottom:none;align-items:flex-start;padding-top:10px">
+      <span class="label" style="padding-top:7px">備註</span>
+      <textarea id="i-daizhi-note" placeholder="代支說明、單號..." style="flex:1;min-width:0;min-height:52px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;background:#fafafa;font-size:13px;font-family:inherit;outline:none;resize:vertical;line-height:1.5"></textarea>
     </div>
   </div>
   <div class="section">
@@ -317,7 +347,7 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
       <button onclick="addItem('w')">＋ 新增</button>
     </div>
     <div class="total-row"><span class="tlabel">提現合計</span><span class="tamt" id="w-total">NT$ 0</span></div>
-    <div class="row sep" style="border-bottom:none"><span class="label">vs 小結提現</span><span class="status neutral" id="s-withdrawal">—</span></div>
+    <div class="row sep" style="border-bottom:none"><span class="label">vs 提現（小結）</span><span class="status neutral" id="s-withdrawal">—</span></div>
   </div>
   <div class="section">
     <h3>代收明細 <span class="ai-tag">AI 自動讀取</span></h3>
@@ -335,7 +365,7 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
       <button onclick="addItem('d')">＋ 新增</button>
     </div>
     <div class="total-row"><span class="tlabel">代收合計</span><span class="tamt" id="d-total">NT$ 0</span></div>
-    <div class="row sep" style="border-bottom:none"><span class="label">vs 小結代收</span><span class="status neutral" id="s-daishuo">—</span></div>
+    <div class="row sep" style="border-bottom:none"><span class="label">vs 代收（小結）</span><span class="status neutral" id="s-daishuo">—</span></div>
   </div>
   <div class="section">
     <h3>存款憑證 <span class="ai-tag">AI 自動讀取</span><span class="status err" id="deposit-status-tag" style="margin-left:auto;display:none">⚠️ 尚未處理</span></h3>
@@ -447,7 +477,7 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.05.04-04';
+var APP_VERSION = '2026.05.05-01';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -871,7 +901,7 @@ function parseJson(raw){
 
 // ==== 主要邏輯 ====
 var store = {w:[], d:[]};
-var imgs = {summary:[], jkopay:[], jko:[], w:[], d:[], deposit:[], refund:[], cancel:[]};
+var imgs = {summary:[], jkopay:[], jko:[], w:[], d:[], deposit:[], refund:[], cancel:[], daizhi:[]};
 function fmt(n){ return Math.round(n).toLocaleString(); }
 
 function handleFiles(input, key){
@@ -898,6 +928,7 @@ function handleFiles(input, key){
     else if(key === 'w' || key === 'd') analyzeReceipts(key, newFiles);
     else if(key === 'refund')     analyzeRefund(newFiles);
     else if(key === 'cancel')     analyzeCancel(newFiles);
+    else if(key === 'daizhi')     analyzeDaizhi(newFiles);
   }
 }
 
@@ -992,6 +1023,12 @@ async function analyzeSummary(filesToAnalyze){
 '  ⚠️ 不要把「代付」「代繳」當 daishuo（除非那真的是代收欄位）。\n' +
 '  ⚠️ 不要與「總代收金額／代收項目數」這種「筆數」欄位混淆，daishuo 要的是「金額」。\n' +
 '\n' +
+'【欄位 6.5：daizhi = 代支合計】\n' +
+'  別名：代支／代支合計／代支總計／代付／代墊／代墊支出／代繳\n' +
+'  ⚠️ 如果有多筆代支項目，請全部加總。\n' +
+'  🚨 代支【不等於】代收！代收是收進來的錢、代支是付出去的錢，方向完全相反，絕對不要互填。\n' +
+'  ⚠️ 看不到代支欄位就填 null（不要拿代收當代支）。\n' +
+'\n' +
 '【欄位 7：jkopay = 全支付】\n' +
 '  別名：全支付／全盈+PAY／全盈PAY／全盈／PXPay／PX Pay+／PX 全支付\n' +
 '  通常在「行動支付」「電子支付」「第三方支付」區塊，跟街口、Line Pay 並列。\n' +
@@ -1018,13 +1055,13 @@ async function analyzeSummary(filesToAnalyze){
 '  - 只回傳純 JSON，不要 markdown 圍欄、不要任何說明文字\n' +
 '\n' +
 '【輸出格式】\n' +
-'{"opening":number|null,"net":number|null,"cash":number|null,"expected":number|null,"withdrawal":number|null,"daishuo":number|null,"jkopay":number|null,"jko":number|null,"refund":number|null,"cancel":number|null}';
+'{"opening":number|null,"net":number|null,"cash":number|null,"expected":number|null,"withdrawal":number|null,"daishuo":number|null,"daizhi":number|null,"jkopay":number|null,"jko":number|null,"refund":number|null,"cancel":number|null}';
     var raw = await geminiCall(targets, prompt);
     console.log('Gemini 回應：', raw);
     var p = parseJson(raw);
     console.log('解析後：', p);
     // 注意：b-cash 欄位已移除，所以 map 裡沒有 cash
-    var map = {opening:'i-opening', net:'b-net', expected:'i-expected', withdrawal:'i-withdrawal', daishuo:'i-daishuo', jkopay:'b-jkopay', jko:'b-jko', refund:'b-refund', cancel:'b-cancel'};
+    var map = {opening:'i-opening', net:'b-net', expected:'i-expected', withdrawal:'i-withdrawal', daishuo:'i-daishuo', daizhi:'b-daizhi', jkopay:'b-jkopay', jko:'b-jko', refund:'b-refund', cancel:'b-cancel'};
     var filled = [];
     var missing = [];
     var skipped = [];
@@ -1293,7 +1330,8 @@ async function analyzeRefund(filesToAnalyze){
     console.log('[Refund] Gemini 回應：', raw);
     var p = parseJson(raw);
     console.log('[Refund] 解析後：', p);
-    var refundEl = document.getElementById('b-refund');
+    // ⭐ 改寫到 i-refund-app（截圖 AI 合計欄位）— 不要蓋掉 b-refund（小結報表的 AI 讀值）
+    var refundEl = document.getElementById('i-refund-app');
     if(refundEl && p.refund != null && !isNaN(parseFloat(p.refund))){
       var addAmount = parseFloat(p.refund);
       var oldAmount = parseFloat(refundEl.value) || 0;
@@ -1349,7 +1387,8 @@ async function analyzeCancel(filesToAnalyze){
     console.log('[Cancel] Gemini 回應：', raw);
     var p = parseJson(raw);
     console.log('[Cancel] 解析後：', p);
-    var cancelEl = document.getElementById('b-cancel');
+    // ⭐ 改寫到 i-cancel-app（截圖 AI 合計欄位）— 不要蓋掉 b-cancel（小結報表的 AI 讀值）
+    var cancelEl = document.getElementById('i-cancel-app');
     if(cancelEl && p.cancel != null && !isNaN(parseFloat(p.cancel))){
       var addAmount = parseFloat(p.cancel);
       var oldAmount = parseFloat(cancelEl.value) || 0;
@@ -1372,6 +1411,60 @@ async function analyzeCancel(filesToAnalyze){
     }
   } catch(e){
     console.error('[Cancel] 讀取錯誤：', e);
+    if(line) line.className = 'ai-status-line err';
+    if(spin) spin.className = 'spinner';
+    if(btxt) btxt.textContent = '讀取失敗：' + (e.message || '未知錯誤');
+  }
+}
+
+// 代支截圖 AI 識別（只讀代支金額，不管代收/提現）
+// ⭐ 只分析新上傳的圖片；結果累加到既有金額（不覆蓋）
+async function analyzeDaizhi(filesToAnalyze){
+  if(!hasApiKey()) return;
+  var targets = filesToAnalyze || imgs.daizhi;
+  if(!targets || targets.length === 0) return;
+  var line = document.getElementById('ai-status-daizhi');
+  var spin = document.getElementById('spin-daizhi');
+  var btxt = document.getElementById('btxt-daizhi');
+  if(line){ line.style.display = 'flex'; line.className = 'ai-status-line'; }
+  if(spin) spin.className = 'spinner on';
+  if(btxt) btxt.textContent = 'AI 讀取中（' + targets.length + ' 張新圖）...';
+  try{
+    var prompt = '這些是【代支】單據／收據（店家代墊／代付的支出）。' +
+      '⚠️ 重要：只要「代支／代付／代墊」的金額，代收（收進來的錢）絕對不算！' +
+      '代支別名：代支、代付、代墊、代墊支出、代繳。' +
+      '🚨 代支【不等於】代收！代收方向是收進來、代支方向是付出去，絕對不要混淆。' +
+      '如果有多筆代支，全部加總。' +
+      '沒看到代支就回傳 0。' +
+      '\n只回傳 JSON（不要 markdown、不要說明）：' +
+      '\n{"daizhi":代支金額加總}';
+    var raw = await geminiCall(targets, prompt);
+    console.log('[Daizhi] Gemini 回應：', raw);
+    var p = parseJson(raw);
+    console.log('[Daizhi] 解析後：', p);
+    var daizhiEl = document.getElementById('i-daizhi-app');
+    if(daizhiEl && p.daizhi != null && !isNaN(parseFloat(p.daizhi))){
+      var addAmount = parseFloat(p.daizhi);
+      var oldAmount = parseFloat(daizhiEl.value) || 0;
+      if(filesToAnalyze){
+        daizhiEl.value = oldAmount + addAmount;
+      }else{
+        daizhiEl.value = addAmount;
+      }
+      recalc();
+      if(line) line.className = 'ai-status-line done';
+      if(spin) spin.className = 'spinner';
+      if(btxt) btxt.textContent = (filesToAnalyze
+        ? '✓ 新增代支 ' + addAmount + '（合計 ' + daizhiEl.value + '）'
+        : '✓ 讀取完成：代支 ' + addAmount) + '（請按「💾 儲存到雲端」）';
+      markDirty();
+    } else {
+      if(line) line.className = 'ai-status-line err';
+      if(spin) spin.className = 'spinner';
+      if(btxt) btxt.textContent = '⚠️ AI 沒讀到代支金額';
+    }
+  } catch(e){
+    console.error('[Daizhi] 讀取錯誤：', e);
     if(line) line.className = 'ai-status-line err';
     if(spin) spin.className = 'spinner';
     if(btxt) btxt.textContent = '讀取失敗：' + (e.message || '未知錯誤');
@@ -1847,14 +1940,46 @@ function recalc(){
     if(jkApp === jkRef){ sJk.textContent = '一致'; sJk.className = 'status ok'; jkOk = true; }
     else { sJk.textContent = '差 NT$ ' + fmt(Math.abs(jkApp - jkRef)); sJk.className = 'status err'; jkOk = false; }
   } else { sJk.textContent = '—'; sJk.className = 'status neutral'; }
+
+  // 退單 / 取消單 / 代支 — 截圖 AI 合計 vs 小結 AI 讀值
+  var rfApp = parseFloat(document.getElementById('i-refund-app').value) || 0;
+  var rfRef = parseFloat(document.getElementById('b-refund').value) || 0;
+  var sRf = document.getElementById('s-refund');
+  var rfOk = null;
+  if(rfApp || rfRef){
+    if(rfApp === rfRef){ sRf.textContent = '一致'; sRf.className = 'status ok'; rfOk = true; }
+    else { sRf.textContent = '差 NT$ ' + fmt(Math.abs(rfApp - rfRef)); sRf.className = 'status err'; rfOk = false; }
+  } else { sRf.textContent = '—'; sRf.className = 'status neutral'; }
+
+  var cnApp = parseFloat(document.getElementById('i-cancel-app').value) || 0;
+  var cnRef = parseFloat(document.getElementById('b-cancel').value) || 0;
+  var sCn = document.getElementById('s-cancel');
+  var cnOk = null;
+  if(cnApp || cnRef){
+    if(cnApp === cnRef){ sCn.textContent = '一致'; sCn.className = 'status ok'; cnOk = true; }
+    else { sCn.textContent = '差 NT$ ' + fmt(Math.abs(cnApp - cnRef)); sCn.className = 'status err'; cnOk = false; }
+  } else { sCn.textContent = '—'; sCn.className = 'status neutral'; }
+
+  var dzApp = parseFloat(document.getElementById('i-daizhi-app').value) || 0;
+  var dzRef = parseFloat(document.getElementById('b-daizhi').value) || 0;
+  var sDz = document.getElementById('s-daizhi');
+  var dzOk = null;
+  if(dzApp || dzRef){
+    if(dzApp === dzRef){ sDz.textContent = '一致'; sDz.className = 'status ok'; dzOk = true; }
+    else { sDz.textContent = '差 NT$ ' + fmt(Math.abs(dzApp - dzRef)); sDz.className = 'status err'; dzOk = false; }
+  } else { sDz.textContent = '—'; sDz.className = 'status neutral'; }
+
   recalcNextDay();
   var errors = [];
   if(wOk === false) errors.push('提現金額不一致');
   if(dOk === false) errors.push('代收金額不一致');
   if(jpOk === false) errors.push('全支付金額不一致');
   if(jkOk === false) errors.push('街口金額不一致');
+  if(rfOk === false) errors.push('退單金額不一致');
+  if(cnOk === false) errors.push('取消單金額不一致');
+  if(dzOk === false) errors.push('代支金額不一致');
   var ra = document.getElementById('result-area');
-  var hasAny = wOk !== null || dOk !== null || jpOk !== null || jkOk !== null;
+  var hasAny = wOk !== null || dOk !== null || jpOk !== null || jkOk !== null || rfOk !== null || cnOk !== null || dzOk !== null;
   if(!hasAny){ ra.innerHTML = ''; return; }
   if(errors.length === 0){
     ra.innerHTML = '<div class="result-box result-ok"><p class="rtitle">所有項目確認無誤</p></div>';
@@ -1864,7 +1989,7 @@ function recalc(){
 }
 
 // ==== 紀錄儲存/讀取 ====
-var INPUT_IDS = ['i-shift-a','i-opening','b-net','i-expected','i-withdrawal','i-daishuo','b-jkopay','b-jko','b-refund','b-cancel','i-remark','i-jkopay','i-jko','i-deposit','i-refund-note','i-cancel-note'];
+var INPUT_IDS = ['i-shift-a','i-opening','b-net','i-expected','i-withdrawal','i-daishuo','b-daizhi','b-jkopay','b-jko','b-refund','b-cancel','i-remark','i-jkopay','i-jko','i-deposit','i-refund-note','i-cancel-note','i-refund-app','i-cancel-app','i-daizhi-app','i-daizhi-note'];
 
 function todayStr(){
   var d = new Date();
@@ -2503,7 +2628,7 @@ function importAll(input){
 }
 
 // ==== 圖片壓縮與處理 ====
-var IMAGE_SECTIONS = ['summary','jkopay','jko','w','d','deposit','refund','cancel'];
+var IMAGE_SECTIONS = ['summary','jkopay','jko','w','d','deposit','refund','cancel','daizhi'];
 
 function compressImage(file, targetBytes){
   if(!targetBytes) targetBytes = 300 * 1024;
