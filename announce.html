@@ -101,6 +101,21 @@ h3 .icon{font-size:15px}
 
 .saved-tag{font-size:12px;color:var(--ok);margin-top:6px;display:block;text-align:right;font-weight:500;min-height:16px}
 
+/* 未確認 / 已確認 分區 */
+.ann-group{margin-top:14px}
+.ann-group:first-child{margin-top:0}
+.ann-group-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;border-radius:11px;font-size:12.5px;font-weight:700;letter-spacing:.5px;cursor:pointer;user-select:none;transition:all .15s}
+.ann-group-head:hover{filter:brightness(.97)}
+.ann-group-head .gh-count{margin-left:auto;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-weight:700;font-size:12px;padding:2px 10px;border-radius:999px}
+.ann-group-head .gh-arrow{font-size:11px;transition:transform .15s}
+.ann-group.collapsed .gh-arrow{transform:rotate(-90deg)}
+.ann-group.collapsed .ann-group-body{display:none}
+.ann-group.unconfirmed .ann-group-head{background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);color:#92400e;border:1px solid rgba(245,158,11,.3)}
+.ann-group.unconfirmed .ann-group-head .gh-count{background:rgba(245,158,11,.2);color:#92400e}
+.ann-group.confirmed .ann-group-head{background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%);color:#047857;border:1px solid rgba(16,185,129,.3)}
+.ann-group.confirmed .ann-group-head .gh-count{background:rgba(16,185,129,.2);color:#047857}
+.ann-group-empty{padding:12px;text-align:center;color:var(--ink-3);font-size:12px;font-style:italic}
+
 /* 照片區 */
 .photo-section{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
 .photo-section .ps-title{font-size:11.5px;font-weight:700;color:var(--ink-3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px}
@@ -337,6 +352,23 @@ function escapeHtml(s){
   });
 }
 
+// 折疊狀態（記在記憶體；換頁就重置，預設都展開）
+var GROUP_COLLAPSED = { unconfirmed: false, confirmed: false };
+function toggleGroup(name){
+  GROUP_COLLAPSED[name] = !GROUP_COLLAPSED[name];
+  var el = document.getElementById('group-' + name);
+  if(el) el.classList.toggle('collapsed');
+}
+
+// 一則佈達是否「全部需要確認的同仁都已確認」
+function isAllConfirmed(a){
+  var announcerName = a.title || '';
+  var staffToConfirm = STAFF.filter(function(s){ return s.name !== announcerName; });
+  if(staffToConfirm.length === 0) return false; // 沒人需要確認就不算
+  var confirms = a.confirms || {};
+  return staffToConfirm.every(function(s){ return confirms[s.name] && confirms[s.name].confirmed; });
+}
+
 function render(){
   var list = document.getElementById('ann-list');
   var arr = STATE.announcements || [];
@@ -351,7 +383,10 @@ function render(){
     return (b.createdAt || '').localeCompare(a.createdAt || '');
   });
 
-  list.innerHTML = sorted.map(function(a){
+  var unconfirmedArr = sorted.filter(function(a){ return !isAllConfirmed(a); });
+  var confirmedArr   = sorted.filter(function(a){ return  isAllConfirmed(a); });
+
+  function renderCard(a){
     var confirms = a.confirms || {};
     var announcerName = a.title || '';
     // 確認名單排除佈達者本人
@@ -421,7 +456,33 @@ function render(){
          +   '</div>'
          +   '<div class="confirm-list">' + items + '</div>'
          + '</div>';
-  }).join('');
+  }
+
+  // 兩個分區
+  var unconfirmedHtml = unconfirmedArr.length === 0
+    ? '<div class="ann-group-empty">— 目前沒有未確認的佈達 —</div>'
+    : unconfirmedArr.map(renderCard).join('');
+  var confirmedHtml = confirmedArr.length === 0
+    ? '<div class="ann-group-empty">— 還沒有全部人確認過的佈達 —</div>'
+    : confirmedArr.map(renderCard).join('');
+
+  list.innerHTML =
+      '<div class="ann-group unconfirmed' + (GROUP_COLLAPSED.unconfirmed ? ' collapsed' : '') + '" id="group-unconfirmed">'
+    +   '<div class="ann-group-head" onclick="toggleGroup(\'unconfirmed\')">'
+    +     '<span class="gh-arrow">▼</span>'
+    +     '🟠 未確認區'
+    +     '<span class="gh-count">' + unconfirmedArr.length + ' 則</span>'
+    +   '</div>'
+    +   '<div class="ann-group-body">' + unconfirmedHtml + '</div>'
+    + '</div>'
+    + '<div class="ann-group confirmed' + (GROUP_COLLAPSED.confirmed ? ' collapsed' : '') + '" id="group-confirmed">'
+    +   '<div class="ann-group-head" onclick="toggleGroup(\'confirmed\')">'
+    +     '<span class="gh-arrow">▼</span>'
+    +     '✅ 已全部確認區'
+    +     '<span class="gh-count">' + confirmedArr.length + ' 則</span>'
+    +   '</div>'
+    +   '<div class="ann-group-body">' + confirmedHtml + '</div>'
+    + '</div>';
 }
 
 // ============================================
