@@ -422,7 +422,7 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
     <h3><span class="step-num">4</span>本批品項明細
       <span style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:999px;background:rgba(59,130,246,.1);color:var(--brand);font-weight:600">📅 <span id="batch-date-badge">—</span></span>
     </h3>
-    <p style="font-size:11.5px;color:var(--ink-2);background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.12);border-radius:10px;padding:9px 12px;margin-bottom:10px;line-height:1.6">💡 AI 辨識完會列在這。可直接修改採購價／進貨量，或刪除錯誤列、補打 AI 漏掉的品項。<br>⚠️ <b>自動同步已關閉</b> — 編輯完請按右上角 <b>「💾 點此儲存到雲端」</b> 才會帶入月度盤點表並推到雲端。</p>
+    <p style="font-size:11.5px;color:var(--ink-2);background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.12);border-radius:10px;padding:9px 12px;margin-bottom:10px;line-height:1.6">💡 AI 辨識完會列在這。可直接修改採購價／進貨量，或刪除錯誤列、補打 AI 漏掉的品項。<br>↩️ <b>退貨請打負數</b>(進貨量填 -3 = 退 3 個給廠商，會自動扣錢) — AI 看到「退」字或「-」號也會自動回負數。<br>⚠️ <b>自動同步已關閉</b> — 編輯完請按右上角 <b>「💾 點此儲存到雲端」</b> 才會帶入月度盤點表並推到雲端。</p>
     <div id="batch-items-list"></div>
     <button class="add-batch-btn" onclick="addBatchItem()">＋ 新增一列</button>
   </div>
@@ -1144,13 +1144,24 @@ async function doAnalyze(filesToAnalyze){
     '只回傳 JSON 陣列（不要 markdown、不要說明文字）：\n' +
     '[{"name":"品項名稱","price":單價數字,"qty":貨量數字' + (needsUnitConversion ? ',"unit":"單位"' : '') + '}]\n' +
     '\n【核心規則】：price × qty 必須等於該列的金額（小計），不要回傳兩個都是 0。\n' +
+    '\n【⚠️ 退貨/退款列的判斷（重要 — 廠商會把退貨夾在出貨單裡）】：\n' +
+    '看到下列任一特徵 → 該列 qty 要回傳「負數」（price 保持正數）：\n' +
+    '  • 數量／金額前面有負號「-」「－」「(-)」「△」（例「-3」「-200」「(3)」「△2」）\n' +
+    '  • 品項旁有「退」「退貨」「退回」「退款」「沖銷」「換貨」「折讓」紅字、印章或註記\n' +
+    '  • 該列金額用紅筆／紅色框／括號「(200)」標示（會計上紅字 = 負數）\n' +
+    '  • 整張單抬頭就是「退貨單」「銷退單」→ 全部品項 qty 都回負數\n' +
+    '範例：\n' +
+    '  - 「鴨肉丸 -3 包 100」→ price=100、qty=-3（小計 -300）\n' +
+    '  - 「青菜 退 2 斤 50」→ price=50、qty=-2（小計 -100）\n' +
+    '  - 「速食麵 (5) 25」→ price=25、qty=-5（括號 = 負數）\n' +
     '\n【依單據格式判斷如何填 price 和 qty】：\n' +
     '  ① 三欄都有「數量 × 單價 = 金額」：price = 單價欄、qty = 數量欄（驗算 price × qty 應等於金額欄）\n' +
     '  ② 只有「品名 + 金額」沒拆數量單價（例如手寫訂單只寫一個價錢）：price = 該金額、qty = 1\n' +
+    '     → 若該列是退貨：price = 該金額、qty = -1\n' +
     '  ③ 只有「品名 + 數量」沒寫單價也沒寫金額：price = 0、qty = 該數量（讓人工補價錢）\n' +
     '  ④ 完全讀不到任何金額也讀不到數量：price = 0、qty = 1（占位讓人工補）\n' +
     '\n【其他規則】：\n' +
-    '- name 為品項中文名稱（不含編號、不含貨號、不含 *、•、- 等符號）\n' +
+    '- name 為品項中文名稱（不含編號、不含貨號、不含 *、•、- 等符號 — 但若「-」是負號就保留進 qty 不要當符號刪掉）\n' +
     '- 【不要辨識日期】日期由系統自動填入\n' +
     '- 忽略總計／合計／稅額／折扣／運費／小費／應付金額／找零 等非品項列\n' +
     '- 所有數字不要千分號、不要貨幣符號（例 "1,234元" → 1234）' +
