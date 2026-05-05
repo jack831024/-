@@ -211,8 +211,12 @@ h3 .icon{font-size:15px}
       <label>內容</label>
       <textarea id="new-content" placeholder="完整佈達內容，可貼上 LINE 群公告原文"></textarea>
     </div>
+    <div class="field">
+      <label>照片（可選，可一次選多張）</label>
+      <div class="photo-row" id="new-photo-row"></div>
+    </div>
     <button class="add-btn" onclick="addAnnouncement()">新增佈達事項</button>
-    <p style="font-size:11.5px;color:var(--ink-2);margin-top:10px;line-height:1.6;background:rgba(79,70,229,.06);border:1px solid rgba(79,70,229,.15);border-radius:10px;padding:9px 12px">💡 新增後會出現在下方，每位同仁旁邊有勾選框。每則佈達可在卡片內按「+ 新增照片」加照片（會即時上傳到雲端 Drive）。<b>勾選 / 編輯 / 移除照片等變更只存在本機，請按右上「💾 點此儲存到雲端」才會推到雲端。</b></p>
+    <p style="font-size:11.5px;color:var(--ink-2);margin-top:10px;line-height:1.6;background:rgba(79,70,229,.06);border:1px solid rgba(79,70,229,.15);border-radius:10px;padding:9px 12px">💡 新增後會出現在下方，每位同仁旁邊有勾選框（不含佈達者本人）。照片在按「新增佈達事項」之前就會即時上傳到雲端 Drive。<b>勾選 / 編輯等之後的變更只存在本機，請按右上「💾 點此儲存到雲端」才會推到雲端。</b></p>
   </div>
 
   <div class="section">
@@ -349,11 +353,14 @@ function render(){
 
   list.innerHTML = sorted.map(function(a){
     var confirms = a.confirms || {};
-    var done = STAFF.filter(function(s){ return confirms[s.name] && confirms[s.name].confirmed; }).length;
-    var total = STAFF.length;
+    var announcerName = a.title || '';
+    // 確認名單排除佈達者本人
+    var staffToConfirm = STAFF.filter(function(s){ return s.name !== announcerName; });
+    var done = staffToConfirm.filter(function(s){ return confirms[s.name] && confirms[s.name].confirmed; }).length;
+    var total = staffToConfirm.length;
     var allDone = total > 0 && done === total;
 
-    var items = STAFF.map(function(s){
+    var items = staffToConfirm.map(function(s){
       var name = s.name;
       var c = confirms[name] || {};
       var checked = !!c.confirmed;
@@ -366,8 +373,8 @@ function render(){
            + '</label>';
     }).join('');
 
-    if(STAFF.length === 0){
-      items = '<div style="grid-column:1/-1;padding:12px;background:#fff3cd;color:#856404;border-radius:8px;font-size:12.5px;text-align:center;font-weight:500">⚠️ 本店員工名單尚未設定，請至 announce.html 頂端 STAFF_LISTS 補齊</div>';
+    if(staffToConfirm.length === 0){
+      items = '<div style="grid-column:1/-1;padding:12px;background:#fff3cd;color:#856404;border-radius:8px;font-size:12.5px;text-align:center;font-weight:500">⚠️ 本店尚無其他需要確認的同仁</div>';
     }
 
     var contentRaw = a.content || '';
@@ -377,27 +384,23 @@ function render(){
     // title 欄位被當成佈達者使用（雲端欄位名稱不變，避免重新部署 GAS）
     var announcerName = a.title || '（未指定佈達者）';
 
-    // 照片區
+    // 照片區（只顯示，不能再新增；要新增請用上面的「新增佈達事項」表單）
     var photos = Array.isArray(a.photos) ? a.photos : [];
-    var photoThumbs = photos.map(function(p, idx){
-      var src = p.thumb || p.view || '';
-      var fullSrc = p.view || p.thumb || '';
-      return '<div class="photo-thumb">'
-           +   '<img src="'+escapeHtml(src)+'" alt="" loading="lazy" onclick="openLightbox(\''+escapeHtml(fullSrc).replace(/\x27/g,"\\\x27")+'\')" onerror="this.onerror=null;this.src=\''+escapeHtml(p.view || '')+'\'">'
-           +   '<button class="pt-del" onclick="onRemovePhoto(\''+a.id+'\','+idx+')" title="移除這張照片（不會刪除雲端檔案）">✕</button>'
-           + '</div>';
-    }).join('');
-    var photoSection = '<div class="photo-section">'
-                     +   '<div class="ps-title">📷 照片<span class="ps-status" id="ps-status-'+a.id+'">'+(photos.length>0 ? photos.length+' 張' : '可加照片')+'</span></div>'
-                     +   '<div class="photo-row">'
-                     +     photoThumbs
-                     +     '<label class="photo-add" id="photo-add-'+a.id+'">'
-                     +       '<span class="pa-icon">+</span>'
-                     +       '<span>新增照片</span>'
-                     +       '<input type="file" accept="image/*" multiple onchange="onAddPhotos(\''+a.id+'\', this)">'
-                     +     '</label>'
-                     +   '</div>'
-                     + '</div>';
+    var photoSection = '';
+    if(photos.length > 0){
+      var photoThumbs = photos.map(function(p, idx){
+        var src = p.thumb || p.view || '';
+        var fullSrc = p.view || p.thumb || '';
+        return '<div class="photo-thumb">'
+             +   '<img src="'+escapeHtml(src)+'" alt="" loading="lazy" onclick="openLightbox(\''+escapeHtml(fullSrc).replace(/\x27/g,"\\\x27")+'\')" onerror="this.onerror=null;this.src=\''+escapeHtml(p.view || '')+'\'">'
+             +   '<button class="pt-del" onclick="onRemovePhoto(\''+a.id+'\','+idx+')" title="移除這張照片（不會刪除雲端檔案）">✕</button>'
+             + '</div>';
+      }).join('');
+      photoSection = '<div class="photo-section">'
+                   +   '<div class="ps-title">📷 照片<span class="ps-status">'+photos.length+' 張</span></div>'
+                   +   '<div class="photo-row">' + photoThumbs + '</div>'
+                   + '</div>';
+    }
 
     return '<div class="ann-card' + (allDone ? ' all-confirmed' : '') + '">'
          +   '<div class="ann-head">'
@@ -439,10 +442,12 @@ function addAnnouncement(){
     content: content,
     createdAt: new Date().toISOString(),
     confirms: {},
-    photos: []
+    photos: PENDING_PHOTOS.slice()  // 把暫存的照片帶進這則佈達
   });
-  // announcer 維持上次選擇，方便連續新增；只清空內容
+  // 清空暫存照片 + 內容；announcer 維持上次選擇，方便連續新增
+  PENDING_PHOTOS = [];
   document.getElementById('new-content').value = '';
+  renderPendingPhotos();
   markDirty();
   render();
 }
@@ -477,9 +482,12 @@ function onBulkAll(id, val){
   var a = (STATE.announcements || []).find(function(x){ return x.id === id; });
   if(!a) return;
   a.confirms = a.confirms || {};
+  // 排除佈達者本人
+  var announcerName = a.title || '';
+  var staffToConfirm = STAFF.filter(function(s){ return s.name !== announcerName; });
   if(val){
     var now = new Date().toISOString();
-    STAFF.forEach(function(s){
+    staffToConfirm.forEach(function(s){
       var n = s.name;
       if(!a.confirms[n] || !a.confirms[n].confirmed){
         a.confirms[n] = { confirmed: true, at: now };
@@ -525,7 +533,29 @@ function compressImage(file, maxDim, quality){
   });
 }
 
-function onAddPhotos(announcementId, inputEl){
+// 新增佈達表單裡的待上傳照片（按「新增佈達事項」時會 attach 到那則新佈達）
+var PENDING_PHOTOS = [];
+
+function renderPendingPhotos(){
+  var row = document.getElementById('new-photo-row');
+  if(!row) return;
+  var thumbs = PENDING_PHOTOS.map(function(p, idx){
+    var src = p.thumb || p.view || '';
+    var fullSrc = p.view || p.thumb || '';
+    return '<div class="photo-thumb">'
+         +   '<img src="'+escapeHtml(src)+'" alt="" loading="lazy" onclick="openLightbox(\''+escapeHtml(fullSrc).replace(/\x27/g,"\\\x27")+'\')">'
+         +   '<button class="pt-del" onclick="removePendingPhoto('+idx+')" title="移除（雲端 Drive 上的檔案保留）">✕</button>'
+         + '</div>';
+  }).join('');
+  row.innerHTML = thumbs
+    + '<label class="photo-add" id="new-photo-add">'
+    +   '<span class="pa-icon">+</span>'
+    +   '<span>'+(PENDING_PHOTOS.length===0?'新增照片':'再加一張')+'</span>'
+    +   '<input type="file" accept="image/*" multiple onchange="onAddNewPhotos(this)">'
+    + '</label>';
+}
+
+function onAddNewPhotos(inputEl){
   if(!syncUrl()){
     alert('⚠️ 尚未設定雲端網址，沒辦法上傳照片。請先到右上「⚙️ 設定」貼網址。');
     inputEl.value = '';
@@ -534,17 +564,12 @@ function onAddPhotos(announcementId, inputEl){
   var files = Array.from(inputEl.files || []);
   inputEl.value = '';
   if(files.length === 0) return;
-  var a = (STATE.announcements || []).find(function(x){ return x.id === announcementId; });
-  if(!a) return;
-  if(!Array.isArray(a.photos)) a.photos = [];
 
-  var addBtn = document.getElementById('photo-add-' + announcementId);
-  var statusEl = document.getElementById('ps-status-' + announcementId);
+  var addBtn = document.getElementById('new-photo-add');
   if(addBtn) addBtn.classList.add('uploading');
 
   var done = 0, total = files.length, succeeded = 0;
-  files.forEach(function(file, idx){
-    if(statusEl) statusEl.textContent = '上傳中 ' + (done+1) + '/' + total + '…';
+  files.forEach(function(file){
     compressImage(file, 1600, 0.85).then(function(dataUrl){
       return callGAS('uploadPhoto', {
         filename: file.name || ('photo-'+Date.now()+'.jpg'),
@@ -552,7 +577,7 @@ function onAddPhotos(announcementId, inputEl){
       });
     }).then(function(res){
       if(res && res.ok && res.fileId){
-        a.photos.push({
+        PENDING_PHOTOS.push({
           fileId: res.fileId,
           name: res.name || file.name || '',
           thumb: res.thumb || '',
@@ -560,7 +585,6 @@ function onAddPhotos(announcementId, inputEl){
           uploadedAt: new Date().toISOString()
         });
         succeeded++;
-        markDirty();
       } else {
         console.warn('upload failed', res);
         flash('❌ ' + (file.name||'') + ' 上傳失敗：' + ((res && res.error) || '未知錯誤'));
@@ -570,15 +594,19 @@ function onAddPhotos(announcementId, inputEl){
       flash('❌ ' + (file.name||'') + ' 上傳失敗：' + err.message);
     }).then(function(){
       done++;
+      renderPendingPhotos();
       if(done === total){
-        if(addBtn) addBtn.classList.remove('uploading');
-        render();
         if(succeeded > 0){
-          flash('✅ 已上傳 ' + succeeded + ' 張照片到雲端，記得按右上「💾 點此儲存到雲端」把連結存下來');
+          flash('✅ 已上傳 ' + succeeded + ' 張照片到雲端，按下方「新增佈達事項」會綁進這則佈達');
         }
       }
     });
   });
+}
+
+function removePendingPhoto(idx){
+  PENDING_PHOTOS.splice(idx, 1);
+  renderPendingPhotos();
 }
 
 function onRemovePhoto(announcementId, idx){
@@ -762,6 +790,7 @@ window.addEventListener('beforeunload', function(e){
 // 初始化
 // ============================================
 populateAnnouncerSelect();
+renderPendingPhotos();
 refreshSaveBtn();
 render();
 pullFromCloud();
