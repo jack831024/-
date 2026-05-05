@@ -151,6 +151,8 @@ body.editing .month-del{display:inline-flex}
 .mexp .hook-name{font-weight:700;font-size:14px;color:var(--rose-dark);margin-bottom:3px}
 .mexp .hook-price{display:inline-block;background:var(--rose);color:#fff;font-weight:700;padding:2px 10px;border-radius:999px;font-size:11.5px;margin-bottom:8px}
 .mexp .hook-desc{color:var(--ink-2);font-size:12.5px;line-height:1.6}
+.mexp .hook-kol{margin-top:8px;padding:7px 11px;background:rgba(225,29,72,.1);border-radius:8px;font-size:11.5px;color:var(--rose-dark);line-height:1.55;border-left:3px solid var(--rose)}
+.mexp .hook-kol b{margin-right:2px;font-weight:700}
 .mexp .forecast-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .mexp .fc-cell{background:rgba(255,255,255,.6);border-radius:8px;padding:6px 10px;font-size:12px}
 .mexp .fc-cell .fclbl{font-size:10.5px;color:var(--ink-3);font-weight:600;letter-spacing:0.5px;text-transform:uppercase}
@@ -318,7 +320,7 @@ const DEFAULT_STATE = {
       { text: '客單 500', cls: '' },
       { text: '25-39 女性 65%', cls: '' },
       { text: '三店活動統一', cls: 'gold' },
-      { text: '主套餐 + 1 元加購', cls: 'ink' },
+      { text: '特色記憶點 + UGC + KOL', cls: 'ink' },
       { text: '寵物友善', cls: 'ink' },
     ],
   },
@@ -360,11 +362,13 @@ const DEFAULT_STATE = {
     principles: {
       h: '活動設計核心原則',
       items: [
-        '主套餐拉價 ＋ 1 元加購記憶點 是已驗證模式（5/母親節肉蛋糕案）。1 元只是話術錨點，可改 9/19/29/39，但「銅板價＋反差」的張力不能丟。',
-        '主套餐定價 ≈ 500 × 1.3 ~ 1.5 = 650 ~ 750。客人感受是「升級值得」，不是「被加價」。加購誘餌成本 ≤ 套餐毛利的 20%。',
-        '三店活動統一執行：每檔期同樣的套餐、同樣的加購、同樣的文案。差異只在「主推門市」（資源傾斜方向）。',
-        '加購品必須有視覺爆點（造型、煙霧、高度），讓客人有理由拍照打卡。',
-        '三條傳播線：視覺記憶點（IG/Threads 分享）／儀式感（命名＋揭蓋／敲擊／合照動作）／限時稀缺（檔期短、加購數量限制）。',
+        '主套餐拉價 ＋ 特色記憶點：母親節肉蛋糕「1 元加購」只是其中一種形式。記憶點形式跟主題走，KPI 是 UGC 打卡與 KOL 短影音曝光。',
+        '八種特色記憶點類型：加購／升級（1 元肉蛋糕）、桌邊秀（揭金蓋、火焰、月升、乾冰瀑布）、節慶挑戰（立蛋、許願池）、DIY 體驗（湯圓、南瓜、擺盤）、變裝主題（兒童動物裝、員工萬聖）、打卡道具（紅包牆、合照框、感謝牆）、限量／搶購（11:11、跨年倒數鍋）、集體儀式（倒數、零點加肉）。',
+        'KOL／UGC 友善 4 條件（合格鉤子要過這 4 關）：(1) 30 秒內可拍完（IG Reels／TikTok 時長）(2) 視覺有差別（不是普通火鍋）(3) 可重現（KOL + 客人都能體驗到一樣的）(4) 有故事或挑戰（讓 KOL 有 caption 寫）。',
+        '主套餐定價 ≈ 500 × 1.3 ~ 1.5 = 650 ~ 750。客人感受是「升級值得」，不是「被加價」。鉤子總成本（道具＋人力＋KOL 配合費）≤ 套餐毛利的 20%。',
+        '三店活動統一執行：每檔期同樣的套餐、同樣的鉤子、同樣的文案。差異只在「主推門市」（資源傾斜方向）。',
+        '特色鉤子必須有視覺爆點（造型、煙霧、高度、火焰、變裝、道具），讓客人有理由拍照打卡。',
+        '三條傳播線：視覺記憶點（IG/Threads/小紅書 分享）／儀式感（命名＋揭蓋／敲擊／合照動作）／限時稀缺（檔期短、限量限時、月底抽獎）。',
         '鬼月（農曆 7 月，多在 8 月）禁忌：避免黑紅暗色、血滴造型、煮人形聯想。',
       ],
     },
@@ -381,7 +385,7 @@ function getDefaultMonths(){ return [
       { name: '尾牙圍爐 · 雙人套', original: '原 NT$899', price: 'NT$699', content: '招牌牛奶鍋＋雙人和牛盤＋自助吧' },
       { name: '尾牙圍爐 · 五人套', original: '原 NT$2,999', price: 'NT$2,499', content: '雙鍋（牛奶＋麻辣）＋肉盤升級＋滷肉飯桶＋自助吧無限' },
     ],
-    hook: { name: '金元寶滷肉飯', price: '1 元加購', desc: '把招牌滷肉飯做成元寶造型，上桌前淋蛋黃醬畫財神紋。每張套餐限購一份；同桌可多份。' },
+    hook: { name: '尾牙紅包合照牆 + 跨年倒數鍋', price: '免費合影道具 + 跨年儀式', desc: '店內巨大紅包造型相框＋發財紋背景，員工幫拍合照。1/1 跨年延長場 23:50 全店一起倒數，氣球牆放下，自助吧免費續一輪。', kolAngle: '紅包牆團體合照短影音、跨年倒數即時直播、員工發財話術 ASMR' },
     ops: ['開放 10 人以上企業尾牙包桌專案，附「全員紅包合照框」道具，可開發票','5 人圍爐多送一份壓歲錢造型甜點，鼓勵回頭客（會員可加碼）','1/1 跨年延長至 23:00 收客，主打「跨完年來吃熱的」','包桌需提前 2 週訂位，避免散客排隊衝突'],
     copy: ['「跨年那杯香檳記不記得喝了？來吃 2026 第一鍋。」','「金元寶 1 元解鎖／家人圍著一鍋的時候才像新年」'],
     forecast: { weekday: '+15%', weekend: '+10%', aov: '永春 ~800 / 中和 ~600', cost: '< 15 元/份', risk: '尾牙旺季人手吃緊，需提前 2 週開放包桌預訂避免散客排隊衝突。' }
@@ -394,7 +398,7 @@ function getDefaultMonths(){ return [
       { name: '情人節雙人套', original: '原 NT$999', price: 'NT$799', content: '心形和牛盤＋玫瑰湯底（限情人節當週）' },
       { name: '開工回血雙人套', original: '原 NT$799', price: 'NT$599', content: '限 2/24-2/28 平日中午' },
     ],
-    hook: { name: '龍年發財金鍋蓋 / 玫瑰肉盤捲', price: '1 元加購', desc: '春節週：金色鏡面鍋蓋揭開瞬間有乾冰，附「揭金蓋」儀式說明卡。情人節週末：和牛捲成玫瑰造型，搭配冰塊乾冰桌面服務。' },
+    hook: { name: '揭金鍋蓋祈福 + 鴛鴦擺盤挑戰', price: '桌邊揭蓋秀 + 情人節互動遊戲', desc: '春節週每桌揭金鍋蓋瞬間有乾冰煙霧，員工念吉祥話「揭出財運」。情人節雙人桌「鴛鴦擺盤挑戰」：男女各擺一邊，誰擺得美誰請客。', kolAngle: '揭金蓋慢動作短影音、情侶擺盤對決 reels、吉祥話 ASMR' },
     ops: ['春節週（2/15-2/22）所有圍爐桌訂位優先；年初二「回娘家圍爐」5 人桌送一壺紅棗茶','情人節週末雙人套配玫瑰肉盤捲，需先培訓擺盤動作','開工後三天（2/24-2/26）平日商業午餐 399 元（限 11:30-13:30）','春節期間延長場至 22:30；員工排休需提前一個月安排'],
     copy: ['「龍年第一掀／金鍋蓋下藏著什麼？」','「情人節不要再吃西餐了。鴛鴦鍋一邊一個剛好。」'],
     forecast: { weekday: '+25%（情人節）', weekend: '+30%（春節）', aov: '圍爐桌 ~650/人 / 情人節 ~1,100/桌', cost: '< 20 元/份', risk: '春節期間員工排休與客流尖峰錯位，需提早排班；玫瑰肉盤需培訓擺盤動作。' }
@@ -406,7 +410,7 @@ function getDefaultMonths(){ return [
       { name: '姊妹解放雙人套', original: '原 NT$799', price: 'NT$599', content: '粉紅櫻花牛奶鍋＋低脂雞肉盤＋蔬果自助吧' },
       { name: '姊妹解放四人套', original: '原 NT$1,499', price: 'NT$1,099', content: '兩鍋（粉紅牛奶＋清爽蔬菜）＋四人肉盤＋現切水果塔' },
     ],
-    hook: { name: '粉紅櫻花牛奶鍋升級', price: '39 元升級', desc: '招牌牛奶鍋染成粉色（火龍果天然色素），漂浮可食用櫻花瓣。原本選任何鍋底皆可加 39 元升級；可拍照上傳 IG 標 @初殿鍋物 截圖換贈飲。' },
+    hook: { name: '姊妹相館 + 閨蜜真心話卡', price: '免費拍立得 + 桌邊互動', desc: '店內設置粉色背景＋專業打光點，免費拍立得 1 張（上傳 IG 多送 1 杯飲料）。桌上「閨蜜真心話卡」抽題目互答（誰先猜對對方愛吃哪一鍋）。粉紅櫻花牛奶鍋仍可 39 元升級。', kolAngle: '姊妹合照打卡短片、女性博主真心話對答 reels、粉紅鍋拍照' },
     ops: ['桌邊拍立得服務（合照 1 張 50 元，4 張 150 元）—— 抓 IG 分享','寵物友善加碼：攜帶寵物贈寵物零食杯','「下班姊妹專場」週四五延長至 22:00 享 9 折','IG 上傳標 @初殿鍋物 截圖換贈飲'],
     copy: ['「這禮拜不是 girls’ night out，是 girls’ night IN（餐廳裡的鍋）。」','「粉紅鍋裡有櫻花，桌邊有合照／#姊妹解放週 你解放什麼？」'],
     forecast: { weekday: '+20%', weekend: '+10%', aov: '雙人 ~700 / 4 人 ~1,300', cost: '< 25 元/份', risk: '粉紅色食物對男性客接受度較低，主打週中女性聚而非家庭日。' }
@@ -417,7 +421,7 @@ function getDefaultMonths(){ return [
     packages: [
       { name: '親子四人套', original: '原 NT$1,599', price: 'NT$1,299', content: '兒童牛奶鍋＋大人麻辣鍋＋兒童肉鬆飯糰＋自助吧；兒童（130cm 以下）免費吃自助吧；12 歲以下贈圍裙＋恐龍貼紙' },
     ],
-    hook: { name: '小小廚師肉造型恐龍', price: '1 元加購', desc: '肉片摺成恐龍造型擺盤，附小朋友自己擺蔬菜配菜的「動手做」說明卡。每位 12 歲以下兒童限購一份。' },
+    hook: { name: '小小廚師體驗 + 動物變裝日', price: 'DIY 體驗 + 變裝免費飲料', desc: '兒童戴專屬廚師帽＋圍裙，親自把肉片擺成造型；完成後員工幫拍紀念照印貼紙帶走。4/4 兒童節穿動物裝免費飲料，店內掛橫幅「今日請尊稱小客人為○○獸」。', kolAngle: '親子博主拍兒童擺盤過程、變裝家族日打卡 vlog、員工幫小朋友戴帽子的瞬間' },
     ops: ['兒童節當天（4/4）小朋友穿動物裝免費飲料，呼應社群擴散','連假期間（4/3-4/6）每日 14:00-16:00 開「下午鍋場」','平日上班族「連假還在上班犒賞自己 雙人 599」','12 歲以下兒童贈圍裙＋恐龍貼紙'],
     copy: ['「肉變恐龍，孩子的眼睛變星星。」','「下午也想吃鍋的，舉手——下午場為你開了。」'],
     forecast: { weekday: '+8%', weekend: '+25%（連假主導）', aov: '4 人桌 ~1,500', cost: '< 20 元/份', risk: '兒童客占比高時翻桌時間拉長 15%，需控制兒童節當天訂位筆數。' }
@@ -426,7 +430,7 @@ function getDefaultMonths(){ return [
     stores: ['永春','中和','新莊'], mainStore: '全店',
     audience: '家庭客（媽媽日）',
     packages: [{ name: '母親節套餐', original: '原 NT$399 系列', price: '拉高定價', content: '依現行海報執行，配對 1 元加購肉蛋糕作為主記憶點' }],
-    hook: { name: '母親節肉蛋糕', price: '1 元加購', desc: '兩層肉片堆疊成蛋糕造型＋立體 Happy Mother’s Day 蛋糕牌＋干冰煙霧。已被證明是高記憶點 / 高分享率的加購品，是日後所有月份的範本。' },
+    hook: { name: '母親節肉蛋糕（已執行・原型範本）', price: '1 元加購', desc: '兩層肉片堆疊成蛋糕造型＋立體 Happy Mother’s Day 蛋糕牌＋干冰煙霧。是日後所有月份的原型範本——但之後不必照「1 元加購」公式做，特色形式可自由（秀、挑戰、DIY、變裝、道具、限量、儀式）。', kolAngle: '揭蓋瞬間慢動作、媽媽收驚奇反應 vlog、肉蛋糕擺盤縮時' },
     ops: ['攜母同行加購甜點半價，操作回頭客','延長場至 21:30 推「下班帶媽媽吃」，附媽媽手寫卡','5/10 設母女合照打卡牆，上傳 IG @初殿鍋物 抽下次套餐','⚠️ 已執行：請於 5/17 後回填實績資料以校準後續預估'],
     copy: ['（請補上活動實際使用的文案）'],
     forecast: { weekday: '待回填', weekend: '待回填', aov: '待回填', cost: '待回填', risk: '結束後請回填以下 5 項數據以校準下一輪估算：(1) 各店活動期客數 vs 去年同期；(2) 母親節套餐 vs 平日 299 的選擇比例；(3) 肉蛋糕每桌平均加購數；(4) IG/Threads 該期間 hashtag 數量；(5) 客訴／反饋（甜膩、份量、等候時間）。' }
@@ -438,7 +442,7 @@ function getDefaultMonths(){ return [
       { name: '粽情家庭桌（4 人）', original: '原 NT$1,799', price: 'NT$1,499', content: '兩鍋＋肉盤＋雙人份招牌滷肉飯' },
       { name: '畢業犒賞學生套（4 人）', original: '原 NT$1,399', price: 'NT$1,099', content: '須出示學生證（含 6 月底前畢業生）' },
     ],
-    hook: { name: '肉粽造型滷肉飯', price: '19 元加購', desc: '用葉片包覆造型呈現，呼應招牌滷肉飯，桌邊「拆粽」儀式。學生套限加購一份；家庭桌不限。' },
+    hook: { name: '立蛋大賽 + 拆粽儀式 + 畢業合照牆', price: '節慶挑戰 + 桌邊秀 + 打卡道具', desc: '6/19 端午中午 12:00 全店立蛋大賽（限時 1 小時），立成功者獲「立蛋成功證書」＋下次 9 折券；全程錄影放店內電視牆。每桌「肉粽造型滷肉飯」由員工幫拆粽，蒸氣瀰漫上桌。畢業週擺出「學士帽＋初殿」打卡牆。', kolAngle: '立蛋直播 12:00 倒數、拆粽 ASMR 蒸氣冒、畢業合照站位指引短片' },
     ops: ['「謝師宴 8 人桌」優惠 2 折抵，須出示學生證','端午當天（6/19）攜立蛋成功照片到店打卡贈飲','畢業週（6/23-6/30）延長場到 22:30','包桌訂金可降低 No-Show 風險'],
     copy: ['「畢業前最後一頓鍋，吃過記得回來。」','「肉粽真的能吃，但拆開才有真章。」'],
     forecast: { weekday: '+10%', weekend: '+15-30%', aov: '學生 ~350/人 / 家庭 ~500/人', cost: '< 20 元/份', risk: '學生客單較低需控制肉盤升級成本；6 月梅雨季影響到店率，包桌訂金可降低 No-Show。' }
@@ -450,7 +454,7 @@ function getDefaultMonths(){ return [
       { name: '夏夜消暑雙人套', original: '原 NT$799', price: 'NT$599', content: '升級版冰淇淋牛奶鍋＋低脂肉盤＋當季蔬果自助吧' },
       { name: '夏夜閨蜜四人套', original: '—', price: 'NT$1,199', content: '兩鍋（牛奶＋柚子昆布）＋四人肉＋自助甜點吧延長' },
     ],
-    hook: { name: '乾冰仙女牛奶鍋盤', price: '1 元加購', desc: '牛奶鍋上桌時附乾冰 + 鮮花裝飾盤，桌邊乾冰升起儀式。每桌限購 1 份。' },
+    hook: { name: '乾冰瀑布秀 + 冰花牛奶鍋', price: '每晚定時表演 + 視覺擺盤', desc: '每晚 19:00／20:00／21:00 三場乾冰瀑布秀（10 秒，全店同時上演）。牛奶鍋上面飄一朵食用冰雕花（融化才能下鍋）。', kolAngle: '乾冰瀑布慢速短影音、冰花融化縮時、ASMR 滴落聲、店內三點齊放的全景' },
     ops: ['每週四「冷氣鍋之夜」女性飲品 9 折','每週日中午暑期親子日，兒童 130cm 以下贈冰品','拍乾冰 IG 短影音標 @初殿鍋物 抽下次免費升級','員工乾冰操作訓練必修；備抗熱主視覺替代方案'],
     copy: ['「外面 36 度，鍋裡卻像下著奶霧。」','「夏天吃鍋是反派，仙女吃鍋才是主角。」'],
     forecast: { weekday: '+20%', weekend: '+20%', aov: '雙人 ~750', cost: '< 30 元/份', risk: '乾冰需員工受訓避免客人手碰；要備抗熱主視覺替代方案（萬一颱風月推遲）。' }
@@ -462,7 +466,7 @@ function getDefaultMonths(){ return [
       { name: '父親節爸氣雙人套', original: '原 NT$999', price: 'NT$799', content: '頂級牛肉盤＋麻辣鍋＋啤酒一杯＋滷肉飯' },
       { name: '七夕鴛鴦雙人套', original: '原 NT$1,099', price: 'NT$899', content: '鴛鴦鍋（牛奶＋麻辣）＋玫瑰肉盤＋情侶共飲果茶' },
     ],
-    hook: { name: '爸氣麻辣肉塔 / 七夕鴛鴦鍋玫瑰盤', price: '1 元加購', desc: '父親節：肉盤堆疊成塔，桌邊淋麻辣油點火（短暫火焰秀）。七夕：肉片捲成玫瑰，盤緣寫情人手寫卡。' },
+    hook: { name: '爸氣火焰秀 + 七夕投幣許願池', price: '桌邊火焰秀 + 月底抽獎', desc: '父親節週每桌「爸氣麻辣肉塔」桌邊點火 10 秒火焰秀（含合影）。七夕週店內設小許願池，情侶投 10 元寫卡片掛上，月底抽 1 對情侶免費套餐。', kolAngle: '火焰秀 10 秒短影音（IG Reels 標準長度）、許願池告白 vlog、抽中那對的反應' },
     ops: ['父親節週（8/1-8/8）：攜父親到店，父親免費吃自助吧；下班帶爸吃延長場 21:30','七夕週（8/15-8/19）：與場館旁咖啡廳合作「鍋＋咖啡甜點」雙店票券','鬼月禁忌：避免黑紅暗色／血滴造型；火焰秀需消防演練','七夕「上班族犒賞情人」午夜場至 21:30'],
     copy: ['「不會說『我愛你』的爸爸，會說『這肉真嫩』。」','「鴛鴦鍋一邊清淡一邊辣，剛好像我們倆。」'],
     forecast: { weekday: '+15%（七夕）', weekend: '+18%（父親節）', aov: '父節 ~1,000/桌 / 七夕 ~1,100/桌', cost: '< 25 元/份', risk: '8 月鬼月禁忌——避免黑紅暗色／血滴造型；火焰秀需消防演練。' }
@@ -474,7 +478,7 @@ function getDefaultMonths(){ return [
       { name: '中秋團圓四人套', original: '原 NT$1,799', price: 'NT$1,499', content: '雙鍋＋四人肉＋月餅造型甜點＋滷肉飯' },
       { name: '教師節謝師六人套', original: '—', price: 'NT$2,199', content: '含敬師酒一壺＋謝卡道具' },
     ],
-    hook: { name: '月之鏡牛奶湯', price: '1 元加購', desc: '牛奶鍋面用乾冰營造月升效果，附「賞月儀式說明卡」。' },
+    hook: { name: '月升儀式 + 謝師卡牆', price: '揭蓋秀 + 感謝牆', desc: '每桌「月之鏡牛奶湯」員工幫掀蓋瞬間，乾冰升起像月亮，員工念「祝您團圓」。畢業/教師節學生寫感謝卡掛在「謝師卡牆」（可拍下次來看自己的卡）。', kolAngle: '月升慢動作、感人謝師故事 vlog、感謝牆延時攝影' },
     ops: ['「謝師宴 8 人桌」95 折，發票可開','中秋當天（9/25）家族 6 人桌附「月餅造型滷肉飯」一份','連假三天延長場到 22:30','月餅造型滷肉飯需培訓擺盤'],
     copy: ['「鍋裡的月亮不會缺，家人圍著的時候才圓。」','「謝師宴吃西餐已經夠多次了。」'],
     forecast: { weekday: '+15%（教師節）', weekend: '+25%（中秋週）', aov: '4 人團圓桌 ~1,800', cost: '< 20 元/份', risk: '月餅造型滷肉飯需培訓擺盤；中秋連假可能與烤肉場景搶客，需主打「室內冷氣＋不用洗碗」。' }
@@ -486,7 +490,7 @@ function getDefaultMonths(){ return [
       { name: '萬聖鍋夜雙人套', original: '原 NT$899', price: 'NT$699', content: '南瓜湯底＋黑色義大利麵造型麵條＋特製麻辣鍋' },
       { name: '親子變裝家庭桌（4 人）', original: '—', price: 'NT$1,299', content: '兒童變裝可贈兒童糖果包' },
     ],
-    hook: { name: '南瓜湯底＋眼球魚丸組', price: '9 元加購', desc: '南瓜造型湯底冒煙登場＋眼球造型魚丸（白底黑點）。每桌限購一份。' },
+    hook: { name: '萬聖鬼屋食堂 + 南瓜雕刻體驗', price: '場景變裝 + 桌邊 DIY', desc: '萬聖週末新莊店化身鬼屋（蜘蛛網／墓碑／南瓜燈／員工變裝服務）。每桌附小南瓜可自己雕（或畫），完成後合影。南瓜湯底＋眼球魚丸組可 9 元加購。', kolAngle: '鬼屋環境 vlog、變裝員工招待短片、南瓜雕刻 DIY 縮時' },
     ops: ['國慶連假平日商業午餐「秋日下班鍋」雙人 599','萬聖週末（10/24-10/25、10/30-10/31）店內佈置 IG 打卡牆（蜘蛛網／墓碑／南瓜燈），延長場到 23:00','「親子變裝日」（10/31）兒童變裝免費吃自助吧','南瓜湯底備料需提前一週'],
     copy: ['「南瓜不騙人，眼球魚丸也不會。」','「萬聖節吃糖會蛀牙。吃鍋不會。」'],
     forecast: { weekday: '+10%', weekend: '+20%（國慶）/ +35%（新莊萬聖）', aov: '萬聖雙人 ~800', cost: '< 30 元/份', risk: '南瓜造型成本較高需要週前備料；眼球魚丸要避免造型影響進食體驗。' }
@@ -498,7 +502,7 @@ function getDefaultMonths(){ return [
       { name: '雙 11 單人犒賞套', original: '原 NT$499', price: 'NT$399', content: '限平日 18:00-21:00 單人入店' },
       { name: '雙 11 雙人套', original: '原 NT$899', price: 'NT$699', content: '雙人；含一杯氣泡飲' },
     ],
-    hook: { name: '頂級肉品升級', price: '11 元升級', desc: '限 11/1-11/11 共 11 天。原平價肉盤升級為頂級和牛或豬五花。每張套餐限升級 1 份；11/11 當天限購 11 份/店。' },
+    hook: { name: '11:11 搶限量 + 下班族留名牆', price: '每天定時搶購 + 簽名累積', desc: '11/1-11/11 共 11 天，每天 11:11 開放 11 個限量套餐 99 元（手機點擊搶）。店內「最後加班來吃的人」簽名留念牆，每天當日最後一位顧客留名（拍立得＋簽名）。', kolAngle: '11:11 搶購直播倒數、下班族故事 vlog、簽名牆累積感延時' },
     ops: ['「平日下班犒賞」單人鍋 399（限平日 18:00-21:00）','「會員回饋日」舊會員兩人同行 9 折（線上抽券機制）','11/1-11/11 共 11 天可 11 元升級頂級肉品；11/11 當日限購 11 份/店','賽事／演唱會檔期綁定「散場 9 折」'],
     copy: ['「雙 11 別人在搶下單，你在搶下班。」','「11 元升級頂級肉，只有 11 天，這次真的不騙。」'],
     forecast: { weekday: '+30%（永春晚場）', weekend: '+15%', aov: '單人 ~450 / 雙人 ~800', cost: '< 50 元/份（升級肉品成本）', risk: '單人鍋需備獨立小型鍋具，平日晚高峰人手要支援；11 元升級毛利壓縮，要算清楚每店每日上限。' }
@@ -511,7 +515,7 @@ function getDefaultMonths(){ return [
       { name: '冬至團圓五人桌', original: '原 NT$2,999', price: 'NT$2,599', content: '雙鍋＋肉＋湯圓 DIY 站' },
       { name: '公司尾牙包桌套（10 人）', original: '原 NT$7,999', price: 'NT$6,999', content: '含飲料無限＋紅包合照框＋尾牙抽獎主持稿模板' },
     ],
-    hook: { name: '聖誕樹肉塔 / 冬至湯圓 DIY', price: '1 元加購', desc: '聖誕：肉盤堆成樹形，桌邊淋乾冰雪景，搭配星形蔬菜頂飾。冬至（5 人桌限定）：1 元加購湯圓 DIY 組（湯圓粉＋餡料桌邊搓）。' },
+    hook: { name: '聖誕禮物換餐 + 跨年倒數鍋 + 尾牙抽獎輪盤', price: '帶物換餐 + 集體儀式 + 包桌抽獎', desc: '12/24-12/25 持禮物到店免費換指定甜點（要當場拆開）。12/31 23:50 集體倒數，零點時所有桌的鍋自動加滿肉一輪。尾牙包桌附專屬抽獎輪盤（員工現場主持）。聖誕樹肉塔仍 1 元加購。', kolAngle: '禮物拆開瞬間、跨年倒數即時直播、抽獎輪盤反應 reels' },
     ops: ['全月開放企業尾牙包桌（10 人以上 6,999 起），主打「公司提前尾牙」','聖誕家庭日（12/24、12/25 中午）小朋友扮聖誕老人贈兒童套餐 8 折','跨年夜（12/31）延長場到隔日凌晨 1:00；附跨年倒數小卡','尾牙包桌訂金需先收 30%；員工加班費要併入成本估算'],
     copy: ['「2026 不要倒，但鍋的乾冰可以。」','「聖誕樹下的禮物會被吃掉，但乾冰雪景會被拍下來。」','「公司尾牙不一定要大酒店。十人吃飽 6,999，老闆會被讚。」'],
     forecast: { weekday: '+25%（聖誕週）', weekend: '+40%（跨年夜）', aov: '聖誕 ~1,100 / 尾牙 ~700/人', cost: '< 30 元/份', risk: '12 月人手最緊、需提前 1 個月排班；跨年延長場員工加班費要併入成本估算；尾牙包桌訂金需先收 30%。' }
@@ -529,7 +533,7 @@ function loadState(){
     if(saved){
       const parsed = JSON.parse(saved);
       if(parsed && typeof parsed === 'object' && Array.isArray(parsed.months)){
-        return mergeWithDefault(parsed);
+        return upgradeHooks(mergeWithDefault(parsed));
       }
     }
     // v2 → v3 自動遷移：v2 是純 12 個月陣列
@@ -539,11 +543,39 @@ function loadState(){
       if(Array.isArray(v2Months)){
         const fresh = deepClone(DEFAULT_STATE);
         fresh.months = v2Months;
-        return fresh;
+        return upgradeHooks(fresh);
       }
     }
   }catch(e){}
   return deepClone(DEFAULT_STATE);
+}
+
+// 偵測舊版 hook（沒有 kolAngle 欄位）→ 自動把 default 的新版 hook 覆蓋進去
+// 套餐／操作／文案／預估等其他欄位保留使用者編輯
+function upgradeHooks(state){
+  if(!state.months) return state;
+  const def = getDefaultMonths();
+  let upgraded = false;
+  state.months.forEach((m, i) => {
+    if(!m.hook || !('kolAngle' in m.hook)){
+      if(def[i]){
+        m.hook = deepClone(def[i].hook);
+        upgraded = true;
+      }
+    }
+  });
+  if(upgraded){
+    // 順手在 timeline 留一筆紀錄
+    if(!state.timeline.some(t => t.title && t.title.indexOf('UGC') >= 0)){
+      state.timeline.push({
+        date: new Date().toISOString().slice(0,10),
+        status: 'done',
+        title: '策略升級：1 元加購 → UGC + KOL 鉤子',
+        desc: '12 個月 hook 內容已自動更新為新版（端午立蛋、跨年倒數、萬聖鬼屋、許願池等）。套餐／操作／文案／預估保留你的編輯。',
+      });
+    }
+  }
+  return state;
 }
 function mergeWithDefault(s){
   // 任何缺少的頂層欄位用預設補
@@ -807,11 +839,12 @@ function renderExpand(m, idx){
         <button class="add-btn" data-action="add-package" data-idx="${idx}">+ 新增套餐</button>
       </div>
       <div>
-        <h4>1 元加購記憶點</h4>
+        <h4>特色記憶點（UGC / KOL 鉤子）</h4>
         <div class="hook-card">
           <div class="hook-name" data-path="months.${idx}.hook.name" data-single="1">${escapeHtml(m.hook.name)}</div>
           <span class="hook-price" data-path="months.${idx}.hook.price" data-single="1">${escapeHtml(m.hook.price)}</span>
           <div class="hook-desc" data-path="months.${idx}.hook.desc">${escapeHtml(m.hook.desc)}</div>
+          <div class="hook-kol" data-path="months.${idx}.hook.kolAngle"><b>📹 KOL 拍攝角度：</b>${escapeHtml(m.hook.kolAngle || '（待補）')}</div>
         </div>
       </div>
       <div class="full">
