@@ -91,6 +91,10 @@ h3 .icon{font-size:15px}
 .confirm-item.checked .name{color:#047857}
 .confirm-item .ts{font-size:10.5px;color:var(--ink-3);font-family:ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:.5px}
 .confirm-item.checked .ts{color:#059669;font-weight:600}
+.confirm-item .pt-tag{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:6px;background:rgba(249,115,22,.14);color:#9a3412;font-size:10px;font-weight:700;letter-spacing:.5px;vertical-align:1px}
+.confirm-item.is-pt{background:rgba(255,247,237,.6)}
+.confirm-item.is-pt:hover{background:rgba(255,247,237,.95)}
+.confirm-item.is-pt.checked{background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%)}
 
 .confirm-bulk{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
 .confirm-bulk button{padding:5px 11px;font-size:11.5px;font-weight:600;color:var(--ink-2);background:rgba(255,255,255,.8);border:1.5px solid var(--line);border-radius:999px;cursor:pointer;font-family:inherit;letter-spacing:.5px;transition:all .15s}
@@ -212,13 +216,24 @@ var BUILTIN_ANNOUNCE_SYNC_URL = ""; // 部署完 佈達資訊-script.gs 後填�
 })();
 
 // ============================================
-// 員工名單（與 daily-summary.html 同一份；新增同仁時記得兩邊一起更新）
+// 員工名單（含 FT + PT；與 leave-gift.html EMP_DATA 同步）
+// 新增/離職同仁時請兩邊一起更新
 // ============================================
 var STAFF_LISTS = {
-  'chudian-zhonghe':    ['李文少','褚心榆','劉濡瑜','施偉祥'],
-  'chudian-yongchun':   ['謝其淇','林韋翔','洪文祥','呂直宸','吳孟澤','邱昊勳'],
-  'chudian-xinzhuang':  ['蔡鈺豪','李嘉真','洪仕賢','蘇奕誠'],
-  'shicheng-zhongxiao': ['林哲民','林梓彥','王謖','陳柏維']
+  'chudian-zhonghe':    [
+    { name:'李文少' }, { name:'褚心榆' }, { name:'劉濡瑜' }, { name:'施偉祥' },
+    { name:'潘立軒', pt:true }, { name:'江竑緯', pt:true }, { name:'黃威倫', pt:true }
+  ],
+  'chudian-yongchun':   [
+    { name:'謝其淇' }, { name:'林韋翔' }, { name:'洪文祥' }, { name:'呂直宸' }, { name:'吳孟澤' }, { name:'邱昊勳' }
+  ],
+  'chudian-xinzhuang':  [
+    { name:'蔡鈺豪' }, { name:'李嘉真' }, { name:'洪仕賢' }, { name:'蘇奕誠' },
+    { name:'洪晟育', pt:true }, { name:'林詩縈', pt:true }
+  ],
+  'shicheng-zhongxiao': [
+    { name:'林哲民' }, { name:'林梓彥' }, { name:'王謖' }, { name:'陳柏維' }
+  ]
 };
 var STORE_NAMES = {
   'chudian-zhonghe':    '初殿中和店',
@@ -308,17 +323,19 @@ function render(){
 
   list.innerHTML = sorted.map(function(a){
     var confirms = a.confirms || {};
-    var done = STAFF.filter(function(n){ return confirms[n] && confirms[n].confirmed; }).length;
+    var done = STAFF.filter(function(s){ return confirms[s.name] && confirms[s.name].confirmed; }).length;
     var total = STAFF.length;
     var allDone = total > 0 && done === total;
 
-    var items = STAFF.map(function(name){
+    var items = STAFF.map(function(s){
+      var name = s.name;
       var c = confirms[name] || {};
       var checked = !!c.confirmed;
       var ts = checked ? fmtTimeOnly(c.at) : '';
-      return '<label class="confirm-item' + (checked ? ' checked' : '') + '" data-id="'+a.id+'" data-name="'+escapeHtml(name)+'">'
+      var ptTag = s.pt ? '<span class="pt-tag">PT</span>' : '';
+      return '<label class="confirm-item' + (checked ? ' checked' : '') + (s.pt ? ' is-pt' : '') + '" data-id="'+a.id+'" data-name="'+escapeHtml(name)+'">'
            +   '<input type="checkbox" '+(checked?'checked':'')+' onchange="onToggle(\''+a.id+'\', \''+escapeHtml(name).replace(/'/g,"\\'")+'\', this.checked)">'
-           +   '<span class="name">'+escapeHtml(name)+'</span>'
+           +   '<span class="name">'+escapeHtml(name)+ptTag+'</span>'
            +   '<span class="ts">'+ts+'</span>'
            + '</label>';
     }).join('');
@@ -395,7 +412,8 @@ function onBulkAll(id, val){
   a.confirms = a.confirms || {};
   if(val){
     var now = new Date().toISOString();
-    STAFF.forEach(function(n){
+    STAFF.forEach(function(s){
+      var n = s.name;
       if(!a.confirms[n] || !a.confirms[n].confirmed){
         a.confirms[n] = { confirmed: true, at: now };
       }
