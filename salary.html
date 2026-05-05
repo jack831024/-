@@ -48,6 +48,10 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
 .sync-chip.busy{background:rgba(59,130,246,.12);color:var(--info)}
 .sync-chip.err{background:rgba(220,38,38,.12);color:var(--danger)}
 .sync-chip.err:hover{background:rgba(220,38,38,.2)}
+.sync-chip.dirty{background:rgba(245,158,11,.15);color:#b45309}
+.sync-chip.dirty:hover{background:rgba(245,158,11,.25)}
+#save-btn.dirty{animation:saveBlink 1.2s ease-in-out infinite}
+@keyframes saveBlink{0%,100%{box-shadow:0 6px 16px -6px rgba(139,92,246,.45)}50%{box-shadow:0 0 0 3px rgba(245,158,11,.45),0 6px 16px -6px rgba(139,92,246,.45)}}
 
 .wrap{max-width:1000px;margin:0 auto;padding:0 0 3rem}
 
@@ -196,6 +200,7 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
   <span class="spacer"></span>
   <span id="sync-chip" class="sync-chip off" title="點擊重新同步" onclick="syncNow()">☁ 未設定</span>
   <select class="month-picker" id="month-picker" aria-label="選擇月份"></select>
+  <button id="save-btn" class="btn btn-primary btn-sm" onclick="saveAll()" title="儲存到雲端（按下才會同步給其他裝置）">💾 儲存</button>
   <button class="btn btn-ghost btn-sm" onclick="openSyncSettings()" title="雲端同步設定">⚙️</button>
   <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 列印</button>
 </div>
@@ -655,12 +660,14 @@ function saveAll(){
   pushToCloud(true);
 }
 
-// 切月份時自動儲存 + 重載
+// 切月份時：只存本機 cache，不推雲端（手動儲存才會推）
 function onMonthChange(){
-  // 先推當前的到雲端（靜默）
   if(STATE){
+    if(isDirty()){
+      var ok = confirm('當前月份有未儲存到雲端的變更，要先儲存嗎？\n\n按「確定」先儲存到雲端再切月\n按「取消」直接切月（變更只存本機）');
+      if(ok){ saveAll(); }
+    }
     try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
-    pushToCloud(false);
   }
   loadState();
   render();
@@ -1332,8 +1339,7 @@ function onDtChange(id, field, v){
   STATE.detail[id][field] = parseFloat(v) || 0;
   // 全勤獎勵金 與 各別明細 互相獨立：這裡不再回寫 s2.sick / s2.personal
   renderDetail();
-  // 立刻觸發雲端 push（內部已 debounce 500ms，不會打爆 API）
-  pushToCloud(false);
+  updateDirtyChip();
 }
 function onNoteChange(id, v){ STATE.notes[id] = v; }
 
@@ -1637,9 +1643,39 @@ function getStorePassword(){
 function setSyncChip(state, text, title){
   var chip = document.getElementById('sync-chip');
   if(!chip) return;
-  chip.className = 'sync-chip ' + state; // ok / off / busy / err
+  chip.className = 'sync-chip ' + state; // ok / off / busy / err / dirty
   chip.textContent = text;
   if(title) chip.title = title;
+}
+
+// ============================================
+// 髒資料追蹤：手動儲存模式必備
+// ============================================
+var _lastSyncedJson = '';
+
+function snapshotJson(){
+  return STATE ? JSON.stringify(STATE) : '';
+}
+
+function isDirty(){
+  return snapshotJson() !== _lastSyncedJson;
+}
+
+// 把目前狀態標記為「已同步」（push 或 pull 成功後呼叫）
+function markSynced(){
+  _lastSyncedJson = snapshotJson();
+  updateDirtyChip();
+}
+
+// 視覺更新：有未儲存變更 → 顯示 ● 未儲存（橘色）+ 💾 按鈕變閃爍
+function updateDirtyChip(){
+  var btn = document.getElementById('save-btn');
+  if(isDirty()){
+    setSyncChip('dirty', '● 有未儲存', '請按 💾 儲存才會同步到雲端／其他裝置');
+    if(btn){ btn.classList.add('dirty'); }
+  } else {
+    if(btn){ btn.classList.remove('dirty'); }
+  }
 }
 
 function callSalaryGAS(action, args){
@@ -1668,6 +1704,7 @@ function pushToCloud(showToastWhenOk){
         if(res && res.ok){
           var t = res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : '';
           setSyncChip('ok', '☁ 已同步', '最後同步：' + t);
+          markSynced();
           if(showToastWhenOk) toast('已同步到雲端', 'ok');
         } else {
           setSyncChip('err', '☁ 失敗', (res && res.error) || '');
@@ -1692,9 +1729,9 @@ function pullFromCloud(showToast){
         return;
       }
       if(!res.found){
-        // 本月雲端沒資料 → 如果本機有就 push 上去；否則維持空白狀態
-        setSyncChip('ok', '☁ 已連線（本月無雲端資料）', '第一次儲存會建立');
-        pushToCloud(false);
+        // 本月雲端沒資料 → 標記為「乾淨」（沒未儲存變更），等使用者按 💾 才推
+        setSyncChip('ok', '☁ 已連線（本月無雲端資料）', '改了東西按 💾 才會建立');
+        markSynced();
         return;
       }
       // 雲端有資料 → 合併到 STATE（以雲端為主）
@@ -1714,6 +1751,7 @@ function pullFromCloud(showToast){
       // 改成必須點「🔄 從加班費系統重新匯入」按鈕才會匯入
       doImportSalesBonus(false);
       doImportSurveyBonus(false);
+      markSynced();
       var t = res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : '';
       setSyncChip('ok', '☁ 已同步', '從雲端讀取：' + t);
       if(showToast) toast('已從雲端讀取（'+t+'）', 'ok');
@@ -1754,20 +1792,29 @@ function openSyncSettings(){
 // ============================================
 loadState();
 render();
+// 載入後先把當前狀態當成「已同步」基準（pullFromCloud 成功會再覆寫成雲端版）
+markSynced();
 // 初次載入只自動帶小結（營業額）+ 匿名表（評分），加班費需點按鈕
-// 這樣可避免「自動 import 蓋掉手動改、再被推回雲端」的循環問題
 doImportSalesBonus(false);
 doImportSurveyBonus(false);
 // 啟動時從雲端拉最新（若有設定）→ 若雲端較新，會覆寫本地
 pullFromCloud(false);
 
-// 自動儲存（每 8 秒：本機 + 推雲端）
+// 本機自動快取（每 4 秒只存到 localStorage，不推雲端）
+// 雲端同步改成手動：要按 💾 儲存按鈕才會推
 setInterval(function(){
   if(!STATE) return;
   try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
-  // 推雲端也會 debounce，連續修改時不會打爆
-  pushToCloud(false);
-}, 8000);
+  updateDirtyChip();
+}, 4000);
+
+// 離開頁面前如果有未儲存的變更，警告使用者
+window.addEventListener('beforeunload', function(e){
+  if(isDirty()){
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
 
 </script>
 </body>
