@@ -44,6 +44,7 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
 .sync-btn.sync-info{background:#dbeafe;border-color:#93c5fd;color:#1e40af}
 .sync-btn.sync-ok{background:#d1fae5;border-color:#86efac;color:#065f46}
 .sync-btn.sync-err{background:#fee2e2;border-color:#fca5a5;color:#b91c1c}
+.sync-btn.sync-warn{background:#fef3c7;border-color:#fcd34d;color:#92400e}
 
 .wrap{max-width:900px;margin:0 auto;padding:0 0 3rem}
 
@@ -188,7 +189,7 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
     <span id="store-name">—</span>
   </div>
   <div class="spacer"></div>
-  <button class="settings-btn sync-btn sync-ok" id="btn-save-cloud" onclick="saveToCloud(false)" disabled title="分析完成後會自動儲存到雲端；按此可手動重新同步">🟢 ✓ 已同步</button>
+  <button class="settings-btn sync-btn sync-warn" id="btn-save-cloud" onclick="saveToCloud(false)" disabled title="按此手動儲存到雲端（不會自動同步）">💾 儲存到雲端</button>
   <button class="settings-btn" onclick="openSettings()">⚙️ 設定</button>
 </div>
 
@@ -2377,21 +2378,21 @@ document.getElementById('filter-chips').addEventListener('click', function(e){
 // ============================================
 // 匯出 CSV
 // ============================================
-// 💾 把 FT + PT 分析結果 POST 到該店的 Apps Script，寫進班表試算表的
+// 💾 把 FT + PT 分析結果 POST 到該店的 Apps Script，寫進加班費獨立試算表的
 //   「加班費-YYYY-MM」分頁。若後端未更新，會顯示「請先更新 Apps Script」錯誤。
-// 🔄 自動同步：整個頁面任何改動都會 debounce 後自動上傳到雲端
-var autoSyncTimer = null;
+// 📌 改為手動儲存：scheduleAutoSync() 不再自動上傳，只是把按鈕標記為「有變更未儲存」
+//    讓使用者主動按按鈕，比較不會誤蓋掉雲端資料
 function scheduleAutoSync(){
-  if(!STORE) return; // 沒選店不用同步
-  // 至少要有一些資料（分析結果 / 班別 / PT 名單）才值得同步，避免空推
+  if(!STORE) return;
+  // 不同 callsite 都會呼叫到，這裡就是把按鈕變黃讓使用者知道有變更要存
   var hasAnything = (ANALYSIS && ANALYSIS.length) ||
                     (PT_ANALYSIS && PT_ANALYSIS.length) ||
                     (readPtListFromDom().length > 0) ||
                     (readShiftsFromDom().length > 0);
   if(!hasAnything) return;
-  clearTimeout(autoSyncTimer);
-  // debounce 2 秒（讓使用者連續改設定時只 push 最後一次）
-  autoSyncTimer = setTimeout(function(){ saveToCloud(true); }, 2000);
+  setSyncStatus('warn', '有變更未儲存', '按下「儲存到雲端」才會 push 上去');
+  var btn = document.getElementById('btn-save-cloud');
+  if(btn) btn.disabled = false;
 }
 
 // silent=true 時：不彈 alert，狀態改用 sync-status chip 顯示（給自動同步用）
@@ -2440,7 +2441,7 @@ function saveToCloud(silent){
       }
       var t = new Date();
       var timeStr = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0') + ':' + String(t.getSeconds()).padStart(2,'0');
-      setSyncStatus('ok', '已同步 ' + timeStr,
+      setSyncStatus('ok', '已儲存 ' + timeStr,
         '工作表：' + data.sheet + '　FT '+data.ftCount+' 筆、PT '+data.ptCount+' 筆');
       if(!silent){
         alert('✅ 已儲存到雲端分頁：' + data.sheet +
@@ -2448,30 +2449,33 @@ function saveToCloud(silent){
       }
     })
     .catch(function(err){
-      setSyncStatus('err', '同步失敗', '點此重新同步：' + (err.message || '未知錯誤'));
-      if(!silent) alert('❌ 同步失敗：\n' + (err.message || '未知錯誤'));
-      else console.warn('自動同步失敗:', err);
+      setSyncStatus('err', '儲存失敗', '點此重新儲存：' + (err.message || '未知錯誤'));
+      if(!silent) alert('❌ 儲存失敗：\n' + (err.message || '未知錯誤'));
+      else console.warn('儲存失敗:', err);
     })
     .finally(function(){
-      btn.disabled = !(ANALYSIS && ANALYSIS.length);
+      btn.disabled = false;  // 永遠允許再按一次
     });
 }
 
 // 同步狀態直接寫到按鈕文字上
-//   cls 可為：'info'（同步中）/ 'ok'（待機 / 已同步）/ 'err'（失敗）
-//   沒傳 cls 視為待機 = 已同步（綠色）
+//   cls 可為：'info'（上傳中）/ 'ok'（已儲存）/ 'err'（失敗）/ 'warn'（有變更未儲存 / 待手動儲存）
 function setSyncStatus(cls, text, tooltip){
   var btn = document.getElementById('btn-save-cloud');
   if(!btn) return;
-  // 預設是 ok（綠色待機狀態）
-  if(!cls) cls = 'ok';
-  btn.className = btn.className.replace(/\s*sync-(info|ok|err)/g, '').trim();
+  if(!cls) cls = 'warn';
+  btn.className = btn.className.replace(/\s*sync-(info|ok|err|warn)/g, '').trim();
   btn.className += ' sync-' + cls;
   var icon = cls === 'info' ? '🔵 ⟲' :
              cls === 'ok'   ? '🟢 ✓' :
              cls === 'err'  ? '🔴 ❌' :
-             '🟢 ✓';
-  btn.innerHTML = icon + ' ' + (text || '已同步');
+             cls === 'warn' ? '💾' :
+             '💾';
+  var defaultText = cls === 'ok' ? '已儲存' :
+                    cls === 'warn' ? '儲存到雲端' :
+                    cls === 'info' ? '上傳中…' :
+                    cls === 'err' ? '儲存失敗' : '儲存到雲端';
+  btn.innerHTML = icon + ' ' + (text || defaultText);
   if(tooltip) btn.title = tooltip;
 }
 
@@ -3042,12 +3046,12 @@ renderPtList();
       }
       // 之前跑過分析就直接顯示
       applyCloudAnalysis(data && data.analysis, ym);
-      setSyncStatus('ok','已同步','已從雲端套用最新設定');
+      setSyncStatus('ok','已從雲端載入','已從雲端套用最新設定');
     })
     .catch(function(err){
       // 靜悄悄失敗：使用者沒按按鈕也不要嚇到他
       console.warn('[prefetchCloudSettings] 略過：', err.message || err);
-      setSyncStatus('ok','已同步','（雲端設定預抓略過：'+(err.message||err)+'）');
+      setSyncStatus('warn','儲存到雲端','（雲端設定預抓略過：'+(err.message||err)+'）');
     });
 })();
 </script>
