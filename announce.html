@@ -67,9 +67,8 @@ h3 .icon{font-size:15px}
 
 .ann-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
 .ann-title-wrap{flex:1;min-width:0}
-.ann-title{font-size:15.5px;font-weight:700;color:var(--ink);letter-spacing:-0.01em;margin-bottom:3px;line-height:1.4;cursor:text;border:1.5px solid transparent;border-radius:8px;padding:3px 6px;margin-left:-6px}
-.ann-title:hover{background:rgba(15,23,42,.03)}
-.ann-title:focus{outline:none;border-color:var(--brand);background:#fff;box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+.announcer-chip{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:var(--ink);letter-spacing:-0.01em;margin-bottom:6px;line-height:1.4;background:linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);border:1px solid rgba(79,70,229,.2);border-radius:999px;padding:4px 12px}
+.announcer-chip b{color:var(--brand);font-weight:700}
 .ann-meta{font-size:11px;color:var(--ink-3);font-weight:600;letter-spacing:.5px}
 .ann-meta .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(15,23,42,.05);margin-right:5px;font-weight:700}
 .ann-meta .badge.ok{background:rgba(16,185,129,.12);color:#047857}
@@ -183,11 +182,11 @@ h3 .icon{font-size:15px}
   <div class="section">
     <h3><span class="icon">➕</span>新增佈達事項</h3>
     <div class="field">
-      <label>標題</label>
-      <input type="text" id="new-title" placeholder="例：12 月新菜單上線、收銀流程調整、出勤規範…">
+      <label>佈達者</label>
+      <select id="new-announcer"></select>
     </div>
     <div class="field">
-      <label>內容（可留空）</label>
+      <label>內容</label>
       <textarea id="new-content" placeholder="完整佈達內容，可貼上 LINE 群公告原文"></textarea>
     </div>
     <button class="add-btn" onclick="addAnnouncement()">新增佈達事項</button>
@@ -348,11 +347,13 @@ function render(){
     var contentHtml = contentRaw
       ? escapeHtml(contentRaw)
       : '<span class="empty-placeholder">（沒有內容，可點此編輯）</span>';
+    // title 欄位被當成佈達者使用（雲端欄位名稱不變，避免重新部署 GAS）
+    var announcerName = a.title || '（未指定佈達者）';
 
     return '<div class="ann-card' + (allDone ? ' all-confirmed' : '') + '">'
          +   '<div class="ann-head">'
          +     '<div class="ann-title-wrap">'
-         +       '<div class="ann-title" contenteditable="true" data-id="'+a.id+'" data-field="title" onblur="onEditField(this)">' + escapeHtml(a.title || '（未命名）') + '</div>'
+         +       '<div class="announcer-chip">📣 佈達者：<b>' + escapeHtml(announcerName) + '</b></div>'
          +       '<div class="ann-meta">'
          +         '<span class="badge ' + (allDone ? 'ok' : 'pending') + '">' + done + ' / ' + total + ' 已確認</span>'
          +         '建立：' + fmtDateTime(a.createdAt)
@@ -376,21 +377,36 @@ function render(){
 function uid(){ return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
 function addAnnouncement(){
-  var title = document.getElementById('new-title').value.trim();
+  var announcer = document.getElementById('new-announcer').value.trim();
   var content = document.getElementById('new-content').value.trim();
-  if(!title){ alert('請輸入標題'); return; }
+  if(!announcer){ alert('請選擇佈達者'); return; }
+  if(!content){ alert('請輸入內容'); return; }
   STATE.announcements = STATE.announcements || [];
   STATE.announcements.push({
     id: uid(),
-    title: title,
+    // 佈達者放在 title 欄位（沿用雲端 schema）
+    title: announcer,
     content: content,
     createdAt: new Date().toISOString(),
     confirms: {}
   });
-  document.getElementById('new-title').value = '';
+  // announcer 維持上次選擇，方便連續新增；只清空內容
   document.getElementById('new-content').value = '';
   markDirty();
   render();
+}
+
+// 把佈達者下拉填好（含 PT，跟確認名單一致）
+function populateAnnouncerSelect(){
+  var sel = document.getElementById('new-announcer');
+  if(!sel) return;
+  if(STAFF.length === 0){
+    sel.innerHTML = '<option value="">⚠️ 本店尚未設定員工名單</option>';
+    return;
+  }
+  sel.innerHTML = STAFF.map(function(s){
+    return '<option value="'+escapeHtml(s.name)+'">'+escapeHtml(s.name)+(s.pt?' (PT)':'')+'</option>';
+  }).join('');
 }
 
 function onToggle(id, name, checked){
@@ -581,6 +597,7 @@ window.addEventListener('beforeunload', function(e){
 // ============================================
 // 初始化
 // ============================================
+populateAnnouncerSelect();
 refreshSaveBtn();
 render();
 pullFromCloud();
