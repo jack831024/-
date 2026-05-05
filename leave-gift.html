@@ -49,6 +49,16 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
 .sync-chip.busy{background:rgba(59,130,246,.12);color:var(--info)}
 .sync-chip.err{background:rgba(220,38,38,.12);color:var(--danger)}
 .sync-chip.err:hover{background:rgba(220,38,38,.2)}
+.sync-chip.dirty{background:rgba(245,158,11,.18);color:#a16207;animation:pulse-dirty 1.6s infinite}
+.sync-chip.dirty:hover{background:rgba(245,158,11,.28)}
+@keyframes pulse-dirty{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.5)}50%{box-shadow:0 0 0 8px rgba(245,158,11,0)}}
+
+/* 浮動儲存鈕 */
+.save-fab{position:fixed;bottom:24px;right:24px;z-index:150;padding:14px 22px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:999px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 12px 32px -8px rgba(245,158,11,.55),0 4px 12px -2px rgba(15,23,42,.15);display:none;align-items:center;gap:8px;transition:transform .12s}
+.save-fab.show{display:inline-flex;animation:fabPop .25s cubic-bezier(.4,1.6,.5,1)}
+.save-fab:hover{transform:translateY(-2px)}
+.save-fab .badge{background:rgba(255,255,255,.25);padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700}
+@keyframes fabPop{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 
 .wrap{max-width:1100px;margin:0 auto;padding:0 0 3rem}
 
@@ -269,6 +279,11 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
   </div>
 </div>
 
+<!-- 浮動儲存鈕（有未儲存禮金紀錄時才出現） -->
+<button class="save-fab" id="save-fab" onclick="saveDirty()">
+  💾 儲存變更 <span class="badge" id="save-fab-count">1</span>
+</button>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -371,6 +386,28 @@ if(STORES_WITHOUT_GIFT[STORE]){
 // 雲端設定（沿用先前部署）
 var LEAVE_SYNC_URL = 'https://script.google.com/macros/s/AKfycbxeJRR4Xlt4fSngAwEIAW2FBMEwLuNH9djZKY7LzI7RhX0_Lk9L2TvUM_WyFU-YpEfO6A/exec';
 var LS_LEAVE_SYNC_URL = 'cd_leavegift_sync_url';
+
+// 待儲存的禮金紀錄數量（手動儲存模式）
+var PENDING_GIFT_COUNT = 0;
+function setPending(n){
+  PENDING_GIFT_COUNT = Math.max(0, n);
+  var fab = document.getElementById('save-fab');
+  var cnt = document.getElementById('save-fab-count');
+  if(fab) fab.classList.toggle('show', PENDING_GIFT_COUNT > 0);
+  if(cnt) cnt.textContent = PENDING_GIFT_COUNT;
+  var chip = document.getElementById('sync-chip');
+  if(chip && PENDING_GIFT_COUNT > 0){
+    chip.className = 'sync-chip dirty';
+    chip.textContent = '⚠ 待儲存 '+PENDING_GIFT_COUNT;
+    chip.title = '點此儲存到雲端';
+  }
+}
+function saveDirty(){
+  if(!STATE) return;
+  pushToCloud(true);
+  // 成功 callback 會在 pushToCloud 內處理；這邊提前清計數讓按鈕消失
+  setPending(0);
+}
 
 function getSyncUrl(){
   return localStorage.getItem(LS_LEAVE_SYNC_URL) || LEAVE_SYNC_URL || '';
@@ -782,10 +819,11 @@ function renderEmpCardAndUpload(){
 
 function selectEmp(id){
   STATE.selectedEmpId = id;
+  // 本機暫存（不推雲端，避免每次切員工都呼叫 GAS）
+  try { localStorage.setItem(stateKey(STATE.ym || ''), JSON.stringify(STATE)); } catch(e){}
   renderEmpTabs();
   renderEmpCardAndUpload();
   renderHistory();
-  pushToCloud(false);
 }
 
 function fmtTs(ts){
@@ -1026,12 +1064,15 @@ async function onGiftFile(files){
       pv.el.classList.add('ok');
       pv.tag.textContent = '−$'+fmt(amount);
     }
-    busy.innerHTML = '<span style="color:var(--ok);font-size:12px">✓ 已扣款 $'+fmt(amount)+'，餘額更新</span>';
+    busy.innerHTML = '<span style="color:var(--ok);font-size:12px">✓ 已扣款 $'+fmt(amount)+'，請按右下「💾 儲存變更」同步</span>';
 
-    pushToCloud(false);
+    // ⚠️ 手動儲存模式：不再自動 pushToCloud；改用浮動儲存鈕
+    setPending(PENDING_GIFT_COUNT + 1);
+    // 本機暫存（避免重新整理就消失，但雲端要等使用者按儲存）
+    try { localStorage.setItem(stateKey(STATE.ym || ''), JSON.stringify(STATE)); } catch(e){}
     render();
     document.getElementById('gift-file').value = '';
-    showNotice('已上傳雲端', '已從 '+emp.name+' 的禮金扣款 $'+fmt(amount)+'，圖片已存到 Drive');
+    showNotice('圖片已上傳 Drive', '已扣款 $'+fmt(amount)+'。雲端尚未同步，請按右下「💾 儲存變更」確認。');
   } catch(e){
     if(pv){ pv.el.classList.remove('busy'); pv.el.classList.add('err'); pv.tag.textContent = '失敗'; }
     busy.innerHTML = '<span style="color:var(--danger);font-size:12px">❌ '+ (e.message||'失敗') +'</span>';
@@ -1195,7 +1236,12 @@ function pushToCloud(showToastWhenOk){
       .then(function(res){
         if(res && res.ok){
           setSyncChip('ok', '☁ 已同步', '最後同步：'+(res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : ''));
-          if(showToastWhenOk) toast('已同步到雲端', 'ok');
+          PENDING_GIFT_COUNT = 0;
+          var fab = document.getElementById('save-fab');
+          if(fab) fab.classList.remove('show');
+          if(showToastWhenOk){
+            showNotice('已上傳雲端', '所有變更已同步到雲端');
+          }
         } else {
           setSyncChip('err', '☁ 失敗', (res && res.error) || '');
           if(showToastWhenOk) toast('同步失敗：'+((res&&res.error)||''), 'err');
@@ -1266,10 +1312,21 @@ function goBack(){ window.location.href = 'home.html'; }
   pullFromCloud();
 })();
 
-// 自動同步（10 秒）
+// ⚠️ 已移除自動同步：使用者上傳禮金後須手動按「💾 儲存變更」才會推到雲端
+// 仍保留每 30 秒寫入 localStorage 的本機備份（重新整理時不會丟失）
 setInterval(function(){
-  if(STATE) pushToCloud(false);
-}, 10000);
+  if(!STATE) return;
+  try { localStorage.setItem(stateKey(STATE.ym || ''), JSON.stringify(STATE)); } catch(e){}
+}, 30000);
+
+// 離開頁面前若還有未儲存的變更 → 警告
+window.addEventListener('beforeunload', function(e){
+  if(PENDING_GIFT_COUNT > 0){
+    e.preventDefault();
+    e.returnValue = '還有未儲存的禮金紀錄，確定離開？';
+    return e.returnValue;
+  }
+});
 </script>
 </body>
 </html>
