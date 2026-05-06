@@ -62,7 +62,7 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
 .btn-sm{padding:6px 11px;font-size:12px;border-radius:8px}
 
 .table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line)}
-table.recon{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px;min-width:640px}
+table.recon{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px;min-width:720px}
 table.recon th{position:sticky;top:0;background:linear-gradient(180deg,#f8fafc 0%,#f1f5f9 100%);text-align:center;padding:10px 8px;font-size:12px;font-weight:700;color:var(--ink-2);border-bottom:2px solid var(--line);white-space:nowrap}
 table.recon th.col-vendor{text-align:left;min-width:140px}
 table.recon th .store-name{display:block;font-size:13px;color:var(--ink);font-weight:700}
@@ -85,6 +85,25 @@ table.recon td.c-amt input.amt-input::placeholder{color:#cbd5e1;font-weight:400}
 table.recon td.c-del{width:38px;text-align:center}
 table.recon .del-btn{width:28px;height:28px;border-radius:8px;border:1.5px solid var(--line);background:#fff;color:var(--ink-3);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;font-size:14px}
 table.recon .del-btn:hover{border-color:var(--danger);color:var(--danger);background:#fef2f2}
+
+/* 「不計總」勾選欄 */
+table.recon th.col-skip{min-width:64px}
+table.recon td.c-skip{width:64px;text-align:center}
+.skip-toggle{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;width:34px;height:24px;position:relative;user-select:none}
+.skip-toggle input[type=checkbox]{position:absolute;opacity:0;width:0;height:0}
+.skip-toggle .skip-mark{display:inline-block;width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line);background:#fff;transition:all .15s;position:relative}
+.skip-toggle:hover .skip-mark{border-color:var(--brand)}
+.skip-toggle input:checked + .skip-mark{background:var(--warn);border-color:var(--warn)}
+.skip-toggle input:checked + .skip-mark::after{
+  content:"";position:absolute;left:5px;top:1px;width:6px;height:11px;
+  border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)
+}
+table.recon tr.row-skip td.c-vendor input.vendor-input,
+table.recon tr.row-skip td.c-amt input.amt-input{
+  color:#94a3b8;
+}
+table.recon tr.row-skip{background:rgba(245,158,11,.05)}
+table.recon tr.row-skip:hover{background:rgba(245,158,11,.09)}
 
 table.recon tfoot td{background:linear-gradient(135deg,rgba(2,132,199,.06) 0%,rgba(2,132,199,.12) 100%);border-top:2px solid var(--brand);padding:10px 8px;font-weight:700}
 table.recon tfoot .ft-label{font-weight:700;color:var(--brand-dark)}
@@ -223,6 +242,7 @@ table.recon tfoot .ft-sum{text-align:right;font-family:ui-monospace,"SF Mono",Me
             <th><span class="store-tag">CHUDIAN</span><span class="store-name">永春店</span></th>
             <th><span class="store-tag">CHUDIAN</span><span class="store-name">新莊店</span></th>
             <th><span class="store-tag">SHICHENG</span><span class="store-name">忠孝店</span></th>
+            <th class="col-skip"><span class="store-tag">SKIP</span><span class="store-name">不計總</span></th>
             <th></th>
           </tr>
         </thead>
@@ -234,7 +254,7 @@ table.recon tfoot .ft-sum{text-align:right;font-family:ui-monospace,"SF Mono",Me
             <td class="ft-sum" id="sum-yongchun">0</td>
             <td class="ft-sum" id="sum-xinzhuang">0</td>
             <td class="ft-sum" id="sum-zhongxiao">0</td>
-            <td></td>
+            <td colspan="2"></td>
           </tr>
         </tfoot>
       </table>
@@ -308,12 +328,14 @@ var BUILTIN_RECONCILE_SYNC_URL = "https://script.google.com/macros/s/AKfycbxnXtK
 })();
 
 // 預設廠商清單：取自盤點表 VENDOR_GROUPS（chudian + shicheng）
-// 已排除：開元、同賀、西北，以及十城的「其他廠商」整組
+// 排除：西北、十城「其他廠商」整組
+// 開元 / 同賀 預設加入清單，但「不計總」打勾（仍可手動 key 金額）
 var SEED_VENDORS = [
-  '菜商','能源','雜費','潔盈','三億','和興',
-  '巨倉','冰淇淋','歐嘉','養殖人生',
+  '菜商','能源','雜費','潔盈','三億','和興','開元',
+  '巨倉','冰淇淋','歐嘉','養殖人生','同賀',
   '新燁','正順','瑞騰','泰安','以曜','美福'
 ];
+var SEED_EXCLUDE_FROM_TOTAL = ['開元','同賀'];
 
 var STORES = [
   {key:'zhonghe',   name:'中和店'},
@@ -336,22 +358,36 @@ function todayMonth(){
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
 }
 
+function buildSeedVendors(){
+  return SEED_VENDORS.map(function(n){
+    return {
+      name: n,
+      hidden: false,
+      excludeFromTotal: SEED_EXCLUDE_FROM_TOTAL.indexOf(n) >= 0
+    };
+  });
+}
+
 function loadVendors(){
   try{
     var raw = localStorage.getItem(KEY_VENDORS);
     if(!raw){
       // 初始化：用 SEED_VENDORS 灌入
-      var seed = SEED_VENDORS.map(function(n){ return {name:n, hidden:false}; });
+      var seed = buildSeedVendors();
       localStorage.setItem(KEY_VENDORS, JSON.stringify(seed));
       return seed;
     }
     var arr = JSON.parse(raw);
     if(!Array.isArray(arr)) throw new Error('bad');
     return arr.map(function(x){
-      return { name:String(x.name||'').trim(), hidden: !!x.hidden };
+      return {
+        name: String(x.name||'').trim(),
+        hidden: !!x.hidden,
+        excludeFromTotal: !!x.excludeFromTotal
+      };
     }).filter(function(x){ return x.name; });
   }catch(e){
-    var seed = SEED_VENDORS.map(function(n){ return {name:n, hidden:false}; });
+    var seed = buildSeedVendors();
     localStorage.setItem(KEY_VENDORS, JSON.stringify(seed));
     return seed;
   }
@@ -399,12 +435,13 @@ function render(){
   var visible = vendors.filter(function(v){ return !v.hidden; });
   if(visible.length === 0){
     var tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="6" style="text-align:center;color:#94a3b8;padding:24px 0;font-size:13px">目前沒有顯示中的廠商，請從下方新增或還原預設清單</td>';
+    tr.innerHTML = '<td colspan="7" style="text-align:center;color:#94a3b8;padding:24px 0;font-size:13px">目前沒有顯示中的廠商，請從下方新增或還原預設清單</td>';
     tbody.appendChild(tr);
   } else {
     visible.forEach(function(v, idx){
       var tr = document.createElement('tr');
       tr.dataset.vendor = v.name;
+      if(v.excludeFromTotal) tr.className = 'row-skip';
       var cells = '';
       cells += '<td class="c-vendor"><input class="vendor-input" type="text" value="'+escapeAttr(v.name)+'" '+
                'onchange="renameVendor(\''+escapeJsAttr(v.name)+'\', this.value)" title="點此修改廠商名稱"></td>';
@@ -414,6 +451,11 @@ function render(){
                  'value="'+(val ? val : '')+'" placeholder="0" '+
                  'oninput="onAmtInput(\''+escapeJsAttr(v.name)+'\', \''+st.key+'\', this.value)"></td>';
       });
+      cells += '<td class="c-skip"><label class="skip-toggle" title="勾選後此廠商不會加入下方總金額（金額仍可正常輸入與儲存）">'+
+               '<input type="checkbox" '+(v.excludeFromTotal?'checked':'')+' '+
+               'onchange="toggleExcludeFromTotal(\''+escapeJsAttr(v.name)+'\', this.checked)">'+
+               '<span class="skip-mark"></span>'+
+               '</label></td>';
       cells += '<td class="c-del"><button class="del-btn" onclick="hideVendor(\''+escapeJsAttr(v.name)+'\')" title="隱藏此廠商">×</button></td>';
       tr.innerHTML = cells;
       tbody.appendChild(tr);
@@ -443,6 +485,7 @@ function renderTotals(){
   var totals = { zhonghe:0, yongchun:0, xinzhuang:0, zhongxiao:0 };
   vendors.forEach(function(v){
     if(v.hidden) return;
+    if(v.excludeFromTotal) return;  // ⭐ 勾「不計總」的廠商：金額不加入總和
     STORES.forEach(function(st){
       totals[st.key] += getAmt(v.name, st.key);
     });
@@ -517,11 +560,19 @@ function addVendor(){
     }
     return;
   }
-  vendors.push({ name:name, hidden:false });
+  vendors.push({ name:name, hidden:false, excludeFromTotal:false });
   saveVendors();
   input.value = '';
   render();
   showToast('已新增「'+name+'」', 'ok');
+}
+
+function toggleExcludeFromTotal(name, checked){
+  var v = vendors.find(function(x){ return x.name === name; });
+  if(!v) return;
+  v.excludeFromTotal = !!checked;
+  saveVendors();
+  render();
 }
 
 function hideVendor(name){
@@ -542,8 +593,8 @@ function restoreVendor(name){
 }
 
 function resetSeedVendors(){
-  if(!confirm('確定把廠商清單還原成預設嗎？\n\n• 你之前手動新增 / 改名的廠商會被覆蓋\n• 已輸入的金額不會消失（仍按廠商名儲存在每月資料）\n• 預設清單已排除：開元、同賀、西北')) return;
-  vendors = SEED_VENDORS.map(function(n){ return {name:n, hidden:false}; });
+  if(!confirm('確定把廠商清單還原成預設嗎？\n\n• 你之前手動新增 / 改名 / 勾「不計總」的設定會被覆蓋\n• 已輸入的金額不會消失（仍按廠商名儲存在每月資料）\n• 預設清單排除：西北、十城其他廠商組\n• 開元、同賀預設加入但「不計總」打勾')) return;
+  vendors = buildSeedVendors();
   saveVendors();
   render();
   showToast('已還原預設清單', 'ok');
@@ -727,10 +778,14 @@ function applyCloudData(data){
   // 廠商清單
   if(Array.isArray(data.vendors)){
     vendors = data.vendors.map(function(v){
-      return { name: String(v.name || '').trim(), hidden: !!v.hidden };
+      return {
+        name: String(v.name || '').trim(),
+        hidden: !!v.hidden,
+        excludeFromTotal: !!v.excludeFromTotal
+      };
     }).filter(function(v){ return v.name; });
     if(vendors.length === 0){
-      vendors = SEED_VENDORS.map(function(n){ return {name:n, hidden:false}; });
+      vendors = buildSeedVendors();
     }
     localStorage.setItem(KEY_VENDORS, JSON.stringify(vendors));
   }
@@ -798,7 +853,7 @@ function clearMonth(){
 }
 
 function exportCSV(){
-  var headers = ['廠商'].concat(STORES.map(function(s){ return s.name; })).concat(['小計']);
+  var headers = ['廠商'].concat(STORES.map(function(s){ return s.name; })).concat(['小計','不計總']);
   var rows = [headers];
   var totals = {zhonghe:0, yongchun:0, xinzhuang:0, zhongxiao:0};
   vendors.forEach(function(v){
@@ -807,20 +862,22 @@ function exportCSV(){
     var line = [v.name];
     STORES.forEach(function(st){
       var n = getAmt(v.name, st.key);
-      totals[st.key] += n;
+      if(!v.excludeFromTotal) totals[st.key] += n;
       rowSum += n;
       line.push(n);
     });
     line.push(rowSum);
+    line.push(v.excludeFromTotal ? '✓' : '');
     rows.push(line);
   });
-  var totalLine = ['合計'];
+  var totalLine = ['合計（已扣除「不計總」廠商）'];
   var grand = 0;
   STORES.forEach(function(st){
     totalLine.push(totals[st.key]);
     grand += totals[st.key];
   });
   totalLine.push(grand);
+  totalLine.push('');
   rows.push(totalLine);
 
   var csv = rows.map(function(r){

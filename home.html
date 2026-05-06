@@ -264,16 +264,7 @@ function goMarketing(){
 }
 
 function goReconcile(){
-  // 廠商對帳：店長本機工具，沿用全域密碼把關
-  if(sessionStorage.getItem('cd_global_auth') !== '1'){
-    var pw = prompt('請輸入登入密碼：');
-    if(pw === null) return;
-    if(String(pw).trim() !== GLOBAL_PASSWORD){
-      alert('❌ 密碼錯誤');
-      return;
-    }
-    sessionStorage.setItem('cd_global_auth', '1');
-  }
+  // 廠商對帳：店長對帳用的本機 + 雲端工具，免密碼
   window.location.href = 'vendor-reconcile.html';
 }
 </script>

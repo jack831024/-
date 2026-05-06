@@ -69,9 +69,9 @@ function readAll() {
   };
 }
 
-// 廠商主檔：[{name, hidden}]，依「排序」欄遞增
+// 廠商主檔：[{name, hidden, excludeFromTotal}]，依「排序」欄遞增
 function readVendors() {
-  var sheet = getSheet(SH_VENDORS, ['排序', '廠商', '隱藏']);
+  var sheet = getSheet(SH_VENDORS, ['排序', '廠商', '隱藏', '不計總']);
   var data = sheet.getDataRange().getValues();
   var rows = [];
   for (var i = 1; i < data.length; i++) {
@@ -80,11 +80,14 @@ function readVendors() {
     rows.push({
       order: Number(data[i][0]) || (i),
       name: name,
-      hidden: (String(data[i][2] || '').toLowerCase() === 'true' || data[i][2] === true)
+      hidden: (String(data[i][2] || '').toLowerCase() === 'true' || data[i][2] === true),
+      excludeFromTotal: (String(data[i][3] || '').toLowerCase() === 'true' || data[i][3] === true)
     });
   }
   rows.sort(function(a, b){ return a.order - b.order; });
-  return rows.map(function(r){ return { name: r.name, hidden: r.hidden }; });
+  return rows.map(function(r){
+    return { name: r.name, hidden: r.hidden, excludeFromTotal: r.excludeFromTotal };
+  });
 }
 
 // 月份資料：{ 'YYYY-MM': { amounts: {vendor:{zhonghe,...}}, note: '' } }
@@ -139,13 +142,13 @@ function writeAll(data) {
 }
 
 function writeVendors(vendors) {
-  var sheet = getSheet(SH_VENDORS, ['排序', '廠商', '隱藏']);
-  clearBody(sheet, 3);
+  var sheet = getSheet(SH_VENDORS, ['排序', '廠商', '隱藏', '不計總']);
+  clearBody(sheet, 4);
   if (vendors.length === 0) return;
   var rows = vendors.map(function(v, idx){
-    return [idx + 1, String(v.name || ''), !!v.hidden];
+    return [idx + 1, String(v.name || ''), !!v.hidden, !!v.excludeFromTotal];
   });
-  sheet.getRange(2, 1, rows.length, 3).setValues(rows);
+  sheet.getRange(2, 1, rows.length, 4).setValues(rows);
 }
 
 function writeAmounts(months) {
@@ -244,6 +247,7 @@ function setColumnWidthsByName(sheet, name, cols) {
     sheet.setColumnWidth(1, 70);
     sheet.setColumnWidth(2, 160);
     sheet.setColumnWidth(3, 80);
+    sheet.setColumnWidth(4, 80);
   } else if (name === SH_NOTES) {
     sheet.setColumnWidth(1, 100);
     sheet.setColumnWidth(2, 480);
@@ -296,7 +300,7 @@ function json(obj) {
 //    （或填到 BUILTIN_RECONCILE_SYNC_URL 寫死）
 // ============================================
 function forceAuth() {
-  var s1 = getSheet(SH_VENDORS, ['排序', '廠商', '隱藏']);
+  var s1 = getSheet(SH_VENDORS, ['排序', '廠商', '隱藏', '不計總']);
   var s2 = getSheet(SH_AMOUNTS, ['月份', '廠商'].concat(STORE_NAMES).concat(['更新時間']));
   var s3 = getSheet(SH_NOTES, ['月份', '備註']);
   Logger.log('✓ 廠商對帳工作表已就緒：');
