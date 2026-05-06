@@ -62,7 +62,7 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
 .btn-sm{padding:6px 11px;font-size:12px;border-radius:8px}
 
 .table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--line)}
-table.recon{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px;min-width:720px}
+table.recon{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px;min-width:820px}
 table.recon th{position:sticky;top:0;background:linear-gradient(180deg,#f8fafc 0%,#f1f5f9 100%);text-align:center;padding:10px 8px;font-size:12px;font-weight:700;color:var(--ink-2);border-bottom:2px solid var(--line);white-space:nowrap}
 table.recon th.col-vendor{text-align:left;min-width:140px}
 table.recon th .store-name{display:block;font-size:13px;color:var(--ink);font-weight:700}
@@ -89,6 +89,19 @@ table.recon .del-btn:hover{border-color:var(--danger);color:var(--danger);backgr
 /* 「不計總」勾選欄 */
 table.recon th.col-skip{min-width:64px}
 table.recon td.c-skip{width:64px;text-align:center}
+
+/* 「小計」欄（橫向：每個廠商 4 家店加總） */
+table.recon th.col-rowsum{min-width:96px;background:linear-gradient(180deg,rgba(2,132,199,.06) 0%,rgba(2,132,199,.12) 100%)}
+table.recon td.c-rowsum{
+  width:96px;text-align:right;font-family:ui-monospace,"SF Mono",Menlo,monospace;
+  font-variant-numeric:tabular-nums;font-weight:700;color:var(--brand-dark);
+  background:rgba(2,132,199,.04);border-left:1.5px solid rgba(2,132,199,.18);padding-right:12px
+}
+table.recon tr.row-skip td.c-rowsum{color:#94a3b8;background:rgba(245,158,11,.06)}
+table.recon tfoot td.ft-grand{
+  background:linear-gradient(135deg,var(--brand) 0%,#22d3ee 100%);
+  color:#fff;font-size:15.5px;border-left:1.5px solid var(--brand-dark)
+}
 .skip-toggle{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;width:34px;height:24px;position:relative;user-select:none}
 .skip-toggle input[type=checkbox]{position:absolute;opacity:0;width:0;height:0}
 .skip-toggle .skip-mark{display:inline-block;width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line);background:#fff;transition:all .15s;position:relative}
@@ -243,6 +256,7 @@ table.recon tfoot .ft-sum{text-align:right;font-family:ui-monospace,"SF Mono",Me
             <th><span class="store-tag">CHUDIAN</span><span class="store-name">新莊店</span></th>
             <th><span class="store-tag">SHICHENG</span><span class="store-name">忠孝店</span></th>
             <th class="col-skip"><span class="store-tag">SKIP</span><span class="store-name">不計總</span></th>
+            <th class="col-rowsum"><span class="store-tag">SUBTOTAL</span><span class="store-name">小計</span></th>
             <th></th>
           </tr>
         </thead>
@@ -254,7 +268,9 @@ table.recon tfoot .ft-sum{text-align:right;font-family:ui-monospace,"SF Mono",Me
             <td class="ft-sum" id="sum-yongchun">0</td>
             <td class="ft-sum" id="sum-xinzhuang">0</td>
             <td class="ft-sum" id="sum-zhongxiao">0</td>
-            <td colspan="2"></td>
+            <td></td>
+            <td class="ft-sum ft-grand" id="sum-grand">0</td>
+            <td></td>
           </tr>
         </tfoot>
       </table>
@@ -435,7 +451,7 @@ function render(){
   var visible = vendors.filter(function(v){ return !v.hidden; });
   if(visible.length === 0){
     var tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="7" style="text-align:center;color:#94a3b8;padding:24px 0;font-size:13px">目前沒有顯示中的廠商，請從下方新增或還原預設清單</td>';
+    tr.innerHTML = '<td colspan="8" style="text-align:center;color:#94a3b8;padding:24px 0;font-size:13px">目前沒有顯示中的廠商，請從下方新增或還原預設清單</td>';
     tbody.appendChild(tr);
   } else {
     visible.forEach(function(v, idx){
@@ -456,6 +472,7 @@ function render(){
                'onchange="toggleExcludeFromTotal(\''+escapeJsAttr(v.name)+'\', this.checked)">'+
                '<span class="skip-mark"></span>'+
                '</label></td>';
+      cells += '<td class="c-rowsum" data-rowsum="'+escapeAttr(v.name)+'">'+formatNum(rowSum(v.name))+'</td>';
       cells += '<td class="c-del"><button class="del-btn" onclick="hideVendor(\''+escapeJsAttr(v.name)+'\')" title="隱藏此廠商">×</button></td>';
       tr.innerHTML = cells;
       tbody.appendChild(tr);
@@ -481,19 +498,40 @@ function renderHiddenList(){
   box.innerHTML = html;
 }
 
+function rowSum(vendorName){
+  var sum = 0;
+  STORES.forEach(function(st){ sum += getAmt(vendorName, st.key); });
+  return sum;
+}
+
 function renderTotals(){
   var totals = { zhonghe:0, yongchun:0, xinzhuang:0, zhongxiao:0 };
+  var grand = 0;
   vendors.forEach(function(v){
     if(v.hidden) return;
     if(v.excludeFromTotal) return;  // ⭐ 勾「不計總」的廠商：金額不加入總和
     STORES.forEach(function(st){
-      totals[st.key] += getAmt(v.name, st.key);
+      var n = getAmt(v.name, st.key);
+      totals[st.key] += n;
+      grand += n;
     });
   });
   STORES.forEach(function(st){
     document.getElementById('sum-' + st.key).textContent = formatNum(totals[st.key]);
     document.getElementById('card-' + st.key).textContent = '$' + formatNum(totals[st.key]);
   });
+  var grandCell = document.getElementById('sum-grand');
+  if(grandCell) grandCell.textContent = formatNum(grand);
+}
+
+function refreshRowSum(vendorName){
+  var cell = document.querySelector('td.c-rowsum[data-rowsum="' + cssAttrEscape(vendorName) + '"]');
+  if(cell) cell.textContent = formatNum(rowSum(vendorName));
+}
+
+function cssAttrEscape(s){
+  // 只用於 querySelector 屬性比對：跳脫雙引號與反斜線
+  return String(s||'').replace(/\\/g,'\\\\').replace(/"/g,'\\"');
 }
 
 function renderNote(){
@@ -508,6 +546,7 @@ function onAmtInput(vendorName, storeKey, raw){
   var n = parseFloat(String(raw).replace(/,/g,''));
   if(isNaN(n)) n = 0;
   setAmt(vendorName, storeKey, n);
+  refreshRowSum(vendorName);
   renderTotals();
 }
 
