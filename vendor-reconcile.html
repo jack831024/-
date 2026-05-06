@@ -940,6 +940,18 @@ function goBack(){
 // 啟動
 // ============================================
 (function init(){
+  // 若在 Apps Script HtmlService iframe 內執行：沒有 home.html 可回，隱藏返回鍵
+  try{
+    if(window.top !== window.self){
+      var bb = document.querySelector('.back-btn');
+      if(bb) bb.style.display = 'none';
+    }
+  }catch(e){
+    // 跨域 access top 也算 iframe，直接隱藏
+    var bb2 = document.querySelector('.back-btn');
+    if(bb2) bb2.style.display = 'none';
+  }
+
   document.getElementById('month-picker').value = currentMonth;
   render();
   refreshSyncBtn();
