@@ -101,8 +101,9 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
 .empty-row{text-align:center;color:var(--ink-3);padding:18px;font-size:12.5px;background:rgba(248,250,252,.5);border-radius:10px;line-height:1.6}
 
 .date-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
-.date-chip-mini{display:inline-flex;align-items:center;font-size:10.5px;font-weight:600;font-family:ui-monospace,Menlo,monospace;padding:2px 7px;border-radius:999px;background:rgba(202,138,4,.1);color:#92400e;letter-spacing:.5px}
+.date-chip-mini{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:600;font-family:ui-monospace,Menlo,monospace;padding:2px 7px;border-radius:999px;background:rgba(202,138,4,.1);color:#92400e;letter-spacing:.5px}
 .date-chip-mini.travel{background:rgba(14,165,233,.1);color:#075985}
+.date-chip-mini .half-mark{font-size:9px;font-weight:700;background:rgba(255,255,255,.55);padding:0 4px;border-radius:8px}
 
 /* 禮金 */
 .emp-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
@@ -223,7 +224,7 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
 
   <!-- 特休 -->
   <div class="section annual">
-    <h3><span class="icon">🌴</span>特休<span class="pill">加班費系統「特/特休」自動扣</span><span class="hint">已用 = 起始 + 加班費系統匯入</span></h3>
+    <h3><span class="icon">🌴</span>特休<span class="pill">加班費系統「特/特休/特半」自動扣</span><span class="hint">特 = 1 天、特半 = 0.5 天</span></h3>
     <table class="grid">
       <thead>
         <tr><th style="width:100px">員工</th><th>到職日</th><th class="c-num">總累計</th><th class="c-num">已使用</th><th class="c-num">剩餘可用</th></tr>
@@ -234,7 +235,7 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
 
   <!-- 旅遊假 -->
   <div class="section travel" id="section-travel">
-    <h3><span class="icon">✈️</span>旅遊假<span class="pill travel">加班費系統「旅/旅遊」自動扣</span><span class="hint">3月中~9月底 平日休 · 半年=1 / 1年=2 / 2年=3 / 3年+=4</span></h3>
+    <h3><span class="icon">✈️</span>旅遊假<span class="pill travel">加班費系統「旅/旅遊/旅半」自動扣</span><span class="hint">3月中~9月底 平日休 · 半年=1 / 1年=2 / 2年=3 / 3年+=4</span></h3>
     <table class="grid">
       <thead>
         <tr><th style="width:100px">員工</th><th>到職日</th><th class="c-num">本年可用</th><th class="c-num">已使用</th><th class="c-num">剩餘</th></tr>
@@ -502,10 +503,13 @@ function cleanEmpName(n){
 //   1) localStorage cd_ot_summary_<store>_<ym>（同瀏覽器當下分析的）
 //   2) 雲端 OT_LEAVE_CLOUD（其他裝置上分析後同步上來的）
 //   兩邊用正規化後的姓名比對，去重 + 過濾 > EFFECTIVE_DATE + 排序
+// 回傳 { full: [...排序日期], half: [...排序日期] }
 function getOvertimeDatesAfter(empName, type){
-  var seen = {};
+  var seenFull = {};
+  var seenHalf = {};
   var target = cleanEmpName(empName);
   var effDate = getEffectiveDate();
+  var halfKey = type + 'Half'; // annualHalf / travelHalf
   var prefix = 'cd_ot_summary_' + STORE + '_';
   for(var i = 0; i < localStorage.length; i++){
     var key = localStorage.key(i);
@@ -516,19 +520,22 @@ function getOvertimeDatesAfter(empName, type){
       Object.keys(emps).forEach(function(n){
         if(cleanEmpName(n) !== target) return;
         var rec = emps[n] || {};
-        var dates = type === 'annual' ? (rec.annualDates || []) : (rec.travelDates || []);
-        dates.forEach(function(d){ if(d > effDate) seen[d] = 1; });
+        var fullDates = type === 'annual' ? (rec.annualDates || []) : (rec.travelDates || []);
+        var halfDates = type === 'annual' ? (rec.annualHalfDates || []) : (rec.travelHalfDates || []);
+        fullDates.forEach(function(d){ if(d > effDate) seenFull[d] = 1; });
+        halfDates.forEach(function(d){ if(d > effDate) seenHalf[d] = 1; });
       });
     } catch(e){}
   }
   if(OT_LEAVE_CLOUD){
     Object.keys(OT_LEAVE_CLOUD).forEach(function(n){
       if(cleanEmpName(n) !== target) return;
-      var arr = (OT_LEAVE_CLOUD[n] || {})[type] || [];
-      arr.forEach(function(d){ if(d > effDate) seen[d] = 1; });
+      var rec = OT_LEAVE_CLOUD[n] || {};
+      (rec[type] || []).forEach(function(d){ if(d > effDate) seenFull[d] = 1; });
+      (rec[halfKey] || []).forEach(function(d){ if(d > effDate) seenHalf[d] = 1; });
     });
   }
-  return Object.keys(seen).sort();
+  return { full: Object.keys(seenFull).sort(), half: Object.keys(seenHalf).sort() };
 }
 function getOvertimeUsedAfter(empName, type){
   return getOvertimeDatesAfter(empName, type).length;
@@ -539,8 +546,8 @@ function calcAnnual(emp){
   // initialAnnualUsed = EFFECTIVE_DATE 之前已用；之後自動從加班費系統抓
   var accrued = emp.initialAnnualAccrued || 0;
   var initialUsed = emp.initialAnnualUsed || 0;
-  var fromOTDates = getOvertimeDatesAfter(emp.name, 'annual');
-  var fromOT = fromOTDates.length;
+  var ot = getOvertimeDatesAfter(emp.name, 'annual');
+  var fromOT = ot.full.length + ot.half.length * 0.5;
   var manual = STATE.annualUsedManual[emp.id] || 0;
   var used = initialUsed + fromOT + manual;
   return {
@@ -548,17 +555,16 @@ function calcAnnual(emp){
     used: used,
     initialUsed: initialUsed,
     fromOT: fromOT,
-    fromOTDates: fromOTDates,
+    fromOTDates: ot.full,
+    fromOTHalfDates: ot.half,
     remaining: Math.max(0, accrued - used)
   };
 }
 function calcTravel(emp){
   var entitlement = travelEntitlement(emp.hireDate);
-  // 「初始剩餘」是 EFFECTIVE_DATE 當下的剩餘
-  // 之後自動從加班費抓 → 從剩餘扣掉
   var initialRemaining = emp.initialTravelRemaining || 0;
-  var fromOTDates = getOvertimeDatesAfter(emp.name, 'travel');
-  var fromOT = fromOTDates.length;
+  var ot = getOvertimeDatesAfter(emp.name, 'travel');
+  var fromOT = ot.full.length + ot.half.length * 0.5;
   var manual = STATE.travelUsedManual[emp.id] || 0;
   var initialUsed = Math.max(0, entitlement - initialRemaining);
   var used = initialUsed + fromOT + manual;
@@ -566,7 +572,8 @@ function calcTravel(emp){
     entitlement: entitlement,
     used: used,
     fromOT: fromOT,
-    fromOTDates: fromOTDates,
+    fromOTDates: ot.full,
+    fromOTHalfDates: ot.half,
     remaining: Math.max(0, initialRemaining - fromOT - manual)
   };
 }
@@ -697,19 +704,27 @@ function renderAnnual(){
   var rows = ft.map(function(e){
     var c = calcAnnual(e);
     var cls = c.remaining === 0 ? 'bal-zero' : (c.remaining < 3 ? 'bal-warn' : 'bal-pos');
-    var preLine = c.initialUsed > 0 ? '<div class="tag-line">'+EFFECTIVE_LABEL+' 以前已使用 '+c.initialUsed+' 天</div>' : '';
-    var chips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini">'+fmtMD(d)+'</span>'; }).join('');
+    var preLine = c.initialUsed > 0 ? '<div class="tag-line">'+EFFECTIVE_LABEL+' 以前已使用 '+fmtDays(c.initialUsed)+' 天</div>' : '';
+    var fullChips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini">'+fmtMD(d)+'</span>'; });
+    var halfChips = c.fromOTHalfDates.map(function(d){ return '<span class="date-chip-mini" title="特半 0.5 天">'+fmtMD(d)+'<span class="half-mark">½</span></span>'; });
+    var chips = fullChips.concat(halfChips).join('');
     var chipBlock = chips ? '<div class="date-chips">'+chips+'</div>' : '';
-    var mainLine = '<div>已使用 '+c.fromOT+' 天</div>';
+    var mainLine = '<div>已使用 '+fmtDays(c.fromOT)+' 天</div>';
     return '<tr>'
       + '<td class="c-name">'+e.name+'</td>'
       + '<td>'+e.hireDate+'<div class="tag-line">年資 '+tenureYears(e.hireDate).toFixed(1)+' 年</div></td>'
       + '<td class="c-num">'+c.accrued+' 天</td>'
       + '<td>'+preLine+mainLine+chipBlock+'</td>'
-      + '<td class="c-num big '+cls+'">'+c.remaining+' 天</td>'
+      + '<td class="c-num big '+cls+'">'+fmtDays(c.remaining)+' 天</td>'
       + '</tr>';
   });
   tb.innerHTML = rows.join('');
+}
+
+// 顯示天數：整數不帶小數、0.5 顯示為 .5
+function fmtDays(n){
+  n = Number(n) || 0;
+  return (n % 1 === 0) ? String(n) : n.toFixed(1).replace(/\.0$/, '');
 }
 
 // YYYY-MM-DD → MM/DD
@@ -732,18 +747,19 @@ function renderTravel(){
     var months = tenureMonths(e.hireDate);
     var cls = c.remaining === 0 ? 'bal-zero' : 'bal-pos';
     var note = months < 6 ? '<div class="tag-line">未滿半年</div>' : '';
-    // 計算 4 月前已用 = entitlement - initialRemaining
     var preUsed = Math.max(0, c.entitlement - (e.initialTravelRemaining || 0));
-    var preLine = preUsed > 0 ? '<div class="tag-line">'+EFFECTIVE_LABEL+' 以前已使用 '+preUsed+' 天</div>' : '';
-    var chips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini travel">'+fmtMD(d)+'</span>'; }).join('');
+    var preLine = preUsed > 0 ? '<div class="tag-line">'+EFFECTIVE_LABEL+' 以前已使用 '+fmtDays(preUsed)+' 天</div>' : '';
+    var fullChips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini travel">'+fmtMD(d)+'</span>'; });
+    var halfChips = c.fromOTHalfDates.map(function(d){ return '<span class="date-chip-mini travel" title="旅半 0.5 天">'+fmtMD(d)+'<span class="half-mark">½</span></span>'; });
+    var chips = fullChips.concat(halfChips).join('');
     var chipBlock = chips ? '<div class="date-chips">'+chips+'</div>' : '';
-    var mainLine = '<div>已使用 '+c.fromOT+' 天</div>';
+    var mainLine = '<div>已使用 '+fmtDays(c.fromOT)+' 天</div>';
     return '<tr>'
       + '<td class="c-name">'+e.name+'</td>'
       + '<td>'+e.hireDate+note+'</td>'
       + '<td class="c-num">'+c.entitlement+' 天</td>'
       + '<td>'+preLine+mainLine+chipBlock+'</td>'
-      + '<td class="c-num big '+cls+'">'+c.remaining+' 天</td>'
+      + '<td class="c-num big '+cls+'">'+fmtDays(c.remaining)+' 天</td>'
       + '</tr>';
   });
   tb.innerHTML = rows.join('');

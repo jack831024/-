@@ -284,8 +284,10 @@ function saveOTLeave(password, store, ym, byEmp) {
     var newRows = [];
     Object.keys(byEmp).forEach(function(name){
       var rec = byEmp[name] || {};
-      (rec.annualDates || []).forEach(function(d){ newRows.push([now, store, ym, name, 'annual', d]); });
-      (rec.travelDates || []).forEach(function(d){ newRows.push([now, store, ym, name, 'travel', d]); });
+      (rec.annualDates       || []).forEach(function(d){ newRows.push([now, store, ym, name, 'annual',     d]); });
+      (rec.annualHalfDates   || []).forEach(function(d){ newRows.push([now, store, ym, name, 'annualHalf', d]); });
+      (rec.travelDates       || []).forEach(function(d){ newRows.push([now, store, ym, name, 'travel',     d]); });
+      (rec.travelHalfDates   || []).forEach(function(d){ newRows.push([now, store, ym, name, 'travelHalf', d]); });
     });
     if (newRows.length > 0) {
       sheet.getRange(sheet.getLastRow() + 1, 1, newRows.length, OT_LEAVE_HEADERS.length).setValues(newRows);
@@ -313,13 +315,14 @@ function loadOTLeave(password, store) {
     var sheet = getOTLeaveSheet();
     var data = sheet.getDataRange().getValues();
     var byEmp = {};
+    var validTypes = { annual:1, travel:1, annualHalf:1, travelHalf:1 };
     for (var i = 1; i < data.length; i++) {
       if (String(data[i][1]) !== store) continue;
       var name = String(data[i][3] || '').trim();
       var type = String(data[i][4] || '').trim();
       var date = String(data[i][5] || '').trim();
-      if (!name || !date || (type !== 'annual' && type !== 'travel')) continue;
-      if (!byEmp[name]) byEmp[name] = { annual: [], travel: [] };
+      if (!name || !date || !validTypes[type]) continue;
+      if (!byEmp[name]) byEmp[name] = { annual: [], travel: [], annualHalf: [], travelHalf: [] };
       var arr = byEmp[name][type];
       if (arr.indexOf(date) < 0) arr.push(date);
     }
@@ -327,6 +330,8 @@ function loadOTLeave(password, store) {
     Object.keys(byEmp).forEach(function(n){
       byEmp[n].annual.sort();
       byEmp[n].travel.sort();
+      byEmp[n].annualHalf.sort();
+      byEmp[n].travelHalf.sort();
     });
     return { ok: true, byEmp: byEmp };
   } catch (err) {
