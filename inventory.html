@@ -384,7 +384,7 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
   <div class="section" id="vendor-section">
     <h3>
       <span class="step-num">1</span>選擇廠商
-      <input type="month" id="vendor-month-picker" class="vendor-month-picker" onchange="onVendorMonthChange()" title="切換月份（每月廠商清單獨立）">
+      <input type="month" id="vendor-month-picker" class="vendor-month-picker" onchange="onVendorMonthChange()" title="切換月份（顯示該月時的廠商清單；刪除某廠商會自當月起隱藏，過往月份仍可見）">
       <button class="manage-vendors-btn" id="manage-vendors-btn" onclick="toggleVendorManageMode()">🗑 管理</button>
     </h3>
     <div id="vendor-grid"></div>
@@ -641,10 +641,12 @@ function todayMonth(){
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
 }
 
-function customVendorsKey(){ return 'cd_custom_vendors_' + STORE_ID + '_' + currentVendorMonth; }
-function hiddenVendorsKey(){ return 'cd_hidden_vendors_' + STORE_ID + '_' + currentVendorMonth; }
+// 自訂廠商：全域清單（不分月），新增之後所有月份都看得到
+function customVendorsKey(){ return 'cd_custom_vendors_' + STORE_ID; }
+// 廠商刪除標記：{廠商名: 'YYYY-MM'}，表示「從該月起隱藏」（< 該月仍可見）
+function vendorDeletionsKey(){ return 'cd_vendor_deleted_' + STORE_ID; }
 
-// 切月份 → 重畫廠商網格（用該月的自訂/隱藏清單）
+// 切月份 → 重畫廠商網格（依「刪除月份」過濾）
 function onVendorMonthChange(){
   var picker = document.getElementById('vendor-month-picker');
   if(!picker) return;
@@ -653,31 +655,88 @@ function onVendorMonthChange(){
   renderVendorGrid(brand);
 }
 
-// 一次性遷移：把舊版（不分月份）的 cd_custom_vendors_{STORE_ID} 搬到當月 key
-// 這樣升級到新版時，使用者原本設好的廠商清單不會憑空消失
+// 一次性遷移：把舊版的廠商清單合併到新格式
+//   v1（極舊）：cd_custom_vendors_{STORE_ID}                         ← 全域陣列
+//   v2（前一版）：cd_custom_vendors_{STORE_ID}_{YYYY-MM}             ← 每月獨立陣列（造成新增不持續的 bug）
+//   v3（現在）：cd_custom_vendors_{STORE_ID}                          ← 全域陣列（合併所有月份）
+//             + cd_vendor_deleted_{STORE_ID} = {名: 'YYYY-MM'}      ← 刪除標記（從該月起隱藏）
+// 隱藏清單同邏輯：把每月隱藏的內建廠商合併成「最早出現的月份」當作 deletion 月份
 function migrateOldVendorKeys(){
-  ['cd_custom_vendors_', 'cd_hidden_vendors_'].forEach(function(prefix){
-    var oldKey = prefix + STORE_ID;
-    var oldVal = localStorage.getItem(oldKey);
-    if(!oldVal) return;
+  var customGlobalKey = 'cd_custom_vendors_' + STORE_ID;
+  var hiddenGlobalKey = 'cd_hidden_vendors_' + STORE_ID;  // v1 也要清掉
+  var deletionsKey = 'cd_vendor_deleted_' + STORE_ID;
+
+  // 收集要遷移的舊 key
+  var customMonthKeys = [];      // [{key, month}]
+  var hiddenMonthKeys = [];      // [{key, month}]
+  for(var i=0; i<localStorage.length; i++){
+    var k = localStorage.key(i);
+    if(!k) continue;
+    var cm = k.match(/^cd_custom_vendors_(.+?)_(\d{4}-\d{2})$/);
+    if(cm && cm[1] === STORE_ID){ customMonthKeys.push({key: k, month: cm[2]}); continue; }
+    var hm = k.match(/^cd_hidden_vendors_(.+?)_(\d{4}-\d{2})$/);
+    if(hm && hm[1] === STORE_ID){ hiddenMonthKeys.push({key: k, month: hm[2]}); }
+  }
+
+  // ── 自訂廠商：合併（v1 全域 + v2 每月）→ 全域陣列
+  var customSet = {};
+  var customOrder = [];
+  function pushCustom(name){
+    if(!name) return;
+    if(customSet[name]) return;
+    customSet[name] = true;
+    customOrder.push(name);
+  }
+  // 既有的 v3 全域（保留順序）
+  try{
+    var existingGlobal = JSON.parse(localStorage.getItem(customGlobalKey) || '[]');
+    if(Array.isArray(existingGlobal)) existingGlobal.forEach(pushCustom);
+  }catch(e){}
+  // v2 每月（依月份由舊到新合併，盡量保留早期順序）
+  customMonthKeys.sort(function(a,b){ return a.month < b.month ? -1 : 1; });
+  customMonthKeys.forEach(function(item){
     try{
-      var arr = JSON.parse(oldVal);
-      if(Array.isArray(arr) && arr.length > 0){
-        var newKey = prefix + STORE_ID + '_' + todayMonth();
-        var existing = localStorage.getItem(newKey);
-        if(!existing){
-          localStorage.setItem(newKey, oldVal);
-        }else{
-          try{
-            var ex = JSON.parse(existing) || [];
-            arr.forEach(function(v){ if(ex.indexOf(v)<0) ex.push(v); });
-            localStorage.setItem(newKey, JSON.stringify(ex));
-          }catch(e){}
-        }
+      var arr = JSON.parse(localStorage.getItem(item.key) || '[]');
+      if(Array.isArray(arr)) arr.forEach(pushCustom);
+    }catch(e){}
+    localStorage.removeItem(item.key);
+  });
+  if(customOrder.length > 0){
+    localStorage.setItem(customGlobalKey, JSON.stringify(customOrder));
+  }
+
+  // ── 隱藏廠商（每月）→ deletions map（取「最早被隱藏的月份」當 deletion 起點）
+  var deletions = {};
+  try{
+    var existingDel = JSON.parse(localStorage.getItem(deletionsKey) || '{}');
+    if(existingDel && typeof existingDel === 'object' && !Array.isArray(existingDel)) deletions = existingDel;
+  }catch(e){}
+  // v1 全域隱藏清單 → 標記為極早期（'1970-01'，等於所有月份都隱藏）
+  try{
+    var v1Hidden = JSON.parse(localStorage.getItem(hiddenGlobalKey) || '[]');
+    if(Array.isArray(v1Hidden)){
+      v1Hidden.forEach(function(name){
+        if(name && (!deletions[name] || '1970-01' < deletions[name])) deletions[name] = '1970-01';
+      });
+    }
+  }catch(e){}
+  localStorage.removeItem(hiddenGlobalKey);
+  // v2 每月隱藏 → 取最早出現的月份（最寬鬆的解讀，避免使用者「曾經想隱藏」的廠商升級後又冒出來）
+  hiddenMonthKeys.forEach(function(item){
+    try{
+      var arr = JSON.parse(localStorage.getItem(item.key) || '[]');
+      if(Array.isArray(arr)){
+        arr.forEach(function(name){
+          if(!name) return;
+          if(!deletions[name] || item.month < deletions[name]) deletions[name] = item.month;
+        });
       }
     }catch(e){}
-    localStorage.removeItem(oldKey);
+    localStorage.removeItem(item.key);
   });
+  if(Object.keys(deletions).length > 0){
+    localStorage.setItem(deletionsKey, JSON.stringify(deletions));
+  }
 }
 
 // 管理模式：切換 body.vendor-manage-mode class，CSS 控制 ❌ 顯示
@@ -700,25 +759,61 @@ function setCustomVendors(arr){
   localStorage.setItem(customVendorsKey(), JSON.stringify(arr || []));
 }
 
-function getHiddenVendors(){
+// 取得刪除標記表 {廠商名: 'YYYY-MM'}（從該月起隱藏）
+function getVendorDeletions(){
   try{
-    var raw = localStorage.getItem(hiddenVendorsKey());
-    var arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr : [];
-  }catch(e){ return []; }
+    var raw = localStorage.getItem(vendorDeletionsKey());
+    var obj = raw ? JSON.parse(raw) : {};
+    return (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {};
+  }catch(e){ return {}; }
+}
+function setVendorDeletions(obj){
+  if(!obj || Object.keys(obj).length === 0){
+    localStorage.removeItem(vendorDeletionsKey());
+  }else{
+    localStorage.setItem(vendorDeletionsKey(), JSON.stringify(obj));
+  }
 }
 
-function setHiddenVendors(arr){
-  localStorage.setItem(hiddenVendorsKey(), JSON.stringify(arr || []));
+// 在指定月份「應隱藏」的廠商清單（沒指定就用 currentVendorMonth）
+// 規則：deletion[name] <= ym 表示已從該月起被隱藏 → 在 ym 看不到
+function getHiddenVendors(ym){
+  ym = ym || currentVendorMonth;
+  var deletions = getVendorDeletions();
+  var hidden = [];
+  Object.keys(deletions).forEach(function(name){
+    var dm = deletions[name];
+    if(dm && dm <= ym) hidden.push(name);
+  });
+  return hidden;
 }
 
-// 隱藏內建廠商（按鈕從畫面消失，但 VENDOR_GROUPS 寫死的值不變、紀錄保留）
+// 從 currentVendorMonth 起隱藏該廠商（內建/自訂統一邏輯）
+//   • 過往月份仍可見，紀錄完全保留
+//   • 重複呼叫會以「較早的月份」為準（避免使用者切回去更早月份再隱藏一次反而把日期推後）
+function hideVendorFromCurrentMonth(name){
+  var deletions = getVendorDeletions();
+  if(!deletions[name] || currentVendorMonth < deletions[name]){
+    deletions[name] = currentVendorMonth;
+    setVendorDeletions(deletions);
+  }
+}
+
+// 還原（清掉某廠商的刪除標記，所有月份都可見）
+function unhideVendor(name){
+  var deletions = getVendorDeletions();
+  if(deletions[name]){
+    delete deletions[name];
+    setVendorDeletions(deletions);
+  }
+}
+
+// 隱藏內建廠商（按鈕從當前月份起消失，過往月份和紀錄都保留）
 function hideBuiltinVendor(name, e){
   if(e){ e.stopPropagation(); e.preventDefault(); }
-  if(!confirm('確定要隱藏廠商「'+name+'」嗎？\n\n注意：\n• 按鈕會從畫面消失，但「'+name+'」之前的盤點紀錄仍保留在本機 + 雲端\n• 想恢復隨時可在「自訂廠商」分組標題右邊的「還原」入口取回'))
+  if(!confirm('確定要從 '+currentVendorMonth+' 起隱藏廠商「'+name+'」嗎？\n\n• 自當月起此廠商不再出現在清單中\n• '+currentVendorMonth+' 之前的月份仍可看到「'+name+'」並讀取盤點紀錄\n• 想完全還原可從「自訂廠商」分組標題右邊的「還原」入口取回'))
     return;
-  var list = getHiddenVendors();
-  if(list.indexOf(name) < 0){ list.push(name); setHiddenVendors(list); }
+  hideVendorFromCurrentMonth(name);
   // 如果剛好是當前選中的廠商，把畫面切回未選擇狀態
   if(currentVendor === name){
     currentVendor = null;
@@ -732,12 +827,12 @@ function hideBuiltinVendor(name, e){
   renderVendorGrid(brand);
 }
 
-// 還原所有已隱藏的內建廠商
+// 還原所有已隱藏的廠商（清空 deletions map）
 function restoreHiddenVendors(){
-  var list = getHiddenVendors();
-  if(list.length === 0){ alert('沒有已隱藏的廠商'); return; }
-  if(!confirm('要還原以下已隱藏的廠商嗎？\n\n• ' + list.join('\n• ') + '\n\n（' + list.length + ' 家）')) return;
-  setHiddenVendors([]);
+  var hidden = getHiddenVendors();  // 在 currentVendorMonth 視角下被隱藏的
+  if(hidden.length === 0){ alert('沒有已隱藏的廠商'); return; }
+  if(!confirm('要還原以下已隱藏的廠商嗎？（所有月份都會重新顯示）\n\n• ' + hidden.join('\n• ') + '\n\n（' + hidden.length + ' 家）')) return;
+  setVendorDeletions({});  // 全部清掉
   var brand = STORE_ID.indexOf('shicheng') >= 0 ? 'shicheng' : 'chudian';
   renderVendorGrid(brand);
 }
@@ -747,24 +842,36 @@ function addCustomVendor(){
   if(name === null) return;  // 使用者取消
   name = String(name).trim();
   if(!name){ alert('廠商名稱不能空白'); return; }
-  // 重複檢查（含內建分組）
-  var allExisting = [];
   var brand = STORE_ID.indexOf('shicheng') >= 0 ? 'shicheng' : 'chudian';
+  // 重複檢查（含內建分組 + 已存在的自訂；考慮「曾經被隱藏的」也算重複，但會自動還原）
+  var builtinAll = [];
   (VENDOR_GROUPS[brand] || []).forEach(function(g){
-    g.vendors.forEach(function(v){ allExisting.push(v); });
+    g.vendors.forEach(function(v){ builtinAll.push(v); });
   });
-  getCustomVendors().forEach(function(v){ allExisting.push(v); });
-  if(allExisting.indexOf(name) >= 0){
+  var customAll = getCustomVendors();
+  var deletions = getVendorDeletions();
+  var existsBuiltin = builtinAll.indexOf(name) >= 0;
+  var existsCustom = customAll.indexOf(name) >= 0;
+  var hiddenAtCurrent = !!(deletions[name] && deletions[name] <= currentVendorMonth);
+
+  if((existsBuiltin || existsCustom) && !hiddenAtCurrent){
     alert('「'+name+'」已存在於廠商清單，不需要重複新增');
     return;
   }
-  var list = getCustomVendors();
-  list.push(name);
-  setCustomVendors(list);
+
+  // 若曾被隱藏 → 還原（清掉刪除標記，所有月份都看得到）
+  if(hiddenAtCurrent){
+    unhideVendor(name);
+  }
+  // 若不存在於任何清單 → 加進自訂全域清單（所有月份都看得到）
+  if(!existsBuiltin && !existsCustom){
+    customAll.push(name);
+    setCustomVendors(customAll);
+  }
   renderVendorGrid(brand);
   // 新增完直接選取該廠商
   setTimeout(function(){
-    var btns = document.querySelectorAll('.vendor-group.custom .vendor-btn');
+    var btns = document.querySelectorAll('.vendor-btn');
     for(var i=0; i<btns.length; i++){
       if(btns[i].textContent === name){
         selectVendor(name, btns[i]);
@@ -774,11 +881,12 @@ function addCustomVendor(){
   }, 30);
 }
 
+// 「刪除自訂廠商」= 從 currentVendorMonth 起隱藏，過往月份仍可見、紀錄保留
+// 不再從自訂清單實際移除（這樣切回過去月份時還能看到並編輯紀錄）
 function removeCustomVendor(name, e){
   if(e){ e.stopPropagation(); e.preventDefault(); }
-  if(!confirm('確定要刪除廠商「'+name+'」嗎？\n\n注意：此操作只移除按鈕，'+name+'\n之前的盤點紀錄仍然保留在本機 + 雲端，要還原直接重新加同名廠商即可。')) return;
-  var list = getCustomVendors().filter(function(v){ return v !== name; });
-  setCustomVendors(list);
+  if(!confirm('確定要從 '+currentVendorMonth+' 起隱藏廠商「'+name+'」嗎？\n\n• 自當月起此廠商不再出現在清單中\n• '+currentVendorMonth+' 之前的月份仍可看到「'+name+'」並讀取盤點紀錄\n• 想完全還原可從「自訂廠商」分組標題右邊的「還原」入口取回')) return;
+  hideVendorFromCurrentMonth(name);
   // 如果剛好刪掉的是當前選中的廠商，把畫面切回未選擇狀態
   if(currentVendor === name){
     currentVendor = null;
@@ -833,11 +941,12 @@ function renderVendorGrid(brand){
   });
 
   // 自訂分組（永遠在最後、永遠顯示「+ 新增」+「還原已隱藏」入口）
-  var customList = getCustomVendors();
+  // 過濾掉在 currentVendorMonth 已被刪除的（hidden 同時包含「被隱藏的內建」與「被刪除的自訂」）
+  var customList = getCustomVendors().filter(function(v){ return hidden.indexOf(v) < 0; });
   var customWrap = document.createElement('div');
   customWrap.className = 'vendor-group custom';
   var restoreLink = hidden.length > 0
-    ? '<button class="restore-vendors-btn" onclick="restoreHiddenVendors()" title="還原所有已隱藏的內建廠商">↻ 還原 '+hidden.length+' 家</button>'
+    ? '<button class="restore-vendors-btn" onclick="restoreHiddenVendors()" title="還原所有已隱藏／已刪除的廠商">↻ 還原 '+hidden.length+' 家</button>'
     : '';
   customWrap.innerHTML =
     '<div class="vendor-group-title">'+
