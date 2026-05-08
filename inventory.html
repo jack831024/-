@@ -609,8 +609,14 @@ var STORE_NAME = sessionStorage.getItem('cd_store_name');
   // ⭐ 一次性把舊版（不分月）的廠商清單搬到當月
   if(typeof migrateOldVendorKeys === 'function') migrateOldVendorKeys();
   // ⭐ 廠商月份選擇器預設當月
+  // 注意：currentVendorMonth 變數宣告在後面（line ~631），這裡 IIFE 跑時還是 undefined，
+  // 所以直接呼叫 todayMonth()（function 宣告會完整 hoist）拿當月字串
+  var thisMonth = todayMonth();
   var vmp = document.getElementById('vendor-month-picker');
-  if(vmp) vmp.value = currentVendorMonth;
+  if(vmp) vmp.value = thisMonth;
+  // ⭐ 月度盤點表月份選擇器預設當月（不然每次進來都要手動選）
+  var mp = document.getElementById('month-picker');
+  if(mp) mp.value = thisMonth;
   renderVendorGrid(brand);
 
   // 預設日期為今天
