@@ -290,11 +290,11 @@ function saveOTLeave(password, store, ym, byEmp) {
       (rec.travelHalfDates   || []).forEach(function(d){ newRows.push([now, store, ym, name, 'travelHalf', d]); });
     });
     if (newRows.length > 0) {
-      sheet.getRange(sheet.getLastRow() + 1, 1, newRows.length, OT_LEAVE_HEADERS.length).setValues(newRows);
-      // 月份和日期欄都設為純文字避免被轉 Date
-      var startRow = sheet.getLastRow() - newRows.length + 1;
-      sheet.getRange(startRow, 3, newRows.length, 1).setNumberFormat('@');
-      sheet.getRange(startRow, 6, newRows.length, 1).setNumberFormat('@');
+      var startRow = sheet.getLastRow() + 1;
+      // ⚠️ 先設文字格式再寫值，避免「2026-04-21」被 Sheets 自動轉成 Date 物件
+      sheet.getRange(startRow, 3, newRows.length, 1).setNumberFormat('@');  // 月份
+      sheet.getRange(startRow, 6, newRows.length, 1).setNumberFormat('@');  // 日期
+      sheet.getRange(startRow, 1, newRows.length, OT_LEAVE_HEADERS.length).setValues(newRows);
     }
     return { ok: true, written: newRows.length, deleted: rowsToDelete.length };
   } catch (err) {
@@ -316,11 +316,19 @@ function loadOTLeave(password, store) {
     var data = sheet.getDataRange().getValues();
     var byEmp = {};
     var validTypes = { annual:1, travel:1, annualHalf:1, travelHalf:1 };
+    var tz = Session.getScriptTimeZone() || 'Asia/Taipei';
     for (var i = 1; i < data.length; i++) {
       if (String(data[i][1]) !== store) continue;
       var name = String(data[i][3] || '').trim();
       var type = String(data[i][4] || '').trim();
-      var date = String(data[i][5] || '').trim();
+      var rawDate = data[i][5];
+      // ⚠️ 補救：若 Sheet 把日期自動轉成 Date 物件，要轉回 YYYY-MM-DD
+      var date;
+      if (rawDate instanceof Date) {
+        date = Utilities.formatDate(rawDate, tz, 'yyyy-MM-dd');
+      } else {
+        date = String(rawDate || '').trim();
+      }
       if (!name || !date || !validTypes[type]) continue;
       if (!byEmp[name]) byEmp[name] = { annual: [], travel: [], annualHalf: [], travelHalf: [] };
       var arr = byEmp[name][type];
@@ -396,6 +404,43 @@ function getGiftLogSheet() {
       .setBackground('#fce7f3').setFontWeight('bold').setHorizontalAlignment('center');
   }
   return sh;
+}
+
+// ============================================
+// 🧹 normalizeOTLeaveSheet — 一次性清理：把「加班費假別」中被 Sheets 自動轉成 Date 物件的日期
+// 寫回 YYYY-MM-DD 字串。執行一次即可（去重也順便做掉）
+// ============================================
+function normalizeOTLeaveSheet() {
+  var sheet = getOTLeaveSheet();
+  var data = sheet.getDataRange().getValues();
+  var tz = Session.getScriptTimeZone() || 'Asia/Taipei';
+  // 全表先設文字格式
+  if (data.length > 1) {
+    sheet.getRange(2, 3, data.length - 1, 1).setNumberFormat('@');
+    sheet.getRange(2, 6, data.length - 1, 1).setNumberFormat('@');
+  }
+  // 整理每列
+  var fixedRows = [];
+  var seen = {};
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i].slice();
+    var rawMonth = row[2];
+    var rawDate  = row[5];
+    if (rawMonth instanceof Date) row[2] = Utilities.formatDate(rawMonth, tz, 'yyyy-MM');
+    if (rawDate  instanceof Date) row[5] = Utilities.formatDate(rawDate,  tz, 'yyyy-MM-dd');
+    var key = [row[1], row[2], row[3], row[4], row[5]].join('|');
+    if (seen[key]) continue;  // 去重
+    seen[key] = 1;
+    fixedRows.push(row);
+  }
+  // 清空舊資料區，重寫
+  if (data.length > 1) {
+    sheet.getRange(2, 1, data.length - 1, OT_LEAVE_HEADERS.length).clearContent();
+  }
+  if (fixedRows.length > 0) {
+    sheet.getRange(2, 1, fixedRows.length, OT_LEAVE_HEADERS.length).setValues(fixedRows);
+  }
+  return { ok: true, normalized: fixedRows.length, originalRowCount: data.length - 1 };
 }
 
 function getOTLeaveSheet() {
