@@ -321,14 +321,7 @@ function loadOTLeave(password, store) {
       if (String(data[i][1]) !== store) continue;
       var name = String(data[i][3] || '').trim();
       var type = String(data[i][4] || '').trim();
-      var rawDate = data[i][5];
-      // ⚠️ 補救：若 Sheet 把日期自動轉成 Date 物件，要轉回 YYYY-MM-DD
-      var date;
-      if (rawDate instanceof Date) {
-        date = Utilities.formatDate(rawDate, tz, 'yyyy-MM-dd');
-      } else {
-        date = String(rawDate || '').trim();
-      }
+      var date = _parseOTLeaveDate(data[i][5], tz);
       if (!name || !date || !validTypes[type]) continue;
       if (!byEmp[name]) byEmp[name] = { annual: [], travel: [], annualHalf: [], travelHalf: [] };
       var arr = byEmp[name][type];
@@ -407,6 +400,29 @@ function getGiftLogSheet() {
 }
 
 // ============================================
+// 🧠 _parseOTLeaveDate — 把儲存格的「日期」轉回標準 YYYY-MM-DD 字串
+//   支援：
+//     - Date 物件（Sheets 自動轉的）
+//     - "Tue Apr 21 2026 00:00:00 GMT+0800" 這種 String(Date) 結果
+//     - "2026-04-21" 標準字串
+//   無法解析時回傳空字串。
+// ============================================
+function _parseOTLeaveDate(raw, tz) {
+  if (raw == null || raw === '') return '';
+  if (raw instanceof Date) {
+    return Utilities.formatDate(raw, tz || (Session.getScriptTimeZone() || 'Asia/Taipei'), 'yyyy-MM-dd');
+  }
+  var s = String(raw).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;  // 已經是標準格式
+  // 「Tue Apr 21 2026 ...」這類 JS Date.toString() 結果 → parse 回 Date
+  var d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    return Utilities.formatDate(d, tz || (Session.getScriptTimeZone() || 'Asia/Taipei'), 'yyyy-MM-dd');
+  }
+  return '';
+}
+
+// ============================================
 // 🧹 normalizeOTLeaveSheet — 一次性清理：把「加班費假別」中被 Sheets 自動轉成 Date 物件的日期
 // 寫回 YYYY-MM-DD 字串。執行一次即可（去重也順便做掉）
 // ============================================
@@ -414,33 +430,44 @@ function normalizeOTLeaveSheet() {
   var sheet = getOTLeaveSheet();
   var data = sheet.getDataRange().getValues();
   var tz = Session.getScriptTimeZone() || 'Asia/Taipei';
-  // 全表先設文字格式
-  if (data.length > 1) {
-    sheet.getRange(2, 3, data.length - 1, 1).setNumberFormat('@');
-    sheet.getRange(2, 6, data.length - 1, 1).setNumberFormat('@');
-  }
   // 整理每列
   var fixedRows = [];
   var seen = {};
+  var dropped = 0;
   for (var i = 1; i < data.length; i++) {
     var row = data[i].slice();
+    // 月份
     var rawMonth = row[2];
-    var rawDate  = row[5];
-    if (rawMonth instanceof Date) row[2] = Utilities.formatDate(rawMonth, tz, 'yyyy-MM');
-    if (rawDate  instanceof Date) row[5] = Utilities.formatDate(rawDate,  tz, 'yyyy-MM-dd');
+    if (rawMonth instanceof Date) {
+      row[2] = Utilities.formatDate(rawMonth, tz, 'yyyy-MM');
+    } else {
+      var ms = String(rawMonth || '').trim();
+      // 處理 "Wed Apr 01 2026 ..." → "2026-04"
+      if (!/^\d{4}-\d{2}$/.test(ms)) {
+        var dm = new Date(ms);
+        if (!isNaN(dm.getTime())) ms = Utilities.formatDate(dm, tz, 'yyyy-MM');
+      }
+      row[2] = ms;
+    }
+    // 日期 — 用 _parseOTLeaveDate 統一處理
+    var cleanDate = _parseOTLeaveDate(row[5], tz);
+    if (!cleanDate) { dropped++; continue; }
+    row[5] = cleanDate;
     var key = [row[1], row[2], row[3], row[4], row[5]].join('|');
-    if (seen[key]) continue;  // 去重
+    if (seen[key]) { dropped++; continue; }  // 去重
     seen[key] = 1;
     fixedRows.push(row);
   }
-  // 清空舊資料區，重寫
+  // 清空舊資料區，重寫（先設文字格式再寫值）
   if (data.length > 1) {
     sheet.getRange(2, 1, data.length - 1, OT_LEAVE_HEADERS.length).clearContent();
   }
   if (fixedRows.length > 0) {
+    sheet.getRange(2, 3, fixedRows.length, 1).setNumberFormat('@'); // 月份
+    sheet.getRange(2, 6, fixedRows.length, 1).setNumberFormat('@'); // 日期
     sheet.getRange(2, 1, fixedRows.length, OT_LEAVE_HEADERS.length).setValues(fixedRows);
   }
-  return { ok: true, normalized: fixedRows.length, originalRowCount: data.length - 1 };
+  return { ok: true, kept: fixedRows.length, dropped: dropped, originalRowCount: data.length - 1 };
 }
 
 function getOTLeaveSheet() {
