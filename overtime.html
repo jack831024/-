@@ -841,6 +841,33 @@ function applyCloudAnalysis(analysis, ym){
   if(!hasFT && !hasPT) return;
 
   if(hasFT){
+    // 後端 loadSavedAnalysis 不認得「特半 / 旅半」字樣，前端這邊補上 halfDay
+    // 同時補強 leaveType（如果後端 regex 漏抓）
+    analysis.ftRows.forEach(function(r){
+      var note = String(r.note || '');
+      // 特半（要先 check，因為「特半」也含「特」字會被誤抓成 annual）
+      if(/特半/.test(note)){
+        r.leaveType = 'annual';
+        r.halfDay = true;
+      } else if(/旅半/.test(note)){
+        r.leaveType = 'travel';
+        r.halfDay = true;
+      } else if(!r.leaveType){
+        if(/休-1/.test(note))      r.leaveType = 'rest';
+        else if(/特休/.test(note)) r.leaveType = 'annual';
+        else if(/旅遊/.test(note)) r.leaveType = 'travel';
+      }
+      // 重算 flags（保留 ot/late/miss/meeting）
+      var flags = [];
+      if(r.overtimeMin > 0) flags.push('ot');
+      if(r.lateMin > 0)     flags.push('late');
+      if(r.missing)         flags.push('miss');
+      if(r.leaveType)       flags.push(r.leaveType + (r.halfDay ? '_half' : ''));
+      if(/開會日/.test(note)) flags.push('meeting');
+      if(!flags.length)     flags.push('ok');
+      r.flags = flags;
+    });
+
     ANALYSIS = analysis.ftRows;
     ACTIVE_FILTER = 'all';
     renderSummary();
@@ -2505,11 +2532,36 @@ function saveToCloud(silent){
   btn.disabled = true;
   setSyncStatus('info', '同步中…', '正在把整頁資料上傳到雲端…');
 
+  // 把 leaveType 對應的標籤寫進 note，這樣存到雲端 sheet 後 reload 認得回來
+  // （後端只會寫「病假/事假」兩個欄位的 Y/空白，其他假別都依賴 note 文字判斷）
+  function leaveLabelOf(r){
+    if(!r || !r.leaveType) return '';
+    if(r.leaveType === 'sick')     return '病假';
+    if(r.leaveType === 'personal') return '事假';
+    if(r.leaveType === 'rest')     return '休-1';
+    if(r.leaveType === 'annual')   return r.halfDay ? '特半' : '特休';
+    if(r.leaveType === 'travel')   return r.halfDay ? '旅半' : '旅遊假';
+    return '';
+  }
+  function enrichLeaveNote(rows){
+    return (rows || []).map(function(r){
+      if(!r.leaveType) return r;
+      var label = leaveLabelOf(r);
+      if(!label) return r;
+      // 已經包含標籤就不動，否則加在前面
+      if((r.note || '').indexOf(label) >= 0) return r;
+      var copy = {};
+      for(var k in r){ if(Object.prototype.hasOwnProperty.call(r, k)) copy[k] = r[k]; }
+      copy.note = label + (r.note ? '；' + r.note : '');
+      return copy;
+    });
+  }
+
   var body = {
     action: 'saveAnalysis',
     store:  STORE,
     month:  getSelectedYM(),
-    ftRows: ANALYSIS || [],
+    ftRows: enrichLeaveNote(ANALYSIS || []),
     ptRows: PT_ANALYSIS || [],
     // 整頁設定快照：班別定義、PT 名單（含時薪）、門檻
     shifts: readShiftsFromDom(),
