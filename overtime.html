@@ -306,7 +306,9 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
         <button class="filter-chip" data-filter="personal">事假<span class="chip-count" id="cnt-personal">0</span></button>
         <button class="filter-chip" data-filter="rest">休-1<span class="chip-count" id="cnt-rest">0</span></button>
         <button class="filter-chip" data-filter="annual">特休<span class="chip-count" id="cnt-annual">0</span></button>
+        <button class="filter-chip" data-filter="annual_half">特半<span class="chip-count" id="cnt-annual-half">0</span></button>
         <button class="filter-chip" data-filter="travel">旅遊假<span class="chip-count" id="cnt-travel">0</span></button>
+        <button class="filter-chip" data-filter="travel_half">旅半<span class="chip-count" id="cnt-travel-half">0</span></button>
         <button class="filter-chip" data-filter="meeting">開會日<span class="chip-count" id="cnt-meeting">0</span></button>
       </div>
     </div>
@@ -319,7 +321,9 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
       <div class="sum-card" style="border-left:3px solid #a855f7"><div class="k">事假</div><div class="v" id="s-personal">0<span class="u"> 天</span></div></div>
       <div class="sum-card" style="border-left:3px solid #1d4ed8"><div class="k">休-1</div><div class="v" id="s-rest">0<span class="u"> 天</span></div></div>
       <div class="sum-card" style="border-left:3px solid #16a34a"><div class="k">特休</div><div class="v" id="s-annual">0<span class="u"> 天</span></div></div>
+      <div class="sum-card" style="border-left:3px solid #4ade80"><div class="k">特半</div><div class="v" id="s-annual-half">0<span class="u"> 次</span></div></div>
       <div class="sum-card" style="border-left:3px solid #0891b2"><div class="k">旅遊假</div><div class="v" id="s-travel">0<span class="u"> 天</span></div></div>
+      <div class="sum-card" style="border-left:3px solid #67e8f9"><div class="k">旅半</div><div class="v" id="s-travel-half">0<span class="u"> 次</span></div></div>
     </div>
     <div id="results-container">
       <div class="empty-state">
@@ -2196,7 +2200,10 @@ function isEnglishName(n){
 
 function renderSummary(){
   if(!ANALYSIS){ return; }
-  var pplSet = {}, otMin = 0, lateCnt = 0, missCnt = 0, sickCnt = 0, personalCnt = 0, restCnt = 0, annualCnt = 0, travelCnt = 0;
+  var pplSet = {}, otMin = 0, lateCnt = 0, missCnt = 0;
+  var sickCnt = 0, personalCnt = 0, restCnt = 0;
+  var annualCnt = 0, annualHalfCnt = 0;
+  var travelCnt = 0, travelHalfCnt = 0;
   ANALYSIS.forEach(function(r){
     pplSet[r.name] = 1;
     if(r.overtimeMin > 0){ otMin += r.overtimeMin; }
@@ -2205,8 +2212,14 @@ function renderSummary(){
     if(r.leaveType === 'sick'){ sickCnt++; }
     else if(r.leaveType === 'personal'){ personalCnt++; }
     else if(r.leaveType === 'rest'){ restCnt++; }
-    else if(r.leaveType === 'annual'){ annualCnt++; }
-    else if(r.leaveType === 'travel'){ travelCnt++; }
+    else if(r.leaveType === 'annual'){
+      if(r.halfDay) annualHalfCnt++;
+      else annualCnt++;
+    }
+    else if(r.leaveType === 'travel'){
+      if(r.halfDay) travelHalfCnt++;
+      else travelCnt++;
+    }
   });
   document.getElementById('s-ppl').textContent      = Object.keys(pplSet).length;
   document.getElementById('s-ot').innerHTML         = (otMin/60).toFixed(1)+'<span class="u"> 小時</span>';
@@ -2218,8 +2231,12 @@ function renderSummary(){
   if(restEl) restEl.innerHTML = restCnt+'<span class="u"> 天</span>';
   var annualEl = document.getElementById('s-annual');
   if(annualEl) annualEl.innerHTML = annualCnt+'<span class="u"> 天</span>';
+  var annualHalfEl = document.getElementById('s-annual-half');
+  if(annualHalfEl) annualHalfEl.innerHTML = annualHalfCnt+'<span class="u"> 次</span>';
   var travelEl = document.getElementById('s-travel');
   if(travelEl) travelEl.innerHTML = travelCnt+'<span class="u"> 天</span>';
+  var travelHalfEl = document.getElementById('s-travel-half');
+  if(travelHalfEl) travelHalfEl.innerHTML = travelHalfCnt+'<span class="u"> 次</span>';
   document.getElementById('cnt-ot').textContent       = ' · '+(ANALYSIS.filter(function(x){return x.overtimeMin>0;}).length);
   document.getElementById('cnt-late').textContent     = ' · '+lateCnt;
   document.getElementById('cnt-miss').textContent     = ' · '+missCnt;
@@ -2229,8 +2246,12 @@ function renderSummary(){
   if(cntRest) cntRest.textContent = ' · '+restCnt;
   var cntAnnual = document.getElementById('cnt-annual');
   if(cntAnnual) cntAnnual.textContent = ' · '+annualCnt;
+  var cntAnnualHalf = document.getElementById('cnt-annual-half');
+  if(cntAnnualHalf) cntAnnualHalf.textContent = ' · '+annualHalfCnt;
   var cntTravel = document.getElementById('cnt-travel');
   if(cntTravel) cntTravel.textContent = ' · '+travelCnt;
+  var cntTravelHalf = document.getElementById('cnt-travel-half');
+  if(cntTravelHalf) cntTravelHalf.textContent = ' · '+travelHalfCnt;
   var meetingCnt = ANALYSIS.filter(function(x){ return x.flags.indexOf('meeting') >= 0; }).length;
   var cntMeeting = document.getElementById('cnt-meeting');
   if(cntMeeting) cntMeeting.textContent = ' · '+meetingCnt;
@@ -2271,9 +2292,11 @@ function renderResults(){
       if(f === 'sick')     return '<span class="tag sick">病假'  + xBtn('sick', '移除病假標記') + '</span>';
       if(f === 'personal') return '<span class="tag personal">事假' + xBtn('personal', '移除事假標記') + '</span>';
       if(f === 'rest')     return '<span class="tag rest">休-1'  + xBtn('rest', '移除休-1 標記') + '</span>';
-      if(f === 'annual')   return '<span class="tag" style="background:rgba(22,163,74,.12);color:#15803d">特休' + xBtn('annual', '移除特休標記') + '</span>';
-      if(f === 'travel')   return '<span class="tag" style="background:rgba(8,145,178,.12);color:#0e7490">旅遊假' + xBtn('travel', '移除旅遊假標記') + '</span>';
-      if(f === 'meeting')  return '<span class="tag" style="background:rgba(217,119,6,.12);color:#b45309">開會日</span>';
+      if(f === 'annual')      return '<span class="tag" style="background:rgba(22,163,74,.12);color:#15803d">特休' + xBtn('annual', '移除特休標記') + '</span>';
+      if(f === 'annual_half') return '<span class="tag" style="background:rgba(74,222,128,.18);color:#166534">特半' + xBtn('annual_half', '移除特半標記') + '</span>';
+      if(f === 'travel')      return '<span class="tag" style="background:rgba(8,145,178,.12);color:#0e7490">旅遊假' + xBtn('travel', '移除旅遊假標記') + '</span>';
+      if(f === 'travel_half') return '<span class="tag" style="background:rgba(103,232,249,.22);color:#155e75">旅半' + xBtn('travel_half', '移除旅半標記') + '</span>';
+      if(f === 'meeting')     return '<span class="tag" style="background:rgba(217,119,6,.12);color:#b45309">開會日</span>';
       return '<span class="tag ok">正常</span>';
     }).join(' ');
     html.push('<tr>',
@@ -2312,15 +2335,21 @@ function renderResults(){
 function removeFlag(rowIdx, flag){
   if(!ANALYSIS || !ANALYSIS[rowIdx]) return;
   var r = ANALYSIS[rowIdx];
-  var labelMap = { ot:'加班', late:'遲到', miss:'缺卡', sick:'病假', personal:'事假', rest:'休-1', annual:'特休', travel:'旅遊假' };
+  var labelMap = {
+    ot:'加班', late:'遲到', miss:'缺卡',
+    sick:'病假', personal:'事假', rest:'休-1',
+    annual:'特休', annual_half:'特半',
+    travel:'旅遊假', travel_half:'旅半'
+  };
   var label = labelMap[flag];
   if(!label) return; // 不可移除的 flag（meeting / ok）
 
   if(flag === 'late')      r.lateMin = 0;
   else if(flag === 'ot')   r.overtimeMin = 0;
   else if(flag === 'miss') r.missing = false;
-  else if(['sick','personal','rest','annual','travel'].indexOf(flag) >= 0){
+  else if(['sick','personal','rest','annual','annual_half','travel','travel_half'].indexOf(flag) >= 0){
     r.leaveType = null;
+    r.halfDay = false;
   }
 
   // 重算 flags
@@ -2328,7 +2357,7 @@ function removeFlag(rowIdx, flag){
   if(r.overtimeMin > 0) r.flags.push('ot');
   if(r.lateMin > 0)     r.flags.push('late');
   if(r.missing)         r.flags.push('miss');
-  if(r.leaveType)       r.flags.push(r.leaveType);
+  if(r.leaveType)       r.flags.push(r.leaveType + (r.halfDay ? '_half' : ''));
   // 開會日 flag 從備註重新偵測（meeting 不可手動移除，所以保留）
   if(/開會日/.test(r.note || '')) r.flags.push('meeting');
   if(!r.flags.length)   r.flags.push('ok');
