@@ -223,6 +223,9 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
       <button class="btn btn-primary" id="btn-load-schedule" onclick="loadSchedule()">
         <span id="load-icon">☁️</span> 載入班表
       </button>
+      <button class="btn btn-ghost" id="btn-load-cloud" onclick="loadCloudRecord()" title="讀取選定月份的雲端紀錄（之前儲存過的分析結果 / 班別 / PT 名單）">
+        📥 看雲端紀錄
+      </button>
       <span class="status-chip" id="sched-status"></span>
     </div>
     <div class="schedule-preview" id="sched-preview"></div>
@@ -751,12 +754,12 @@ function loadSchedule(){
     .then(function(r){ return r.json(); })
     .then(function(data){
       if(data.error) throw new Error(data.error);
-      SCHEDULE = data;
+      // 只取班表 rows + events，雲端 settings / analysis 故意不套用
+      // （要看雲端紀錄請按「📥 看雲端紀錄」）
+      SCHEDULE = { ok:data.ok, store:data.store, year:data.year, month:data.month,
+                   sheetName:data.sheetName, rows:data.rows||[], events:data.events||{} };
       renderSchedulePreview();
-      setStatus('sched-status','ok','✅ 已載入 '+(data.rows||[]).length+' 位員工');
-
-      // 雲端設定同步：把伺服器存的班別/PT 名單套到 UI（讓不同裝置看到一樣的設定）
-      applyCloudSettings(data.settings);
+      setStatus('sched-status','ok','✅ 已載入 '+(data.rows||[]).length+' 位員工的班表（不含雲端紀錄）');
 
       // 班表載入後：
       //   1) 清掉 PT 名單裡已被排班成 FT 的人
@@ -768,15 +771,62 @@ function loadSchedule(){
         autoImportPtList(true);
       }
       maybeEnableAnalyze();
-
-      // 雲端分析結果回填：之前跑過分析就直接顯示，不用再上傳打卡再分析
-      applyCloudAnalysis(data.analysis, ym);
     })
     .catch(function(err){
       setStatus('sched-status','err','❌ 載入失敗：'+err.message);
     })
     .finally(function(){
       document.getElementById('btn-load-schedule').disabled = false;
+    });
+}
+
+// ============================================
+// 📥 看雲端紀錄：讀取選定月份的雲端 settings + analysis
+//   - 班別 / PT 名單 → 套用到 UI
+//   - 之前儲存的分析結果 → 顯示在 Step 4 / Step 5
+//   - 不會動到 SCHEDULE / PUNCHES（班表跟打卡是另外載的）
+// ============================================
+function loadCloudRecord(){
+  var url = getSyncUrl();
+  if(!url){
+    setStatus('sched-status','err','⚠️ 尚未設定 Apps Script 網址（按右上「⚙️ 設定」）');
+    return;
+  }
+  var ym = getSelectedYM();
+  if(!ym){ setStatus('sched-status','err','請先選月份'); return; }
+
+  setStatus('sched-status','info','讀取 '+ym+' 雲端紀錄中…');
+  var btn = document.getElementById('btn-load-cloud');
+  if(btn) btn.disabled = true;
+
+  var q = url + (url.indexOf('?')>=0 ? '&' : '?')
+        + 'action=getSchedule'
+        + '&store=' + encodeURIComponent(STORE)
+        + '&month=' + encodeURIComponent(ym)
+        + '&_ts='   + Date.now();
+
+  fetch(q, { method:'GET' })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(data.error) throw new Error(data.error);
+      // 套用雲端設定（班別 / PT 名單）
+      applyCloudSettings(data.settings);
+      // 套用雲端分析結果（FT / PT）
+      applyCloudAnalysis(data.analysis, ym);
+
+      var ftCount = (data.analysis && data.analysis.ftRows) ? data.analysis.ftRows.length : 0;
+      var ptCount = (data.analysis && data.analysis.ptRows) ? data.analysis.ptRows.length : 0;
+      if(ftCount === 0 && ptCount === 0){
+        setStatus('sched-status','warn','⚠️ '+ym+' 雲端沒有紀錄（該月可能還沒儲存過）');
+      } else {
+        setStatus('sched-status','ok','✅ 已載入 '+ym+' 雲端紀錄：FT '+ftCount+' 筆、PT '+ptCount+' 筆');
+      }
+    })
+    .catch(function(err){
+      setStatus('sched-status','err','❌ 讀取雲端紀錄失敗：'+err.message);
+    })
+    .finally(function(){
+      if(btn) btn.disabled = false;
     });
 }
 
@@ -3054,49 +3104,11 @@ renderPtList();
   }
 })();
 
-// ☁️ 開頁就自動把雲端的「整頁設定」拉下來覆蓋本機
-//   讓不同裝置一打開就看到 A 裝置最新改的班別/PT 名單，不用按「載入班表」
-//   抑制錯誤：抓不到就靜悄悄略過（例如該月還沒建班表分頁、未設定網址）
-(function prefetchCloudSettings(){
-  if(!STORE) return;
-  var url = getSyncUrl();
-  if(!url) return;
-  var ym = getSelectedYM();
-  if(!ym) return;
-  var q = url + (url.indexOf('?')>=0 ? '&' : '?')
-        + 'action=getSchedule'
-        + '&store=' + encodeURIComponent(STORE)
-        + '&month=' + encodeURIComponent(ym)
-        + '&_ts='   + Date.now();
-  setSyncStatus('info','拉取雲端設定…','正在從雲端取得最新班別/PT 設定');
-  fetch(q, { method:'GET' })
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if(data && data.settings){
-        applyCloudSettings(data.settings);
-      }
-      // 連帶把班表也存起來給後續分析用（如果有回）
-      if(data && Array.isArray(data.rows)){
-        SCHEDULE = data;
-        renderSchedulePreview();
-        setStatus('sched-status','ok','✅ 已自動載入 '+data.rows.length+' 位員工的 '+ym+' 班表');
-        cleanupPtListBySchedule();
-        autoAddPtFromSchedule();
-        if(PUNCHES && PUNCHES.rows && PUNCHES.rows.length){
-          autoImportPtList(true);
-        }
-        maybeEnableAnalyze();
-      }
-      // 之前跑過分析就直接顯示
-      applyCloudAnalysis(data && data.analysis, ym);
-      setSyncStatus('ok','已從雲端載入','已從雲端套用最新設定');
-    })
-    .catch(function(err){
-      // 靜悄悄失敗：使用者沒按按鈕也不要嚇到他
-      console.warn('[prefetchCloudSettings] 略過：', err.message || err);
-      setSyncStatus('warn','儲存到雲端','（雲端設定預抓略過：'+(err.message||err)+'）');
-    });
-})();
+// 📌 取消「開頁自動拉雲端」— 改成完全手動：
+//   - 想看班表 → 按「☁️ 載入班表」
+//   - 想看之前儲存的雲端紀錄（班別/PT 名單/分析） → 按「📥 看雲端紀錄」
+//   - 改完想存 → 按「💾 儲存到雲端」
+// 這樣不會發生「分析完存雲端 → 又自動拉雲端蓋掉現在的」這種 bug
 </script>
 </body>
 </html>
