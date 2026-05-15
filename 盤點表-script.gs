@@ -111,6 +111,57 @@ function doPost(e) {
       return json({ ok: true, deleted: deleted });
     }
 
+    // ⭐ 儲存廠商清單設定（自訂廠商 + 刪除標記）— 讓每台裝置一致
+    // body: { action:'saveVendorConfig', store, config:{custom:[...],deleted:{名:'YYYY-MM'}}, savedAt }
+    // 採整包 last-write-wins：savedAt 較新者覆蓋
+    if (body.action === 'saveVendorConfig') {
+      var scStore = body.store || 'default';
+      var scConfig = body.config || {};
+      var scSavedAt = body.savedAt || new Date().toISOString();
+      var cfgSheet = getVendorConfigSheet();
+      var cfgData = cfgSheet.getDataRange().getValues();
+      var foundRow = -1;
+      var prevSavedAt = '';
+      for (var ci = 1; ci < cfgData.length; ci++) {
+        if (String(cfgData[ci][0]) === String(scStore)) {
+          foundRow = ci + 1;             // 1-based sheet row
+          prevSavedAt = String(cfgData[ci][2] || '');
+          break;
+        }
+      }
+      // 雲端現有的較新 → 不覆蓋，回傳雲端版本讓前端採用
+      if (prevSavedAt && scSavedAt && prevSavedAt > scSavedAt) {
+        var keepRaw = cfgData[foundRow - 1][1];
+        var keepCfg = {};
+        try { keepCfg = JSON.parse(keepRaw || '{}'); } catch (e) {}
+        return json({ ok: true, store: scStore, stale: true, config: keepCfg, savedAt: prevSavedAt });
+      }
+      var cfgJson = JSON.stringify(scConfig);
+      if (foundRow > 0) {
+        cfgSheet.getRange(foundRow, 1, 1, 3).setValues([[scStore, cfgJson, scSavedAt]]);
+      } else {
+        cfgSheet.appendRow([scStore, cfgJson, scSavedAt]);
+      }
+      cfgSheet.getRange(foundRow > 0 ? foundRow : cfgSheet.getLastRow(), 2, 1, 1).setNumberFormat('@');
+      return json({ ok: true, store: scStore, savedAt: scSavedAt });
+    }
+
+    // ⭐ 讀取廠商清單設定
+    // body: { action:'getVendorConfig', store }
+    if (body.action === 'getVendorConfig') {
+      var gcStore = body.store || 'default';
+      var gcSheet = getVendorConfigSheet();
+      var gcData = gcSheet.getDataRange().getValues();
+      for (var gi = 1; gi < gcData.length; gi++) {
+        if (String(gcData[gi][0]) === String(gcStore)) {
+          var gcCfg = {};
+          try { gcCfg = JSON.parse(gcData[gi][1] || '{}'); } catch (e) {}
+          return json({ ok: true, store: gcStore, config: gcCfg, savedAt: String(gcData[gi][2] || '') });
+        }
+      }
+      return json({ ok: true, store: gcStore, config: null, savedAt: '' });
+    }
+
     return json({ error: 'unknown action: ' + body.action });
   } catch (err) {
     return json({ error: String(err) });
@@ -140,6 +191,29 @@ function getInventorySheet(store) {
     sheet.setColumnWidth(8, 90);
     // 標頭底色
     sheet.getRange(1, 1, 1, 8)
+      .setBackground('#fff7ed')
+      .setFontWeight('bold')
+      .setHorizontalAlignment('center');
+  }
+  return sheet;
+}
+
+// 廠商清單設定表（一份就好，所有店共用一張，每店一列）
+// 欄：門市代號 | 設定JSON | 儲存時間
+function getVendorConfigSheet() {
+  var ss = INVENTORY_SHEET_ID
+    ? SpreadsheetApp.openById(INVENTORY_SHEET_ID)
+    : SpreadsheetApp.getActiveSpreadsheet();
+  var name = '廠商清單設定';
+  var sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+    sheet.appendRow(['門市代號', '設定JSON', '儲存時間']);
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidth(1, 160);
+    sheet.setColumnWidth(2, 520);
+    sheet.setColumnWidth(3, 200);
+    sheet.getRange(1, 1, 1, 3)
       .setBackground('#fff7ed')
       .setFontWeight('bold')
       .setHorizontalAlignment('center');
@@ -231,5 +305,7 @@ function forceAuth() {
     var sh = getInventorySheet(s);
     Logger.log('✓ 盤點工作表已就緒：' + sh.getName());
   });
+  var cfg = getVendorConfigSheet();
+  Logger.log('✓ 廠商清單設定表已就緒：' + cfg.getName());
   Logger.log('全部完成');
 }

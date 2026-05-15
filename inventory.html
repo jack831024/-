@@ -651,6 +651,9 @@ var STORE_NAME = sessionStorage.getItem('cd_store_name');
   var mp = document.getElementById('month-picker');
   if(mp) mp.value = thisMonth;
   renderVendorGrid(brand);
+  // ⭐ 從雲端拉廠商清單設定，與本機 union 合併後重畫（每台裝置一致）
+  //    非同步：先用本機畫一次，雲端回來再重畫，不阻塞開頁
+  if(typeof pullVendorConfigFromCloud === 'function') pullVendorConfigFromCloud();
 
   // 預設日期為今天
   document.getElementById('inv-date').value = todayDate();
@@ -780,6 +783,122 @@ function toggleVendorManageMode(){
   if(btn) btn.textContent = on ? '✓ 完成' : '🗑 管理';
 }
 
+// ============================================
+// ☁️ 廠商清單雲端同步（讓每台裝置看到一致的廠商清單）
+//   • 自訂廠商 + 刪除標記存雲端（盤點表-script.gs 的 saveVendorConfig）
+//   • 任何新增/刪除/還原 → debounce 後自動推雲端
+//   • 開頁 → 從雲端拉，與本機 union 合併（不漏任何裝置加過的廠商）
+//   • 衝突：custom 取聯集；deleted 取最早月份；整包以 savedAt last-write-wins
+// ============================================
+var _applyingRemoteVendorCfg = false;   // 套用雲端設定時不要反向觸發 push
+var _vendorCfgPushTimer = null;
+
+function vendorCfgSavedAtKey(){ return 'cd_vendor_cfg_savedat_' + STORE_ID; }
+function getVendorCfgSavedAt(){ return localStorage.getItem(vendorCfgSavedAtKey()) || ''; }
+function setVendorCfgSavedAt(iso){ if(iso) localStorage.setItem(vendorCfgSavedAtKey(), iso); }
+function invSyncUrl(){ return localStorage.getItem('cd_inv_sync_url') || ''; }
+
+function buildVendorConfig(){
+  return { custom: getCustomVendors(), deleted: getVendorDeletions() };
+}
+
+// 把一份設定寫進本機（不觸發反向 push）
+function applyVendorConfigLocal(cfg){
+  if(!cfg) return;
+  _applyingRemoteVendorCfg = true;
+  try{
+    var custom = Array.isArray(cfg.custom) ? cfg.custom : [];
+    localStorage.setItem(customVendorsKey(), JSON.stringify(custom));
+    var del = (cfg.deleted && typeof cfg.deleted === 'object' && !Array.isArray(cfg.deleted)) ? cfg.deleted : {};
+    if(Object.keys(del).length === 0) localStorage.removeItem(vendorDeletionsKey());
+    else localStorage.setItem(vendorDeletionsKey(), JSON.stringify(del));
+  }finally{ _applyingRemoteVendorCfg = false; }
+}
+
+// 自訂廠商清單聯集（保序，cloudFirst 決定誰排前面）
+// 新增的廠商在任何裝置都不該消失 → 永遠取聯集
+function unionCustomList(cloudCustom, localCustom){
+  var order = [], seen = {};
+  function add(list){ (list||[]).forEach(function(n){ if(n && !seen[n]){ seen[n]=1; order.push(n); } }); }
+  add(cloudCustom); add(localCustom);
+  return order;
+}
+
+// 合併兩份設定：
+//   • custom：聯集（不漏任何裝置加過的廠商）
+//   • deleted：「較新的那份整包為準」（last-write-wins），
+//     不可用聯集，否則某台還原後會被另一台舊的刪除標記蓋回去
+// cloudNewer = 雲端 savedAt 是否比本機新
+function mergeVendorConfig(localCfg, cloudCfg, cloudNewer){
+  localCfg = localCfg || {}; cloudCfg = cloudCfg || null;
+  var custom = unionCustomList(cloudCfg && cloudCfg.custom, localCfg.custom);
+  var deleted;
+  if(cloudCfg && cloudNewer) deleted = cloudCfg.deleted || {};
+  else                       deleted = localCfg.deleted || {};
+  return { custom: custom, deleted: deleted };
+}
+
+function _rerenderVendors(){
+  var brand = STORE_ID.indexOf('shicheng') >= 0 ? 'shicheng' : 'chudian';
+  try{ renderVendorGrid(brand); }catch(e){}
+}
+
+// 變更後排程推雲端（debounce，避免一個動作多次 set 連打）
+function scheduleVendorCfgPush(){
+  if(_applyingRemoteVendorCfg) return;
+  if(!invSyncUrl()) return;
+  if(_vendorCfgPushTimer) clearTimeout(_vendorCfgPushTimer);
+  _vendorCfgPushTimer = setTimeout(pushVendorConfigToCloud, 700);
+}
+
+function pushVendorConfigToCloud(){
+  var url = invSyncUrl();
+  if(!url) return Promise.resolve();
+  var savedAt = new Date().toISOString();
+  setVendorCfgSavedAt(savedAt);
+  var cfg = buildVendorConfig();
+  return fetch(url, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action:'saveVendorConfig', store: STORE_ID, config: cfg, savedAt: savedAt })
+  }).then(function(r){ return r.json(); }).then(function(res){
+    // 雲端有更新的版本（stale=雲端較新）→ 採用雲端 deleted、custom 聯集，重畫
+    if(res && res.stale && res.config){
+      var merged = mergeVendorConfig(buildVendorConfig(), res.config, true);
+      applyVendorConfigLocal(merged);
+      setVendorCfgSavedAt(res.savedAt || savedAt);
+      _rerenderVendors();
+    }
+  }).catch(function(){ /* 離線容忍：保留本機，下次再推 */ });
+}
+
+function pullVendorConfigFromCloud(){
+  var url = invSyncUrl();
+  if(!url) return Promise.resolve();
+  return fetch(url, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action:'getVendorConfig', store: STORE_ID })
+  }).then(function(r){ return r.json(); }).then(function(res){
+    if(!res || !res.ok) return;
+    var localCfg = buildVendorConfig();
+    var cloudCfg = res.config;          // 可能為 null（雲端還沒資料）
+    var cloudSavedAt = res.savedAt || '';
+    var localSavedAt = getVendorCfgSavedAt();
+    var cloudNewer = !!cloudCfg && cloudSavedAt > localSavedAt;
+    var merged = mergeVendorConfig(localCfg, cloudCfg, cloudNewer);
+    applyVendorConfigLocal(merged);
+    var newest = cloudSavedAt > localSavedAt ? cloudSavedAt : localSavedAt;
+    if(newest) setVendorCfgSavedAt(newest);
+    _rerenderVendors();
+    // 合併結果跟雲端不一致（或雲端原本沒資料）→ 把聯集推回雲端，讓所有裝置收斂
+    var changed = !cloudCfg ||
+      JSON.stringify(merged.custom) !== JSON.stringify(cloudCfg.custom || []) ||
+      JSON.stringify(merged.deleted) !== JSON.stringify(cloudCfg.deleted || {});
+    if(changed) pushVendorConfigToCloud();
+  }).catch(function(){ /* 離線容忍 */ });
+}
+
 function getCustomVendors(){
   try{
     var raw = localStorage.getItem(customVendorsKey());
@@ -790,6 +909,7 @@ function getCustomVendors(){
 
 function setCustomVendors(arr){
   localStorage.setItem(customVendorsKey(), JSON.stringify(arr || []));
+  scheduleVendorCfgPush();
 }
 
 // 取得刪除標記表 {廠商名: 'YYYY-MM'}（從該月起隱藏）
@@ -806,6 +926,7 @@ function setVendorDeletions(obj){
   }else{
     localStorage.setItem(vendorDeletionsKey(), JSON.stringify(obj));
   }
+  scheduleVendorCfgPush();
 }
 
 // 在指定月份「應隱藏」的廠商清單（沒指定就用 currentVendorMonth）
