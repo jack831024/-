@@ -233,6 +233,10 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
 .monthly tbody th.c-name-click .edit-icon{opacity:0;font-size:10px;color:var(--ink-3);margin-left:3px;transition:opacity .15s}
 .monthly tbody th.c-name-click:hover .edit-icon{opacity:1;color:var(--accent)}
 .monthly tbody th.c-name-click .alias-badge{display:inline-block;font-size:10px;padding:1px 7px;border-radius:999px;background:rgba(16,185,129,.15);color:#047857;font-weight:700;margin-left:5px;vertical-align:middle;cursor:help;letter-spacing:0.3px}
+/* 品名包在 block div 裡，才能可靠鎖欄寬（auto-layout 的 table cell 會忽略 max-width）。
+   桌面：div 從 th 繼承 white-space:nowrap → 維持原本單行、欄寬隨內容（行為不變）。
+   手機：見 @media 區塊，改成固定寬 + overflow-wrap:anywhere 強制換行。 */
+.monthly .c-name .cn-box{display:block}
 .monthly tbody td.c-type{position:sticky;left:80px;background:rgba(248,250,252,.95);padding:4px 8px;font-size:10.5px;font-weight:700;text-align:center;white-space:nowrap;border-right:1.5px solid var(--line);border-bottom:1px solid var(--line);z-index:1;letter-spacing:1px;min-width:68px}
 .monthly tbody td{padding:3px 5px;text-align:right;font-size:11.5px;font-family:ui-monospace,"SF Mono",Menlo,monospace;color:var(--ink);border-right:1px solid rgba(226,232,240,.5);border-bottom:1px solid rgba(226,232,240,.5);white-space:nowrap;min-width:36px}
 .monthly tbody tr.price-row td.c-type{color:var(--accent);background:rgba(255,247,237,.95)}
@@ -327,8 +331,14 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
   .monthly thead th.c-name,
   .monthly tbody th.c-name{
     width:104px;min-width:104px;max-width:104px;
-    white-space:normal;word-break:break-word;
+    white-space:normal;
     font-size:10.5px;line-height:1.25;padding:5px 6px;
+  }
+  /* 內層 div 才是真正鎖寬的關鍵：填滿欄寬、長英數字串強制斷行，
+     讓 cell 的最小內容寬縮到極小，瀏覽器才會乖乖吃 width:104px */
+  .monthly .c-name .cn-box{
+    width:100%;max-width:100%;
+    white-space:normal;overflow-wrap:anywhere;word-break:break-word;
   }
   .monthly thead th.c-type,
   .monthly tbody td.c-type{
@@ -2364,7 +2374,7 @@ function renderHistoryTable(box, stat, records){
   var html = '<div class="grid-wrap"><table class="monthly">';
 
   // thead（日期欄可點擊 → 載入該日編輯）
-  html += '<thead><tr><th class="c-name">品項</th><th class="c-type">類型</th>';
+  html += '<thead><tr><th class="c-name"><div class="cn-box">品項</div></th><th class="c-type">類型</th>';
   for(var d=1; d<=daysInMonth; d++){
     var wk = isWeekend(d) ? 'weekend' : '';
     html += '<th class="day-col '+wk+'" onclick="editDay('+d+')" title="點擊編輯 '+yearMonth+'-'+String(d).padStart(2,'0')+'">'+d+'</th>';
@@ -2388,7 +2398,7 @@ function renderHistoryTable(box, stat, records){
       ? '此列已自動合併：'+aliases.join('、')+'\n點擊可重新命名'
       : '點品項名可重新命名並合併重複項';
     var nEsc = escapeAttr(n).replace(/'/g,"\\\'");
-    html += '<tr class="price-row item-top"><th class="c-name c-name-click" rowspan="2" onclick="renameItem(\''+nEsc+'\')" title="'+escapeAttr(aliasTitle)+'">'+escapeAttr(n)+aliasBadge+' <span class="edit-icon">✎</span></th><td class="c-type">採購價</td>';
+    html += '<tr class="price-row item-top"><th class="c-name c-name-click" rowspan="2" onclick="renameItem(\''+nEsc+'\')" title="'+escapeAttr(aliasTitle)+'"><div class="cn-box">'+escapeAttr(n)+aliasBadge+' <span class="edit-icon">✎</span></div></th><td class="c-type">採購價</td>';
     for(var d=1; d<=daysInMonth; d++){
       var c = pivot[n][d];
       var wk = isWeekend(d) ? ' weekend' : '';
