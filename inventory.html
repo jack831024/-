@@ -651,8 +651,10 @@ var STORE_NAME = sessionStorage.getItem('cd_store_name');
   var mp = document.getElementById('month-picker');
   if(mp) mp.value = thisMonth;
   renderVendorGrid(brand);
-  // ⭐ 從雲端拉廠商清單設定，與本機 union 合併後重畫（每台裝置一致）
-  //    非同步：先用本機畫一次，雲端回來再重畫，不阻塞開頁
+  // ⭐ 跨裝置一致（兩層，皆非同步、不阻塞開頁，回來再重畫）：
+  //   (1) 從已同步的盤點紀錄自動補出「有資料的廠商」— 不需重新部署就生效
+  //   (2) 從雲端拉完整廠商清單設定（含自訂/刪除）— 需後端重新部署後才生效
+  if(typeof syncVendorsFromCloudRecords === 'function') syncVendorsFromCloudRecords();
   if(typeof pullVendorConfigFromCloud === 'function') pullVendorConfigFromCloud();
 
   // 預設日期為今天
@@ -896,6 +898,40 @@ function pullVendorConfigFromCloud(){
       JSON.stringify(merged.custom) !== JSON.stringify(cloudCfg.custom || []) ||
       JSON.stringify(merged.deleted) !== JSON.stringify(cloudCfg.deleted || {});
     if(changed) pushVendorConfigToCloud();
+  }).catch(function(){ /* 離線容忍 */ });
+}
+
+// ⭐ 不需重新部署也能跨裝置：盤點「紀錄」本來就同步雲端，
+//    從已同步紀錄撈出「有資料的廠商」自動補進本機自訂清單，
+//    每台裝置開頁就都看得到用過的廠商（刪除/月份過濾仍照常套用）。
+//    用的是現有已部署的 getInventoryHistory，不靠新後端。
+function syncVendorsFromCloudRecords(){
+  var url = invSyncUrl();
+  if(!url) return Promise.resolve();
+  return fetch(url, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action:'getInventoryHistory', store: STORE_ID, vendor:'' })
+  }).then(function(r){ return r.json(); }).then(function(res){
+    if(!res || !res.records || !res.records.length) return;
+    var brand = STORE_ID.indexOf('shicheng') >= 0 ? 'shicheng' : 'chudian';
+    var builtin = {};
+    (VENDOR_GROUPS[brand] || []).forEach(function(g){
+      (g.vendors || []).forEach(function(v){ builtin[v] = 1; });
+    });
+    var custom = getCustomVendors();
+    var have = {};
+    custom.forEach(function(v){ have[v] = 1; });
+    var added = false;
+    res.records.forEach(function(rec){
+      var v = String((rec && rec.vendor) || '').trim();
+      if(!v || builtin[v] || have[v]) return;   // 內建本來就有 / 已在清單就跳過
+      custom.push(v); have[v] = 1; added = true;
+    });
+    if(added){
+      setCustomVendors(custom);     // 會 debounce 推設定雲端（後端有部署才生效，沒部署也無害）
+      _rerenderVendors();
+    }
   }).catch(function(){ /* 離線容忍 */ });
 }
 
