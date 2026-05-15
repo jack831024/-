@@ -318,6 +318,29 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
   .hero-icon{width:44px;height:44px;font-size:22px}
   .hero-text h1{font-size:18px}
   .vendor-grid{grid-template-columns:repeat(3,1fr)}
+
+  /* ⭐ 月度盤點表手機修正：
+     凍結的「品項/類型」欄因長品名 + nowrap 會撐爆整個畫面，
+     且 c-type / footer 的 sticky left 寫死 80px 跟實際品名欄寬對不上，
+     往右滑時會錯位重疊，把資料和「送貨款金額」的數字蓋掉。
+     → 品名欄固定 104px 並允許換行；c-type 的 left 對齊 104px。 */
+  .monthly thead th.c-name,
+  .monthly tbody th.c-name{
+    width:104px;min-width:104px;max-width:104px;
+    white-space:normal;word-break:break-word;
+    font-size:10.5px;line-height:1.25;padding:5px 6px;
+  }
+  .monthly thead th.c-type,
+  .monthly tbody td.c-type{
+    left:104px;
+    width:42px;min-width:42px;max-width:42px;
+    font-size:10px;padding:4px 3px;letter-spacing:0;
+  }
+  /* footer「送貨款金額」整段（colspan=2）貼左，寬度=104+42，維持可見不蓋資料 */
+  .monthly tfoot th{left:0;font-size:10.5px;padding:6px 6px;white-space:normal;line-height:1.2}
+  /* 總進貨量/金額兩欄稍微收窄，讓中間日期資料區多一點空間 */
+  .monthly thead th.c-sum{min-width:56px;font-size:10px}
+  .monthly tbody td.c-sum,.monthly tfoot td.c-sum-foot{font-size:10.5px}
 }
 </style>
 </head>
