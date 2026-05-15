@@ -2164,29 +2164,55 @@ async function saveRecord(opts){
   if(syncUrl){
     if(!silent) setSyncBadge('⏳ 壓縮圖片中...');
     var images = null;
+    var collectInfo = null;
     if(!skipImages){
-      try{ images = await collectImagesForUpload(); } catch(e){ console.warn('壓縮出錯：', e); }
+      try{
+        collectInfo = await collectImagesForUpload();
+        images = collectInfo.images;
+      } catch(e){
+        console.warn('壓縮出錯：', e);
+        // 整個壓縮流程爆掉 → 當作「本來有圖但全失敗」，下面安全網會擋住覆蓋
+        collectInfo = { images: null, failedSections: ['全部'], expectedSections: ['全部'] };
+      }
     }
+
+    // ⭐⭐⭐ 安全網：本來畫面上有圖（expectedSections 非空），但壓縮有任何一張失敗
+    //   → 絕對不能讓後端拿「不完整 / null 的 images」去整包覆蓋或刪掉雲端既有圖。
+    //   改成 keepImages=true（雲端圖原封不動），文字照存，最後丟錯請使用者重傳那幾張再存。
+    //   這是「上傳圖→按儲存→圖卻不見」間歇 bug 的根因防線。
+    var collectionIncomplete = !skipImages && collectInfo &&
+                               collectInfo.expectedSections.length > 0 &&
+                               collectInfo.failedSections.length > 0;
+
     var imgCount = 0;
     if(images){ Object.keys(images).forEach(function(k){ imgCount += images[k].length; }); }
     if(!silent) setSyncBadge('⏳ 同步中...' + (imgCount ? '（含 ' + imgCount + ' 張圖）' : ''));
 
-    // ⭐⭐ 三道防呆計算 keepImages（避免任何 race / 空 imgs 情境下誤刪 Drive 圖）
+    // ⭐⭐ 計算 keepImages（避免任何 race / 空 imgs / 壓縮失敗情境下誤刪或覆蓋 Drive 圖）
     //   1) skipImages=true                 → 純文字儲存，當然 keep
     //   2) 雲端圖片還沒載入完成（_imagesLoaded=false） → 強制 keep，防止 race 下送出 null 觸發後端刪檔
     //   3) skipImages=false 但 collectImages 沒拿到圖 → 也 keep（除非 _imagesDirty 明確表示「使用者剛動過圖」）
-    //      這樣手動同步時若 imgs 是空（剛載入過去的紀錄但還沒下載完），也不會誤刪
-    var keepImagesFlag = skipImages || !_imagesLoaded || (!images && !_imagesDirty);
+    //   4) 壓縮不完整（collectionIncomplete） → 強制 keep，保護雲端既有圖不被不完整內容覆蓋
+    var keepImagesFlag = skipImages || !_imagesLoaded || (!images && !_imagesDirty) || collectionIncomplete;
 
     try{
-      var res = await cloudSave(date, rec, images, keepImagesFlag);
+      // 不完整時連 images 都不傳（雙保險：就算 keepImagesFlag 因任何原因失效，也不會覆蓋）
+      var res = await cloudSave(date, rec, collectionIncomplete ? null : images, keepImagesFlag);
       if(res.fileId){ rec.imageFileId = res.fileId; records[date] = rec; setAllRecords(records); }
+
+      if(collectionIncomplete){
+        // 文字已存、雲端既有圖已保留未被覆蓋 → 明確擋下並請使用者重傳
+        setSyncBadge('⚠️ 圖片未更新（壓縮失敗）');
+        throw new Error('有圖片壓縮失敗（' + collectInfo.failedSections.join('、')
+          + '）。為避免覆蓋／刪除雲端上已有的圖片，本次「圖片」未更新（文字資料已存）。\n\n請重新上傳那幾張圖片後，再按一次「💾 儲存到雲端」。');
+      }
+
       setSyncBadge('☁️ 已同步' + (imgCount ? '（' + imgCount + ' 張圖）' : ''));
       if(!silent) alert('已儲存 ' + date + ' 的紀錄' + (imgCount ? '（含 ' + imgCount + ' 張圖）' : '') + '\n已同步到雲端');
     } catch(e){
-      setSyncBadge('⚠️ 同步失敗');
-      if(!silent) alert('已儲存到本機，但雲端同步失敗：' + e.message);
-      if(silent) throw e;  // 讓自動儲存的呼叫者能看到錯誤
+      if(!collectionIncomplete) setSyncBadge('⚠️ 同步失敗');
+      if(!silent) alert(collectionIncomplete ? e.message : ('已儲存到本機，但雲端同步失敗：' + e.message));
+      if(silent) throw e;  // 讓自動儲存 / 手動儲存的呼叫者能看到錯誤
     }
   } else {
     if(!silent) alert('已儲存 ' + date + ' 的紀錄（僅本機，未開啟雲端同步）');
@@ -2305,12 +2331,19 @@ async function doAutoSave(){
 //   1. 把當前畫面（含本批新圖）push 到雲端
 //   2. 不主動 pull 雲端 — 避免覆蓋使用者剛改的東西
 //      若需要拉其他裝置改的紀錄，請按右上角「🔄」或重新整理頁面
+var _manualSaving = false;  // 手動儲存進行中旗標（防連點造成兩個 saveRecord 並行壓縮 / 競爭 Drive 寫入）
 async function manualResync(){
+  // 防呆：上一次手動儲存還沒跑完就又被點 → 直接忽略，避免並行 race
+  if(_manualSaving){
+    console.warn('[manualResync] 已有儲存進行中，忽略這次點擊');
+    return;
+  }
   // 防呆：圖片還在等載入完（剛切換日期、雲端圖還沒下載完）就不准存
   if(!_imagesLoaded){
     alert('⚠️ 雲端圖片還在載入中，請等載入完再儲存（避免把已上傳的圖蓋掉）');
     return;
   }
+  _manualSaving = true;
   var hasNewImages = _imagesDirty;
   if(hasNewImages){
     var imgCount = 0;
@@ -2331,7 +2364,9 @@ async function manualResync(){
     console.warn('手動儲存失敗', e);
     setAutoSaveStatus('error');
     hideLoading();
-    alert('❌ 儲存失敗：' + (e.message || '未知錯誤') + '\n\n請檢查網路連線後再點一次儲存。');
+    alert('❌ 儲存失敗：' + (e.message || '未知錯誤') + '\n\n（圖片若壓縮失敗，雲端既有圖片已被保護未覆蓋）\n請依提示重新上傳後，再點一次儲存。');
+  }finally{
+    _manualSaving = false;
   }
 }
 
@@ -2639,11 +2674,22 @@ function importAll(input){
 // ==== 圖片壓縮與處理 ====
 var IMAGE_SECTIONS = ['summary','jkopay','jko','w','d','deposit','refund','cancel','daizhi'];
 
-function compressImage(file, targetBytes){
-  if(!targetBytes) targetBytes = 300 * 1024;
+function _compressImageOnce(file, targetBytes){
   return new Promise(function(resolve, reject){
     var img = new Image();
+    var objUrl = URL.createObjectURL(file);
+    var settled = false;
+    // ⏱️ 15 秒還沒 onload/onerror 就當失敗（手機記憶體吃緊時 <img> 會卡住不觸發任何事件）
+    var timer = setTimeout(function(){
+      if(settled) return;
+      settled = true;
+      try{ URL.revokeObjectURL(objUrl); }catch(e){}
+      reject(new Error('圖片解碼逾時'));
+    }, 15000);
     img.onload = function(){
+      if(settled) return;
+      settled = true;
+      clearTimeout(timer);
       try{
         var canvas = document.createElement('canvas');
         var w = img.width, h = img.height;
@@ -2661,21 +2707,49 @@ function compressImage(file, targetBytes){
           q -= 0.1;
           url = canvas.toDataURL('image/jpeg', q);
         }
+        try{ URL.revokeObjectURL(objUrl); }catch(e){}  // ⭐ 釋放記憶體，降低手機端後續解碼失敗率
         resolve(url);
-      } catch(e){ reject(e); }
+      } catch(e){
+        try{ URL.revokeObjectURL(objUrl); }catch(_){}
+        reject(e);
+      }
     };
-    img.onerror = reject;
-    img.src = URL.createObjectURL(file);
+    img.onerror = function(){
+      if(settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try{ URL.revokeObjectURL(objUrl); }catch(e){}
+      reject(new Error('圖片解碼失敗'));
+    };
+    img.src = objUrl;
   });
 }
 
+// 壓縮一張圖：失敗自動重試一次（手機端常因記憶體瞬間吃緊而第一次失敗、第二次成功）
+function compressImage(file, targetBytes){
+  if(!targetBytes) targetBytes = 300 * 1024;
+  return _compressImageOnce(file, targetBytes).catch(function(e){
+    console.warn('compressImage 第一次失敗，0.3 秒後重試一次：', e);
+    return new Promise(function(r){ setTimeout(r, 300); })
+      .then(function(){ return _compressImageOnce(file, targetBytes); });
+  });
+}
+
+// 回傳 { images, failedSections, expectedSections }
+//   images          : 壓好的 {區塊:[base64,...]}（全空回 null）
+//   expectedSections: 「畫面上有圖、預期要上傳」的區塊
+//   failedSections  : 「有圖但有任一張壓縮失敗」的區塊（→ 視為不完整，呼叫端要保護雲端不被覆蓋）
 async function collectImagesForUpload(){
   var result = {};
   var hasAny = false;
+  var failedSections = [];
+  var expectedSections = [];
   for(var i = 0; i < IMAGE_SECTIONS.length; i++){
     var k = IMAGE_SECTIONS[i];
     if(!imgs[k] || imgs[k].length === 0) continue;
+    expectedSections.push(k);
     var arr = [];
+    var failedInSection = 0;
     for(var j = 0; j < imgs[k].length; j++){
       var f = imgs[k][j];
       try{
@@ -2686,12 +2760,21 @@ async function collectImagesForUpload(){
           arr.push(await compressImage(f));
         }
       } catch(e){
-        console.warn('壓縮失敗：', e);
+        failedInSection++;
+        console.warn('壓縮失敗（' + k + ' 第 ' + (j + 1) + ' 張）：', e);
       }
     }
     if(arr.length > 0){ result[k] = arr; hasAny = true; }
+    // 這個區塊本來有圖，但有任一張沒壓成功 → 標記為「不完整」
+    if(failedInSection > 0){
+      failedSections.push(k + '(' + failedInSection + '/' + imgs[k].length + ' 張失敗)');
+    }
   }
-  return hasAny ? result : null;
+  return {
+    images: hasAny ? result : null,
+    failedSections: failedSections,
+    expectedSections: expectedSections
+  };
 }
 
 async function base64ToFile(dataUrl, name){
