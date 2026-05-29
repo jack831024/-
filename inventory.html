@@ -421,6 +421,8 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
       <button class="manage-vendors-btn" id="sync-vendors-btn" onclick="manualSyncVendors()" title="從雲端把所有有資料的廠商抓到這台裝置（每台手機看到一致）">🔄 同步</button>
       <button class="manage-vendors-btn" id="manage-vendors-btn" onclick="toggleVendorManageMode()">🗑 管理</button>
     </h3>
+    <!-- 常駐同步狀態徽章：店名 · 廠商總數 · 雲端最後同步時間 -->
+    <div id="vendor-sync-badge" style="font-size:11px;color:var(--ink-2);background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:8px;padding:6px 10px;margin-bottom:8px;line-height:1.5">—</div>
     <div id="vendor-sync-status" class="vendor-sync-status" style="font-size:11px;color:var(--ink-3);margin-bottom:8px;min-height:14px"></div>
     <div id="vendor-grid"></div>
   </div>
@@ -658,6 +660,9 @@ var STORE_NAME = sessionStorage.getItem('cd_store_name');
   //   (2) 從雲端拉完整廠商清單設定（含自訂/刪除）— 需後端重新部署後才生效
   if(typeof syncVendorsFromCloudRecords === 'function') syncVendorsFromCloudRecords();
   if(typeof pullVendorConfigFromCloud === 'function') pullVendorConfigFromCloud();
+  // 常駐徽章 + 每 30 秒自動同步一次
+  if(typeof _updateSyncStatusBadge === 'function') _updateSyncStatusBadge();
+  if(typeof startVendorPeriodicSync === 'function') startVendorPeriodicSync();
 
   // 預設日期為今天
   document.getElementById('inv-date').value = todayDate();
@@ -845,14 +850,55 @@ function mergeVendorConfig(localCfg, cloudCfg, cloudNewer){
 function _rerenderVendors(){
   var brand = STORE_ID.indexOf('shicheng') >= 0 ? 'shicheng' : 'chudian';
   try{ renderVendorGrid(brand); }catch(e){}
+  try{ _updateSyncStatusBadge(); }catch(e){}
 }
 
-// 變更後排程推雲端（debounce，避免一個動作多次 set 連打）
+// 變更後排程推雲端（debounce 縮短到 150ms，幾乎等同即時，但仍能合併同次動作的多個 set）
 function scheduleVendorCfgPush(){
   if(_applyingRemoteVendorCfg) return;
   if(!invSyncUrl()) return;
   if(_vendorCfgPushTimer) clearTimeout(_vendorCfgPushTimer);
-  _vendorCfgPushTimer = setTimeout(pushVendorConfigToCloud, 700);
+  _vendorCfgPushTimer = setTimeout(function(){
+    pushVendorConfigToCloud().then(_updateSyncStatusBadge);
+  }, 150);
+}
+
+// ⭐ 每 30 秒自動拉一次雲端，多裝置不必手動 reload 就會收斂
+//    （只有頁面在前台才跑，避免背景耗電）
+function startVendorPeriodicSync(){
+  if(window._vendorPeriodicSyncStarted) return;
+  window._vendorPeriodicSyncStarted = true;
+  setInterval(function(){
+    if(document.visibilityState !== 'visible') return;
+    if(!invSyncUrl()) return;
+    if(typeof syncVendorsFromCloudRecords === 'function') syncVendorsFromCloudRecords();
+    if(typeof pullVendorConfigFromCloud === 'function')
+      pullVendorConfigFromCloud().then(_updateSyncStatusBadge);
+  }, 30000);
+}
+
+// 常駐顯示的同步狀態徽章：店名 · 廠商 N 家 · 最後同步 HH:MM
+// 讓使用者一眼就看得出「我這台在哪家店 / 廠商有幾家 / 雲端時間」
+function _updateSyncStatusBadge(){
+  var el = document.getElementById('vendor-sync-badge');
+  if(!el) return;
+  var brand = STORE_ID.indexOf('shicheng') >= 0 ? 'shicheng' : 'chudian';
+  var builtinCount = 0;
+  (VENDOR_GROUPS[brand] || []).forEach(function(g){ builtinCount += (g.vendors||[]).length; });
+  var customCount = getCustomVendors().length;
+  var hiddenCount = getHiddenVendors().length;
+  var visibleCount = builtinCount + customCount - hiddenCount;
+  var savedAt = getVendorCfgSavedAt();
+  var t = '—';
+  if(savedAt){
+    try{
+      var d = new Date(savedAt);
+      t = d.toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    }catch(e){}
+  }
+  el.innerHTML = '📍 <b>' + (STORE_NAME || STORE_ID) + '</b>'
+    + ' · 廠商 <b>' + visibleCount + '</b> 家（自訂 '+customCount+'、隱藏 '+hiddenCount+'）'
+    + ' · 雲端同步：<b>' + t + '</b>';
 }
 
 function pushVendorConfigToCloud(){
