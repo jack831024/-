@@ -941,6 +941,37 @@ document.addEventListener('visibilitychange', function(){
   if(typeof pullVendorConfigFromCloud === 'function') pullVendorConfigFromCloud();
 });
 
+// ⭐ 跨裝置新增廠商不需重新部署：用「占位紀錄」讓現有後端就能傳遞廠商名
+// 1970-01-01 + 特殊品名 → 確定不會跟使用者真的盤點資料衝突
+var VENDOR_INIT_MARKER_NAME = '__vendor_marker__';
+var VENDOR_INIT_MARKER_DATE = '1970-01-01';
+
+function isVendorMarkerRecord(rec){
+  return rec && String(rec.name||'') === VENDOR_INIT_MARKER_NAME;
+}
+
+// 新增廠商時呼叫：在雲端塞一筆 0/0 占位紀錄（量價皆 0、日期 1970-01-01）
+// 其他裝置的 syncVendorsFromCloudRecords 就能撈到這家廠商，自動補按鈕。
+// 注意：用 1970-01-01 避免動到任何月份的真實盤點資料；
+//      量價都 0 → 不會影響月度成本/利潤分析。
+function seedVendorInCloud(vendorName){
+  var url = invSyncUrl();
+  if(!url || !vendorName) return;
+  return fetch(url, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({
+      action: 'saveInventory',
+      store: STORE_ID,
+      vendor: vendorName,
+      date: VENDOR_INIT_MARKER_DATE,
+      items: [{ name: VENDOR_INIT_MARKER_NAME, price: 0, qty: 0, unit: '', date: VENDOR_INIT_MARKER_DATE }],
+      savedAt: new Date().toISOString(),
+      savedBy: 'auto-init'
+    })
+  }).catch(function(){ /* 離線容忍 */ });
+}
+
 // ⭐ 不需重新部署也能跨裝置：盤點「紀錄」本來就同步雲端，
 //    從已同步紀錄撈出「有資料的廠商」自動補進本機自訂清單，
 //    每台裝置開頁就都看得到用過的廠商（刪除/月份過濾仍照常套用）。
@@ -1098,6 +1129,10 @@ function addCustomVendor(){
     customAll.push(name);
     setCustomVendors(customAll);
   }
+  // ⭐ 跨裝置：在雲端塞一筆「占位紀錄」（1970-01-01、量價皆 0），
+  //    讓其他裝置開頁時的 syncVendorsFromCloudRecords 能撈到這家廠商
+  //    → 不需要重新部署 Apps Script，新增廠商也能跨裝置
+  if(typeof seedVendorInCloud === 'function') seedVendorInCloud(name);
   renderVendorGrid(brand);
   // 新增完直接選取該廠商
   setTimeout(function(){
@@ -2229,6 +2264,9 @@ async function loadHistory(opts){
       });
       var j = await r.json();
       if(j && j.ok && Array.isArray(j.records)){
+        // 過濾掉「廠商占位紀錄」(1970-01-01 + __vendor_marker__)，
+        // 避免污染月度表、本機 cache、月度成本分析
+        j.records = j.records.filter(function(r){ return !isVendorMarkerRecord(r); });
         // 雲端資料為準（同 date+name 以雲端覆蓋本機）
         var cloudMap = {};
         j.records.forEach(function(row){
@@ -2472,6 +2510,8 @@ function normalizeDate(s){
 }
 
 function renderHistoryTable(box, stat, records){
+  // 過濾掉「廠商占位紀錄」（新增廠商時為了跨裝置同步寫進雲端的 1970-01-01 假紀錄）
+  records = (records || []).filter(function(r){ return !isVendorMarkerRecord(r); });
   // 重畫前記住舊的 scroll 位置（避免每次編輯後表格「跳回最上方」造成「縮短／看不到」的錯覺）
   var oldGrid = box.querySelector('.grid-wrap');
   var savedScrollTop = oldGrid ? oldGrid.scrollTop : 0;
