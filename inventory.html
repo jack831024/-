@@ -418,8 +418,10 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
     <h3>
       <span class="step-num">1</span>選擇廠商
       <input type="month" id="vendor-month-picker" class="vendor-month-picker" onchange="onVendorMonthChange()" title="切換月份（顯示該月時的廠商清單；刪除某廠商會自當月起隱藏，過往月份仍可見）">
+      <button class="manage-vendors-btn" id="sync-vendors-btn" onclick="manualSyncVendors()" title="從雲端把所有有資料的廠商抓到這台裝置（每台手機看到一致）">🔄 同步</button>
       <button class="manage-vendors-btn" id="manage-vendors-btn" onclick="toggleVendorManageMode()">🗑 管理</button>
     </h3>
+    <div id="vendor-sync-status" class="vendor-sync-status" style="font-size:11px;color:var(--ink-3);margin-bottom:8px;min-height:14px"></div>
     <div id="vendor-grid"></div>
   </div>
 
@@ -900,6 +902,44 @@ function pullVendorConfigFromCloud(){
     if(changed) pushVendorConfigToCloud();
   }).catch(function(){ /* 離線容忍 */ });
 }
+
+// 手動同步：使用者按「🔄 同步」按鈕觸發，顯示同步結果讓使用者看得到
+async function manualSyncVendors(){
+  var btn = document.getElementById('sync-vendors-btn');
+  var statusEl = document.getElementById('vendor-sync-status');
+  function setStatus(msg, color){
+    if(!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.style.color = color || 'var(--ink-3)';
+  }
+  if(!invSyncUrl()){
+    setStatus('⚠️ 雲端網址未設定，無法同步', '#b45309');
+    return;
+  }
+  var before = getCustomVendors().length;
+  if(btn){ btn.disabled = true; btn.textContent = '同步中…'; }
+  setStatus('正在從雲端拉廠商清單…', 'var(--brand)');
+  try{
+    var p1 = (typeof syncVendorsFromCloudRecords === 'function') ? syncVendorsFromCloudRecords() : Promise.resolve();
+    var p2 = (typeof pullVendorConfigFromCloud === 'function') ? pullVendorConfigFromCloud() : Promise.resolve();
+    await Promise.all([p1, p2]);
+    var added = getCustomVendors().length - before;
+    if(added > 0) setStatus('✓ 已從雲端同步 '+added+' 家新廠商', '#047857');
+    else          setStatus('✓ 已是最新（雲端沒有本機沒有的廠商）', '#047857');
+  }catch(e){
+    setStatus('⚠️ 同步失敗，請檢查網路', '#b45309');
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = '🔄 同步'; }
+    setTimeout(function(){ setStatus('', ''); }, 8000);
+  }
+}
+
+// 切回此分頁/App 時自動再同步一次（多裝置間切換 → 自動拿到最新）
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState !== 'visible') return;
+  if(typeof syncVendorsFromCloudRecords === 'function') syncVendorsFromCloudRecords();
+  if(typeof pullVendorConfigFromCloud === 'function') pullVendorConfigFromCloud();
+});
 
 // ⭐ 不需重新部署也能跨裝置：盤點「紀錄」本來就同步雲端，
 //    從已同步紀錄撈出「有資料的廠商」自動補進本機自訂清單，
