@@ -42,6 +42,7 @@ function doPost(e) {
     var body = JSON.parse(e.postData.contents);
 
     // 儲存（upsert：先清掉該 store+vendor+date 的舊列，再寫新列）
+    // ⭐ 用 LockService 序列化，避免兩個並行請求都通過 delete → 各自 append → 整批雙倍寫入
     if (body.action === 'saveInventory') {
       var store = body.store || 'default';
       var vendor = String(body.vendor || '').trim();
@@ -52,36 +53,46 @@ function doPost(e) {
       if (!vendor) return json({ error: 'vendor 必填' });
       if (!date)   return json({ error: 'date 必填' });
 
-      var sheet = getInventorySheet(store);
-      deleteInventoryRows(sheet, vendor, date);
-
-      var rows = [];
-      for (var i = 0; i < itemsArr.length; i++) {
-        var it = itemsArr[i] || {};
-        var name = String(it.name || '').trim();
-        if (!name) continue;
-        var price = Number(it.price) || 0;
-        var qty = Number(it.qty) || 0;
-        rows.push([
-          normalizeDate(it.date) || date,
-          vendor,
-          name,
-          price,
-          qty,
-          price * qty,
-          savedAt,
-          savedBy
-        ]);
+      var lock = LockService.getScriptLock();
+      try { lock.waitLock(20000); } catch (e) {
+        return json({ error: '取鎖逾時，請稍後再試：' + String(e) });
       }
+      try {
+        var sheet = getInventorySheet(store);
+        deleteInventoryRows(sheet, vendor, date);
 
-      if (rows.length > 0) {
-        var startRow = sheet.getLastRow() + 1;
-        sheet.getRange(startRow, 1, rows.length, rows[0].length).setValues(rows);
-        // 日期欄位設為文字，避免 Google Sheets 自動轉 Date
-        sheet.getRange(startRow, 1, rows.length, 1).setNumberFormat('@');
+        // 同次 push 內也去重一次（保險）：同 (date, name) 留最後一筆
+        var dedupMap = {};
+        var orderedNames = [];
+        for (var i = 0; i < itemsArr.length; i++) {
+          var it = itemsArr[i] || {};
+          var name = String(it.name || '').trim();
+          if (!name) continue;
+          var itDate = normalizeDate(it.date) || date;
+          var k = itDate + '|' + name;
+          if (!(k in dedupMap)) orderedNames.push(k);
+          dedupMap[k] = {
+            date: itDate,
+            name: name,
+            price: Number(it.price) || 0,
+            qty: Number(it.qty) || 0
+          };
+        }
+        var rows = orderedNames.map(function(k){
+          var x = dedupMap[k];
+          return [x.date, vendor, x.name, x.price, x.qty, x.price * x.qty, savedAt, savedBy];
+        });
+
+        if (rows.length > 0) {
+          var startRow = sheet.getLastRow() + 1;
+          sheet.getRange(startRow, 1, rows.length, rows[0].length).setValues(rows);
+          sheet.getRange(startRow, 1, rows.length, 1).setNumberFormat('@');
+        }
+
+        return json({ ok: true, count: rows.length, store: store, vendor: vendor, date: date });
+      } finally {
+        try { lock.releaseLock(); } catch (e) {}
       }
-
-      return json({ ok: true, count: rows.length, store: store, vendor: vendor, date: date });
     }
 
     // 讀取某廠商的全部歷史
@@ -98,6 +109,73 @@ function doPost(e) {
         out.push(rowToRecord(row));
       }
       return json({ ok: true, store: gStore, vendor: gVendor, records: out });
+    }
+
+    // ⭐ 一鍵清除「同店同日同廠商同品項」的重複歷史紀錄
+    // 規則：同 (date, vendor, name) 只留 savedAt 最新的一筆，其餘刪除
+    // body: { action:'dedupeInventory', store, vendor? (可選，省略=全部廠商), date? (可選，省略=全部日期) }
+    // 為避免大量 deleteRow 卡 Apps Script 6 分鐘時限，改用「重寫整張表」策略：
+    //   讀出所有列 → groupBy(date,vendor,name) → 每組留最新 → clear → 寫回
+    if (body.action === 'dedupeInventory') {
+      var ddStore = body.store || 'default';
+      var ddVendor = String(body.vendor || '').trim();   // 空 = 不過濾
+      var ddDate = normalizeDate(body.date);             // 空 = 不過濾
+      var ddLock = LockService.getScriptLock();
+      try { ddLock.waitLock(60000); } catch (e) {
+        return json({ error: '取鎖逾時：' + String(e) });
+      }
+      try {
+        var ddSheet = getInventorySheet(ddStore);
+        var ddData = ddSheet.getDataRange().getValues();
+        if (ddData.length <= 1) return json({ ok: true, before: 0, after: 0, removed: 0 });
+        var header = ddData[0];
+        var bodyRows = ddData.slice(1).filter(function(r){ return r[0]; });   // 跳空白列
+
+        // 兩堆：受影響範圍（要 dedupe）+ 其他保留原樣
+        var inScope = [];
+        var outScope = [];
+        bodyRows.forEach(function(r){
+          var rDate = normalizeDate(r[0]);
+          var rVendor = String(r[1] || '').trim();
+          var hit = true;
+          if (ddVendor && rVendor !== ddVendor) hit = false;
+          if (ddDate && rDate !== ddDate) hit = false;
+          (hit ? inScope : outScope).push(r);
+        });
+
+        // 受影響範圍 dedupe：同 (date,vendor,name) 留最新 savedAt
+        var groupBest = {};  // key → row（目前最新）
+        var groupOrder = []; // 保留出現順序
+        inScope.forEach(function(r){
+          var key = normalizeDate(r[0]) + '|' + String(r[1]||'').trim() + '|' + String(r[2]||'').trim();
+          var savedAt = String(r[6] || '');
+          if (!(key in groupBest)) {
+            groupBest[key] = r;
+            groupOrder.push(key);
+          } else {
+            var prev = String(groupBest[key][6] || '');
+            if (savedAt > prev) groupBest[key] = r;   // 新的勝出
+          }
+        });
+        var deduped = groupOrder.map(function(k){ return groupBest[k]; });
+
+        var before = bodyRows.length;
+        var after  = outScope.length + deduped.length;
+        var removed = before - after;
+
+        if (removed > 0) {
+          // 整張表重寫：先清掉資料區，再寫回 [outScope, deduped]
+          ddSheet.getRange(2, 1, ddSheet.getLastRow() - 1, ddSheet.getLastColumn()).clearContent();
+          var finalRows = outScope.concat(deduped);
+          if (finalRows.length > 0) {
+            ddSheet.getRange(2, 1, finalRows.length, header.length).setValues(finalRows);
+            ddSheet.getRange(2, 1, finalRows.length, 1).setNumberFormat('@');  // 日期欄文字
+          }
+        }
+        return json({ ok: true, store: ddStore, vendor: ddVendor, date: ddDate, before: before, after: after, removed: removed });
+      } finally {
+        try { ddLock.releaseLock(); } catch (e) {}
+      }
     }
 
     // 刪除某廠商某日的資料

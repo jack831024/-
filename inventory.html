@@ -2310,76 +2310,62 @@ async function loadHistory(opts){
       });
       var j = await r.json();
       if(j && j.ok && Array.isArray(j.records)){
-        // 過濾掉「廠商占位紀錄」(1970-01-01 + __vendor_marker__)，
-        // 避免污染月度表、本機 cache、月度成本分析
+        // 過濾掉「廠商占位紀錄」(1970-01-01 + __vendor_marker__)
         j.records = j.records.filter(function(r){ return !isVendorMarkerRecord(r); });
-        // 雲端資料為準（同 date+name 以雲端覆蓋本機）
-        var cloudMap = {};
+
+        // ⭐ 雲端 = 唯一真實來源：用雲端 snapshot 完整取代本機 cache
+        //    （之前的 union-merge 邏輯會把本機殘留的舊重複資料永遠保留，
+        //     造成「同店同廠商不同裝置看到不同金額」+ 下次按 💾 把垃圾推回去）
+        //    例外：currentVendor 中「該日有未儲存編輯」(_dirtyDates) 的整天 cache
+        //    必須跳過，不可覆蓋使用者正在打的本機資料。
+        var prefix = 'cd_inv_'+STORE_ID+'_'+currentVendor+'_';
+        var dirtySet = (typeof _dirtyDates === 'object' && _dirtyDates) ? _dirtyDates : {};
+
+        // 1) 把雲端依日期分組
+        var byDate = {};
         j.records.forEach(function(row){
           var nd = normalizeDate(row.date);
-          var k = nd+'|'+row.name;
-          cloudMap[k] = { date: nd, name: row.name, price: row.price, qty: row.qty, unit: row.unit||'' };
+          if(!nd || !row.name) return;
+          if(!byDate[nd]) byDate[nd] = [];
+          byDate[nd].push({
+            name: row.name,
+            price: Number(row.price) || 0,
+            qty: Number(row.qty) || 0,
+            unit: row.unit || '',
+            date: nd
+          });
         });
-        // 合併：先保留 local 的，雲端再蓋過去
-        var merged = {};
-        allRecords.forEach(function(row){
-          merged[normalizeDate(row.date)+'|'+row.name] = row;
-        });
-        Object.keys(cloudMap).forEach(function(k){ merged[k] = cloudMap[k]; });
-        allRecords = Object.keys(merged).map(function(k){ return merged[k]; });
-        src = 'cloud';
 
+        // 2) 清掉本機 cache 中該廠商「不在 dirty 清單」的所有日期 key
+        var toRemove = [];
+        for(var ki=0; ki<localStorage.length; ki++){
+          var lk = localStorage.key(ki);
+          if(!lk || lk.indexOf(prefix) !== 0) continue;
+          var dpart = lk.substring(prefix.length);
+          if(!dirtySet[dpart]) toRemove.push(lk);   // 有 dirty 編輯就保留
+        }
+        toRemove.forEach(function(k){ localStorage.removeItem(k); });
+
+        // 3) 把雲端的每一天寫進本機 cache（被 dirty 保護的日期不覆蓋）
+        Object.keys(byDate).forEach(function(d){
+          if(dirtySet[d]) return;
+          localStorage.setItem(prefix + d, JSON.stringify({
+            vendor: currentVendor, date: d, items: byDate[d], savedAt: new Date().toISOString()
+          }));
+        });
+
+        // 4) 用最新的本機 cache（= 雲端 snapshot + dirty 編輯）重新計算 allRecords
+        allRecords = scanLocalInventory();
+        src = 'cloud';
         srcChip.className = 'src-chip ' + src;
-        srcChip.textContent = '雲端 + 本機';
+        srcChip.textContent = '雲端';
+
         renderHistoryTable(box, stat, allRecords);
         renderBusinessSummary();
-
-        // ⭐ 把雲端有但本機缺的「整天」cache 回 localStorage，讓下次切到該日期時
-        //    reloadBatchFromStorage（讀本機）能找到資料 → 本批品項明細顯示出來
-        try{
-          var existingKeys = {};
-          var prefix = 'cd_inv_'+STORE_ID+'_'+currentVendor+'_';
-          for(var i=0;i<localStorage.length;i++){
-            var lk = localStorage.key(i);
-            if(lk && lk.indexOf(prefix) === 0) existingKeys[lk] = 1;
-          }
-          // 用日期分組雲端資料
-          var byDate = {};
-          j.records.forEach(function(row){
-            var nd = normalizeDate(row.date);
-            if(!nd) return;
-            if(!byDate[nd]) byDate[nd] = [];
-            byDate[nd].push({
-              name: row.name,
-              price: Number(row.price) || 0,
-              qty: Number(row.qty) || 0,
-              unit: row.unit || '',
-              date: nd
-            });
-          });
-          // 寫回本機（只寫缺的，不覆蓋已有的避免吃掉本機新編輯）
-          var cachedCount = 0;
-          Object.keys(byDate).forEach(function(d){
-            var key = prefix + d;
-            if(!existingKeys[key]){
-              localStorage.setItem(key, JSON.stringify({
-                vendor: currentVendor, date: d, items: byDate[d], savedAt: new Date().toISOString()
-              }));
-              cachedCount++;
-            }
-          });
-          if(cachedCount > 0) console.log('[loadHistory] 雲端 → 本機 cache：' + cachedCount + ' 天');
-          // ⭐ 寫回 cache 後，所有「依賴 localStorage」的 UI 都要重 render
-          //    1) 「所有廠商成本」(getAllVendorTotals 掃 localStorage) → 之前呼叫的 renderBusinessSummary 是空 localStorage 算的，要重算
-          //    2) 「本批品項明細」(reloadBatchFromStorage 讀 localStorage) → 無條件 reload 避免日期格式微差導致匹配不到
-          if(cachedCount > 0){
-            if(typeof renderBusinessSummary === 'function') renderBusinessSummary();
-            if(typeof reloadBatchFromStorage === 'function'){
-              reloadBatchFromStorage();
-              renderBatchItems();
-            }
-          }
-        }catch(cacheErr){ console.warn('[loadHistory] 寫回本機 cache 失敗', cacheErr); }
+        if(typeof reloadBatchFromStorage === 'function'){
+          reloadBatchFromStorage();
+          renderBatchItems();
+        }
       }
     }catch(e){ console.warn('雲端讀取失敗', e); }
   }
