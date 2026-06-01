@@ -551,6 +551,58 @@ var EMPLOYEES = CFG.employees.slice();
 var PT_EMPLOYEES = (CFG.pt || []).map(function(e){ return Object.assign({ role:'pt' }, e); });
 var ALL_EMPLOYEES = EMPLOYEES.concat(PT_EMPLOYEES);
 
+// ============================================
+// 員工名單繼承（跨月份共用）
+//   - 新開的月份從這個 key 繼承上次的 customEmployees → 新增的員工自動延續
+//   - 過去已儲存的月份不會被改（per-month state 各自獨立）
+// ============================================
+function inheritedEmpsKey(){
+  return 'cd_salary_inherit_emps_' + (STORE || 'nostore');
+}
+function loadInheritedEmps(){
+  try {
+    var raw = localStorage.getItem(inheritedEmpsKey());
+    if(raw){
+      var arr = JSON.parse(raw);
+      if(Array.isArray(arr)) return arr;
+    }
+  } catch(e){}
+  return [];
+}
+function saveInheritedEmps(emps){
+  try {
+    localStorage.setItem(inheritedEmpsKey(), JSON.stringify(emps || []));
+  } catch(e){}
+}
+
+// 雲端沒本月資料時，去找這店「最近的月份」抓 customEmployees 過來
+// 這樣別台裝置加的員工，新裝置開新月份也能看到
+function seedCustomEmployeesFromLatestMonth(){
+  var url = (typeof getSyncUrl === 'function') ? getSyncUrl() : '';
+  var pw  = (typeof getStorePassword === 'function') ? getStorePassword() : '';
+  if(!url || !pw || !STORE) return;
+  var thisYm = getSelectedYM();
+  callSalaryGAS('listMonths', [pw, STORE]).then(function(r){
+    if(!r || !r.ok || !Array.isArray(r.months) || !r.months.length) return;
+    // months 已按新→舊排序，取第一個不是當前月份的當「最近月份」
+    var latest = r.months.find(function(m){ return m.ym !== thisYm; });
+    if(!latest) return;
+    callSalaryGAS('loadSalary', [pw, STORE, latest.ym]).then(function(r2){
+      if(!r2 || !r2.ok || !r2.found || !r2.state) return;
+      var emps = Array.isArray(r2.state.customEmployees) ? r2.state.customEmployees : [];
+      if(!emps.length) return;
+      // 把繼承來的員工塞進當前 STATE（覆蓋掉本月空白的 customEmployees）
+      if(!STATE) return;
+      STATE.customEmployees = emps;
+      saveInheritedEmps(emps);
+      rebuildEmployeeLists();
+      render();
+      // 不算 dirty（因為只是繼承，使用者沒實際改動）
+      markSynced();
+    });
+  }).catch(function(){ /* silently ignore */ });
+}
+
 // 從 STATE.customEmployees 重建 EMPLOYEES / PT_EMPLOYEES / ALL_EMPLOYEES
 // 預設的（從 STORE_CONFIG）永遠保留，custom 的後面附上
 function rebuildEmployeeLists(){
@@ -614,12 +666,14 @@ function addCustomEmployee(){
   // 該員工的 STATE 各欄位先初始化
   var emp = ALL_EMPLOYEES.find(function(e){ return e.id === id; });
   if(emp) ensureEmployeeSlots(emp);
+  // 同步到 inherited key，未來新月份開啟會帶這份名單
+  saveInheritedEmps(STATE.customEmployees);
   nameEl.value = '';
   roleEl.value = 'regular';
   toggleAddEmpForm(false);
   render();
   updateDirtyChip();
-  toast('已新增員工：' + name, 'ok');
+  toast('已新增員工：' + name + '（未來新月份也會自動帶入）', 'ok');
 }
 
 // 刪除自訂員工（只能刪 custom，不能刪預設）
@@ -627,7 +681,7 @@ function removeCustomEmployee(id){
   if(id.indexOf('cust_') !== 0){ toast('預設員工不能刪除', 'err'); return; }
   var emp = ALL_EMPLOYEES.find(function(e){ return e.id === id; });
   if(!emp){ return; }
-  if(!confirm('確定要刪除「'+emp.name+'」？\n\n刪除後該員工本月的所有獎金/扣款資料也會一併刪掉。\n（已存到雲端的紀錄需按 💾 儲存才會更新）')) return;
+  if(!confirm('確定要刪除「'+emp.name+'」？\n\n• 本月與未來新月份不會再有此員工\n• 過去已儲存的月份仍會保留\n（按 💾 才會同步到雲端）')) return;
   STATE.customEmployees = (STATE.customEmployees || []).filter(function(e){ return e.id !== id; });
   // 把該員工的 STATE 欄位都清掉，避免殘留
   ['s1','s2','s3','s4','s5','s6','s7','insurance','roles','detail','notes','ptWage'].forEach(function(k){
@@ -642,10 +696,12 @@ function removeCustomEmployee(id){
     });
   }
   rebuildEmployeeLists();
+  // 同步到 inherited key，未來新月份不會再帶入此員工
+  saveInheritedEmps(STATE.customEmployees);
   if(STATE.activeEmp === id) STATE.activeEmp = (EMPLOYEES[0] || ALL_EMPLOYEES[0] || {}).id;
   render();
   updateDirtyChip();
-  toast('已刪除員工', 'ok');
+  toast('已刪除員工（過去月份保留）', 'ok');
 }
 
 // 切換「新增員工表單」顯示
@@ -730,7 +786,8 @@ function blankState(){
     ptWage: {},        // {empId: {hours,otHours,wage}} — 從加班費系統匯入的 PT 月度工資
     otherBonuses: {},  // {entryId: {empId, label, amount}}
     fixedOT: {},       // {empId: number} — 固定加班費 override，0 = 用該店該職級預設
-    customEmployees: [], // [{id, name, isPT, defaultRole}] — 手動新增的員工
+    // 從 inherited key 繼承上次的員工名單（新增的員工會自動延續到新月份）
+    customEmployees: loadInheritedEmps(),
     activeEmp: EMPLOYEES[0].id,
     notes: {}          // {empId: 備註字串}
   };
@@ -1895,7 +1952,9 @@ function pullFromCloud(showToast){
         return;
       }
       if(!res.found){
-        // 本月雲端沒資料 → 標記為「乾淨」（沒未儲存變更），等使用者按 💾 才推
+        // 本月雲端沒資料 → 嘗試從這店「最近的月份」抓 customEmployees 當作員工底
+        // （這樣別台裝置新增的員工也能繼承過來）
+        seedCustomEmployeesFromLatestMonth();
         setSyncChip('ok', '☁ 已連線（本月無雲端資料）', '改了東西按 💾 才會建立');
         markSynced();
         return;
@@ -1911,6 +1970,8 @@ function pullFromCloud(showToast){
       cloud.ym = getSelectedYM();
       cloud.store = STORE;
       STATE = cloud;
+      // 雲端有的 customEmployees 也存進 inherited key（給之後其他月份繼承）
+      saveInheritedEmps(STATE.customEmployees);
       rebuildEmployeeLists();
       try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
       render();

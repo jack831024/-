@@ -537,6 +537,49 @@ var EMPLOYEES = CFG.employees.slice();
 var PT_EMPLOYEES = (CFG.pt || []).map(function(e){ return Object.assign({ role:'pt' }, e); });
 var ALL_EMPLOYEES = EMPLOYEES.concat(PT_EMPLOYEES);
 
+// 員工名單繼承（跨月份共用）— 對帳用獨立 key 與主系統不衝突
+function inheritedEmpsKey(){
+  return 'cd_salary_verify_inherit_emps_' + (STORE || 'nostore');
+}
+function loadInheritedEmps(){
+  try {
+    var raw = localStorage.getItem(inheritedEmpsKey());
+    if(raw){
+      var arr = JSON.parse(raw);
+      if(Array.isArray(arr)) return arr;
+    }
+  } catch(e){}
+  return [];
+}
+function saveInheritedEmps(emps){
+  try {
+    localStorage.setItem(inheritedEmpsKey(), JSON.stringify(emps || []));
+  } catch(e){}
+}
+
+function seedCustomEmployeesFromLatestMonth(){
+  var url = (typeof getSyncUrl === 'function') ? getSyncUrl() : '';
+  var pw  = (typeof getStorePassword === 'function') ? getStorePassword() : '';
+  if(!url || !pw || !STORE) return;
+  var thisYm = getSelectedYM();
+  callSalaryGAS('listMonths', [pw, STORE]).then(function(r){
+    if(!r || !r.ok || !Array.isArray(r.months) || !r.months.length) return;
+    var latest = r.months.find(function(m){ return m.ym !== thisYm; });
+    if(!latest) return;
+    callSalaryGAS('loadSalary', [pw, STORE, latest.ym]).then(function(r2){
+      if(!r2 || !r2.ok || !r2.found || !r2.state) return;
+      var emps = Array.isArray(r2.state.customEmployees) ? r2.state.customEmployees : [];
+      if(!emps.length) return;
+      if(!STATE) return;
+      STATE.customEmployees = emps;
+      saveInheritedEmps(emps);
+      rebuildEmployeeLists();
+      render();
+      markSynced();
+    });
+  }).catch(function(){});
+}
+
 function rebuildEmployeeLists(){
   var defaultEmps = CFG.employees.slice();
   var defaultPT   = (CFG.pt || []).map(function(e){ return Object.assign({ role:'pt' }, e); });
@@ -591,19 +634,20 @@ function addCustomEmployee(){
   rebuildEmployeeLists();
   var emp = ALL_EMPLOYEES.find(function(e){ return e.id === id; });
   if(emp) ensureEmployeeSlots(emp);
+  saveInheritedEmps(STATE.customEmployees);
   nameEl.value = '';
   roleEl.value = 'regular';
   toggleAddEmpForm(false);
   render();
   updateDirtyChip();
-  toast('已新增員工：' + name, 'ok');
+  toast('已新增員工：' + name + '（未來新月份也會自動帶入）', 'ok');
 }
 
 function removeCustomEmployee(id){
   if(id.indexOf('cust_') !== 0){ toast('預設員工不能刪除', 'err'); return; }
   var emp = ALL_EMPLOYEES.find(function(e){ return e.id === id; });
   if(!emp){ return; }
-  if(!confirm('確定要刪除「'+emp.name+'」？\n\n刪除後該員工本月的所有資料也會清掉。\n（按 💾 才會同步到雲端）')) return;
+  if(!confirm('確定要刪除「'+emp.name+'」？\n\n• 本月與未來新月份不會再有此員工\n• 過去已儲存的月份仍會保留\n（按 💾 才會同步到雲端）')) return;
   STATE.customEmployees = (STATE.customEmployees || []).filter(function(e){ return e.id !== id; });
   ['s1','s2','s3','s4','s5','s6','s7','insurance','roles','detail','notes','ptWage'].forEach(function(k){
     if(STATE[k] && STATE[k][id] !== undefined) delete STATE[k][id];
@@ -616,10 +660,11 @@ function removeCustomEmployee(id){
     });
   }
   rebuildEmployeeLists();
+  saveInheritedEmps(STATE.customEmployees);
   if(STATE.activeEmp === id) STATE.activeEmp = (EMPLOYEES[0] || ALL_EMPLOYEES[0] || {}).id;
   render();
   updateDirtyChip();
-  toast('已刪除員工', 'ok');
+  toast('已刪除員工（過去月份保留）', 'ok');
 }
 
 function toggleAddEmpForm(force){
@@ -703,7 +748,7 @@ function blankState(){
     ptWage: {},        // 對帳模式：{empId: {hours, hourlyWage}} — 店長手動輸入
     otherBonuses: {},  // {entryId: {empId, label, amount}}
     fixedOT: {},       // {empId: number} — 固定加班費 override，0 = 用該店該職級預設
-    customEmployees: [], // [{id, name, isPT, defaultRole}] — 手動新增的員工
+    customEmployees: loadInheritedEmps(), // 新月份從繼承 key 帶入上次的員工名單
     activeEmp: EMPLOYEES[0].id,
     notes: {}          // {empId: 備註字串}
   };
@@ -1819,7 +1864,8 @@ function pullFromCloud(showToast){
         return;
       }
       if(!res.found){
-        // 本月雲端沒資料 → 標記為「乾淨」（沒未儲存變更），等使用者按 💾 才推
+        // 本月雲端沒資料 → 從最近月份抓 customEmployees 過來（給新月份/新裝置繼承）
+        seedCustomEmployeesFromLatestMonth();
         setSyncChip('ok', '☁ 已連線（本月無雲端資料）', '改了東西按 💾 才會建立');
         markSynced();
         return;
@@ -1835,6 +1881,8 @@ function pullFromCloud(showToast){
       cloud.ym = getSelectedYM();
       cloud.store = STORE;
       STATE = cloud;
+      // 也存進 inherited key，給新月份／其他裝置繼承
+      saveInheritedEmps(STATE.customEmployees);
       rebuildEmployeeLists();
       try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
       render();
