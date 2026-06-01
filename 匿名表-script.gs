@@ -58,8 +58,7 @@ var STORE_DEFAULT_POSITIONS = {
   'chudian-xinzhuang': {
     '蔡鈺豪': '店長',
     '蘇奕誠': '副店長',
-    '李嘉真': '正職',
-    '洪仕賢': '正職'
+    '李嘉真': '正職'
   },
   'shicheng-zhongxiao': {
     '林梓彥': '店長',

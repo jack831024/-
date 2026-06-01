@@ -226,6 +226,12 @@ body.view-form-active #mgr-card{display:none}
 .position-row select{flex:0 0 92px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;font-family:inherit;background:#fff}
 .position-row select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 2px rgba(139,92,246,.15)}
 .positions-foot{display:flex;justify-content:flex-end}
+.positions-add-row{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#f0f9ff;border:1px dashed #93c5fd;border-radius:10px;margin-bottom:10px;flex-wrap:wrap}
+.positions-add-row .input{flex:1;min-width:120px;font-size:13px;padding:6px 10px}
+.positions-add-row select.input{flex:0 0 90px;min-width:80px}
+.positions-add-row .btn{padding:6px 12px;font-size:12.5px;flex-shrink:0}
+.btn-del-emp{flex-shrink:0;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit;line-height:1;padding:0;transition:all .15s;display:flex;align-items:center;justify-content:center}
+.btn-del-emp:hover{background:#fecaca;transform:scale(1.05)}
 
 .emp-title-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:#e0e7ff;color:#4338ca;letter-spacing:0.5px}
 .emp-title-badge.mgr{background:#fee2e2;color:#991b1b}
@@ -403,6 +409,16 @@ body.view-form-active #mgr-card{display:none}
           <span class="positions-sub">（店長 / 副店長 不列入獎金計算）</span>
         </div>
         <div class="positions-grid" id="positions-grid"></div>
+        <div class="positions-add-row">
+          <input id="new-emp-name" type="text" class="input" placeholder="新員工姓名" maxlength="20" autocomplete="off">
+          <select id="new-emp-position" class="input">
+            <option value="店長">店長</option>
+            <option value="副店長">副店長</option>
+            <option value="正職" selected>正職</option>
+            <option value="兼職">兼職</option>
+          </select>
+          <button id="btn-add-emp" class="btn btn-ghost" type="button">➕ 加入</button>
+        </div>
         <div class="positions-foot">
           <button id="btn-save-positions" class="btn btn-primary" type="button" style="padding:8px 14px;font-size:12.5px">💾 儲存職位設定</button>
         </div>
@@ -497,7 +513,7 @@ var STORE_DEFAULT_POSITIONS = {
     '謝其淇':'店長', '林韋翔':'副店長', '洪文祥':'正職', '呂直宸':'正職', '吳孟澤':'正職', '邱昊勳':'正職'
   },
   'chudian-xinzhuang': {
-    '蔡鈺豪':'店長', '蘇奕誠':'副店長', '李嘉真':'正職', '洪仕賢':'正職'
+    '蔡鈺豪':'店長', '蘇奕誠':'副店長', '李嘉真':'正職'
   },
   'shicheng-zhongxiao': {
     '林梓彥':'店長', '王謖':'正職', '林哲民':'正職', '陳柏維':'正職'
@@ -517,6 +533,9 @@ function getStore(id){
   return null;
 }
 function getEmployees(storeId){
+  // 優先用後端載回來的（含主管手動加減過的）；沒載到時退回預設
+  var pos = POSITIONS_BY_STORE[storeId];
+  if(pos && Object.keys(pos).length > 0) return Object.keys(pos);
   return Object.keys(STORE_DEFAULT_POSITIONS[storeId] || {});
 }
 function getPositionsFor(storeId){
@@ -600,8 +619,14 @@ function selectStore(storeId){
   $('view-form').style.display = 'block';
   document.body.classList.add('view-form-active'); // 隱藏底部主管區
 
-  // 渲染評分區
-  renderCategories();
+  // 先抓最新員工列表（主管可能手動加減過），再渲染評分區
+  callGAS('getPositions', storeId).then(function(res){
+    if(res && typeof res === 'object' && !res.error){
+      POSITIONS_BY_STORE[storeId] = res;
+    }
+  }).catch(function(){ /* 退回預設 */ }).finally(function(){
+    renderCategories();
+  });
 
   window.scrollTo({ top:0, behavior:'smooth' });
 }
@@ -794,10 +819,14 @@ function lockManager(){
   $('mgr-unlocked').style.display = 'none';
 }
 
-// ---- 職位設定（每家店獨立） ----
+// ---- 職位設定（每家店獨立，可手動加減員工） ----
 function renderPositionsGrid(){
-  var emps = getEmployees(currentMgrStore);
   var cur = getPositionsFor(currentMgrStore);
+  var emps = Object.keys(cur);
+  if(emps.length === 0){
+    $('positions-grid').innerHTML = '<div style="text-align:center;padding:14px;color:var(--ink-3);font-size:13px;border:1px dashed var(--line);border-radius:10px">尚無員工，請從下方新增</div>';
+    return;
+  }
   var html = emps.map(function(emp){
     var pos = cur[emp] || '正職';
     var opts = POSITION_OPTIONS.map(function(p){
@@ -806,9 +835,49 @@ function renderPositionsGrid(){
     return '<div class="position-row">'
       + '<span class="pname">'+esc(emp)+'</span>'
       + '<select data-emp="'+esc(emp)+'">'+opts+'</select>'
+      + '<button class="btn-del-emp" data-emp="'+esc(emp)+'" type="button" title="刪除員工">×</button>'
       + '</div>';
   }).join('');
   $('positions-grid').innerHTML = html;
+}
+
+// 把目前 grid 的 dropdown 狀態同步回 POSITIONS_BY_STORE（重渲染前用）
+function syncDropdownsToState(){
+  if(!currentMgrStore) return;
+  var newPos = {};
+  document.querySelectorAll('#positions-grid select').forEach(function(sel){
+    newPos[sel.getAttribute('data-emp')] = sel.value;
+  });
+  if(Object.keys(newPos).length > 0){
+    POSITIONS_BY_STORE[currentMgrStore] = newPos;
+  }
+}
+
+function addEmployee(){
+  if(!currentMgrStore){ toast('請先解鎖主管區', 'err'); return; }
+  var name = $('new-emp-name').value.trim();
+  var position = $('new-emp-position').value;
+  if(!name){ toast('請輸入姓名', 'err'); $('new-emp-name').focus(); return; }
+  syncDropdownsToState();
+  var cur = POSITIONS_BY_STORE[currentMgrStore] || {};
+  if(cur[name]){ toast('已有「'+name+'」這位員工', 'err'); return; }
+  cur[name] = position;
+  POSITIONS_BY_STORE[currentMgrStore] = cur;
+  $('new-emp-name').value = '';
+  $('new-emp-position').value = '正職';
+  renderPositionsGrid();
+  toast('已加入 ' + name + '，記得按「儲存職位設定」', 'ok');
+}
+
+function removeEmployee(name){
+  if(!currentMgrStore) return;
+  if(!confirm('確定要移除「' + name + '」嗎？\n移除後該員工不會出現在未來的評分表（需按「儲存職位設定」生效）')) return;
+  syncDropdownsToState();
+  var cur = POSITIONS_BY_STORE[currentMgrStore] || {};
+  delete cur[name];
+  POSITIONS_BY_STORE[currentMgrStore] = cur;
+  renderPositionsGrid();
+  toast('已移除 ' + name + '，記得按「儲存職位設定」', 'ok');
 }
 
 function loadPositions(){
@@ -1194,6 +1263,18 @@ document.addEventListener('DOMContentLoaded', function(){
   $('btn-refresh').addEventListener('click', loadManagerResults);
   $('btn-save-positions').addEventListener('click', savePositions);
   $('btn-export-png').addEventListener('click', exportPng);
+
+  // 新增員工
+  $('btn-add-emp').addEventListener('click', addEmployee);
+  $('new-emp-name').addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); addEmployee(); }
+  });
+  // 刪除員工（事件委派）
+  $('positions-grid').addEventListener('click', function(e){
+    if(e.target && e.target.classList && e.target.classList.contains('btn-del-emp')){
+      removeEmployee(e.target.getAttribute('data-emp'));
+    }
+  });
 
   // 如果 sessionStorage 有舊密碼，保留但不自動解鎖
   var savedPwd = sessionStorage.getItem('cd_survey_mgr_pwd');
