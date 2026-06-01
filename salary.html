@@ -225,10 +225,32 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
           <th style="width:160px">職級</th>
           <th style="width:130px">職務加給基礎</th>
           <th style="width:130px">固定加班費</th>
+          <th style="width:40px"></th>
         </tr>
       </thead>
       <tbody id="tbody-role"></tbody>
     </table>
+    <div style="text-align:right;margin-top:10px">
+      <button class="btn btn-ghost btn-sm" onclick="toggleAddEmpForm()">＋ 新增員工</button>
+    </div>
+    <div id="add-emp-form" style="display:none;margin-top:10px;padding:12px;border:1.5px dashed var(--line);border-radius:10px;background:rgba(8,145,178,.04)">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="new-emp-name" type="text" placeholder="姓名（如：王小明）" style="flex:1;min-width:140px;padding:8px 12px;border:1.5px solid var(--line);border-radius:8px;font-family:inherit;font-size:14px;outline:none">
+        <select id="new-emp-role" style="padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;font-family:inherit;font-size:13.5px;outline:none">
+          <option value="regular">正職</option>
+          <option value="newbie">新人正職</option>
+          <option value="deputy">副店長</option>
+          <option value="head">店長</option>
+          <option value="pt">PT</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="addCustomEmployee()">新增</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleAddEmpForm(false)">取消</button>
+      </div>
+      <div style="margin-top:8px;font-size:11.5px;color:var(--ink-3);line-height:1.6">
+        新增的員工會出現在所有區塊（打卡/全勤/Google 等）。<br>
+        刪除員工會清掉他本月所有資料（不影響其他月份）。儲存後才會同步到雲端。
+      </div>
+    </div>
   </div>
 
   <!-- 1. 打卡/小結/回收獎金 -->
@@ -528,6 +550,115 @@ function fixedOTForRole(role){
 var EMPLOYEES = CFG.employees.slice();
 var PT_EMPLOYEES = (CFG.pt || []).map(function(e){ return Object.assign({ role:'pt' }, e); });
 var ALL_EMPLOYEES = EMPLOYEES.concat(PT_EMPLOYEES);
+
+// 從 STATE.customEmployees 重建 EMPLOYEES / PT_EMPLOYEES / ALL_EMPLOYEES
+// 預設的（從 STORE_CONFIG）永遠保留，custom 的後面附上
+function rebuildEmployeeLists(){
+  var defaultEmps = CFG.employees.slice();
+  var defaultPT   = (CFG.pt || []).map(function(e){ return Object.assign({ role:'pt' }, e); });
+  var custom = (STATE && STATE.customEmployees) || [];
+  var customReg = custom.filter(function(e){ return !e.isPT; }).map(function(e){
+    return { id:e.id, name:e.name, defaultRole:e.defaultRole || 'regular', salesAlias:e.name, custom:true };
+  });
+  var customPT = custom.filter(function(e){ return e.isPT; }).map(function(e){
+    return { id:e.id, name:e.name, role:'pt', salesAlias:e.name, custom:true };
+  });
+  EMPLOYEES = defaultEmps.concat(customReg);
+  PT_EMPLOYEES = defaultPT.concat(customPT);
+  ALL_EMPLOYEES = EMPLOYEES.concat(PT_EMPLOYEES);
+  // 確保每位員工在 STATE 都有對應 slot（避免從雲端讀到不完整 state 時 render 崩潰）
+  if(STATE){
+    ALL_EMPLOYEES.forEach(ensureEmployeeSlots);
+  }
+}
+
+// 確保新員工在 STATE 各 bucket 都有 slot（避免 undefined 錯誤）
+function ensureEmployeeSlots(emp){
+  var id = emp.id;
+  if(!STATE) return;
+  if(STATE.s1[id] === undefined) STATE.s1[id] = 0;
+  if(!STATE.s2[id]) STATE.s2[id] = { sick:0, personal:0, late:0 };
+  if(STATE.s3[id] === undefined) STATE.s3[id] = 0;
+  if(STATE.s4[id] === undefined) STATE.s4[id] = 10;
+  if(STATE.s5[id] === undefined) STATE.s5[id] = 0;
+  if(STATE.s6[id] === undefined) STATE.s6[id] = 0;
+  if(STATE.s7[id] === undefined) STATE.s7[id] = true;
+  if(STATE.insurance[id] === undefined) STATE.insurance[id] = 0;
+  if(!STATE.roles[id]) STATE.roles[id] = emp.defaultRole || emp.role || 'regular';
+  if(!STATE.detail[id]) STATE.detail[id] = { dtDays:0, otHours:0, sickDays:0, personalDays:0, restDays:0 };
+  if(STATE.notes[id] === undefined) STATE.notes[id] = '';
+  if(STATE.ptWage && !STATE.ptWage[id]) STATE.ptWage[id] = { hours:0, otHours:0, wage:0 };
+}
+
+// 新增員工
+function addCustomEmployee(){
+  var nameEl = document.getElementById('new-emp-name');
+  var roleEl = document.getElementById('new-emp-role');
+  if(!nameEl || !roleEl) return;
+  var name = String(nameEl.value || '').trim();
+  if(!name){ toast('請輸入姓名', 'err'); nameEl.focus(); return; }
+  // 同店員工名字不能重複
+  var dupe = ALL_EMPLOYEES.some(function(e){ return e.name === name; });
+  if(dupe){ toast('已有員工叫「'+name+'」', 'err'); return; }
+  var roleVal = roleEl.value;
+  var isPT = (roleVal === 'pt');
+  var id = 'cust_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+  if(!STATE.customEmployees) STATE.customEmployees = [];
+  STATE.customEmployees.push({
+    id: id,
+    name: name,
+    isPT: isPT,
+    defaultRole: isPT ? null : roleVal
+  });
+  rebuildEmployeeLists();
+  // 該員工的 STATE 各欄位先初始化
+  var emp = ALL_EMPLOYEES.find(function(e){ return e.id === id; });
+  if(emp) ensureEmployeeSlots(emp);
+  nameEl.value = '';
+  roleEl.value = 'regular';
+  toggleAddEmpForm(false);
+  render();
+  updateDirtyChip();
+  toast('已新增員工：' + name, 'ok');
+}
+
+// 刪除自訂員工（只能刪 custom，不能刪預設）
+function removeCustomEmployee(id){
+  if(id.indexOf('cust_') !== 0){ toast('預設員工不能刪除', 'err'); return; }
+  var emp = ALL_EMPLOYEES.find(function(e){ return e.id === id; });
+  if(!emp){ return; }
+  if(!confirm('確定要刪除「'+emp.name+'」？\n\n刪除後該員工本月的所有獎金/扣款資料也會一併刪掉。\n（已存到雲端的紀錄需按 💾 儲存才會更新）')) return;
+  STATE.customEmployees = (STATE.customEmployees || []).filter(function(e){ return e.id !== id; });
+  // 把該員工的 STATE 欄位都清掉，避免殘留
+  ['s1','s2','s3','s4','s5','s6','s7','insurance','roles','detail','notes','ptWage'].forEach(function(k){
+    if(STATE[k] && STATE[k][id] !== undefined) delete STATE[k][id];
+  });
+  // 連帶刪掉「其他獎金/懲罰」裡指派給此人的條目
+  if(STATE.otherBonuses){
+    Object.keys(STATE.otherBonuses).forEach(function(eid){
+      if(STATE.otherBonuses[eid] && STATE.otherBonuses[eid].empId === id){
+        delete STATE.otherBonuses[eid];
+      }
+    });
+  }
+  rebuildEmployeeLists();
+  if(STATE.activeEmp === id) STATE.activeEmp = (EMPLOYEES[0] || ALL_EMPLOYEES[0] || {}).id;
+  render();
+  updateDirtyChip();
+  toast('已刪除員工', 'ok');
+}
+
+// 切換「新增員工表單」顯示
+function toggleAddEmpForm(force){
+  var box = document.getElementById('add-emp-form');
+  if(!box) return;
+  var shouldShow = (typeof force === 'boolean') ? force : (box.style.display === 'none');
+  box.style.display = shouldShow ? 'block' : 'none';
+  if(shouldShow){
+    var nameEl = document.getElementById('new-emp-name');
+    if(nameEl){ nameEl.focus(); }
+  }
+}
 var DEFAULT_INSURANCE = CFG.defaultInsurance || {};
 
 // 獎金對照表
@@ -599,6 +730,7 @@ function blankState(){
     ptWage: {},        // {empId: {hours,otHours,wage}} — 從加班費系統匯入的 PT 月度工資
     otherBonuses: {},  // {entryId: {empId, label, amount}}
     fixedOT: {},       // {empId: number} — 固定加班費 override，0 = 用該店該職級預設
+    customEmployees: [], // [{id, name, isPT, defaultRole}] — 手動新增的員工
     activeEmp: EMPLOYEES[0].id,
     notes: {}          // {empId: 備註字串}
   };
@@ -641,12 +773,16 @@ function loadState(){
       ['s1','s2','s3','s4','s5','s6','s7','insurance','roles','detail','notes','ptWage','otherBonuses','fixedOT'].forEach(function(k){
         obj[k] = Object.assign({}, def[k], obj[k] || {});
       });
+      // customEmployees 是 array，照 obj 帶過來；舊版沒有就空陣列
+      obj.customEmployees = Array.isArray(obj.customEmployees) ? obj.customEmployees : [];
       if(!obj.activeEmp) obj.activeEmp = EMPLOYEES[0].id;
       STATE = obj;
+      rebuildEmployeeLists();
       return;
     }
   } catch(e){ console.warn('load state fail', e); }
   STATE = blankState();
+  rebuildEmployeeLists();
 }
 
 function saveAll(){
@@ -992,7 +1128,10 @@ function renderInsurance(){
   var rows = ALL_EMPLOYEES.map(function(e){
     var v = STATE.insurance[e.id] | 0;
     var r = isPT(e) ? 'pt' : (STATE.roles[e.id] || e.defaultRole);
-    return '<tr><td class="c-name">'+e.name+' <span style="color:#94a3b8;font-size:11px">('+roleLabel(r)+')</span></td>'
+    var delBtn = (e.id.indexOf('cust_') === 0)
+      ? ' <button onclick="removeCustomEmployee(\''+e.id+'\')" title="刪除員工" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:14px;margin-left:4px">×</button>'
+      : '';
+    return '<tr><td class="c-name">'+e.name+' <span style="color:#94a3b8;font-size:11px">('+roleLabel(r)+')</span>'+delBtn+'</td>'
       + '<td><input type="number" step="1" value="'+v+'" onchange="onInsChange(\''+e.id+'\',this.value)"></td>'
       + '</tr>';
   });
@@ -1011,7 +1150,6 @@ function renderRoles(){
       + opt('regular', '正職', r)
       + opt('newbie', '新人正職', r)
       + '</select>';
-    // 固定加班費：以 STATE.fixedOT[id] 為主，沒設就用該店該職級的預設
     var fxStored = STATE.fixedOT && STATE.fixedOT[e.id];
     var fxValue = (typeof fxStored === 'number' && fxStored > 0)
       ? fxStored
@@ -1019,9 +1157,14 @@ function renderRoles(){
     var fxInput = '<input type="number" min="0" step="500" value="'+fxValue+'" '
       + 'onchange="onFixedOTChange(\''+e.id+'\',this.value)" '
       + 'style="width:110px;text-align:right">';
-    return '<tr><td class="c-name">'+e.name+'</td><td>'+sel+'</td>'
+    // 自訂員工才有刪除按鈕
+    var delBtn = (e.id.indexOf('cust_') === 0)
+      ? '<button onclick="removeCustomEmployee(\''+e.id+'\')" title="刪除員工" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:16px;padding:4px">×</button>'
+      : '';
+    return '<tr><td class="c-name">'+e.name+(e.id.indexOf('cust_')===0?' <span style="font-size:10px;color:var(--info);background:rgba(59,130,246,.1);padding:1px 6px;border-radius:999px">自訂</span>':'')+'</td><td>'+sel+'</td>'
       + '<td class="c-num">'+fmtPlain(roleBase(r))+'</td>'
-      + '<td>'+fxInput+'</td></tr>';
+      + '<td>'+fxInput+'</td>'
+      + '<td style="text-align:center">'+delBtn+'</td></tr>';
   });
   tb.innerHTML = rows.join('');
 }
@@ -1763,10 +1906,12 @@ function pullFromCloud(showToast){
       ['s1','s2','s3','s4','s5','s6','s7','insurance','roles','detail','notes','ptWage','otherBonuses','fixedOT'].forEach(function(k){
         cloud[k] = Object.assign({}, def[k], cloud[k] || {});
       });
+      cloud.customEmployees = Array.isArray(cloud.customEmployees) ? cloud.customEmployees : [];
       if(!cloud.activeEmp) cloud.activeEmp = EMPLOYEES[0].id;
       cloud.ym = getSelectedYM();
       cloud.store = STORE;
       STATE = cloud;
+      rebuildEmployeeLists();
       try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
       render();
       // 雲端讀完後重跑「小結（十城除外）+ 匿名表」自動匯入
