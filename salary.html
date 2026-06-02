@@ -575,6 +575,39 @@ function saveInheritedEmps(emps){
   } catch(e){}
 }
 
+// 勞健保 跨月份繼承（同店）— 跟員工名單同邏輯
+//   每次 push 雲端成功時更新「最後一次的勞健保」
+//   新月份開啟時讀這份當底；只接受「比現有更新」的 ym 來避免回頭編輯舊月份倒退
+function inheritedInsKey(){
+  return 'cd_salary_inherit_ins_' + (STORE || 'nostore');
+}
+function _loadInheritedInsRaw(){
+  try {
+    var raw = localStorage.getItem(inheritedInsKey());
+    if(raw){
+      var obj = JSON.parse(raw);
+      if(obj && typeof obj === 'object') return obj;
+    }
+  } catch(e){}
+  return {};
+}
+function loadInheritedInsurance(){
+  var d = _loadInheritedInsRaw();
+  return (d && d.insurance && typeof d.insurance === 'object') ? d.insurance : {};
+}
+function saveInheritedInsurance(insMap, ym){
+  var current = _loadInheritedInsRaw();
+  var currentYm = current.ym || '';
+  // 只接受比現有更新（或一樣）的月份；避免回頭存舊月份反而把繼承「倒退」
+  if(currentYm && ym && ym < currentYm) return;
+  try {
+    localStorage.setItem(inheritedInsKey(), JSON.stringify({
+      ym: ym || currentYm || '',
+      insurance: insMap || {}
+    }));
+  } catch(e){}
+}
+
 // 雲端沒本月資料時，去找這店「最近的月份」抓 customEmployees 過來
 // 這樣別台裝置加的員工，新裝置開新月份也能看到
 function seedCustomEmployeesFromLatestMonth(){
@@ -590,14 +623,23 @@ function seedCustomEmployeesFromLatestMonth(){
     callSalaryGAS('loadSalary', [pw, STORE, latest.ym]).then(function(r2){
       if(!r2 || !r2.ok || !r2.found || !r2.state) return;
       var emps = Array.isArray(r2.state.customEmployees) ? r2.state.customEmployees : [];
-      if(!emps.length) return;
-      // 把繼承來的員工塞進當前 STATE（覆蓋掉本月空白的 customEmployees）
+      var ins  = r2.state.insurance && typeof r2.state.insurance === 'object' ? r2.state.insurance : null;
+      if(!emps.length && !ins) return;
       if(!STATE) return;
-      STATE.customEmployees = emps;
-      saveInheritedEmps(emps);
+      // 員工名單繼承
+      if(emps.length){
+        STATE.customEmployees = emps;
+        saveInheritedEmps(emps);
+      }
+      // 勞健保繼承（覆蓋本月空白值）
+      if(ins){
+        Object.keys(ins).forEach(function(k){
+          if(ins[k] !== undefined) STATE.insurance[k] = ins[k] | 0;
+        });
+        saveInheritedInsurance(STATE.insurance, latest.ym);
+      }
       rebuildEmployeeLists();
       render();
-      // 不算 dirty（因為只是繼承，使用者沒實際改動）
       markSynced();
     });
   }).catch(function(){ /* silently ignore */ });
@@ -791,6 +833,7 @@ function blankState(){
     activeEmp: EMPLOYEES[0].id,
     notes: {}          // {empId: 備註字串}
   };
+  var inheritedIns = loadInheritedInsurance();
   ALL_EMPLOYEES.forEach(function(e){
     s.s1[e.id] = 0;
     s.s2[e.id] = { sick:0, personal:0, late:0 };
@@ -799,7 +842,10 @@ function blankState(){
     s.s5[e.id] = 0;
     s.s6[e.id] = 0;
     s.s7[e.id] = true; // 預設「有提出」
-    s.insurance[e.id] = DEFAULT_INSURANCE[e.id] || 0;
+    // 勞健保：優先用「繼承來的最新月份值」，沒有再 fallback DEFAULT_INSURANCE
+    s.insurance[e.id] = (inheritedIns[e.id] !== undefined)
+      ? (inheritedIns[e.id] | 0)
+      : (DEFAULT_INSURANCE[e.id] || 0);
     s.roles[e.id] = e.defaultRole || e.role || 'regular';
     s.detail[e.id] = { dtDays:0, otHours:0, sickDays:0, personalDays:0, restDays:0 };
     s.notes[e.id] = '';
@@ -1928,6 +1974,9 @@ function pushToCloud(showToastWhenOk){
           var t = res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : '';
           setSyncChip('ok', '☁ 已同步', '最後同步：' + t);
           markSynced();
+          // 儲存成功 → 把本月的勞健保 + 員工名單同步到 inherited key（讓未來新月份繼承）
+          saveInheritedInsurance(STATE.insurance, getSelectedYM());
+          saveInheritedEmps(STATE.customEmployees);
           if(showToastWhenOk) toast('已同步到雲端', 'ok');
         } else {
           setSyncChip('err', '☁ 失敗', (res && res.error) || '');
@@ -1970,8 +2019,9 @@ function pullFromCloud(showToast){
       cloud.ym = getSelectedYM();
       cloud.store = STORE;
       STATE = cloud;
-      // 雲端有的 customEmployees 也存進 inherited key（給之後其他月份繼承）
+      // 雲端有的 customEmployees + 勞健保 也存進 inherited key（給之後其他月份繼承）
       saveInheritedEmps(STATE.customEmployees);
+      saveInheritedInsurance(STATE.insurance, STATE.ym);
       rebuildEmployeeLists();
       try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
       render();

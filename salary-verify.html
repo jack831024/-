@@ -557,6 +557,36 @@ function saveInheritedEmps(emps){
   } catch(e){}
 }
 
+// 勞健保跨月份繼承（對帳用獨立 key）
+function inheritedInsKey(){
+  return 'cd_salary_verify_inherit_ins_' + (STORE || 'nostore');
+}
+function _loadInheritedInsRaw(){
+  try {
+    var raw = localStorage.getItem(inheritedInsKey());
+    if(raw){
+      var obj = JSON.parse(raw);
+      if(obj && typeof obj === 'object') return obj;
+    }
+  } catch(e){}
+  return {};
+}
+function loadInheritedInsurance(){
+  var d = _loadInheritedInsRaw();
+  return (d && d.insurance && typeof d.insurance === 'object') ? d.insurance : {};
+}
+function saveInheritedInsurance(insMap, ym){
+  var current = _loadInheritedInsRaw();
+  var currentYm = current.ym || '';
+  if(currentYm && ym && ym < currentYm) return; // 只接受比現有更新的月份
+  try {
+    localStorage.setItem(inheritedInsKey(), JSON.stringify({
+      ym: ym || currentYm || '',
+      insurance: insMap || {}
+    }));
+  } catch(e){}
+}
+
 function seedCustomEmployeesFromLatestMonth(){
   var url = (typeof getSyncUrl === 'function') ? getSyncUrl() : '';
   var pw  = (typeof getStorePassword === 'function') ? getStorePassword() : '';
@@ -569,10 +599,19 @@ function seedCustomEmployeesFromLatestMonth(){
     callSalaryGAS('loadSalary', [pw, STORE, latest.ym]).then(function(r2){
       if(!r2 || !r2.ok || !r2.found || !r2.state) return;
       var emps = Array.isArray(r2.state.customEmployees) ? r2.state.customEmployees : [];
-      if(!emps.length) return;
+      var ins  = r2.state.insurance && typeof r2.state.insurance === 'object' ? r2.state.insurance : null;
+      if(!emps.length && !ins) return;
       if(!STATE) return;
-      STATE.customEmployees = emps;
-      saveInheritedEmps(emps);
+      if(emps.length){
+        STATE.customEmployees = emps;
+        saveInheritedEmps(emps);
+      }
+      if(ins){
+        Object.keys(ins).forEach(function(k){
+          if(ins[k] !== undefined) STATE.insurance[k] = ins[k] | 0;
+        });
+        saveInheritedInsurance(STATE.insurance, latest.ym);
+      }
       rebuildEmployeeLists();
       render();
       markSynced();
@@ -752,6 +791,7 @@ function blankState(){
     activeEmp: EMPLOYEES[0].id,
     notes: {}          // {empId: 備註字串}
   };
+  var inheritedIns = loadInheritedInsurance();
   ALL_EMPLOYEES.forEach(function(e){
     s.s1[e.id] = 0;
     s.s2[e.id] = { sick:0, personal:0, late:0 };
@@ -760,7 +800,10 @@ function blankState(){
     s.s5[e.id] = 0;
     s.s6[e.id] = 0;
     s.s7[e.id] = true; // 預設「有提出」
-    s.insurance[e.id] = DEFAULT_INSURANCE[e.id] || 0;
+    // 勞健保：優先用「繼承來的最新月份值」
+    s.insurance[e.id] = (inheritedIns[e.id] !== undefined)
+      ? (inheritedIns[e.id] | 0)
+      : (DEFAULT_INSURANCE[e.id] || 0);
     s.roles[e.id] = e.defaultRole || e.role || 'regular';
     s.detail[e.id] = { dtDays:0, otHours:0, sickDays:0, personalDays:0, restDays:0 };
     s.notes[e.id] = '';
@@ -1837,6 +1880,9 @@ function pushToCloud(showToastWhenOk){
           var t = res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : '';
           setSyncChip('ok', '☁ 已同步', '最後同步：' + t);
           markSynced();
+          // 同步成功 → 更新繼承來源（員工名單 + 勞健保）
+          saveInheritedInsurance(STATE.insurance, getSelectedYM());
+          saveInheritedEmps(STATE.customEmployees);
           if(showToastWhenOk) toast('已同步到雲端', 'ok');
         } else {
           setSyncChip('err', '☁ 失敗', (res && res.error) || '');
@@ -1881,8 +1927,9 @@ function pullFromCloud(showToast){
       cloud.ym = getSelectedYM();
       cloud.store = STORE;
       STATE = cloud;
-      // 也存進 inherited key，給新月份／其他裝置繼承
+      // 也存進 inherited key，給新月份／其他裝置繼承（員工 + 勞健保）
       saveInheritedEmps(STATE.customEmployees);
+      saveInheritedInsurance(STATE.insurance, STATE.ym);
       rebuildEmployeeLists();
       try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
       render();
