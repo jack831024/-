@@ -339,7 +339,10 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
 
   <!-- 6. 評分表獎金 -->
   <div class="section">
-    <h3><span class="step-num">7</span><span class="icon">📊</span>評分表獎金<span class="hint">正職專屬，來自匿名表每項最高分 $200</span></h3>
+    <h3><span class="step-num">7</span><span class="icon">📊</span>評分表獎金<span class="hint">正職專屬，來自匿名表每項最高分 $200（店長/副店長那份蒸發）</span></h3>
+    <div style="margin-bottom:8px">
+      <button class="btn btn-ghost btn-sm" onclick="importSurveyBonus()">🔄 從匿名表雲端匯入</button>
+    </div>
     <div id="survey-import-status" style="font-size:11.5px;color:var(--ink-3);margin-bottom:8px"></div>
     <table class="grid">
       <thead><tr><th>員工</th><th style="width:160px">獎金</th></tr></thead>
@@ -460,6 +463,29 @@ function getSalesBonusRate(storeId, ym){
     if(hit !== null) return hit;
   }
   return SALES_BONUS_RATES[storeId] || 0;
+}
+
+// 小結報表 GAS（用來抓 records；不用先開小結頁也能算營業額獎金）
+var SALES_GAS_URL = 'https://script.google.com/macros/s/AKfycbzQweLpmQ_5SPxr90Iu-GnqleHUFPbJph8RZuFeasAEKIEWA3xBr_MAdenIkIdciYmQDA/exec';
+
+// 匿名表 GAS（用來抓 records + positions；不用先開匿名表也能算評分表獎金）
+var SURVEY_GAS_URL  = 'https://script.google.com/macros/s/AKfycbylKtlhC7gA7B3REfis6dpI30DWbk-K8XduKi8q9O5yBUHOiUgmJNvRlqsbHDo6Uz3_/exec';
+var SURVEY_BONUS_POOL = 200;
+
+// 匿名表 評分題目（要跟 survey.html 同一份）
+var SHICHENG_CATEGORIES = [
+  { id:'service',name:'服務' }, { id:'counter',name:'櫃台' }, { id:'food',name:'出餐品質' },
+  { id:'efficiency',name:'做事效率' }, { id:'active',name:'積極度' }, { id:'teamwork',name:'同事相處' },
+  { id:'order',name:'叫貨' }, { id:'prep',name:'備料' }, { id:'shift',name:'開收班' }, { id:'clean',name:'清潔' }
+];
+var CHUDIAN_CATEGORIES = [
+  { id:'service',name:'服務' }, { id:'duty',name:'值班' }, { id:'meat',name:'切肉、擺盤、品質' },
+  { id:'hall',name:'外場巡視' }, { id:'efficiency',name:'做事效率' }, { id:'active',name:'積極度' },
+  { id:'teamwork',name:'同事相處' }, { id:'sop',name:'SOP正確' }, { id:'shift',name:'開收班' },
+  { id:'clean',name:'清潔' }
+];
+function getSurveyCategories(){
+  return (STORE && STORE.indexOf('chudian') === 0) ? CHUDIAN_CATEGORIES : SHICHENG_CATEGORIES;
 }
 
 // ============================================
@@ -913,9 +939,7 @@ function onMonthChange(){
   }
   loadState();
   render();
-  // 換月只自動帶小結（營業額，十城手動）+ 匿名表（評分），加班費需手動按鈕
-  autoImportSalesBonusIfAllowed();
-  doImportSurveyBonus(false);
+  // 換月不再自動匯入任何來源；營業額/評分/加班費 都要手動按按鈕
   // 嘗試從雲端拉最新（會以雲端值為準，避免覆蓋手動修改）
   pullFromCloud(false);
 }
@@ -1727,21 +1751,87 @@ function importFromOvertime(){ doImportOvertime(true); }
 // ============================================
 // 從小結報表自動計算營業額獎金（直接讀 cd_records_<store>）
 // ============================================
-function doImportSalesBonus(showToast){
-  var ym = getSelectedYM();
-  var rate = getSalesBonusRate(STORE, ym);  // 按月份取（5 月起十城用 2.8% 等）
+// 把「小結 A 班 → 累計營業額獎金」的對應寫進 STATE.s5
+function _applySalesBonusTotals(totalsBySource, rate, source){
+  var matched = 0, totalAssigned = 0, unassigned = [];
+  ALL_EMPLOYEES.forEach(function(e){ STATE.s5[e.id] = 0; });  // 先清空
+  Object.keys(totalsBySource).forEach(function(src){
+    var amt = Math.round(totalsBySource[src] || 0);
+    var hit = ALL_EMPLOYEES.find(function(e){
+      return src === e.salesAlias || src === e.name || src === e.nickname;
+    });
+    if(hit){
+      STATE.s5[hit.id] = (STATE.s5[hit.id] || 0) + amt;
+      matched++;
+      totalAssigned += amt;
+    } else if(amt) {
+      unassigned.push(src + '(' + amt + ')');
+    }
+  });
+  renderS5();
+  renderDetail();
+  updateDirtyChip();
   var status = document.getElementById('sales-import-status');
+  if(status){
+    var pct = (rate*100).toFixed(2).replace(/\.?0+$/, '');
+    var parts = ['✅ 已帶入（來源：'+source+'・率 '+pct+'%・本月共發放 NT$ '+totalAssigned.toLocaleString()+'）'];
+    if(unassigned.length) parts.push('未對應到：' + unassigned.join('、'));
+    status.innerHTML = parts.join('<br>');
+  }
+  return matched;
+}
 
-  // 清空所有員工的營業額獎金，避免切月時殘留
-  ALL_EMPLOYEES.forEach(function(e){ STATE.s5[e.id] = 0; });
+// 從小結 GAS 雲端直接抓 records → 算營業額獎金
+async function fetchSalesFromCloud(){
+  if(!STORE) throw new Error('尚未選店');
+  var url = SALES_GAS_URL + '?action=list&store=' + encodeURIComponent(STORE) + '&ts=' + Date.now();
+  var r = await fetch(url);
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  var d = await r.json();
+  if(d.error) throw new Error(d.error);
+  return d.records || {};
+}
 
-  if(!STORE){
-    if(status) status.textContent = '⚠ 尚未選店';
+async function importSalesBonusFromCloud(){
+  var ym = getSelectedYM();
+  var rate = getSalesBonusRate(STORE, ym);
+  var status = document.getElementById('sales-import-status');
+  if(status) status.textContent = '☁ 從小結雲端讀取中…';
+  try {
+    var records = await fetchSalesFromCloud();
+    var totalsBySource = {};
+    var hasRecords = false;
+    Object.keys(records).forEach(function(d){
+      if(d.substring(0, 7) !== ym) return;
+      var inp = ((records[d]||{}).data || {}).inputs || {};
+      var net = parseFloat(inp['b-net']) || 0;
+      if(!net) return;
+      var person = inp['i-shift-a'];
+      if(!person) return;
+      hasRecords = true;
+      totalsBySource[person] = (totalsBySource[person] || 0) + net * rate;
+    });
+    if(!hasRecords){
+      if(status) status.textContent = '⚠ 雲端本月無小結資料（可手動填寫）';
+      toast('雲端本月無小結資料', 'err');
+      return 0;
+    }
+    var matched = _applySalesBonusTotals(totalsBySource, rate, '小結雲端');
+    toast('營業額獎金已計算，共 '+matched+' 人', 'ok');
+    return matched;
+  } catch(e){
+    if(status) status.textContent = '⚠ 雲端讀取失敗：'+e.message;
+    toast('雲端讀取失敗：'+e.message, 'err');
     return 0;
   }
+}
 
-  // 1) 首選：直接讀 cd_records_<store>，當場算本月每人 A 班獎金
-  var totalsBySource = {}; // 小結裡的 A 班姓名 → 累計獎金
+// 舊的「先讀本機快取」版本仍保留供舊呼叫點使用，但不再被自動觸發
+function doImportSalesBonus(showToast){
+  var ym = getSelectedYM();
+  var rate = getSalesBonusRate(STORE, ym);
+  if(!STORE){ return 0; }
+  var totalsBySource = {};
   var hasRecords = false;
   try {
     var raw = localStorage.getItem('cd_records_' + STORE);
@@ -1758,91 +1848,138 @@ function doImportSalesBonus(showToast){
         totalsBySource[person] = (totalsBySource[person] || 0) + net * rate;
       });
     }
-  } catch(e){ console.warn('read records fail', e); }
-
-  // 2) 備援：若 cd_records 沒本月資料，改讀小結頁另存的 cd_sales_bonus
+  } catch(e){}
   if(!hasRecords){
     try {
       var raw2 = localStorage.getItem('cd_sales_bonus_' + STORE + '_' + ym);
       if(raw2){
         var fb = JSON.parse(raw2);
         if(fb && fb.employees){
-          Object.keys(fb.employees).forEach(function(n){
-            totalsBySource[n] = fb.employees[n];
-          });
+          Object.keys(fb.employees).forEach(function(n){ totalsBySource[n] = fb.employees[n]; });
           hasRecords = true;
         }
       }
-    } catch(e){ /* ignore */ }
+    } catch(e){}
   }
-
-  // 對應到薪水頁員工（salesAlias / name / nickname 都試）
-  var matched = 0, totalAssigned = 0, unassigned = [];
-  Object.keys(totalsBySource).forEach(function(src){
-    var amt = Math.round(totalsBySource[src] || 0);
-    var hit = ALL_EMPLOYEES.find(function(e){
-      return src === e.salesAlias || src === e.name || src === e.nickname;
-    });
-    if(hit){
-      STATE.s5[hit.id] = (STATE.s5[hit.id] || 0) + amt;
-      matched++;
-      totalAssigned += amt;
-    } else if(amt) {
-      unassigned.push(src + '(' + amt + ')');
-    }
-  });
-
-  renderS5();
-  renderDetail();
-
-  if(status){
-    if(!hasRecords){
-      status.textContent = '⚠ 本店本月尚無小結資料（獎金維持 0，可手動填）';
-    } else {
-      var pct = (rate*100).toFixed(2).replace(/\.?0+$/, '');
-      var parts = ['✅ 已自動帶入（獎金率 '+pct+'%・本月共發放 NT$ '+totalAssigned.toLocaleString()+'）'];
-      if(unassigned.length) parts.push('未對應到：' + unassigned.join('、'));
-      status.textContent = parts.join(' · ');
-    }
-  }
-  if(showToast) toast(hasRecords ? ('營業額獎金已計算，共 '+matched+' 人') : '本店本月無小結資料', hasRecords ? 'ok' : 'err');
-  return matched;
+  if(!hasRecords) return 0;
+  return _applySalesBonusTotals(totalsBySource, rate, '本機快取');
 }
-function importSalesBonus(){ doImportSalesBonus(true); }
+function importSalesBonus(){ importSalesBonusFromCloud(); }
 
-// 自動匯入入口：十城店改成手動，避免被覆蓋
-function autoImportSalesBonusIfAllowed(){
-  if(STORE === 'shicheng-zhongxiao') return; // 十城手動：使用者按按鈕才匯入
-  doImportSalesBonus(false);
-}
+// 改成全部店家都手動匯入（雲端直接抓）
+function autoImportSalesBonusIfAllowed(){ /* no-op：完全手動 */ }
 
-// 視店家顯示「自動」 vs 「手動」的提示與按鈕
 function setupSalesBonusUI(){
   var hint   = document.getElementById('s5-hint');
   var btnRow = document.getElementById('s5-button-row');
-  if(STORE === 'shicheng-zhongxiao'){
-    if(hint) hint.textContent = '十城店：手動點按鈕才會匯入，可避免覆蓋手動修改的數字';
-    if(btnRow) btnRow.style.display = 'block';
-  } else {
-    if(hint) hint.textContent = '自動從該店小結報表計算（A 班 × 該店獎金 %）';
-    if(btnRow) btnRow.style.display = 'none';
-  }
+  if(hint) hint.textContent = '按下按鈕直接從小結雲端抓資料計算（不用先打開小結頁）';
+  if(btnRow) btnRow.style.display = 'block';
 }
 
 // ============================================
 // 從匿名表匯入（評分表獎金）
 // ============================================
+// 從匿名表 GAS 直接抓 records + positions → 算評分表獎金
+async function fetchSurveyFromCloud(ym){
+  if(!STORE) throw new Error('尚未選店');
+  var pwd = getStorePassword();
+  var body = { action:'getSurveys', args:[pwd, STORE, ym] };
+  var r = await fetch(SURVEY_GAS_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(body)
+  });
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  var d = await r.json();
+  if(!d.ok) throw new Error(d.error || '匿名表 API 失敗');
+  return d; // { records: [...], positions: {name:position} }
+}
+
+// 評分表獎金規則：每題最高分共領 $200（同分平分），但 店長/副店長 那份蒸發
+function computeSurveyBonus(records, positions){
+  var cats = getSurveyCategories();
+  var emps = Object.keys(positions || {});
+  if(!emps.length) return {};
+  var totalBonus = {};
+  emps.forEach(function(e){ totalBonus[e] = 0; });
+  cats.forEach(function(cat){
+    var rated = emps.map(function(emp){
+      var sum = 0, cnt = 0;
+      records.forEach(function(rec){
+        var v = rec.ratings && rec.ratings[cat.id] && rec.ratings[cat.id][emp];
+        if(typeof v === 'number'){ sum += v; cnt++; }
+      });
+      return { emp:emp, avg: cnt>0 ? sum/cnt : null };
+    }).filter(function(s){ return s.avg !== null; });
+    if(!rated.length) return;
+    var maxAvg = rated.reduce(function(m,s){ return Math.max(m,s.avg); }, -Infinity);
+    var winners = rated.filter(function(s){ return s.avg === maxAvg; });
+    var perShare = SURVEY_BONUS_POOL / winners.length;
+    winners.forEach(function(w){
+      var pos = positions[w.emp] || '';
+      // 店長/副店長 得獎那份蒸發；其餘（正職/兼職）才實領
+      if(pos !== '店長' && pos !== '副店長'){
+        totalBonus[w.emp] += perShare;
+      }
+    });
+  });
+  return totalBonus;
+}
+
+async function importSurveyBonusFromCloud(){
+  var ym = getSelectedYM();
+  var status = document.getElementById('survey-import-status');
+  if(status) status.textContent = '☁ 從匿名表雲端讀取中…';
+  try {
+    var data = await fetchSurveyFromCloud(ym);
+    var records = data.records || [];
+    var positions = data.positions || {};
+    if(!records.length){
+      if(status) status.textContent = '⚠ 雲端本月無匿名表資料';
+      toast('雲端本月無匿名表資料', 'err');
+      return 0;
+    }
+    var totals = computeSurveyBonus(records, positions);
+    // 清空 → 依姓名套用到 STATE.s6
+    var matched = 0, unmatched = [];
+    ALL_EMPLOYEES.forEach(function(e){ STATE.s6[e.id] = 0; });
+    Object.keys(totals).forEach(function(name){
+      var amt = Math.round(totals[name] || 0);
+      if(!amt) return;
+      var hit = ALL_EMPLOYEES.find(function(e){
+        return name === e.name || name === e.nickname || name === e.salesAlias;
+      });
+      if(hit){
+        STATE.s6[hit.id] = amt;
+        matched++;
+      } else {
+        unmatched.push(name + '(' + amt + ')');
+      }
+    });
+    renderS6();
+    renderDetail();
+    updateDirtyChip();
+    if(status){
+      var parts = ['✅ 已從匿名表雲端帶入（共 '+matched+' 位、本月 '+records.length+' 份回收）'];
+      if(unmatched.length) parts.push('未對應到：' + unmatched.join('、'));
+      status.innerHTML = parts.join('<br>');
+    }
+    toast('評分表獎金匯入完成：'+matched+' 位', 'ok');
+    return matched;
+  } catch(e){
+    if(status) status.textContent = '⚠ 雲端讀取失敗：'+e.message;
+    toast('雲端讀取失敗：'+e.message, 'err');
+    return 0;
+  }
+}
+
+// 舊的本機快取版（保留以維持向後相容；不再自動觸發）
 function doImportSurveyBonus(showToast){
   var ym = getSelectedYM();
   var key = 'cd_survey_bonus_' + (STORE || 'nostore') + '_' + ym;
-  var status = document.getElementById('survey-import-status');
   try {
     var raw = localStorage.getItem(key);
-    if(!raw){
-      if(status) status.textContent = '⚠ 匿名表尚未統計本月獎金（請店長進匿名表查看本月後重試）';
-      if(showToast) toast('找不到匿名表資料：請店長先進入匿名表查看本月', 'err');
-      return 0;
-    }
+    if(!raw) return 0;
     var data = JSON.parse(raw);
     var emps = data.employees || {};
     var matched = 0;
@@ -1856,18 +1993,10 @@ function doImportSurveyBonus(showToast){
     });
     renderS6();
     renderDetail();
-    if(status){
-      var ts = data.savedAt ? new Date(data.savedAt).toLocaleString('zh-TW') : '';
-      status.textContent = '✅ 已匯入 '+matched+' 位員工'+(ts?'（'+ts+' 產出）':'');
-    }
-    if(showToast) toast('評分表獎金匯入完成：'+matched+' 位', 'ok');
     return matched;
-  } catch(err){
-    if(showToast) toast('匯入失敗：'+err.message, 'err');
-    return 0;
-  }
+  } catch(err){ return 0; }
 }
-function importSurveyBonus(){ doImportSurveyBonus(true); }
+function importSurveyBonus(){ importSurveyBonusFromCloud(); }
 
 // ============================================
 // Toast
@@ -2029,11 +2158,8 @@ function pullFromCloud(showToast){
       rebuildEmployeeLists();
       try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
       render();
-      // 雲端讀完後重跑「小結（十城除外）+ 匿名表」自動匯入
-      // 十城店因為老闆會手動覆蓋營業額獎金，不在 pull 後自動覆蓋掉
-      // 加班費(s1/s2/休-1/加班時數/PT工資) 也是手動才匯入
-      autoImportSalesBonusIfAllowed();
-      doImportSurveyBonus(false);
+      // 雲端讀完後不再自動匯入任何來源（營業額/評分/加班費 都改成手動按鈕）
+      // 這樣使用者修改後存到雲端的值不會被自動匯入再覆蓋掉
       markSynced();
       var t = res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : '';
       setSyncChip('ok', '☁ 已同步', '從雲端讀取：' + t);
@@ -2077,11 +2203,9 @@ loadState();
 render();
 // 載入後先把當前狀態當成「已同步」基準（pullFromCloud 成功會再覆寫成雲端版）
 markSynced();
-// 依店家顯示「自動 / 手動」按鈕（十城手動）
+// 顯示營業額獎金的「🔄 從小結雲端匯入」按鈕
 setupSalesBonusUI();
-// 初次載入：小結（十城除外，需手動）+ 匿名表（自動）
-autoImportSalesBonusIfAllowed();
-doImportSurveyBonus(false);
+// 初次載入：不自動匯入任何來源；營業額/評分/加班費 全都要點按鈕
 // 啟動時從雲端拉最新（若有設定）→ 若雲端較新，會覆寫本地
 pullFromCloud(false);
 
