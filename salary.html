@@ -2147,12 +2147,22 @@ function pullFromCloud(showToast){
         cloud[k] = Object.assign({}, def[k], cloud[k] || {});
       });
       cloud.customEmployees = Array.isArray(cloud.customEmployees) ? cloud.customEmployees : [];
+      // 🐛 修：若雲端的 customEmployees 是空（可能是早期自動推上去的空白月份），
+      //    用 inherited key 覆蓋上去 → 新增的員工才會在「舊月份」也跑出來
+      if(!cloud.customEmployees.length){
+        var inheritedFallback = loadInheritedEmps();
+        if(inheritedFallback.length){
+          cloud.customEmployees = inheritedFallback;
+        }
+      }
       if(!cloud.activeEmp) cloud.activeEmp = EMPLOYEES[0].id;
       cloud.ym = getSelectedYM();
       cloud.store = STORE;
       STATE = cloud;
-      // 雲端有的 customEmployees + 勞健保 也存進 inherited key（給之後其他月份繼承）
-      saveInheritedEmps(STATE.customEmployees);
+      // 只有「雲端真的有員工」時才更新 inherited（避免被空雲端把 inherited 蓋成空）
+      if(STATE.customEmployees.length){
+        saveInheritedEmps(STATE.customEmployees);
+      }
       saveInheritedInsurance(STATE.insurance, STATE.ym);
       rebuildEmployeeLists();
       try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}

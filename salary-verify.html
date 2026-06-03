@@ -1985,12 +1985,21 @@ function pullFromCloud(showToast){
         cloud[k] = Object.assign({}, def[k], cloud[k] || {});
       });
       cloud.customEmployees = Array.isArray(cloud.customEmployees) ? cloud.customEmployees : [];
+      // 🐛 修：若雲端的 customEmployees 是空，用 inherited 覆蓋
+      if(!cloud.customEmployees.length){
+        var inheritedFallback = loadInheritedEmps();
+        if(inheritedFallback.length){
+          cloud.customEmployees = inheritedFallback;
+        }
+      }
       if(!cloud.activeEmp) cloud.activeEmp = EMPLOYEES[0].id;
       cloud.ym = getSelectedYM();
       cloud.store = STORE;
       STATE = cloud;
-      // 也存進 inherited key，給新月份／其他裝置繼承（員工 + 勞健保）
-      saveInheritedEmps(STATE.customEmployees);
+      // 只有雲端真的有員工才更新 inherited（避免被空雲端蓋成空）
+      if(STATE.customEmployees.length){
+        saveInheritedEmps(STATE.customEmployees);
+      }
       saveInheritedInsurance(STATE.insurance, STATE.ym);
       rebuildEmployeeLists();
       try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
