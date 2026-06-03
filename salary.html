@@ -958,9 +958,8 @@ function onMonthChange(){
   }
   loadState();
   render();
-  // 換月不再自動匯入任何來源；營業額/評分/加班費 都要手動按按鈕
-  // 嘗試從雲端拉最新（會以雲端值為準，避免覆蓋手動修改）
-  pullFromCloud(false);
+  // 換月一律從雲端讀最新（showToast=true → 看到 ☁ 已同步 提示）
+  pullFromCloud(true);
 }
 
 // ============================================
