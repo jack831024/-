@@ -2174,15 +2174,17 @@ function pullFromCloud(showToast){
           cloud.customEmployees = inheritedFallback;
         }
       }
-      // 🐛 修：若雲端的 insurance 是空白（全 0），用 inherited insurance 覆蓋
-      //    → 5 月填好的勞健保，在 6 月（舊空白月份）也會出現
-      if(isInsuranceEmpty(cloud.insurance)){
-        var inheritedIns = loadInheritedInsurance();
-        if(!isInsuranceEmpty(inheritedIns)){
-          Object.keys(inheritedIns).forEach(function(k){
-            cloud.insurance[k] = inheritedIns[k] | 0;
-          });
-        }
+      // 🐛 修：每位員工各自看「雲端值是不是 0」，是 0 就用 inherited 覆蓋
+      //    這樣處理：(1) 雲端整包空白 (2) 部分員工被刪後的殘留值不會干擾判斷
+      var inheritedIns = loadInheritedInsurance();
+      if(Object.keys(inheritedIns).length){
+        ALL_EMPLOYEES.forEach(function(e){
+          var cloudVal = cloud.insurance[e.id] | 0;
+          var inhVal = inheritedIns[e.id];
+          if(cloudVal === 0 && typeof inhVal === 'number' && inhVal !== 0){
+            cloud.insurance[e.id] = inhVal;
+          }
+        });
       }
       if(!cloud.activeEmp) cloud.activeEmp = EMPLOYEES[0].id;
       cloud.ym = getSelectedYM();
