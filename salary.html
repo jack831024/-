@@ -1003,10 +1003,14 @@ function renderSummaryTable(){
 
   // 把人事成本合計同步到一個簡單 key，讓盤點表的月度成本分析讀取
   // key 格式：cd_hr_total_<門市>_<YYYY-MM> = 合計金額（整數）
+  // ⭐ 同時塞進 STATE._hrTotal：saveSalary 推雲端時會帶上，
+  //    讓別台手機的盤點表 fetchHrTotalFromCloud 不必先開薪水頁就能撈到
   try {
     var ym = getSelectedYM();
     if(STORE && ym){
-      localStorage.setItem('cd_hr_total_' + STORE + '_' + ym, String(Math.round(totalReal)));
+      var hrTotal = Math.round(totalReal);
+      localStorage.setItem('cd_hr_total_' + STORE + '_' + ym, String(hrTotal));
+      if(STATE){ STATE._hrTotal = hrTotal; }
     }
   } catch(e){ console.warn('sync hr total fail', e); }
 }

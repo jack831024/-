@@ -2860,7 +2860,57 @@ var DEFAULT_RENTS = {
   'shicheng-zhongxiao': 45000  // 十城未指定，暫用 45000，可手動調整
 };
 
+// ⭐ 跨裝置：從「小結報表」雲端直接撈當月營業額（這台裝置不必開過小結報表也能看到）
+//    用現有的 BUILTIN_SYNC_URL（小結報表 doGet）拉全部紀錄、寫進本機 cd_records_<store>，
+//    讓 getMonthlyRevenue 之後讀本機就有數字
+var _revenueCloudPending = {};
+function fetchRevenueFromCloud(yearMonth){
+  if(!yearMonth || _revenueCloudPending[yearMonth]) return;
+  var summaryUrl = localStorage.getItem('cd_sync_url') || (typeof BUILTIN_SYNC_URL !== 'undefined' ? BUILTIN_SYNC_URL : '');
+  if(!summaryUrl) return;
+  _revenueCloudPending[yearMonth] = true;
+  fetch(summaryUrl + (summaryUrl.indexOf('?')>=0?'&':'?') + 'store=' + encodeURIComponent(STORE_ID), { method:'GET' })
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if(!j || !j.records) return;
+      // 鏡像進本機 cd_records_<store>（小結報表自己也是用這個 key）
+      try{ localStorage.setItem('cd_records_'+STORE_ID, JSON.stringify(j.records)); }catch(e){}
+      if(typeof renderBusinessSummary === 'function'){ try{ renderBusinessSummary(); }catch(e){} }
+    }).catch(function(){ /* 離線容忍 */ })
+    .finally(function(){ delete _revenueCloudPending[yearMonth]; });
+}
+
+// ⭐ 跨裝置：從「薪水」雲端直接撈當月人事成本（這台裝置不必開過薪水頁也能看到）
+//    用 ANALYSIS_PASSWORDS 對應的店密碼（盤點表分析區早就有了），呼叫 loadSalary，
+//    從 state._hrTotal 取出總額寫進本機 cd_hr_total_<store>_<ym>
+var BUILTIN_SALARY_URL = 'https://script.google.com/macros/s/AKfycbykQ-2CnEFLxy9Qs3o_9kqzOk2E9aIr-ODnY0wx8OS9SWGIAFGJu0Nmss2GqjQcbtNL/exec';
+var _hrCloudPending = {};
+function fetchHrTotalFromCloud(yearMonth){
+  if(!yearMonth || _hrCloudPending[yearMonth]) return;
+  var password = (typeof ANALYSIS_PASSWORDS !== 'undefined') ? ANALYSIS_PASSWORDS[STORE_ID] : null;
+  if(!password) return;
+  _hrCloudPending[yearMonth] = true;
+  fetch(BUILTIN_SALARY_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action:'loadSalary', args:[password, STORE_ID, yearMonth] })
+  }).then(function(r){ return r.json(); })
+    .then(function(j){
+      if(!j || !j.ok || !j.state) return;
+      var total = Number(j.state._hrTotal);
+      if(!isFinite(total) || total <= 0) return;
+      try{ localStorage.setItem('cd_hr_total_'+STORE_ID+'_'+yearMonth, String(Math.round(total))); }catch(e){}
+      // 重新套用人事卡 + 重算分析摘要
+      try{ loadBizInputs(yearMonth); }catch(e){}
+      if(typeof renderBusinessSummary === 'function'){ try{ renderBusinessSummary(); }catch(e){} }
+    }).catch(function(){ /* 離線容忍 */ })
+    .finally(function(){ delete _hrCloudPending[yearMonth]; });
+}
+
 function loadBizInputs(yearMonth){
+  // 背景拉雲端營業額+人事（這台裝置沒開過小結報表/薪水也能拿到）
+  if(typeof fetchRevenueFromCloud === 'function') fetchRevenueFromCloud(yearMonth);
+  if(typeof fetchHrTotalFromCloud === 'function') fetchHrTotalFromCloud(yearMonth);
   // 人事成本：優先從薪資系統同步的總和讀取，沒有才讓使用者手動輸入
   var hrEl = document.getElementById('biz-hr-input');
   var hrSynced = localStorage.getItem('cd_hr_total_'+STORE_ID+'_'+yearMonth);
