@@ -600,12 +600,30 @@ function saveInheritedInsurance(insMap, ym){
   var current = _loadInheritedInsRaw();
   var currentYm = current.ym || '';
   if(currentYm && ym && ym < currentYm) return; // 只接受比現有更新的月份
+  // 🐛 防呆：不要用「全 0 / 空」的 insurance 蓋掉已經有資料的 inherited
+  var sum = 0;
+  Object.keys(insMap || {}).forEach(function(k){ sum += Math.abs(insMap[k] | 0); });
+  if(sum === 0){
+    var currentInsMap = current.insurance || {};
+    var currentSum = 0;
+    Object.keys(currentInsMap).forEach(function(k){ currentSum += Math.abs(currentInsMap[k] | 0); });
+    if(currentSum > 0) return;
+  }
   try {
     localStorage.setItem(inheritedInsKey(), JSON.stringify({
       ym: ym || currentYm || '',
       insurance: insMap || {}
     }));
   } catch(e){}
+}
+
+function isInsuranceEmpty(insMap){
+  if(!insMap || typeof insMap !== 'object') return true;
+  var keys = Object.keys(insMap);
+  if(!keys.length) return true;
+  var sum = 0;
+  for(var i=0;i<keys.length;i++){ sum += Math.abs(insMap[keys[i]] | 0); }
+  return sum === 0;
 }
 
 function seedCustomEmployeesFromLatestMonth(){
@@ -1990,6 +2008,15 @@ function pullFromCloud(showToast){
         var inheritedFallback = loadInheritedEmps();
         if(inheritedFallback.length){
           cloud.customEmployees = inheritedFallback;
+        }
+      }
+      // 🐛 修：若雲端的 insurance 是空白（全 0），用 inherited insurance 覆蓋
+      if(isInsuranceEmpty(cloud.insurance)){
+        var inheritedIns = loadInheritedInsurance();
+        if(!isInsuranceEmpty(inheritedIns)){
+          Object.keys(inheritedIns).forEach(function(k){
+            cloud.insurance[k] = inheritedIns[k] | 0;
+          });
         }
       }
       if(!cloud.activeEmp) cloud.activeEmp = EMPLOYEES[0].id;
