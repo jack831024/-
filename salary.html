@@ -198,7 +198,7 @@ table.grid input[type=number]{text-align:right;font-family:ui-monospace,"SF Mono
     <span id="store-name">（未選店）</span>
   </div>
   <span class="spacer"></span>
-  <span id="sync-chip" class="sync-chip off" title="點擊重新同步" onclick="syncNow()">☁ 未設定</span>
+  <span id="sync-chip" class="sync-chip off" title="點擊從雲端重新讀取最新（看別台剛存的）" onclick="syncNow()">☁ 未設定</span>
   <select class="month-picker" id="month-picker" aria-label="選擇月份"></select>
   <button id="save-btn" class="btn btn-primary btn-sm" onclick="saveAll()" title="儲存到雲端（按下才會同步給其他裝置）">💾 儲存</button>
   <button class="btn btn-ghost btn-sm" onclick="openSyncSettings()" title="雲端同步設定">⚙️</button>
@@ -2172,10 +2172,13 @@ function pullFromCloud(showToast){
 }
 
 function syncNow(){
-  // 使用者點擊 sync chip：先 push 再 pull，確保兩邊一致
+  // 使用者點擊 sync chip：從雲端重新讀取最新資料（讓別台裝置剛存的也能看到）
   var url = getSyncUrl();
   if(!url){ openSyncSettings(); return; }
-  pushToCloud(true);
+  if(isDirty()){
+    if(!confirm('目前有未儲存的變更。\n\n從雲端重新讀取會覆蓋掉這些變更，要繼續嗎？\n\n如果不要繼續，請按取消，先按 💾 儲存。')) return;
+  }
+  pullFromCloud(true);
 }
 
 function openSyncSettings(){
