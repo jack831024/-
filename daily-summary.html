@@ -2436,10 +2436,17 @@ function refreshBonusLockState(){
   if(lockBtn) lockBtn.style.display = unlocked ? 'inline-block' : 'none';
 }
 
-async function loadRecord(date){
+async function loadRecord(date, opts){
+  opts = opts || {};
+  // ⭐ 多裝置最新優先：開啟一個日期前，先從雲端拉這個 store 的最新紀錄覆蓋本機
+  //   （opts.skipCloudPull 是給「剛剛才 syncFromCloud 過、不必再拉一次」的呼叫端用）
+  if(!opts.skipCloudPull && localStorage.getItem('cd_sync_url')){
+    showLoading('☁️ 同步雲端', '正在拉取 ' + date + ' 最新版本（避免裝置間舊版互蓋）...');
+    await pullCloudOverwriteLocal();
+  }
   var records = getAllRecords();
   var r = records[date];
-  if(!r){ return false; }
+  if(!r){ hideLoading(); return false; }
   // ⭐ 載入新紀錄前先標記「圖還沒載入」，避免任何 autoSave 在這空檔送出 keepImages=false 誤刪 Drive 檔
   _imagesLoaded = false;
   _imagesDirty = false;
@@ -2495,7 +2502,13 @@ async function loadSelectedRecord(){
   var date = sel.value;
   if(!date) return;
   if(!confirmLoseUnsaved()){ sel.value = document.getElementById('record-date').value || ''; return; }
-  var ok = await loadRecord(date);
+  // ⭐ 多裝置最新優先：選歷史紀錄也先拉雲端最新（其他裝置可能剛改完）
+  if(localStorage.getItem('cd_sync_url')){
+    showLoading('☁️ 同步雲端', '正在拉取 ' + date + ' 最新版本...');
+    await pullCloudOverwriteLocal();
+    hideLoading();
+  }
+  var ok = await loadRecord(date, {skipCloudPull: true});
   if(!ok) alert('找不到這筆紀錄');
 }
 
@@ -2514,10 +2527,18 @@ async function onDateChange(){
     if(prev) document.getElementById('record-date').value = prev;
     return;
   }
+  // ⭐ 多裝置最新優先：切日期前先拉雲端最新版本，再決定走「載入既有」還是「清空新一天」分支
+  //   不先拉的話：本機沒這天 → 走清空分支 → 使用者不知道別台已經存過 → 一存就「新增」了空白覆蓋
+  if(localStorage.getItem('cd_sync_url')){
+    showLoading('☁️ 同步雲端', '正在拉取 ' + date + ' 最新版本...');
+    await pullCloudOverwriteLocal();
+    hideLoading();
+  }
   var records = getAllRecords();
   if(records[date]){
     // ⭐ 自動載入，不再 confirm（避免使用者選「取消」造成畫面 vs 日期 mismatch、autoSave 把殘留資料寫到新日期覆蓋既有紀錄）
-    await loadRecord(date);
+    //   skipCloudPull:true → 上面剛拉過了，loadRecord 不必再拉
+    await loadRecord(date, {skipCloudPull: true});
   } else {
     // ⭐ 切到「沒紀錄的新一天」→ 完整清空畫面（避免殘留前一天的提現/代收/欄位/圖片）
     // 1) 清所有 INPUT_IDS 欄位、store.w/d 提現代收陣列、no-deposit checkbox
@@ -2851,6 +2872,37 @@ async function cloudLoad(){
   return d.records || {};
 }
 
+// ⭐ 多裝置最新優先：把整個 store 的雲端紀錄拉下來，覆蓋本機 localStorage 快取
+//   解決問題：A 裝置開著某天的舊版本、B 裝置剛存新版本 → A 不知情地存出去就把 B 的新版蓋掉
+//   合併規則：
+//     - 雲端有這天 → 用雲端版本（本機殘留舊版會被覆蓋，避免被當「最新」推回雲端）
+//     - 雲端沒這天但本機有 → 保留本機（離線時暫存的紀錄）
+//     - 本機 savedAt 嚴格新於雲端 → 保留本機（剛存完雲端 round-trip 還沒回來的極端情況）
+//   失敗（網路斷）→ 回 false、不動本機，loadRecord 用既有本機快取繼續
+async function pullCloudOverwriteLocal(){
+  if(!localStorage.getItem('cd_sync_url')) return false;
+  try{
+    var cloud = await cloudLoad();
+    var local = getAllRecords();
+    var merged = {};
+    Object.keys(cloud).forEach(function(d){ merged[d] = cloud[d]; });
+    Object.keys(local).forEach(function(d){
+      var c = merged[d];
+      if(!c){ merged[d] = local[d]; return; }
+      var l = local[d];
+      var lT = (l && l.savedAt) || '';
+      var cT = (c && c.savedAt) || '';
+      if(lT && lT > cT) merged[d] = l;
+    });
+    setAllRecords(merged);
+    if(typeof renderHistoryList === 'function') renderHistoryList();
+    return true;
+  }catch(e){
+    console.warn('[pullCloudOverwriteLocal] 失敗，沿用本機快取：', e);
+    return false;
+  }
+}
+
 async function cloudSave(date, rec, images, keepExistingImages){
   var url = localStorage.getItem('cd_sync_url');
   if(!url) throw new Error('未設定同步網址');
@@ -2911,7 +2963,8 @@ async function syncFromCloud(){
     var today = document.getElementById('record-date').value || todayStr();
     // ⚠️ 必須 await — 否則 loadRecord 還在拉圖時，外層 initRecords 的 .finally 已經 hide 掉 LOADING 視窗，
     //     使用者會看到半載入的畫面、可能在圖還沒回來時就上傳新圖造成 race
-    if(merged[today]) await loadRecord(today);
+    //   skipCloudPull:true → 上面已經 cloudLoad 過了，loadRecord 不必再拉一次
+    if(merged[today]) await loadRecord(today, {skipCloudPull: true});
     else updateSavedTag(today);
     setSyncBadge('☁️ 已同步（' + Object.keys(merged).length + ' 筆'
       + (newerLocalCount > 0 ? '，' + newerLocalCount + ' 筆本機較新已保留' : '') + '）');
@@ -2939,7 +2992,8 @@ async function syncFromCloud(){
       // 失敗時用本機資料
       updateLoadingDetail('⚠️ 雲端載入失敗，改用本機資料');
       var records = getAllRecords();
-      if(records[today]) return loadRecord(today);
+      // 雲端剛剛 fail 了，loadRecord 沒必要再試一次（也會 fail），skipCloudPull:true 直接吃本機快取
+      if(records[today]) return loadRecord(today, {skipCloudPull: true});
       else updateSavedTag(today);
     }).finally(function(){
       // 雲端資料拉回來後也再跑一次修正（setAllRecords 內已統一 key，但保險再跑）
