@@ -175,7 +175,9 @@ function selectStore(id, name){
     salaryVerify: 'salary-verify.html',
     leave:        'leave-gift.html'
   };
-  window.location.href = pageMap[flow] || 'daily-summary.html';
+  // 加 timestamp 防止瀏覽器 cache 舊版（特別是 salary / verify 改動頻繁）
+  var target = pageMap[flow] || 'daily-summary.html';
+  window.location.href = target + '?t=' + Date.now();
 }
 </script>
 </body>

@@ -634,9 +634,14 @@ async function fillMissingInsuranceFromCloud(){
   var zeros = ALL_EMPLOYEES.filter(function(e){ return (STATE.insurance[e.id] | 0) === 0; });
   if(!zeros.length) return;
   var thisYm = getSelectedYM();
+  setSyncChip('busy', '☁ 補齊勞健保中…', '從雲端最近月份抓');
   try {
     var r = await callSalaryGAS('listMonths', [pw, STORE]);
-    if(!r || !r.ok || !Array.isArray(r.months) || !r.months.length) return;
+    if(!r || !r.ok || !Array.isArray(r.months) || !r.months.length){
+      setSyncChip('ok', '☁ 已同步', '');
+      return;
+    }
+    var filledSomething = false;
     for(var i = 0; i < r.months.length; i++){
       if(r.months[i].ym === thisYm) continue;
       var r2 = await callSalaryGAS('loadSalary', [pw, STORE, r.months[i].ym]);
@@ -646,16 +651,24 @@ async function fillMissingInsuranceFromCloud(){
         var v = ins[e.id];
         if(typeof v === 'number' && v !== 0 && (STATE.insurance[e.id] | 0) === 0){
           STATE.insurance[e.id] = v;
+          filledSomething = true;
         }
       });
       zeros = zeros.filter(function(e){ return (STATE.insurance[e.id] | 0) === 0; });
       if(!zeros.length) break;
     }
-    saveInheritedInsurance(STATE.insurance, thisYm);
-    renderInsurance();
-    renderDetail();
+    if(filledSomething){
+      saveInheritedInsurance(STATE.insurance, thisYm);
+      renderInsurance();
+      renderDetail();
+      updateDirtyChip();
+      setSyncChip('dirty', '● 勞健保已補齊（待存）', '按 💾 儲存才會同步到雲端');
+    } else {
+      setSyncChip('ok', '☁ 已同步', '');
+    }
   } catch(e){
     console.warn('fillMissingInsuranceFromCloud fail', e);
+    setSyncChip('ok', '☁ 已同步', '');
   }
 }
 

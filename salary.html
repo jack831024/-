@@ -659,14 +659,18 @@ async function fillMissingInsuranceFromCloud(){
   var url = getSyncUrl();
   var pw  = getStorePassword();
   if(!url || !pw || !STORE) return;
-  // 哪些員工現在還是 0
   var zeros = ALL_EMPLOYEES.filter(function(e){ return (STATE.insurance[e.id] | 0) === 0; });
   if(!zeros.length) return;
   var thisYm = getSelectedYM();
+  // 視覺提示：右上 ☁ 顯示「補齊勞健保中…」
+  setSyncChip('busy', '☁ 補齊勞健保中…', '從雲端最近月份抓');
   try {
     var r = await callSalaryGAS('listMonths', [pw, STORE]);
-    if(!r || !r.ok || !Array.isArray(r.months) || !r.months.length) return;
-    // months 已按新→舊排序；逐個月份去抓 insurance 補 0 的員工
+    if(!r || !r.ok || !Array.isArray(r.months) || !r.months.length){
+      setSyncChip('ok', '☁ 已同步', '');
+      return;
+    }
+    var filledSomething = false;
     for(var i = 0; i < r.months.length; i++){
       if(r.months[i].ym === thisYm) continue;
       var r2 = await callSalaryGAS('loadSalary', [pw, STORE, r.months[i].ym]);
@@ -676,17 +680,24 @@ async function fillMissingInsuranceFromCloud(){
         var v = ins[e.id];
         if(typeof v === 'number' && v !== 0 && (STATE.insurance[e.id] | 0) === 0){
           STATE.insurance[e.id] = v;
+          filledSomething = true;
         }
       });
       zeros = zeros.filter(function(e){ return (STATE.insurance[e.id] | 0) === 0; });
       if(!zeros.length) break;
     }
-    // 把補完的值同步到 inherited（給之後其他月份用）
-    saveInheritedInsurance(STATE.insurance, thisYm);
-    renderInsurance();
-    renderDetail();
+    if(filledSomething){
+      saveInheritedInsurance(STATE.insurance, thisYm);
+      renderInsurance();
+      renderDetail();
+      updateDirtyChip(); // 補齊算「改動」需要按 💾 推回雲端
+      setSyncChip('dirty', '● 勞健保已補齊（待存）', '按 💾 儲存才會同步到雲端');
+    } else {
+      setSyncChip('ok', '☁ 已同步', '');
+    }
   } catch(e){
     console.warn('fillMissingInsuranceFromCloud fail', e);
+    setSyncChip('ok', '☁ 已同步', '');
   }
 }
 
