@@ -1033,13 +1033,30 @@ async function onGiftFile(files){
     var raw = await geminiCall([resized.blob], prompt);
     var data;
     try { data = parseJson(raw); }
-    catch(jerr){ throw new Error('AI 回應格式錯誤：'+raw.slice(0,80)); }
+    catch(jerr){ data = { amount:0, occasion:'', recipient:'', note:'' }; }
     var amount = Math.abs(Math.round(Number(data.amount) || 0));
+
+    // AI 失敗救援：跳框讓使用者手動輸入金額
     if(!amount){
-      if(pv){ pv.el.classList.remove('busy'); pv.el.classList.add('err'); pv.tag.textContent = '無金額'; }
-      busy.innerHTML = '<span style="color:var(--danger);font-size:12px">❌ AI 沒辨識出金額：'+ JSON.stringify(data).slice(0,80) +'</span>';
-      toast('AI 沒辨識出金額', 'err');
-      return;
+      if(pv) pv.tag.textContent = '手動輸入中';
+      var hint = 'AI 沒抓到金額，請手動輸入要扣的金額（NT$）\n\nAI 看到的內容：' + (data.note || data.occasion || '無');
+      var manualStr = prompt(hint, '');
+      if(manualStr === null){
+        // 使用者按取消 → 完全放棄這次上傳（連 Drive 都不傳）
+        if(pv){ pv.el.classList.remove('busy'); pv.el.classList.add('err'); pv.tag.textContent = '取消'; }
+        busy.innerHTML = '<span style="color:var(--ink-3);font-size:12px">已取消</span>';
+        toast('已取消上傳', 'err');
+        return;
+      }
+      amount = Math.abs(Math.round(Number(manualStr) || 0));
+      if(!amount){
+        if(pv){ pv.el.classList.remove('busy'); pv.el.classList.add('err'); pv.tag.textContent = '金額無效'; }
+        busy.innerHTML = '<span style="color:var(--danger);font-size:12px">❌ 金額無效</span>';
+        toast('金額無效', 'err');
+        return;
+      }
+      // 標記為手動輸入
+      data.note = (data.note ? data.note + ' · ' : '') + '手動輸入金額';
     }
 
     // 3. 上傳到 Drive
