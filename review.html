@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>考核紀錄</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#4f46e5;
+  --brand-dark:#4338ca;
+  --ink:#0f172a;
+  --ink-2:#475569;
+  --ink-3:#94a3b8;
+  --line:#e2e8f0;
+  --ok:#059669;
+  --bad:#dc2626;
+  --warn:#d97706;
+}
+html,body{min-height:100%}
+body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;padding:1.25rem;overflow-x:hidden;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #e0e7ff 0%, transparent 50%),
+    radial-gradient(900px 500px at 110% 10%, #fde4d3 0%, transparent 55%),
+    linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+}
+.wrap{max-width:860px;margin:0 auto;padding-bottom:3rem}
+
+.back-btn{position:fixed;top:16px;left:16px;width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.85);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);transition:all .2s;box-shadow:0 4px 12px -4px rgba(15,23,42,.1);z-index:10}
+.back-btn:hover{background:#fff;color:var(--brand)}
+.back-btn svg{width:18px;height:18px}
+
+.hero{text-align:center;margin:2.2rem 0 1.2rem}
+h1{font-size:24px;font-weight:700;letter-spacing:-0.02em}
+.subtitle{font-size:13px;color:var(--ink-2);margin-top:4px}
+
+/* 店家選擇 */
+.store-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+.store-chip{padding:9px 18px;border-radius:999px;border:1.5px solid var(--line);background:rgba(255,255,255,.8);font-family:inherit;font-size:14px;font-weight:600;color:var(--ink-2);cursor:pointer;transition:all .18s}
+.store-chip:hover{border-color:var(--brand);color:var(--brand)}
+.store-chip.on{background:linear-gradient(135deg,var(--brand),#818cf8);border-color:transparent;color:#fff;box-shadow:0 6px 16px -6px rgba(79,70,229,.5)}
+
+/* 月份列 */
+.month-row{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:14px}
+.mbtn{width:34px;height:34px;border-radius:10px;border:1.5px solid var(--line);background:#fff;cursor:pointer;font-size:15px;color:var(--ink-2);transition:all .15s}
+.mbtn:hover{border-color:var(--brand);color:var(--brand)}
+.mlabel{font-size:17px;font-weight:700;letter-spacing:1px;min-width:120px;text-align:center}
+
+/* 說明區 */
+.rules{background:rgba(255,255,255,.8);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.9);border-radius:18px;margin-bottom:14px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -12px rgba(15,23,42,.08)}
+.rules summary{padding:14px 18px;cursor:pointer;font-size:14.5px;font-weight:700;color:var(--ink);list-style:none;display:flex;align-items:center;gap:8px;user-select:none}
+.rules summary::-webkit-details-marker{display:none}
+.rules summary .arr{margin-left:auto;color:var(--ink-3);transition:transform .2s;font-size:12px}
+.rules[open] summary .arr{transform:rotate(180deg)}
+.rules-body{padding:0 18px 16px}
+.rules-body ol{margin:0 0 14px 1.3rem;font-size:13.5px;color:var(--ink-2);line-height:2}
+/* 考核檢查細項 */
+.chk-section{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
+.chk-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.chk-title{font-size:12.5px;font-weight:700;color:var(--ink-2)}
+.chk-count{font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;background:rgba(79,70,229,.08);color:var(--brand)}
+.chk-count.done{background:rgba(5,150,105,.12);color:var(--ok)}
+.chk-group-title{font-size:12px;font-weight:700;color:var(--brand-dark);margin:8px 0 4px}
+.chk-item{display:flex;align-items:flex-start;gap:8px;padding:5px 2px;font-size:13px;color:var(--ink-2);cursor:pointer;user-select:none;border-radius:8px}
+.chk-item:hover{background:rgba(79,70,229,.04)}
+.chk-item input{accent-color:var(--brand);width:16px;height:16px;margin-top:2px;flex:none}
+.chk-item.checked{color:var(--ink);text-decoration:none}
+.chk-item.checked .chk-text{color:var(--ink-3);text-decoration:line-through}
+.chk-note{font-size:11.5px;color:var(--warn);background:rgba(217,119,6,.07);border-radius:8px;padding:7px 10px;margin-top:8px}
+.chk-del{margin-left:auto;border:none;background:none;color:var(--ink-3);cursor:pointer;font-size:13px;padding:0 4px;flex:none}
+.chk-del:hover{color:var(--bad)}
+.chk-add-item{display:block;margin:4px 0 2px;border:1px dashed var(--line);background:none;border-radius:8px;padding:6px 12px;font-family:inherit;font-size:12px;font-weight:600;color:var(--brand);cursor:pointer}
+.chk-add-item:hover{border-color:var(--brand);background:rgba(79,70,229,.04)}
+
+/* 工具列 */
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.tbtn{padding:9px 16px;border-radius:12px;border:1.5px solid var(--line);background:rgba(255,255,255,.85);font-family:inherit;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
+.tbtn:hover{border-color:var(--brand);color:var(--brand)}
+.tbtn.primary{background:linear-gradient(135deg,var(--brand),#818cf8);border-color:transparent;color:#fff;box-shadow:0 6px 16px -6px rgba(79,70,229,.5)}
+.tbtn.primary:hover{transform:translateY(-1px)}
+.tbtn.danger{color:var(--bad)}
+.tbtn:disabled{opacity:.5;cursor:not-allowed}
+.spacer{flex:1}
+.sync-chip{font-size:12px;font-weight:600;padding:7px 12px;border-radius:999px;border:none;cursor:pointer;font-family:inherit}
+.sync-chip.idle{background:rgba(5,150,105,.1);color:var(--ok)}
+.sync-chip.dirty{background:rgba(217,119,6,.12);color:var(--warn)}
+.sync-chip.saving{background:rgba(79,70,229,.1);color:var(--brand)}
+.sync-chip.err{background:rgba(220,38,38,.1);color:var(--bad)}
+.edit-badge{font-size:12px;font-weight:700;padding:7px 12px;border-radius:999px;background:rgba(220,38,38,.08);color:var(--bad)}
+
+/* 員工卡片 */
+.emp-list{display:flex;flex-direction:column;gap:12px}
+.emp-card{background:rgba(255,255,255,.85);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.9);border-radius:18px;padding:16px 18px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -12px rgba(15,23,42,.08)}
+.emp-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.emp-name{font-size:16.5px;font-weight:700}
+.lv-chip{font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:1px}
+.lv-chip.staff{background:rgba(59,130,246,.1);color:#2563eb}
+.lv-chip.cadre{background:rgba(217,119,6,.12);color:var(--warn)}
+.cum-chip{font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(15,23,42,.05);color:var(--ink-2)}
+.cum-chip.raise{background:rgba(5,150,105,.12);color:var(--ok)}
+
+/* 已通過站別迷你勳章 */
+.ps-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+.mini-badge{display:inline-flex;align-items:center;justify-content:center;font-weight:800;position:relative;user-select:none}
+
+/* 正職：圓形綠勳章 */
+.mini-badge.g-staff{width:30px;height:30px;border-radius:50%;font-size:12.5px;background:rgba(15,23,42,.04);color:var(--ink-3);border:1.5px solid var(--line)}
+.mini-badge.g-staff.on{
+  background:radial-gradient(circle at 30% 25%, #e8c39e 0%, #c08552 40%, #8c5a2b 75%, #5f3c1a 100%);
+  color:#fff7ec;border:none;text-shadow:0 1px 2px rgba(60,30,10,.6);
+  box-shadow:inset 0 1.5px 2px rgba(255,240,215,.6), inset 0 -2px 3px rgba(70,40,15,.45),
+             0 3px 8px -2px rgba(120,75,35,.6), 0 0 0 2px rgba(192,133,82,.3);
+}
+
+/* 幹部：金色六角勳章（更高級） */
+.mini-badge.g-cadre{width:34px;height:34px;font-size:13px;
+  clip-path:polygon(50% 0%, 95% 26%, 95% 74%, 50% 100%, 5% 74%, 5% 26%);
+  background:rgba(15,23,42,.05);color:var(--ink-3);
+}
+.mini-badge.g-cadre::before{content:"";position:absolute;inset:1.5px;
+  clip-path:polygon(50% 0%, 95% 26%, 95% 74%, 50% 100%, 5% 74%, 5% 26%);
+  background:#f8fafc;z-index:-1;
+}
+.mini-badge.g-cadre{z-index:0}
+.mini-badge.g-cadre.on{
+  background:linear-gradient(150deg, #fde68a 0%, #f5b942 40%, #c98a1b 75%, #8a5a0b 100%);
+  color:#ffe9b8;text-shadow:0 1px 2px rgba(70,8,8,.75);letter-spacing:.5px;
+  filter:drop-shadow(0 3px 6px rgba(140,25,25,.5));
+}
+.mini-badge.g-cadre.on::before{
+  background:linear-gradient(155deg, #e23a3a 0%, #b01d1d 45%, #7c1010 100%);
+  box-shadow:inset 0 2px 3px rgba(255,220,150,.4), inset 0 -2px 4px rgba(60,5,5,.5);
+}
+.mini-badge.g-cadre.on::after{content:"";position:absolute;top:3px;left:6px;right:14px;height:8px;
+  clip-path:polygon(50% 0%, 95% 26%, 95% 74%, 50% 100%, 5% 74%, 5% 26%);
+  background:linear-gradient(180deg, rgba(255,236,180,.6), rgba(255,236,180,0));pointer-events:none;
+}
+
+.mini-badge.clickable{cursor:pointer;transition:transform .15s}
+.mini-badge.clickable:hover{transform:scale(1.15)}
+.ps-divider{width:1px;height:22px;background:var(--line);margin:0 5px}
+
+/* 調薪提示 */
+.raise-banner{margin-top:10px;padding:9px 14px;border-radius:12px;font-size:13px;font-weight:700;color:var(--ok);background:rgba(5,150,105,.1);border:1px solid rgba(5,150,105,.25)}
+.status-chip{margin-left:auto;font-size:12.5px;font-weight:700;padding:5px 13px;border-radius:999px}
+.status-chip.pass{background:rgba(5,150,105,.12);color:var(--ok)}
+.status-chip.fail{background:rgba(220,38,38,.1);color:var(--bad)}
+.status-chip.none{background:rgba(15,23,42,.05);color:var(--ink-3)}
+.status-chip.locked{background:rgba(217,119,6,.12);color:var(--warn)}
+
+.emp-body{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;align-items:center}
+.field{display:flex;flex-direction:column;gap:4px}
+.flabel{font-size:11px;font-weight:600;color:var(--ink-3);letter-spacing:.5px}
+select.fsel,input.fin{padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;background:#fff;font-family:inherit;font-size:13.5px;color:var(--ink);outline:none}
+select.fsel:focus,input.fin:focus{border-color:var(--brand)}
+select.fsel:disabled,input.fin:disabled{background:#f8fafc;color:var(--ink-2)}
+.late-toggle{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer;user-select:none;padding:8px 12px;border:1.5px solid var(--line);border-radius:10px;background:#fff}
+.late-toggle input{accent-color:var(--bad);width:16px;height:16px}
+.late-toggle.on{border-color:rgba(220,38,38,.4);background:rgba(220,38,38,.05);color:var(--bad)}
+.pass-seg{display:flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden}
+.pass-seg button{padding:8px 14px;border:none;background:#fff;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink-3);cursor:pointer}
+.pass-seg button.on-pass{background:var(--ok);color:#fff}
+.pass-seg button.on-fail{background:var(--bad);color:#fff}
+.pass-seg button:disabled{cursor:not-allowed}
+
+/* 失誤 */
+.mistakes{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
+.mk-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.mk-title{font-size:12.5px;font-weight:700;color:var(--ink-2)}
+.mk-count{font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;background:rgba(15,23,42,.05);color:var(--ink-2)}
+.mk-count.full{background:rgba(220,38,38,.1);color:var(--bad)}
+.mk-add{margin-left:auto;font-size:12px;font-weight:600;color:var(--brand);background:none;border:none;cursor:pointer;font-family:inherit}
+.mk-add:disabled{color:var(--ink-3);cursor:not-allowed}
+.mk-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.mk-row input[type=date]{padding:6px 8px;border:1.5px solid var(--line);border-radius:8px;font-family:inherit;font-size:12.5px}
+.mk-row input.mk-reason{flex:1;min-width:140px;padding:6px 10px;border:1.5px solid var(--line);border-radius:8px;font-family:inherit;font-size:12.5px}
+.mk-del{border:none;background:none;color:var(--bad);cursor:pointer;font-size:14px}
+.mk-empty{font-size:12px;color:var(--ink-3)}
+
+.emp-foot{margin-top:10px;display:flex;justify-content:flex-end}
+.emp-remove{font-size:11.5px;color:var(--ink-3);background:none;border:none;cursor:pointer;font-family:inherit}
+.emp-remove:hover{color:var(--bad)}
+
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--ink-3);font-size:14px;background:rgba(255,255,255,.6);border-radius:18px;border:1px dashed var(--line)}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:11px 20px;border-radius:12px;font-size:13.5px;font-weight:600;color:#fff;z-index:99;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw}
+.toast.ok{background:#059669}
+.toast.err{background:#dc2626}
+.toast.show{opacity:1}
+
+.hint-banner{font-size:12.5px;color:var(--warn);background:rgba(217,119,6,.08);border:1px solid rgba(217,119,6,.25);border-radius:12px;padding:10px 14px;margin-bottom:12px;display:none}
+.hint-banner.show{display:block}
+
+@media(max-width:600px){
+  body{padding:.9rem}
+  .emp-body{gap:8px}
+  .field{flex:1;min-width:45%}
+  select.fsel{width:100%}
+  .status-chip{margin-left:0}
+  /* 徽章分兩列：正職一列、幹部一列 */
+  .ps-divider{flex-basis:100%;width:auto;height:0;background:transparent;margin:1px 0}
+  /* 考核結果：獨佔一列，通過/不通過 均分 */
+  .field:has(.pass-seg){flex-basis:100%;min-width:100%}
+  .pass-seg{display:flex;width:100%}
+  .pass-seg button{flex:1;padding:10px 0}
+}
+</style>
+</head>
+<body>
+
+<button class="back-btn" onclick="location.href='home.html'" title="返回主頁">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+</button>
+
+<div class="wrap">
+  <div class="hero">
+    <h1>📊 考核紀錄</h1>
+    <p class="subtitle">員工可查看全店紀錄；主管編輯需店長密碼</p>
+  </div>
+
+  <div class="store-row" id="storeRow"></div>
+
+  <div class="month-row">
+    <button class="mbtn" onclick="shiftMonth(-1)">◀</button>
+    <span class="mlabel" id="monthLabel"></span>
+    <button class="mbtn" onclick="shiftMonth(1)">▶</button>
+  </div>
+
+  <details class="rules">
+    <summary>🏅 職務加給表（考核說明） <span class="arr">▼</span></summary>
+    <div class="rules-body">
+      <ol>
+        <li>每月考核 乙 站，每 3 站調薪 乙 次。</li>
+        <li>正職 1 站 + 500 元</li>
+        <li>幹部以上考核，每 2 站調薪 乙 次。</li>
+      </ol>
+      <p style="font-size:12px;color:var(--ink-2)">※ 每人每月有 3 次失誤機會，失誤累計達 3 次當月考核不通過；當月有遲到不可考核。<br>※ 選擇考核站後，檢查細項會直接顯示在該員工的考核項目中。</p>
+    </div>
+  </details>
+
+  <div class="hint-banner" id="urlBanner">⚙️ 尚未設定雲端網址，目前資料只存在這台裝置。請主管點右方「⚙️ 設定」貼上 GAS 網址。</div>
+
+  <div class="toolbar">
+    <button class="tbtn" id="editBtn" onclick="toggleEdit()">🔒 主管編輯</button>
+    <button class="tbtn" id="addEmpBtn" onclick="addEmployee()" style="display:none">➕ 新增員工</button>
+    <span class="spacer"></span>
+    <button class="sync-chip idle" id="syncBtn" onclick="onSyncClick()">☁️ 已同步</button>
+    <button class="tbtn" onclick="openSettings()">⚙️</button>
+  </div>
+
+  <div class="emp-list" id="empList"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================
+// 設定
+// ============================================
+// 部署 考核紀錄-script.gs 後，把 /exec 網址貼到下面（或由 ⚙️ 設定輸入）
+var BUILTIN_REVIEW_SYNC_URL = "https://script.google.com/macros/s/AKfycbwhMQQqBW67DQ-xOQdJIew5u1y6sNWad9GtsNXPcBvZKUmnx70RvKiakKuYjAYl47GX/exec";
+
+var STORES = [
+  { key: 'chudian-zhonghe',    name: '中和店', brand: '初殿' },
+  { key: 'chudian-yongchun',   name: '永春店', brand: '初殿' },
+  { key: 'chudian-xinzhuang',  name: '新莊店', brand: '初殿' },
+  { key: 'shicheng-zhongxiao', name: '忠孝店', brand: '十城' }
+];
+
+// 各店店長密碼（同 薪資對帳 / 匿名表主管）：只能編輯自己店
+var EDIT_PASSWORDS = {
+  'chudian-zhonghe':    'a90369287',
+  'chudian-yongchun':   'a94213054',
+  'chudian-xinzhuang':  'a60749791',
+  'shicheng-zhongxiao': 'a61222042'
+};
+// 全域密碼（同 加班費/薪水）：可編輯所有店＋管理檢查細項
+var GLOBAL_EDIT_PASSWORD = 'yuanxin2022';
+
+var STATIONS = {
+  staff: ['服務/帶位','切肉','開收班','洗碗/環境整潔','出湯/海鮮','備料'],
+  cadre: ['值班(人員安排.客訴處理).訂位','品管(食材.服務.清潔)','訂貨','訓練']
+};
+var RAISE_EVERY = { staff: 3, cadre: 2 };
+var MAX_MISTAKES = 3;
+
+// 正職各站考核檢查細項預設值（雲端「設定」有自訂版時會蓋過；全域密碼可在頁面上增刪）
+var DEFAULT_CHECKLISTS = {
+  '服務/帶位': {
+    groups: [
+      { title: '收、送餐', items: [
+        '送湯要說什麼？', '加湯要說什麼?', '送白蝦要幹麻?', '送蛤蜊要幹麻?',
+        '送魚卷要說什麼?', '壽星肉蛋糕要說什麼？', '老顧客優惠要說什麼?'
+      ]},
+      { title: '介紹', items: [
+        '介紹詞介紹一次', '共鍋費考試Ex: 3大３小', '第二鍋六折優惠是什麼?'
+      ]}
+    ],
+    note: '以上考試除了最後一天要全考，平常也要聽'
+  },
+  '開收班': {
+    groups: [{ title: '', items: [
+      '開班是否在時間內完成？', '開班是否有遺漏？', '收班設置小陷阱考試'
+    ]}]
+  },
+  '洗碗/環境整潔': {
+    groups: [{ title: '', items: [
+      '洗碗速度夠快', '洗碗是否有油膩髒污', '自助吧環境整潔', '廁所環境整潔', '周清整潔'
+    ]}]
+  },
+  '出湯/海鮮': {
+    groups: [{ title: '', items: [
+      '出湯是否正確按照比例(對準量杯)', '每個湯的配方背下來', '背下海鮮單位是否正確'
+    ]}]
+  },
+  '備料': {
+    groups: [{ title: '', items: [
+      '平日備料速度是否太慢(14:00要備料完畢)', '雕魚大小是否符合標準',
+      '所有飲料比例是否背下', '滷肉、醬油、豆瓣醬、辣渣等比例是否背下'
+    ]}]
+  },
+  '切肉': {
+    groups: [{ title: '', items: [
+      '是否會雙手全自動', '滿單時是否會規劃切肉順序(跳單)', '肉品擺盤是否漂亮',
+      '全滿炸單時是否可以在15分鐘內切完所有肉'
+    ]}]
+  }
+};
+var CHECKLISTS = JSON.parse(JSON.stringify(DEFAULT_CHECKLISTS));
+
+function checklistItems(station){
+  var c = CHECKLISTS[station];
+  if(!c) return [];
+  var flat = [];
+  c.groups.forEach(function(g){ g.items.forEach(function(it){ flat.push(it); }); });
+  return flat;
+}
+
+// 內建預設名單與歷史通過進度（雲端名單為空時自動帶入；之後以雲端為準）
+var ALL_STATIONS = STATIONS.staff.concat(STATIONS.cadre);   // 全部10站
+var NO_DINGHUO = ALL_STATIONS.filter(function(s){ return s !== '訂貨'; }); // 剩訂貨沒過
+var DEFAULT_EMPLOYEES = {
+  'chudian-zhonghe': [
+    { n:'李文少', p: ALL_STATIONS }, { n:'施偉祥', p: ALL_STATIONS },
+    { n:'褚心榆', p: ALL_STATIONS }, { n:'劉濡瑜', p: ALL_STATIONS }
+  ],
+  'chudian-yongchun': [
+    { n:'謝其淇', p: ALL_STATIONS }, { n:'林韋翔', p: ALL_STATIONS },
+    { n:'洪文祥', p: ALL_STATIONS }, { n:'呂直宸', p: ALL_STATIONS },
+    { n:'吳孟澤', p: ALL_STATIONS },
+    { n:'邱皓勳', p: ['服務/帶位'] }   // 本月考核：出湯/海鮮（見 DEFAULT_RECORDS）
+  ],
+  'chudian-xinzhuang': [
+    { n:'蔡鈺豪', p: ALL_STATIONS },
+    { n:'蘇奕誠', p: NO_DINGHUO },  // 剩訂貨
+    { n:'李嘉真', p: NO_DINGHUO },  // 剩訂貨
+    { n:'簡訢丞', p: [] }, { n:'陳致賢', p: [] }
+  ]
+};
+
+// 站別縮寫（迷你徽章用）
+var SHORT_NAMES = {
+  '服務/帶位':'服', '切肉':'切', '開收班':'班', '洗碗/環境整潔':'洗',
+  '出湯/海鮮':'湯', '備料':'備',
+  '值班(人員安排.客訴處理).訂位':'值', '品管(食材.服務.清潔)':'品', '訂貨':'訂', '訓練':'訓'
+};
+
+// 調薪規則：正職站每3站調1500、幹部站每2站調1000
+var RAISE_RULES = {
+  staffStation: { every: 3, amount: 1500 },
+  cadreStation: { every: 2, amount: 1000 }
+};
+var DEFAULT_RECORDS = {
+  'chudian-yongchun': {
+    '2026-06': { 'n-邱皓勳': { station:'出湯/海鮮', late:false, pass:'', mistakes:[], checks:[] } }
+  }
+};
+function ensureSeed(){
+  var d = storeData();
+  if(d.employees.length > 0) return;
+  var defs = DEFAULT_EMPLOYEES[curStore];
+  if(!defs) return;
+  d.employees = defs.map(function(e){
+    return { id: 'n-' + e.n, name: e.n, level: 'staff', active: true, passed: (e.p || []).slice() };
+  });
+  var dr = DEFAULT_RECORDS[curStore];
+  if(dr) Object.keys(dr).forEach(function(m){
+    if(!d.records[m]) d.records[m] = {};
+    Object.keys(dr[m]).forEach(function(id){
+      if(!d.records[m][id]) d.records[m][id] = JSON.parse(JSON.stringify(dr[m][id]));
+    });
+  });
+  saveLocal();
+}
+
+// 已通過站別 ＝ 歷史基準(emp.passed) ∪ 各月考核通過的站
+function passedSetUpTo(emp, month){
+  var set = {};
+  (emp.passed || []).forEach(function(s){ set[s] = 1; });
+  var d = storeData();
+  Object.keys(d.records || {}).forEach(function(m){
+    if(month && m > month) return;
+    var r = d.records[m] && d.records[m][emp.id];
+    if(r && r.station && statusOf(r).code === 'pass') set[r.station] = 1;
+  });
+  return set;
+}
+function passedStations(emp){
+  var set = passedSetUpTo(emp, null);
+  return STATIONS.staff.concat(STATIONS.cadre).filter(function(s){ return set[s]; });
+}
+function nextMonthLabel(month){
+  var p = month.split('-');
+  var d = new Date(Number(p[0]), Number(p[1]), 1);  // 下個月1號
+  return (d.getMonth() + 1) + '月';
+}
+
+// ============================================
+// 狀態
+// ============================================
+var curStore = sessionStorage.getItem('cd_review_store') || STORES[0].key;
+var curMonth = currentMonth();
+// DATA[storeKey] = { employees:[{id,name,level,active}], records:{ 'YYYY-MM': { empId:{station,late,pass,mistakes:[{d,r}]} } } }
+var DATA = {};
+var DIRTY = false;
+var EDITING = false;       // 是否在編輯模式
+var EDIT_LEVEL = '';       // '' | 'store'（店長）| 'global'（全域，可管理細項）
+
+function editState(){
+  if(sessionStorage.getItem('cd_review_edit_global') === '1') return 'global';
+  if(sessionStorage.getItem('cd_review_edit_' + curStore) === '1') return 'store';
+  return '';
+}
+
+function currentMonth(){
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+function syncUrl(){
+  if(BUILTIN_REVIEW_SYNC_URL && !localStorage.getItem('cd_review_sync_url')){
+    localStorage.setItem('cd_review_sync_url', BUILTIN_REVIEW_SYNC_URL);
+  }
+  return localStorage.getItem('cd_review_sync_url') || '';
+}
+function storeData(){
+  if(!DATA[curStore]) DATA[curStore] = { employees: [], records: {} };
+  var d = DATA[curStore];
+  if(!d.employees) d.employees = [];
+  if(!d.records) d.records = {};
+  return d;
+}
+function rec(empId){
+  var d = storeData();
+  if(!d.records[curMonth]) d.records[curMonth] = {};
+  if(!d.records[curMonth][empId]) d.records[curMonth][empId] = { station:'', late:false, pass:'', mistakes:[], checks:[] };
+  var r = d.records[curMonth][empId];
+  if(!r.mistakes) r.mistakes = [];
+  if(!r.checks) r.checks = [];
+  return r;
+}
+
+// 自動判定狀態：遲到→鎖定；失誤滿3→不通過；否則看主管勾選
+function statusOf(r){
+  if(!r) return { code:'none', label:'未考核' };
+  if(r.late) return { code:'locked', label:'⏰ 遲到不可考核' };
+  if((r.mistakes||[]).length >= MAX_MISTAKES) return { code:'fail', label:'✕ 不通過（失誤滿3次）' };
+  if(r.pass === 'pass') return { code:'pass', label:'✓ 通過' };
+  if(r.pass === 'fail') return { code:'fail', label:'✕ 不通過' };
+  return { code:'none', label:'未考核' };
+}
+
+
+// ============================================
+// 渲染
+// ============================================
+function renderStores(){
+  var row = document.getElementById('storeRow');
+  row.innerHTML = '';
+  STORES.forEach(function(s){
+    var b = document.createElement('button');
+    b.className = 'store-chip' + (s.key === curStore ? ' on' : '');
+    b.textContent = s.brand + '・' + s.name;
+    b.onclick = function(){ switchStore(s.key); };
+    row.appendChild(b);
+  });
+}
+
+function renderMonth(){
+  document.getElementById('monthLabel').textContent = curMonth.replace('-', ' 年 ') + ' 月';
+}
+
+function render(){
+  ensureSeed();
+  EDIT_LEVEL = editState();
+  EDITING = EDIT_LEVEL !== '';
+  renderStores();
+  renderMonth();
+  document.getElementById('urlBanner').className = 'hint-banner' + (syncUrl() ? '' : ' show');
+  document.getElementById('addEmpBtn').style.display = EDITING ? '' : 'none';
+  document.getElementById('editBtn').innerHTML = EDITING
+    ? '✏️ 編輯中' + (EDIT_LEVEL === 'global' ? '（全域）' : '') + '（點此鎖定）'
+    : '🔒 主管編輯';
+
+  var list = document.getElementById('empList');
+  list.innerHTML = '';
+  var emps = storeData().employees.filter(function(e){ return e.active !== false; });
+  if(emps.length === 0){
+    var div = document.createElement('div');
+    div.className = 'empty-state';
+    div.textContent = EDITING ? '尚無員工，點上方「➕ 新增員工」建立名單' : '本店尚未建立考核名單（主管請點「🔒 主管編輯」後新增員工）';
+    list.appendChild(div);
+    refreshSyncBtn();
+    return;
+  }
+  emps.forEach(function(e){ list.appendChild(renderEmp(e)); });
+  refreshSyncBtn();
+}
+
+function renderEmp(emp){
+  var r = rec(emp.id);
+  var st = statusOf(r);
+  var passed = passedStations(emp);
+  var cum = passed.length;
+  var total = ALL_STATIONS.length;
+
+  var card = document.createElement('div');
+  card.className = 'emp-card';
+
+  // ---- 頭 ----
+  var head = document.createElement('div');
+  head.className = 'emp-head';
+  head.innerHTML =
+    '<span class="emp-name">' + esc(emp.name) + '</span>' +
+    '<span class="lv-chip ' + emp.level + '">' + (emp.level === 'cadre' ? '幹部' : '正職') + '</span>' +
+    '<span class="cum-chip">已通過 ' + cum + ' / ' + total + ' 站' + (cum === total ? '｜🏆 全站完成' : '') + '</span>' +
+    '<span class="status-chip ' + st.code + '">' + st.label + '</span>';
+  card.appendChild(head);
+
+  // ---- 迷你徽章：10 站一排，綠＝已過、灰＝未過（編輯模式點徽章補登/取消） ----
+  var ps = document.createElement('div');
+  ps.className = 'ps-row';
+  ALL_STATIONS.forEach(function(s, i){
+    if(i === STATIONS.staff.length){
+      var div = document.createElement('span');
+      div.className = 'ps-divider';
+      ps.appendChild(div);
+    }
+    var on = passed.indexOf(s) !== -1;
+    var isCadre = i >= STATIONS.staff.length;
+    var b = document.createElement('span');
+    b.className = 'mini-badge ' + (isCadre ? 'g-cadre' : 'g-staff') + (on ? ' on' : '') + (EDITING ? ' clickable' : '');
+    b.textContent = SHORT_NAMES[s] || s.charAt(0);
+    b.title = s + (on ? '｜✓ 已通過' : '｜未通過') + (EDITING ? '（點一下切換）' : '');
+    if(EDITING){
+      b.onclick = function(){
+        if(!emp.passed) emp.passed = [];
+        var idx = emp.passed.indexOf(s);
+        if(idx === -1) emp.passed.push(s);
+        else emp.passed.splice(idx, 1);
+        markDirty(); render();
+      };
+    }
+    ps.appendChild(b);
+  });
+  card.appendChild(ps);
+
+  // ---- 調薪提示：本月通過讓正職站數達3倍數→下月調1500；幹部站達2倍數→下月調1000 ----
+  if(st.code === 'pass' && r.station){
+    var upTo = passedSetUpTo(emp, curMonth);
+    var isStaffSt = STATIONS.staff.indexOf(r.station) !== -1;
+    var group = isStaffSt ? STATIONS.staff : STATIONS.cadre;
+    var rule = isStaffSt ? RAISE_RULES.staffStation : RAISE_RULES.cadreStation;
+    var n = group.filter(function(s){ return upTo[s]; }).length;
+    if(n > 0 && n % rule.every === 0){
+      var rb = document.createElement('div');
+      rb.className = 'raise-banner';
+      rb.textContent = '🎉 達調薪門檻，' + nextMonthLabel(curMonth) + '調薪 ' + rule.amount + ' 元';
+      card.appendChild(rb);
+    }
+  }
+
+  // ---- 本月考核 ----
+  var body = document.createElement('div');
+  body.className = 'emp-body';
+
+  // 考核站
+  var f1 = document.createElement('div');
+  f1.className = 'field';
+  f1.innerHTML = '<span class="flabel">本月考核站</span>';
+  var sel = document.createElement('select');
+  sel.className = 'fsel';
+  sel.disabled = !EDITING;
+  function optHtml(s){
+    return '<option value="' + esc(s) + '"' + (r.station === s ? ' selected' : '') + '>' + esc(s) + '</option>';
+  }
+  sel.innerHTML = '<option value="">— 未選 —</option>' +
+    '<optgroup label="正職站">' + STATIONS.staff.map(optHtml).join('') + '</optgroup>' +
+    '<optgroup label="幹部站">' + STATIONS.cadre.map(optHtml).join('') + '</optgroup>';
+  sel.onchange = function(){
+    if(r.station !== sel.value) r.checks = [];   // 換站別清空檢查勾選
+    r.station = sel.value;
+    markDirty(); render();
+  };
+  f1.appendChild(sel);
+  body.appendChild(f1);
+
+  // 遲到
+  var f2 = document.createElement('div');
+  f2.className = 'field';
+  f2.innerHTML = '<span class="flabel">當月遲到</span>';
+  var lt = document.createElement('label');
+  lt.className = 'late-toggle' + (r.late ? ' on' : '');
+  var cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = !!r.late;
+  cb.disabled = !EDITING;
+  cb.onchange = function(){
+    r.late = cb.checked;
+    if(r.late) r.pass = '';
+    markDirty(); render();
+  };
+  lt.appendChild(cb);
+  lt.appendChild(document.createTextNode('本月有遲到'));
+  f2.appendChild(lt);
+  body.appendChild(f2);
+
+  // 通過/不通過
+  var f3 = document.createElement('div');
+  f3.className = 'field';
+  f3.innerHTML = '<span class="flabel">考核結果</span>';
+  var seg = document.createElement('div');
+  seg.className = 'pass-seg';
+  var canJudge = EDITING && !r.late && (r.mistakes||[]).length < MAX_MISTAKES;
+  var bPass = document.createElement('button');
+  bPass.textContent = '通過';
+  bPass.disabled = !canJudge;
+  if(st.code === 'pass') bPass.className = 'on-pass';
+  bPass.onclick = function(){ r.pass = (r.pass === 'pass' ? '' : 'pass'); markDirty(); render(); };
+  var bFail = document.createElement('button');
+  bFail.textContent = '不通過';
+  bFail.disabled = !EDITING || r.late;
+  if(st.code === 'fail') bFail.className = 'on-fail';
+  bFail.onclick = function(){ r.pass = (r.pass === 'fail' ? '' : 'fail'); markDirty(); render(); };
+  seg.appendChild(bPass); seg.appendChild(bFail);
+  f3.appendChild(seg);
+  body.appendChild(f3);
+
+  card.appendChild(body);
+
+  // ---- 考核檢查細項 ----
+  var cl = CHECKLISTS[r.station];
+  if(cl){
+    var items = checklistItems(r.station);
+    var done = r.checks.filter(function(c){ return items.indexOf(c) !== -1; }).length;
+    var sec = document.createElement('div');
+    sec.className = 'chk-section';
+    var ch = document.createElement('div');
+    ch.className = 'chk-head';
+    ch.innerHTML = '<span class="chk-title">考核檢查細項｜' + esc(r.station) + '</span>' +
+      '<span class="chk-count' + (done === items.length ? ' done' : '') + '">' + done + ' / ' + items.length + '</span>';
+    sec.appendChild(ch);
+    cl.groups.forEach(function(g, gi){
+      if(g.title){
+        var gt = document.createElement('div');
+        gt.className = 'chk-group-title';
+        gt.textContent = g.title + '：';
+        sec.appendChild(gt);
+      }
+      g.items.forEach(function(itemText){
+        var checked = r.checks.indexOf(itemText) !== -1;
+        var lab = document.createElement('label');
+        lab.className = 'chk-item' + (checked ? ' checked' : '');
+        var cbx = document.createElement('input');
+        cbx.type = 'checkbox';
+        cbx.checked = checked;
+        cbx.disabled = !EDITING;
+        cbx.onchange = function(){
+          var pos = r.checks.indexOf(itemText);
+          if(cbx.checked && pos === -1) r.checks.push(itemText);
+          if(!cbx.checked && pos !== -1) r.checks.splice(pos, 1);
+          markDirty(); render();
+        };
+        var tx = document.createElement('span');
+        tx.className = 'chk-text';
+        tx.textContent = itemText;
+        lab.appendChild(cbx); lab.appendChild(tx);
+        if(EDIT_LEVEL === 'global'){
+          var del = document.createElement('button');
+          del.className = 'chk-del';
+          del.textContent = '✕';
+          del.title = '刪除此檢查項目（全域）';
+          del.onclick = function(ev){
+            ev.preventDefault(); ev.stopPropagation();
+            removeCheckItem(r.station, gi, itemText);
+          };
+          lab.appendChild(del);
+        }
+        sec.appendChild(lab);
+      });
+      if(EDIT_LEVEL === 'global'){
+        var addI = document.createElement('button');
+        addI.className = 'chk-add-item';
+        addI.textContent = '＋ 新增細項' + (g.title ? '（' + g.title + '）' : '');
+        addI.onclick = function(){ addCheckItem(r.station, gi); };
+        sec.appendChild(addI);
+      }
+    });
+    if(cl.note){
+      var nt = document.createElement('div');
+      nt.className = 'chk-note';
+      nt.textContent = '※ ' + cl.note;
+      sec.appendChild(nt);
+    }
+    card.appendChild(sec);
+  } else if(r.station && EDIT_LEVEL === 'global'){
+    // 這站還沒有細項（例如幹部站）→ 全域模式可直接建立
+    var sec0 = document.createElement('div');
+    sec0.className = 'chk-section';
+    var addB = document.createElement('button');
+    addB.className = 'chk-add-item';
+    addB.textContent = '＋ 為「' + r.station + '」建立檢查細項';
+    addB.onclick = function(){ addCheckItem(r.station, 0); };
+    sec0.appendChild(addB);
+    card.appendChild(sec0);
+  }
+
+  // ---- 失誤紀錄 ----
+  var mk = document.createElement('div');
+  mk.className = 'mistakes';
+  var mhead = document.createElement('div');
+  mhead.className = 'mk-head';
+  var n = (r.mistakes||[]).length;
+  mhead.innerHTML = '<span class="mk-title">失誤紀錄</span><span class="mk-count' + (n >= MAX_MISTAKES ? ' full' : '') + '">' + n + ' / ' + MAX_MISTAKES + '</span>';
+  if(EDITING){
+    var addB = document.createElement('button');
+    addB.className = 'mk-add';
+    addB.textContent = '＋ 登記失誤';
+    addB.disabled = n >= MAX_MISTAKES;
+    addB.onclick = function(){
+      r.mistakes.push({ d: new Date().toISOString().slice(0,10), r: '' });
+      if(r.mistakes.length >= MAX_MISTAKES) r.pass = '';
+      markDirty(); render();
+    };
+    mhead.appendChild(addB);
+  }
+  mk.appendChild(mhead);
+
+  if(n === 0){
+    var me = document.createElement('div');
+    me.className = 'mk-empty';
+    me.textContent = '本月無失誤';
+    mk.appendChild(me);
+  } else {
+    r.mistakes.forEach(function(m, i){
+      var row = document.createElement('div');
+      row.className = 'mk-row';
+      var di = document.createElement('input');
+      di.type = 'date'; di.value = m.d || ''; di.disabled = !EDITING;
+      di.onchange = function(){ m.d = di.value; markDirty(); };
+      var ri = document.createElement('input');
+      ri.className = 'mk-reason'; ri.placeholder = '失誤原因…'; ri.value = m.r || ''; ri.disabled = !EDITING;
+      ri.oninput = function(){ m.r = ri.value; markDirty(); };
+      row.appendChild(di); row.appendChild(ri);
+      if(EDITING){
+        var del = document.createElement('button');
+        del.className = 'mk-del'; del.textContent = '🗑'; del.title = '刪除這筆失誤';
+        del.onclick = function(){
+          if(!confirm('刪除這筆失誤紀錄？')) return;
+          r.mistakes.splice(i,1); markDirty(); render();
+        };
+        row.appendChild(del);
+      }
+      mk.appendChild(row);
+    });
+  }
+  card.appendChild(mk);
+
+  // ---- 移除員工 ----
+  if(EDITING){
+    var foot = document.createElement('div');
+    foot.className = 'emp-foot';
+    var rm = document.createElement('button');
+    rm.className = 'emp-remove';
+    rm.textContent = '移除此員工（保留歷史紀錄）';
+    rm.onclick = function(){
+      if(!confirm('將「' + emp.name + '」從考核名單移除？\n歷史紀錄會保留，之後可請工程師恢復。')) return;
+      emp.active = false; markDirty(); render();
+    };
+    foot.appendChild(rm);
+    card.appendChild(foot);
+  }
+
+  return card;
+}
+
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+
+// ============================================
+// 操作
+// ============================================
+function switchStore(key){
+  if(DIRTY && EDITING && !confirm('有未儲存的變更，切換門市將不會上傳，確定？')) return;
+  curStore = key;
+  sessionStorage.setItem('cd_review_store', key);
+  pullFromCloud(true).finally(render);
+}
+
+function shiftMonth(delta){
+  var p = curMonth.split('-');
+  var d = new Date(Number(p[0]), Number(p[1]) - 1 + delta, 1);
+  curMonth = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  render();
+}
+
+function toggleEdit(){
+  if(editState()){
+    sessionStorage.removeItem('cd_review_edit_global');
+    sessionStorage.removeItem('cd_review_edit_' + curStore);
+    render();
+    return;
+  }
+  var s = STORES.find(function(x){ return x.key === curStore; });
+  var input = prompt('【' + s.name + '】輸入店長密碼或全域密碼：');
+  if(input === null) return;
+  input = String(input).trim();
+  if(input === GLOBAL_EDIT_PASSWORD){
+    sessionStorage.setItem('cd_review_edit_global', '1');   // 全域：四店都能編＋管理細項
+  } else if(input === EDIT_PASSWORDS[curStore]){
+    sessionStorage.setItem('cd_review_edit_' + curStore, '1');
+  } else {
+    alert('❌ 密碼錯誤');
+    return;
+  }
+  render();
+}
+
+function addEmployee(){
+  var name = prompt('員工姓名：');
+  if(!name || !name.trim()) return;
+  var lv = prompt('職級？輸入 1=正職、2=幹部', '1');
+  if(lv === null) return;
+  var level = (String(lv).trim() === '2') ? 'cadre' : 'staff';
+  storeData().employees.push({
+    id: 'e' + Date.now() + Math.floor(Math.random()*1000),
+    name: name.trim(),
+    level: level,
+    active: true,
+    passed: []
+  });
+  markDirty(); render();
+}
+
+// ============================================
+// 本機快取 + 雲端同步
+// ============================================
+function cacheKey(){ return 'cd_review_data_' + curStore; }
+function saveLocal(){
+  try{ localStorage.setItem(cacheKey(), JSON.stringify(storeData())); }catch(e){}
+}
+function loadLocal(){
+  try{
+    var raw = localStorage.getItem(cacheKey());
+    if(raw) DATA[curStore] = JSON.parse(raw);
+  }catch(e){}
+}
+
+function markDirty(){ DIRTY = true; saveLocal(); refreshSyncBtn(); }
+function markClean(){ DIRTY = false; saveLocal(); refreshSyncBtn(); }
+
+function refreshSyncBtn(){
+  var btn = document.getElementById('syncBtn');
+  if(!syncUrl()){ btn.className = 'sync-chip err'; btn.textContent = '⚙️ 未設定雲端'; return; }
+  if(DIRTY){ btn.className = 'sync-chip dirty'; btn.textContent = '⚠️ 有變更 — 點此上傳'; }
+  else { btn.className = 'sync-chip idle'; btn.textContent = '☁️ 已同步'; }
+}
+
+function callGAS(action, payload){
+  var url = syncUrl();
+  if(!url) return Promise.reject(new Error('尚未設定雲端網址'));
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(Object.assign({ action: action }, payload || {}))
+  }).then(function(r){ return r.json(); });
+}
+
+function onSyncClick(){
+  if(!syncUrl()){ openSettings(); return; }
+  pushToCloud();
+}
+
+function pushToCloud(){
+  var btn = document.getElementById('syncBtn');
+  btn.className = 'sync-chip saving'; btn.textContent = '⏳ 上傳中…';
+  callGAS('saveStore', { store: curStore, data: storeData() }).then(function(res){
+    if(res && res.ok){ markClean(); showToast('✅ 已存到雲端', 'ok'); }
+    else throw new Error((res && res.error) || '雲端回應錯誤');
+  }).catch(function(err){
+    refreshSyncBtn();
+    alert('❌ 上傳失敗：' + err.message + '\n\n資料仍保留在本機，可稍後再試。');
+  });
+}
+
+function pullFromCloud(silent){
+  loadLocal();
+  if(!syncUrl()) return Promise.resolve();
+  return callGAS('getStore', { store: curStore }).then(function(res){
+    if(!res || !res.ok) throw new Error((res && res.error) || '雲端回應錯誤');
+    var cloudEmpty = !res.data || !res.data.employees || res.data.employees.length === 0;
+    if(res.data && !cloudEmpty){ DATA[curStore] = res.data; saveLocal(); }
+    DIRTY = false;
+    // 雲端還沒有這家店的名單 → 用內建名單自動補上傳一次，試算表才有資料
+    if(cloudEmpty){
+      DATA[curStore] = { employees: [], records: {} };
+      ensureSeed();
+      if(storeData().employees.length > 0){
+        return callGAS('saveStore', { store: curStore, data: storeData() }).then(function(res2){
+          if(res2 && res2.ok){ DIRTY = false; if(!silent) showToast('✅ 已將內建名單同步到雲端', 'ok'); }
+        });
+      }
+    }
+  }).catch(function(err){
+    if(!silent) showToast('讀取雲端失敗：' + err.message, 'err');
+  });
+}
+
+// ---- 檢查細項設定：雲端共用（全域密碼才能改） ----
+function pullConfig(){
+  if(!syncUrl()) return Promise.resolve();
+  return callGAS('getConfig', {}).then(function(res){
+    if(res && res.ok && res.config && res.config.checklists){
+      CHECKLISTS = res.config.checklists;
+    }
+  }).catch(function(){ /* 讀不到就用內建預設 */ });
+}
+
+function pushConfig(){
+  if(!syncUrl()){ showToast('尚未設定雲端網址，細項只改在本機', 'err'); return Promise.resolve(); }
+  return callGAS('saveConfig', { config: { checklists: CHECKLISTS } }).then(function(res){
+    if(res && res.ok) showToast('✅ 檢查細項已同步到雲端', 'ok');
+    else throw new Error((res && res.error) || '雲端回應錯誤');
+  }).catch(function(err){
+    showToast('細項同步失敗：' + err.message, 'err');
+  });
+}
+
+function addCheckItem(station, groupIdx){
+  var txt = prompt('【' + station + '】新增檢查項目：');
+  if(!txt || !txt.trim()) return;
+  if(!CHECKLISTS[station]) CHECKLISTS[station] = { groups: [{ title: '', items: [] }] };
+  CHECKLISTS[station].groups[groupIdx || 0].items.push(txt.trim());
+  render();
+  pushConfig();
+}
+
+function removeCheckItem(station, groupIdx, itemText){
+  if(!confirm('刪除檢查項目：\n「' + itemText + '」？\n（不影響已勾過的歷史紀錄）')) return;
+  var g = CHECKLISTS[station].groups[groupIdx];
+  var i = g.items.indexOf(itemText);
+  if(i !== -1) g.items.splice(i, 1);
+  render();
+  pushConfig();
+}
+
+function openSettings(){
+  var cur = localStorage.getItem('cd_review_sync_url') || '';
+  var v = prompt('考核紀錄 GAS 雲端網址（/exec 結尾）：', cur);
+  if(v === null) return;
+  v = v.trim();
+  if(v) localStorage.setItem('cd_review_sync_url', v);
+  else localStorage.removeItem('cd_review_sync_url');
+  pullFromCloud().finally(render);
+}
+
+var toastTimer = null;
+function showToast(msg, kind){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (kind || 'ok') + ' show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.className = 'toast'; }, 2200);
+}
+
+// ============================================
+// 啟動
+// ============================================
+render();
+Promise.all([pullFromCloud(true), pullConfig()]).finally(render);
+</script>
+</body>
+</html>

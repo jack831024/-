@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>缺失登記</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#dc2626;
+  --brand-dark:#b91c1c;
+  --ink:#0f172a;
+  --ink-2:#475569;
+  --ink-3:#94a3b8;
+  --line:#e2e8f0;
+  --ok:#059669;
+  --bad:#dc2626;
+  --warn:#d97706;
+}
+html,body{min-height:100%}
+body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;padding:1.25rem;overflow-x:hidden;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #fee2e2 0%, transparent 50%),
+    radial-gradient(900px 500px at 110% 10%, #fde4d3 0%, transparent 55%),
+    linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+}
+.wrap{max-width:860px;margin:0 auto;padding-bottom:3rem}
+
+.back-btn{position:fixed;top:16px;left:16px;width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.85);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2);transition:all .2s;box-shadow:0 4px 12px -4px rgba(15,23,42,.1);z-index:10}
+.back-btn:hover{background:#fff;color:var(--brand)}
+.back-btn svg{width:18px;height:18px}
+
+.hero{text-align:center;margin:2.2rem 0 1.2rem}
+h1{font-size:24px;font-weight:700;letter-spacing:-0.02em}
+.subtitle{font-size:13px;color:var(--ink-2);margin-top:4px}
+
+.store-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+.store-chip{padding:9px 18px;border-radius:999px;border:1.5px solid var(--line);background:rgba(255,255,255,.8);font-family:inherit;font-size:14px;font-weight:600;color:var(--ink-2);cursor:pointer;transition:all .18s}
+.store-chip:hover{border-color:var(--brand);color:var(--brand)}
+.store-chip.on{background:linear-gradient(135deg,var(--brand),#f87171);border-color:transparent;color:#fff;box-shadow:0 6px 16px -6px rgba(220,38,38,.5)}
+
+.month-row{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:14px}
+.mbtn{width:34px;height:34px;border-radius:10px;border:1.5px solid var(--line);background:#fff;cursor:pointer;font-size:15px;color:var(--ink-2);transition:all .15s}
+.mbtn:hover{border-color:var(--brand);color:var(--brand)}
+.mlabel{font-size:17px;font-weight:700;letter-spacing:1px;min-width:120px;text-align:center}
+
+.rules{background:rgba(255,255,255,.8);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.9);border-radius:18px;margin-bottom:14px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -12px rgba(15,23,42,.08)}
+.rules summary{padding:14px 18px;cursor:pointer;font-size:14.5px;font-weight:700;color:var(--ink);list-style:none;display:flex;align-items:center;gap:8px;user-select:none}
+.rules summary::-webkit-details-marker{display:none}
+.rules summary .arr{margin-left:auto;color:var(--ink-3);transition:transform .2s;font-size:12px}
+.rules[open] summary .arr{transform:rotate(180deg)}
+.rules-body{padding:0 18px 16px;font-size:13px;color:var(--ink-2);line-height:1.9}
+
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.tbtn{padding:9px 16px;border-radius:12px;border:1.5px solid var(--line);background:rgba(255,255,255,.85);font-family:inherit;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
+.tbtn:hover{border-color:var(--brand);color:var(--brand)}
+.spacer{flex:1}
+.sync-chip{font-size:12px;font-weight:600;padding:7px 12px;border-radius:999px;border:none;cursor:pointer;font-family:inherit}
+.sync-chip.idle{background:rgba(5,150,105,.1);color:var(--ok)}
+.sync-chip.dirty{background:rgba(217,119,6,.12);color:var(--warn)}
+.sync-chip.saving{background:rgba(220,38,38,.08);color:var(--brand)}
+.sync-chip.err{background:rgba(220,38,38,.1);color:var(--bad)}
+
+.hint-banner{font-size:12.5px;color:var(--warn);background:rgba(217,119,6,.08);border:1px solid rgba(217,119,6,.25);border-radius:12px;padding:10px 14px;margin-bottom:12px;display:none}
+.hint-banner.show{display:block}
+
+/* 項目管理面板（全域密碼） */
+.item-panel{background:rgba(255,255,255,.9);border:1.5px dashed rgba(220,38,38,.35);border-radius:16px;padding:14px 16px;margin-bottom:14px;display:none}
+.item-panel.show{display:block}
+.item-panel h3{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--brand-dark)}
+.ip-row{display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px dashed var(--line);font-size:13px}
+.ip-row:last-of-type{border-bottom:none}
+.ip-name{flex:1;color:var(--ink-2);cursor:pointer}
+.ip-name:hover{color:var(--brand)}
+.ip-row.archived .ip-name{color:var(--ink-3);text-decoration:line-through}
+.ip-act{border:none;background:none;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;color:var(--ink-3);padding:4px 8px;border-radius:8px}
+.ip-act:hover{background:rgba(15,23,42,.05);color:var(--brand)}
+.ip-add{display:block;margin-top:8px;border:1px dashed var(--line);background:none;border-radius:8px;padding:7px 14px;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--brand);cursor:pointer;width:100%}
+.ip-add:hover{border-color:var(--brand);background:rgba(220,38,38,.04)}
+
+/* 員工卡 */
+.emp-list{display:flex;flex-direction:column;gap:12px}
+.emp-card{background:rgba(255,255,255,.85);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.9);border-radius:18px;padding:16px 18px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -12px rgba(15,23,42,.08)}
+.emp-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.emp-name{font-size:16.5px;font-weight:700}
+.cnt-chip{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:999px;background:rgba(15,23,42,.05);color:var(--ink-2)}
+.cnt-chip.warn{background:rgba(217,119,6,.12);color:var(--warn)}
+.cnt-chip.bad{background:rgba(220,38,38,.1);color:var(--bad)}
+
+.retest-banner{margin-top:10px;padding:9px 14px;border-radius:12px;font-size:13px;font-weight:700;line-height:1.7}
+.retest-banner.now{color:var(--bad);background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.25)}
+.retest-banner.next{color:var(--warn);background:rgba(217,119,6,.08);border:1px solid rgba(217,119,6,.25)}
+
+/* 缺失摘要徽章 */
+.sum-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.sum-chip{font-size:11.5px;font-weight:700;padding:4px 11px;border-radius:999px;background:rgba(217,119,6,.1);color:var(--warn);border:1px solid rgba(217,119,6,.25)}
+.sum-chip.bad{background:rgba(220,38,38,.1);color:var(--bad);border-color:rgba(220,38,38,.3)}
+
+/* 缺失列表 */
+.df-list{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.df-row{display:flex;align-items:flex-start;gap:8px;font-size:13px;padding:8px 10px;border-radius:10px;background:rgba(15,23,42,.025);flex-wrap:wrap}
+.df-item{font-weight:700;color:var(--brand-dark);flex:none;max-width:100%}
+.df-item .x3{font-size:10.5px;font-weight:700;background:rgba(220,38,38,.12);color:var(--bad);border-radius:999px;padding:1px 7px;margin-left:4px}
+.df-date{color:var(--ink-3);font-family:ui-monospace,Menlo,monospace;font-size:12px;flex:none}
+.df-reason{color:var(--ink-2);flex:1;min-width:120px}
+.df-del{border:none;background:none;color:var(--ink-3);cursor:pointer;font-size:13px;flex:none}
+.df-del:hover{color:var(--bad)}
+.df-empty{font-size:12.5px;color:var(--ink-3);margin-top:12px}
+
+/* 新增缺失表單 */
+.df-form{margin-top:12px;border-top:1px dashed var(--line);padding-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.df-form select,.df-form input{padding:8px 10px;border:1.5px solid var(--line);border-radius:10px;background:#fff;font-family:inherit;font-size:13px;color:var(--ink);outline:none}
+.df-form select:focus,.df-form input:focus{border-color:var(--brand)}
+.df-form select{max-width:100%}
+.df-form input.reason{flex:1;min-width:150px}
+.df-form button{padding:8px 16px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--brand),#f87171);color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px -4px rgba(220,38,38,.5)}
+.df-form button:hover{transform:translateY(-1px)}
+
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--ink-3);font-size:14px;background:rgba(255,255,255,.6);border-radius:18px;border:1px dashed var(--line)}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:11px 20px;border-radius:12px;font-size:13.5px;font-weight:600;color:#fff;z-index:99;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw}
+.toast.ok{background:#059669}
+.toast.err{background:#dc2626}
+.toast.show{opacity:1}
+
+@media(max-width:600px){
+  body{padding:.9rem}
+  .df-form select{width:100%}
+  .df-form input[type=date]{flex:1}
+}
+</style>
+</head>
+<body>
+
+<button class="back-btn" onclick="location.href='home.html'" title="返回主頁">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+</button>
+
+<div class="wrap">
+  <div class="hero">
+    <h1>⚠️ 缺失登記</h1>
+    <p class="subtitle">員工可查看全店紀錄；店長登記需門店密碼</p>
+  </div>
+
+  <div class="store-row" id="storeRow"></div>
+
+  <div class="month-row">
+    <button class="mbtn" onclick="shiftMonth(-1)">◀</button>
+    <span class="mlabel" id="monthLabel"></span>
+    <button class="mbtn" onclick="shiftMonth(1)">▶</button>
+  </div>
+
+  <details class="rules">
+    <summary>📋 缺失登記規則 <span class="arr">▼</span></summary>
+    <div class="rules-body">
+      ・主管發現缺失時，登記「項目＋日期＋原因」。<br>
+      ・同一項目當月累計 <b>3 次（含）以上</b>，下個月需<b>重考該項目</b>，系統會自動提醒。<br>
+      ・員工名單與考核紀錄共用，名單調整請至「考核紀錄」頁。<br>
+      ・項目清單四店統一，由全域密碼在本頁「🛠 管理項目」中新增、修改、封存。
+    </div>
+  </details>
+
+  <div class="hint-banner" id="urlBanner">⚙️ 尚未設定雲端網址，目前資料只存在這台裝置。請主管點「⚙️」貼上 GAS 網址。</div>
+
+  <div class="toolbar">
+    <button class="tbtn" id="editBtn" onclick="toggleEdit()">🔒 主管登記</button>
+    <button class="tbtn" id="itemBtn" onclick="toggleItemPanel()">🛠 管理項目</button>
+    <span class="spacer"></span>
+    <button class="sync-chip idle" id="syncBtn" onclick="onSyncClick()">☁️ 已同步</button>
+    <button class="tbtn" onclick="openSettings()">⚙️</button>
+  </div>
+
+  <div class="item-panel" id="itemPanel"></div>
+
+  <div class="emp-list" id="empList"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================
+// 設定（與考核紀錄共用同一個 GAS 後端）
+// ============================================
+var BUILTIN_REVIEW_SYNC_URL = "https://script.google.com/macros/s/AKfycbwhMQQqBW67DQ-xOQdJIew5u1y6sNWad9GtsNXPcBvZKUmnx70RvKiakKuYjAYl47GX/exec";
+
+var STORES = [
+  { key: 'chudian-zhonghe',    name: '中和店', brand: '初殿' },
+  { key: 'chudian-yongchun',   name: '永春店', brand: '初殿' },
+  { key: 'chudian-xinzhuang',  name: '新莊店', brand: '初殿' },
+  { key: 'shicheng-zhongxiao', name: '忠孝店', brand: '十城' }
+];
+
+// 各店店長密碼（同 薪資對帳 / 考核紀錄）
+var EDIT_PASSWORDS = {
+  'chudian-zhonghe':    'a90369287',
+  'chudian-yongchun':   'a94213054',
+  'chudian-xinzhuang':  'a60749791',
+  'shicheng-zhongxiao': 'a61222042'
+};
+// 全域密碼：可登記所有店＋管理項目清單
+var GLOBAL_EDIT_PASSWORD = 'yuanxin2022';
+
+var RETEST_THRESHOLD = 3;   // 同一項目當月 3 次（含）以上 → 下月重考
+
+// 預設缺失項目（雲端設定有自訂版時會蓋過；ID 固定，改名不影響歷史紀錄）
+var DEFAULT_DEFECT_ITEMS = [
+  { id:'i01', name:'切肉厚薄刻度正確' },
+  { id:'i02', name:'開收班是否確實' },
+  { id:'i03', name:'衛生棉.衛生紙.桌上垃圾桶袋子.門口去味劑 是否補滿' },
+  { id:'i04', name:'結帳有講 去味劑有講在門外可以使用' },
+  { id:'i05', name:'海鮮.松阪豬，出餐是否清洗乾淨' },
+  { id:'i06', name:'假日櫃台訂位.候位是否能安排得當' },
+  { id:'i07', name:'飲料品質' },
+  { id:'i08', name:'冷氣有應對客人數量作調整' },
+  { id:'i09', name:'各項產品的控量.是否備得足夠' },
+  { id:'i10', name:'上下班打卡確實 上下班禮貌打招呼' },
+  { id:'i11', name:'KEY貨單確實.上傳小結報表確實' },
+  { id:'i12', name:'開會準備（營業額 店裡改善 讚美 糾正 討論回應別人問題）' },
+  { id:'i13', name:'牛奶加湯壺.牛奶壺.花枝蝦仁漿.蒜.薑 離峰是否有冰起來' },
+  { id:'i14', name:'週清是否確實.日常清潔是否確實' },
+  { id:'i15', name:'告知海鮮上桌術語，活動優惠告知打卡.髮圈.圍兜.湯是否太鹹淡' },
+  { id:'i16', name:'積極收空盤.告知冰淇淋在地下室' },
+  { id:'i17', name:'出餐品質是否良好.擺盤是否好看' },
+  { id:'i18', name:'出餐是否不會遺漏' },
+  { id:'i19', name:'叫貨確實' },
+  { id:'i20', name:'自助吧.2樓廁所.火鍋料區 巡清潔以及料是否足夠' }
+];
+var DEFECT_ITEMS = JSON.parse(JSON.stringify(DEFAULT_DEFECT_ITEMS));
+
+function itemName(id){
+  var it = DEFECT_ITEMS.find(function(x){ return x.id === id; });
+  return it ? it.name : '(已移除項目)';
+}
+function itemNo(id){
+  var idx = DEFECT_ITEMS.findIndex(function(x){ return x.id === id; });
+  return idx === -1 ? '?' : (idx + 1);
+}
+// 短標籤：編號＋前幾個字，給摘要徽章用
+function itemShort(id){
+  var n = itemName(id).split(/[.．(（,，\s]/)[0];
+  if(n.length > 7) n = n.slice(0, 7) + '…';
+  return itemNo(id) + '.' + n;
+}
+function activeItems(){
+  return DEFECT_ITEMS.filter(function(x){ return !x.archived; });
+}
+
+// ============================================
+// 狀態
+// ============================================
+var curStore = sessionStorage.getItem('cd_defect_store') || STORES[0].key;
+var curMonth = currentMonth();
+// DATA[store] = { employees:[{id,name,level,active}], months:{ 'YYYY-MM': { empId:[{i,d,r}] } } }
+var DATA = {};
+var DIRTY = false;
+var EDITING = false;
+var EDIT_LEVEL = '';
+
+function currentMonth(){
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+function prevMonthOf(month){
+  var p = month.split('-');
+  var d = new Date(Number(p[0]), Number(p[1]) - 2, 1);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+function syncUrl(){
+  if(BUILTIN_REVIEW_SYNC_URL && !localStorage.getItem('cd_review_sync_url')){
+    localStorage.setItem('cd_review_sync_url', BUILTIN_REVIEW_SYNC_URL);
+  }
+  return localStorage.getItem('cd_review_sync_url') || '';
+}
+function storeData(){
+  if(!DATA[curStore]) DATA[curStore] = { employees: [], months: {} };
+  var d = DATA[curStore];
+  if(!d.employees) d.employees = [];
+  if(!d.months) d.months = {};
+  return d;
+}
+function empDefects(empId, month){
+  var d = storeData();
+  if(!d.months[month]) d.months[month] = {};
+  if(!d.months[month][empId]) d.months[month][empId] = [];
+  return d.months[month][empId];
+}
+// 某員工某月，各項目缺失次數 {itemId: n}
+function defectCounts(empId, month){
+  var counts = {};
+  (storeData().months[month] && storeData().months[month][empId] || []).forEach(function(e){
+    counts[e.i] = (counts[e.i] || 0) + 1;
+  });
+  return counts;
+}
+// 達重考門檻的項目 id 清單
+function retestItems(empId, month){
+  var counts = defectCounts(empId, month);
+  return Object.keys(counts).filter(function(id){ return counts[id] >= RETEST_THRESHOLD; });
+}
+
+function editState(){
+  if(sessionStorage.getItem('cd_review_edit_global') === '1') return 'global';
+  if(sessionStorage.getItem('cd_defect_edit_' + curStore) === '1') return 'store';
+  return '';
+}
+
+// ============================================
+// 渲染
+// ============================================
+function renderStores(){
+  var row = document.getElementById('storeRow');
+  row.innerHTML = '';
+  STORES.forEach(function(s){
+    var b = document.createElement('button');
+    b.className = 'store-chip' + (s.key === curStore ? ' on' : '');
+    b.textContent = s.brand + '・' + s.name;
+    b.onclick = function(){ switchStore(s.key); };
+    row.appendChild(b);
+  });
+}
+
+function render(){
+  EDIT_LEVEL = editState();
+  EDITING = EDIT_LEVEL !== '';
+  renderStores();
+  document.getElementById('monthLabel').textContent = curMonth.replace('-', ' 年 ') + ' 月';
+  document.getElementById('urlBanner').className = 'hint-banner' + (syncUrl() ? '' : ' show');
+  document.getElementById('editBtn').innerHTML = EDITING
+    ? '✏️ 登記中' + (EDIT_LEVEL === 'global' ? '（全域）' : '') + '（點此鎖定）'
+    : '🔒 主管登記';
+  if(EDIT_LEVEL !== 'global') document.getElementById('itemPanel').classList.remove('show');
+  renderItemPanel();
+
+  var list = document.getElementById('empList');
+  list.innerHTML = '';
+  var emps = storeData().employees.filter(function(e){ return e.active !== false; });
+  if(emps.length === 0){
+    var div = document.createElement('div');
+    div.className = 'empty-state';
+    div.textContent = '本店尚無員工名單（名單與考核紀錄共用，請先到「考核紀錄」頁建立）';
+    list.appendChild(div);
+    refreshSyncBtn();
+    return;
+  }
+  emps.forEach(function(e){ list.appendChild(renderEmp(e)); });
+  refreshSyncBtn();
+}
+
+function renderEmp(emp){
+  var entries = (storeData().months[curMonth] && storeData().months[curMonth][emp.id]) || [];
+  var counts = defectCounts(emp.id, curMonth);
+  var total = entries.length;
+
+  var card = document.createElement('div');
+  card.className = 'emp-card';
+
+  // ---- 頭 ----
+  var head = document.createElement('div');
+  head.className = 'emp-head';
+  var cntCls = total === 0 ? '' : (Object.keys(counts).some(function(id){ return counts[id] >= RETEST_THRESHOLD; }) ? ' bad' : ' warn');
+  head.innerHTML =
+    '<span class="emp-name">' + esc(emp.name) + '</span>' +
+    '<span class="cnt-chip' + cntCls + '">本月缺失 ' + total + ' 次</span>';
+  card.appendChild(head);
+
+  // ---- 摘要徽章：哪幾項中了幾次，一眼看完 ----
+  var ids = Object.keys(counts);
+  if(ids.length){
+    var sum = document.createElement('div');
+    sum.className = 'sum-row';
+    ids.sort(function(a,b){ return itemNo(a) - itemNo(b); }).forEach(function(id){
+      var chip = document.createElement('span');
+      chip.className = 'sum-chip' + (counts[id] >= RETEST_THRESHOLD ? ' bad' : '');
+      chip.textContent = itemShort(id) + ' ×' + counts[id];
+      chip.title = itemNo(id) + '. ' + itemName(id) + '｜本月 ' + counts[id] + ' 次';
+      sum.appendChild(chip);
+    });
+    card.appendChild(sum);
+  }
+
+  // ---- 重考提醒：上月達標 → 本月需重考 ----
+  var prevRetest = retestItems(emp.id, prevMonthOf(curMonth));
+  if(prevRetest.length){
+    var rb = document.createElement('div');
+    rb.className = 'retest-banner now';
+    rb.innerHTML = '📌 本月需重考：' + prevRetest.map(function(id){ return esc(itemName(id)); }).join('、') +
+      '<br><span style="font-weight:400;font-size:11.5px">（上月同一項目缺失達 ' + RETEST_THRESHOLD + ' 次）</span>';
+    card.appendChild(rb);
+  }
+  // ---- 本月已達標 → 下月需重考 ----
+  var curRetest = retestItems(emp.id, curMonth);
+  if(curRetest.length){
+    var nb = document.createElement('div');
+    nb.className = 'retest-banner next';
+    nb.textContent = '⚠️ 下月需重考：' + curRetest.map(function(id){ return itemName(id); }).join('、');
+    card.appendChild(nb);
+  }
+
+  // ---- 缺失列表 ----
+  if(entries.length === 0){
+    var em = document.createElement('div');
+    em.className = 'df-empty';
+    em.textContent = '本月無缺失紀錄 👍';
+    card.appendChild(em);
+  } else {
+    var lst = document.createElement('div');
+    lst.className = 'df-list';
+    entries.forEach(function(e, idx){
+      var row = document.createElement('div');
+      row.className = 'df-row';
+      var hit = counts[e.i] >= RETEST_THRESHOLD;
+      row.innerHTML =
+        '<span class="df-item">' + itemNo(e.i) + '. ' + esc(itemName(e.i)) + (hit ? '<span class="x3">×' + counts[e.i] + '</span>' : '') + '</span>' +
+        '<span class="df-date">' + esc(e.d || '') + '</span>' +
+        '<span class="df-reason">' + esc(e.r || '') + '</span>';
+      if(EDITING){
+        var del = document.createElement('button');
+        del.className = 'df-del';
+        del.textContent = '🗑';
+        del.title = '刪除這筆缺失';
+        del.onclick = function(){
+          if(!confirm('刪除這筆缺失？\n' + itemName(e.i) + ' ' + (e.d||'') + ' ' + (e.r||''))) return;
+          entries.splice(idx, 1);
+          markDirty(); render();
+        };
+        row.appendChild(del);
+      }
+      lst.appendChild(row);
+    });
+    card.appendChild(lst);
+  }
+
+  // ---- 登記表單 ----
+  if(EDITING){
+    var form = document.createElement('div');
+    form.className = 'df-form';
+    var sel = document.createElement('select');
+    sel.innerHTML = '<option value="">— 選擇缺失項目 —</option>' + activeItems().map(function(it){
+      return '<option value="' + esc(it.id) + '">' + itemNo(it.id) + '. ' + esc(it.name) + '</option>';
+    }).join('');
+    var di = document.createElement('input');
+    di.type = 'date';
+    di.value = new Date().toISOString().slice(0,10);
+    var ri = document.createElement('input');
+    ri.className = 'reason';
+    ri.placeholder = '缺失原因…';
+    var btn = document.createElement('button');
+    btn.textContent = '＋ 登記';
+    btn.onclick = function(){
+      if(!sel.value){ alert('請選擇缺失項目'); return; }
+      if(!ri.value.trim()){ alert('請填寫缺失原因'); return; }
+      empDefects(emp.id, curMonth).push({ i: sel.value, d: di.value, r: ri.value.trim() });
+      markDirty(); render();
+    };
+    form.appendChild(sel); form.appendChild(di); form.appendChild(ri); form.appendChild(btn);
+    card.appendChild(form);
+  }
+
+  return card;
+}
+
+// ---- 項目管理面板（全域密碼） ----
+function toggleItemPanel(){
+  if(editState() !== 'global'){
+    var input = prompt('管理項目清單需要全域密碼：');
+    if(input === null) return;
+    if(String(input).trim() !== GLOBAL_EDIT_PASSWORD){ alert('❌ 密碼錯誤'); return; }
+    sessionStorage.setItem('cd_review_edit_global', '1');
+  }
+  document.getElementById('itemPanel').classList.toggle('show');
+  render();
+}
+function renderItemPanel(){
+  var p = document.getElementById('itemPanel');
+  if(!p.classList.contains('show') || EDIT_LEVEL !== 'global'){ p.innerHTML = ''; return; }
+  p.innerHTML = '<h3>🛠 缺失項目管理（四店共用，改了即時同步雲端）</h3>';
+  DEFECT_ITEMS.forEach(function(it, idx){
+    var row = document.createElement('div');
+    row.className = 'ip-row' + (it.archived ? ' archived' : '');
+    var nm = document.createElement('span');
+    nm.className = 'ip-name';
+    nm.textContent = (idx + 1) + '. ' + it.name;
+    nm.title = '點一下改名';
+    nm.onclick = function(){
+      var v = prompt('修改項目名稱（歷史紀錄會自動跟著新名稱）：', it.name);
+      if(v === null || !v.trim()) return;
+      it.name = v.trim();
+      render(); pushConfig();
+    };
+    row.appendChild(nm);
+    var arc = document.createElement('button');
+    arc.className = 'ip-act';
+    arc.textContent = it.archived ? '♻️ 還原' : '🗄 封存';
+    arc.title = it.archived ? '恢復此項目' : '封存後不能再登記，歷史紀錄保留';
+    arc.onclick = function(){
+      if(!it.archived && !confirm('封存「' + it.name + '」？\n封存後無法再登記此項目，歷史紀錄保留，可隨時還原。')) return;
+      it.archived = !it.archived;
+      render(); pushConfig();
+    };
+    row.appendChild(arc);
+    p.appendChild(row);
+  });
+  var add = document.createElement('button');
+  add.className = 'ip-add';
+  add.textContent = '＋ 新增缺失項目';
+  add.onclick = function(){
+    var v = prompt('新增缺失項目名稱：');
+    if(!v || !v.trim()) return;
+    var maxN = DEFECT_ITEMS.reduce(function(m, it){
+      var n = parseInt(String(it.id).replace(/\D/g,''), 10);
+      return isNaN(n) ? m : Math.max(m, n);
+    }, 0);
+    DEFECT_ITEMS.push({ id: 'i' + String(maxN + 1).padStart(2,'0'), name: v.trim() });
+    render(); pushConfig();
+  };
+  p.appendChild(add);
+}
+
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+
+// ============================================
+// 操作
+// ============================================
+function switchStore(key){
+  if(DIRTY && EDITING && !confirm('有未儲存的變更，切換門市將不會上傳，確定？')) return;
+  curStore = key;
+  sessionStorage.setItem('cd_defect_store', key);
+  pullFromCloud(true).finally(render);
+}
+
+function shiftMonth(delta){
+  var p = curMonth.split('-');
+  var d = new Date(Number(p[0]), Number(p[1]) - 1 + delta, 1);
+  curMonth = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  render();
+}
+
+function toggleEdit(){
+  if(editState()){
+    sessionStorage.removeItem('cd_review_edit_global');
+    sessionStorage.removeItem('cd_defect_edit_' + curStore);
+    render();
+    return;
+  }
+  var s = STORES.find(function(x){ return x.key === curStore; });
+  var input = prompt('【' + s.name + '】輸入店長密碼或全域密碼：');
+  if(input === null) return;
+  input = String(input).trim();
+  if(input === GLOBAL_EDIT_PASSWORD){
+    sessionStorage.setItem('cd_review_edit_global', '1');
+  } else if(input === EDIT_PASSWORDS[curStore]){
+    sessionStorage.setItem('cd_defect_edit_' + curStore, '1');
+  } else {
+    alert('❌ 密碼錯誤');
+    return;
+  }
+  render();
+}
+
+// ============================================
+// 本機快取 + 雲端同步
+// ============================================
+function cacheKey(){ return 'cd_defect_data_' + curStore; }
+function saveLocal(){
+  try{ localStorage.setItem(cacheKey(), JSON.stringify(storeData())); }catch(e){}
+}
+function loadLocal(){
+  try{
+    var raw = localStorage.getItem(cacheKey());
+    if(raw) DATA[curStore] = JSON.parse(raw);
+  }catch(e){}
+}
+function markDirty(){ DIRTY = true; saveLocal(); refreshSyncBtn(); }
+function markClean(){ DIRTY = false; saveLocal(); refreshSyncBtn(); }
+
+function refreshSyncBtn(){
+  var btn = document.getElementById('syncBtn');
+  if(!syncUrl()){ btn.className = 'sync-chip err'; btn.textContent = '⚙️ 未設定雲端'; return; }
+  if(DIRTY){ btn.className = 'sync-chip dirty'; btn.textContent = '⚠️ 有變更 — 點此上傳'; }
+  else { btn.className = 'sync-chip idle'; btn.textContent = '☁️ 已同步'; }
+}
+
+function callGAS(action, payload){
+  var url = syncUrl();
+  if(!url) return Promise.reject(new Error('尚未設定雲端網址'));
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(Object.assign({ action: action }, payload || {}))
+  }).then(function(r){ return r.json(); });
+}
+
+function onSyncClick(){
+  if(!syncUrl()){ openSettings(); return; }
+  pushToCloud();
+}
+
+function pushToCloud(){
+  var btn = document.getElementById('syncBtn');
+  btn.className = 'sync-chip saving'; btn.textContent = '⏳ 上傳中…';
+  callGAS('saveDefects', { store: curStore, data: { months: storeData().months } }).then(function(res){
+    if(res && res.ok){ markClean(); showToast('✅ 已存到雲端', 'ok'); }
+    else throw new Error((res && res.error) || '雲端回應錯誤');
+  }).catch(function(err){
+    refreshSyncBtn();
+    alert('❌ 上傳失敗：' + err.message + '\n\n資料仍保留在本機，可稍後再試。');
+  });
+}
+
+function pullFromCloud(silent){
+  loadLocal();
+  if(!syncUrl()) return Promise.resolve();
+  return callGAS('getDefects', { store: curStore }).then(function(res){
+    if(!res || !res.ok) throw new Error((res && res.error) || '雲端回應錯誤');
+    DATA[curStore] = { employees: res.employees || [], months: (res.data && res.data.months) || {} };
+    saveLocal();
+    DIRTY = false;
+  }).catch(function(err){
+    if(!silent) showToast('讀取雲端失敗：' + err.message, 'err');
+  });
+}
+
+// ---- 項目清單設定（共用 getConfig/saveConfig，key=defectItems） ----
+function pullConfig(){
+  if(!syncUrl()) return Promise.resolve();
+  return callGAS('getConfig', {}).then(function(res){
+    if(res && res.ok && res.config && res.config.defectItems && res.config.defectItems.length){
+      DEFECT_ITEMS = res.config.defectItems;
+    }
+  }).catch(function(){});
+}
+function pushConfig(){
+  if(!syncUrl()){ showToast('尚未設定雲端網址，項目只改在本機', 'err'); return Promise.resolve(); }
+  return callGAS('saveConfig', { config: { defectItems: DEFECT_ITEMS } }).then(function(res){
+    if(res && res.ok) showToast('✅ 項目清單已同步到雲端', 'ok');
+    else throw new Error((res && res.error) || '雲端回應錯誤');
+  }).catch(function(err){
+    showToast('項目同步失敗：' + err.message, 'err');
+  });
+}
+
+function openSettings(){
+  var cur = localStorage.getItem('cd_review_sync_url') || '';
+  var v = prompt('雲端網址（與考核紀錄共用，/exec 結尾）：', cur);
+  if(v === null) return;
+  v = v.trim();
+  if(v) localStorage.setItem('cd_review_sync_url', v);
+  else localStorage.removeItem('cd_review_sync_url');
+  Promise.all([pullFromCloud(), pullConfig()]).finally(render);
+}
+
+var toastTimer = null;
+function showToast(msg, kind){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (kind || 'ok') + ' show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.className = 'toast'; }, 2200);
+}
+
+// ============================================
+// 啟動
+// ============================================
+render();
+Promise.all([pullFromCloud(true), pullConfig()]).finally(render);
+</script>
+</body>
+</html>
