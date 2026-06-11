@@ -119,13 +119,16 @@ h1{font-size:24px;font-weight:700;letter-spacing:-0.02em}
 
 .empty-state{text-align:center;padding:3rem 1rem;color:var(--ink-3);font-size:14px;background:rgba(255,255,255,.6);border-radius:18px;border:1px dashed var(--line)}
 
-/* 門市選擇 */
-.picker{display:flex;flex-direction:column;gap:12px;max-width:420px;margin:1rem auto 0}
-.picker-title{text-align:center;font-size:12.5px;font-weight:700;color:var(--ink-3);letter-spacing:2px;margin-bottom:4px}
-.picker-btn{display:flex;align-items:center;gap:12px;padding:18px 20px;border-radius:16px;border:1px solid rgba(255,255,255,.9);background:rgba(255,255,255,.85);cursor:pointer;font-family:inherit;transition:all .18s;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -12px rgba(15,23,42,.08)}
-.picker-btn:hover{transform:translateY(-2px);border-color:var(--brand)}
-.pb-name{font-size:16px;font-weight:700;color:var(--ink)}
-.pb-arrow{margin-left:auto;color:var(--ink-3);font-size:20px}
+/* 門市選擇（方格狀，同小結報表） */
+.picker{max-width:480px;margin:1rem auto 0}
+.picker-title{text-align:center;font-size:12.5px;font-weight:700;color:var(--ink-3);letter-spacing:2px;margin-bottom:14px}
+.picker-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.picker-btn{background:rgba(255,255,255,.85);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.9);border-radius:18px;padding:1.25rem 1rem;cursor:pointer;transition:all .22s cubic-bezier(.4,0,.2,1);text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;font-family:inherit;box-shadow:0 1px 2px rgba(15,23,42,.04),0 6px 18px -10px rgba(15,23,42,.1)}
+.picker-btn:hover{transform:translateY(-3px);border-color:var(--brand);box-shadow:0 1px 2px rgba(15,23,42,.04),0 18px 36px -14px rgba(15,23,42,.15)}
+.picker-btn:active{transform:translateY(-1px)}
+.pb-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;background:rgba(15,23,42,.04);margin-bottom:4px}
+.pb-brand{font-size:10px;color:var(--ink-3);font-weight:600;letter-spacing:2px;text-transform:uppercase}
+.pb-name{font-size:15px;font-weight:700;color:var(--ink)}
 
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:11px 20px;border-radius:12px;font-size:13.5px;font-weight:600;color:#fff;z-index:99;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw}
 .toast.ok{background:#059669}
@@ -333,13 +336,19 @@ function renderPicker(){
   t.className = 'picker-title';
   t.textContent = 'STORE · SELECTION　請選擇門市';
   wrap.appendChild(t);
+  var grid = document.createElement('div');
+  grid.className = 'picker-grid';
   STORES.forEach(function(s){
     var b = document.createElement('button');
     b.className = 'picker-btn';
-    b.innerHTML = '<span class="pb-name">' + s.brand + '・' + s.name + '</span><span class="pb-arrow">›</span>';
+    var isSc = s.brand === '十城';
+    b.innerHTML = '<span class="pb-icon">' + (isSc ? '🍛' : '🍲') + '</span>' +
+      '<span class="pb-brand">' + (isSc ? 'SHICHENG' : 'CHUDIAN') + '</span>' +
+      '<span class="pb-name">' + s.name + '</span>';
     b.onclick = function(){ switchStore(s.key); };
-    wrap.appendChild(b);
+    grid.appendChild(b);
   });
+  wrap.appendChild(grid);
   list.appendChild(wrap);
 }
 
