@@ -173,8 +173,10 @@ select.fsel:disabled,input.fin:disabled{background:#f8fafc;color:var(--ink-2)}
 .mk-add{margin-left:auto;font-size:12px;font-weight:600;color:var(--brand);background:none;border:none;cursor:pointer;font-family:inherit}
 .mk-add:disabled{color:var(--ink-3);cursor:not-allowed}
 .mk-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
-.mk-row input[type=date]{padding:6px 8px;border:1.5px solid var(--line);border-radius:8px;font-family:inherit;font-size:12.5px}
-.mk-row input.mk-reason{flex:1;min-width:140px;padding:6px 10px;border:1.5px solid var(--line);border-radius:8px;font-family:inherit;font-size:12.5px}
+.mk-row input[type=date]{padding:6px 8px;border:1.5px solid rgba(220,38,38,.3);border-radius:8px;font-family:inherit;font-size:12.5px;color:var(--bad);font-weight:700;background:rgba(220,38,38,.04)}
+.mk-row input.mk-reason{flex:1;min-width:140px;padding:6px 10px;border:1.5px solid rgba(220,38,38,.3);border-radius:8px;font-family:inherit;font-size:12.5px;color:var(--bad);font-weight:600;background:rgba(220,38,38,.04)}
+/* 非編輯模式（disabled）也維持紅色清楚可讀，蓋掉瀏覽器預設淺灰 */
+.mk-row input[type=date]:disabled,.mk-row input.mk-reason:disabled{color:var(--bad);-webkit-text-fill-color:var(--bad);opacity:1;background:rgba(220,38,38,.05)}
 .mk-del{border:none;background:none;color:var(--bad);cursor:pointer;font-size:14px}
 .mk-empty{font-size:12px;color:var(--ink-3)}
 
