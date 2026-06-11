@@ -40,7 +40,25 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;background:
 h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;background:linear-gradient(135deg,#0f172a 0%,#475569 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .subtitle{font-size:14px;color:var(--ink-2)}
 
-.menu-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:2rem}
+/* 區塊標題 */
+.section-head{display:flex;align-items:center;gap:12px;margin:0 0 16px}
+.section-head .stag{display:inline-flex;align-items:center;gap:7px;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:700;letter-spacing:1px}
+.section-head.staff .stag{background:rgba(59,130,246,.1);color:var(--brand-dark)}
+.section-head.admin .stag{background:rgba(15,23,42,.07);color:var(--ink)}
+.section-head .sline{flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+.section-head .snote{font-size:11.5px;color:var(--ink-3);letter-spacing:.5px}
+
+/* 主管專區：點擊展開 */
+.admin-toggle{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:16px;margin-bottom:2.5rem;border:1px solid rgba(255,255,255,.85);border-radius:18px;background:rgba(255,255,255,.65);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);cursor:pointer;font-family:inherit;font-size:15px;font-weight:700;color:var(--ink);letter-spacing:1px;transition:all .2s;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -12px rgba(15,23,42,.08)}
+.admin-toggle:hover{transform:translateY(-2px);box-shadow:0 1px 2px rgba(15,23,42,.04),0 16px 36px -14px rgba(15,23,42,.16)}
+.admin-toggle .arrow{transition:transform .25s;font-size:13px;color:var(--ink-3)}
+.admin-toggle.open .arrow{transform:rotate(180deg)}
+#adminZone{display:none}
+#adminZone.open{display:block;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+
+.menu-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:2.5rem}
+a.menu-card{text-decoration:none}
 .menu-card{background:rgba(255,255,255,.75);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.8);border-radius:20px;padding:1.75rem 1.5rem;cursor:pointer;transition:all .25s cubic-bezier(.4,0,.2,1);text-align:left;display:flex;flex-direction:column;gap:10px;font-family:inherit;color:inherit;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -12px rgba(15,23,42,.08)}
 .menu-card::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0) 0%,rgba(255,255,255,0) 60%,rgba(255,255,255,.5) 100%);pointer-events:none;opacity:.7}
 .menu-card::after{content:"";position:absolute;top:-1px;left:-1px;right:-1px;height:2px;border-radius:20px 20px 0 0;opacity:0;transition:opacity .25s}
@@ -56,6 +74,19 @@ h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 .menu-card .mgo svg{transition:transform .25s}
 .menu-card:hover .mgo svg{transform:translateX(4px)}
 
+/* 即將推出（反灰、不可點） */
+.menu-card.soon{cursor:not-allowed;opacity:.55;filter:grayscale(.45)}
+.menu-card.soon:hover{transform:none;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -12px rgba(15,23,42,.08)}
+.menu-card.soon:hover::after{opacity:0}
+.menu-card.soon .mgo{color:var(--ink-3)}
+.soon-badge{position:absolute;top:16px;right:16px;font-size:11px;font-weight:700;color:#b45309;background:rgba(245,158,11,.15);border-radius:999px;padding:4px 10px;letter-spacing:1px}
+
+/* 卡片配色 */
+.menu-card.punch .icon-wrap{background:linear-gradient(135deg,#ccfbf1 0%,#99f6e4 100%);color:#0d9488}
+.menu-card.punch::after{background:linear-gradient(90deg,#0d9488,#2dd4bf)}
+.menu-card.punch:hover .icon-wrap{background:linear-gradient(135deg,#0d9488 0%,#2dd4bf 100%);color:#fff;transform:scale(1.05)}
+.menu-card.punch .mgo{color:#0d9488}
+
 .menu-card.summary .icon-wrap{background:linear-gradient(135deg,#dbeafe 0%,#bfdbfe 100%);color:var(--brand)}
 .menu-card.summary::after{background:linear-gradient(90deg,var(--brand),#60a5fa)}
 .menu-card.summary:hover .icon-wrap{background:linear-gradient(135deg,var(--brand) 0%,#60a5fa 100%);color:#fff;transform:scale(1.05)}
@@ -66,35 +97,56 @@ h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 .menu-card.inventory:hover .icon-wrap{background:linear-gradient(135deg,var(--accent) 0%,#fb923c 100%);color:#fff;transform:scale(1.05)}
 .menu-card.inventory .mgo{color:var(--accent)}
 
-.menu-card.overtime .icon-wrap{background:linear-gradient(135deg,#d1fae5 0%,#a7f3d0 100%);color:#059669}
-.menu-card.overtime::after{background:linear-gradient(90deg,#10b981,#34d399)}
-.menu-card.overtime:hover .icon-wrap{background:linear-gradient(135deg,#10b981 0%,#34d399 100%);color:#fff;transform:scale(1.05)}
-.menu-card.overtime .mgo{color:#059669}
-
-.menu-card.survey .icon-wrap{background:linear-gradient(135deg,#ede9fe 0%,#ddd6fe 100%);color:#8b5cf6}
-.menu-card.survey::after{background:linear-gradient(90deg,#8b5cf6,#a78bfa)}
-.menu-card.survey:hover .icon-wrap{background:linear-gradient(135deg,#8b5cf6 0%,#a78bfa 100%);color:#fff;transform:scale(1.05)}
-.menu-card.survey .mgo{color:#8b5cf6}
-
-.menu-card.salary .icon-wrap{background:linear-gradient(135deg,#fce7f3 0%,#fbcfe8 100%);color:#db2777}
-.menu-card.salary::after{background:linear-gradient(90deg,#ec4899,#f472b6)}
-.menu-card.salary:hover .icon-wrap{background:linear-gradient(135deg,#ec4899 0%,#f472b6 100%);color:#fff;transform:scale(1.05)}
-.menu-card.salary .mgo{color:#db2777}
+.menu-card.order .icon-wrap{background:linear-gradient(135deg,#ecfccb 0%,#d9f99d 100%);color:#65a30d}
+.menu-card.order::after{background:linear-gradient(90deg,#65a30d,#a3e635)}
+.menu-card.order:hover .icon-wrap{background:linear-gradient(135deg,#65a30d 0%,#a3e635 100%);color:#fff;transform:scale(1.05)}
+.menu-card.order .mgo{color:#65a30d}
 
 .menu-card.leave .icon-wrap{background:linear-gradient(135deg,#fef9c3 0%,#fde68a 100%);color:#ca8a04}
 .menu-card.leave::after{background:linear-gradient(90deg,#eab308,#facc15)}
 .menu-card.leave:hover .icon-wrap{background:linear-gradient(135deg,#eab308 0%,#facc15 100%);color:#fff;transform:scale(1.05)}
 .menu-card.leave .mgo{color:#ca8a04}
 
-.menu-card.verify .icon-wrap{background:linear-gradient(135deg,#cffafe 0%,#a5f3fc 100%);color:#0e7490}
-.menu-card.verify::after{background:linear-gradient(90deg,#0891b2,#22d3ee)}
-.menu-card.verify:hover .icon-wrap{background:linear-gradient(135deg,#0891b2 0%,#22d3ee 100%);color:#fff;transform:scale(1.05)}
-.menu-card.verify .mgo{color:#0e7490}
+.menu-card.survey .icon-wrap{background:linear-gradient(135deg,#ede9fe 0%,#ddd6fe 100%);color:#8b5cf6}
+.menu-card.survey::after{background:linear-gradient(90deg,#8b5cf6,#a78bfa)}
+.menu-card.survey:hover .icon-wrap{background:linear-gradient(135deg,#8b5cf6 0%,#a78bfa 100%);color:#fff;transform:scale(1.05)}
+.menu-card.survey .mgo{color:#8b5cf6}
+
+.menu-card.defect .icon-wrap{background:linear-gradient(135deg,#fee2e2 0%,#fecaca 100%);color:#dc2626}
+.menu-card.defect::after{background:linear-gradient(90deg,#dc2626,#f87171)}
+.menu-card.defect:hover .icon-wrap{background:linear-gradient(135deg,#dc2626 0%,#f87171 100%);color:#fff;transform:scale(1.05)}
+.menu-card.defect .mgo{color:#dc2626}
 
 .menu-card.reconcile .icon-wrap{background:linear-gradient(135deg,#e0f2fe 0%,#bae6fd 100%);color:#0284c7}
 .menu-card.reconcile::after{background:linear-gradient(90deg,#0284c7,#38bdf8)}
 .menu-card.reconcile:hover .icon-wrap{background:linear-gradient(135deg,#0284c7 0%,#38bdf8 100%);color:#fff;transform:scale(1.05)}
 .menu-card.reconcile .mgo{color:#0284c7}
+
+.menu-card.verify .icon-wrap{background:linear-gradient(135deg,#cffafe 0%,#a5f3fc 100%);color:#0e7490}
+.menu-card.verify::after{background:linear-gradient(90deg,#0891b2,#22d3ee)}
+.menu-card.verify:hover .icon-wrap{background:linear-gradient(135deg,#0891b2 0%,#22d3ee 100%);color:#fff;transform:scale(1.05)}
+.menu-card.verify .mgo{color:#0e7490}
+
+.menu-card.overtime .icon-wrap{background:linear-gradient(135deg,#d1fae5 0%,#a7f3d0 100%);color:#059669}
+.menu-card.overtime::after{background:linear-gradient(90deg,#10b981,#34d399)}
+.menu-card.overtime:hover .icon-wrap{background:linear-gradient(135deg,#10b981 0%,#34d399 100%);color:#fff;transform:scale(1.05)}
+.menu-card.overtime .mgo{color:#059669}
+
+.menu-card.salary .icon-wrap{background:linear-gradient(135deg,#fce7f3 0%,#fbcfe8 100%);color:#db2777}
+.menu-card.salary::after{background:linear-gradient(90deg,#ec4899,#f472b6)}
+.menu-card.salary:hover .icon-wrap{background:linear-gradient(135deg,#ec4899 0%,#f472b6 100%);color:#fff;transform:scale(1.05)}
+.menu-card.salary .mgo{color:#db2777}
+
+.menu-card.review .icon-wrap{background:linear-gradient(135deg,#e0e7ff 0%,#c7d2fe 100%);color:#4f46e5}
+.menu-card.review::after{background:linear-gradient(90deg,#4f46e5,#818cf8)}
+.menu-card.review:hover .icon-wrap{background:linear-gradient(135deg,#4f46e5 0%,#818cf8 100%);color:#fff;transform:scale(1.05)}
+.menu-card.review .mgo{color:#4f46e5}
+
+.menu-card.sop .icon-wrap{background:linear-gradient(135deg,#ffe4e6 0%,#fecdd3 100%);color:#e11d48}
+.menu-card.sop::after{background:linear-gradient(90deg,#e11d48,#fb7185)}
+.menu-card.sop:hover .icon-wrap{background:linear-gradient(135deg,#e11d48 0%,#fb7185 100%);color:#fff;transform:scale(1.05)}
+.menu-card.sop .mgo{color:#e11d48}
+
 
 .footer{text-align:center;font-size:11px;color:var(--ink-3);letter-spacing:1px;margin-top:1rem}
 .footer .year{font-weight:600;color:var(--ink-2)}
@@ -108,7 +160,14 @@ h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
 @media(max-width:560px){
   body{padding:1rem}
   .stage{padding:1.5rem 0 1rem}
-  .menu-grid{grid-template-columns:1fr;gap:12px}
+  .menu-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .menu-card{padding:1.1rem .9rem;border-radius:16px;gap:7px}
+  .menu-card .icon-wrap{width:44px;height:44px;font-size:24px;border-radius:13px;margin-bottom:2px}
+  .menu-card .mtitle{font-size:15px}
+  .menu-card .mdesc{font-size:11px;line-height:1.5}
+  .menu-card .mdesc br{display:none}
+  .menu-card .num,.soon-badge{top:12px;right:12px;font-size:10px;padding:3px 8px}
+  .menu-card .mgo{font-size:11px;padding-top:8px}
   h1{font-size:24px}
   .hero-logo{width:68px;height:68px;font-size:36px;border-radius:20px}
 }
@@ -127,63 +186,119 @@ h1{font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
     <p class="subtitle">請選擇要使用的功能</p>
   </div>
 
+  <!-- ===== 員工功能 ===== -->
+  <div class="section-head staff">
+    <span class="stag">👥 員工功能</span>
+    <span class="sline"></span>
+  </div>
   <div class="menu-grid">
-    <button class="menu-card summary" onclick="goFlow('summary')">
+    <a class="menu-card punch" href="https://j9011303.github.io/punch/index.html">
       <span class="num">01</span>
+      <span class="icon-wrap">⏰</span>
+      <span class="mtitle">打卡</span>
+      <span class="mdesc">上下班打卡系統，<br>記錄出勤時間</span>
+      <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+    </a>
+    <button class="menu-card summary" onclick="goFlow('summary')">
+      <span class="num">02</span>
       <span class="icon-wrap">📋</span>
       <span class="mtitle">小結報表</span>
       <span class="mdesc">每日收入確認、員工獎金計算、<br>照片上傳與 AI 辨識</span>
       <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
     </button>
     <button class="menu-card inventory" onclick="goFlow('inventory')">
-      <span class="num">02</span>
+      <span class="num">03</span>
       <span class="icon-wrap">📦</span>
       <span class="mtitle">盤點表</span>
       <span class="mdesc">食材、耗材庫存盤點紀錄，<br>支援每日與每週盤點</span>
       <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
     </button>
-    <button class="menu-card overtime" onclick="goFlow('overtime')">
-      <span class="num">03</span>
-      <span class="icon-wrap">💰</span>
-      <span class="mtitle">計算加班費</span>
-      <span class="mdesc">讀取班表與打卡 Excel，<br>自動判定加班、遲到、缺卡</span>
-      <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
-    </button>
-    <button class="menu-card survey" onclick="goSurvey()">
+    <a class="menu-card order" href="https://script.google.com/macros/s/AKfycbwaFXqI3MgH7C2ZuEjxE9XrnON3znbiFgo7YAD4FYVVfWrTx-Ev36irSwcNLRf_2MSG/exec">
       <span class="num">04</span>
-      <span class="icon-wrap">📝</span>
-      <span class="mtitle">匿名表</span>
-      <span class="mdesc">員工匿名評分與回饋，<br>4 家店分別統計獎金</span>
+      <span class="icon-wrap">🛒</span>
+      <span class="mtitle">叫貨表</span>
+      <span class="mdesc">各店每日叫貨填寫，<br>直接送出給廠商彙整</span>
       <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
-    </button>
-    <button class="menu-card salary" onclick="goFlow('salary')">
-      <span class="num">05</span>
-      <span class="icon-wrap">🧾</span>
-      <span class="mtitle">薪水計算</span>
-      <span class="mdesc">各項獎金彙整、勞健保與加給，<br>自動算出每位員工實領</span>
-      <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
-    </button>
+    </a>
     <button class="menu-card leave" onclick="goFlow('leave')">
-      <span class="num">06</span>
+      <span class="num">05</span>
       <span class="icon-wrap">🎁</span>
       <span class="mtitle">特休／禮金</span>
       <span class="mdesc">特休自動同步加班費系統，<br>禮金支援圖片上傳 AI 辨識</span>
       <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
     </button>
-    <button class="menu-card verify" onclick="goFlow('salaryVerify')">
+    <a class="menu-card sop" href="https://script.google.com/macros/s/AKfycbwiMQGasr-5qF0D6Ttcb-1uXPaFoDyrF2zqlVP2gKQLietLAgGV1ol1VkIPKSBbfkvi/exec">
+      <span class="num">06</span>
+      <span class="icon-wrap">📖</span>
+      <span class="mtitle">SOP</span>
+      <span class="mdesc">標準作業流程查詢，<br>各站工作步驟一覽</span>
+      <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+    </a>
+    <button class="menu-card defect" onclick="goDefect()">
       <span class="num">07</span>
-      <span class="icon-wrap">🧮</span>
-      <span class="mtitle">薪資對帳</span>
-      <span class="mdesc">店長獨立計算頁，資料只存本機<br>不影響主系統，用來和老闆對帳</span>
+      <span class="icon-wrap">⚠️</span>
+      <span class="mtitle">缺失登記</span>
+      <span class="mdesc">缺失項目登記與重考提醒，員工可查看<br>主管登記需店長密碼</span>
       <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
     </button>
-    <button class="menu-card reconcile" onclick="goReconcile()">
+    <button class="menu-card review" onclick="goReview()">
       <span class="num">08</span>
-      <span class="icon-wrap">💵</span>
-      <span class="mtitle">廠商對帳</span>
-      <span class="mdesc">店長對帳用，4 家店廠商月結金額<br>彙整與小計，資料只存本機</span>
+      <span class="icon-wrap">📊</span>
+      <span class="mtitle">考核紀錄</span>
+      <span class="mdesc">每月考核站別與失誤紀錄，員工可查看<br>主管編輯需店長密碼</span>
       <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
     </button>
+    <button class="menu-card survey" onclick="goSurvey()">
+      <span class="num">09</span>
+      <span class="icon-wrap">📝</span>
+      <span class="mtitle">匿名表</span>
+      <span class="mdesc">員工匿名評分與回饋，<br>4 家店分別統計獎金</span>
+      <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+    </button>
+  </div>
+
+  <!-- ===== 主管專區（點擊展開） ===== -->
+  <button class="admin-toggle" id="adminToggle" onclick="toggleAdmin()">
+    <span>🔒 主管專區</span>
+    <span class="arrow">▼</span>
+  </button>
+
+  <div id="adminZone">
+    <div class="section-head admin">
+      <span class="stag">🔒 主管功能</span>
+      <span class="sline"></span>
+      <span class="snote">部分功能需輸入密碼</span>
+    </div>
+    <div class="menu-grid">
+      <button class="menu-card reconcile" onclick="goReconcile()">
+        <span class="num">09</span>
+        <span class="icon-wrap">💵</span>
+        <span class="mtitle">廠商對帳</span>
+        <span class="mdesc">店長對帳用，4 家店廠商月結金額<br>彙整與小計，資料只存本機</span>
+        <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+      </button>
+      <button class="menu-card verify" onclick="goFlow('salaryVerify')">
+        <span class="num">10</span>
+        <span class="icon-wrap">🧮</span>
+        <span class="mtitle">薪資對帳</span>
+        <span class="mdesc">店長獨立計算頁，資料只存本機<br>不影響主系統，用來和老闆對帳</span>
+        <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+      </button>
+      <button class="menu-card overtime" onclick="goFlow('overtime')">
+        <span class="num">11</span>
+        <span class="icon-wrap">💰</span>
+        <span class="mtitle">加班費計算</span>
+        <span class="mdesc">讀取班表與打卡 Excel，<br>自動判定加班、遲到、缺卡</span>
+        <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+      </button>
+      <button class="menu-card salary" onclick="goFlow('salary')">
+        <span class="num">12</span>
+        <span class="icon-wrap">🧾</span>
+        <span class="mtitle">薪水計算</span>
+        <span class="mdesc">各項獎金彙整、勞健保與加給，<br>自動算出每位員工實領</span>
+        <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+      </button>
+    </div>
   </div>
 
   <p class="footer">© <span class="year">2026</span> · INTERNAL SYSTEM</p>
@@ -215,6 +330,28 @@ function goFlow(flow){
   window.location.href = 'index.html?t=' + Date.now();
 }
 
+// 主管專區展開/收合（展開狀態存 sessionStorage，從功能頁返回時保持展開）
+function toggleAdmin(){
+  var zone = document.getElementById('adminZone');
+  var btn = document.getElementById('adminToggle');
+  var open = !zone.classList.contains('open');
+  zone.classList.toggle('open', open);
+  btn.classList.toggle('open', open);
+  sessionStorage.setItem('cd_admin_open', open ? '1' : '0');
+}
+if(sessionStorage.getItem('cd_admin_open') === '1'){
+  document.getElementById('adminZone').classList.add('open');
+  document.getElementById('adminToggle').classList.add('open');
+}
+
+function goReview(){
+  window.location.href = 'review.html?t=' + Date.now();
+}
+
+function goDefect(){
+  window.location.href = 'defect.html?t=' + Date.now();
+}
+
 function goSurvey(){
   window.location.href = 'survey.html';
 }
@@ -222,6 +359,10 @@ function goSurvey(){
 function goReconcile(){
   // 廠商對帳：跟其他卡片一樣由 GitHub Pages 託管，雲端同步走 Apps Script /exec POST API
   window.location.href = 'vendor-reconcile.html';
+}
+
+function comingSoon(){
+  alert('🚧 此功能製作中，敬請期待！');
 }
 </script>
 </body>
