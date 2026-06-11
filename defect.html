@@ -119,6 +119,14 @@ h1{font-size:24px;font-weight:700;letter-spacing:-0.02em}
 
 .empty-state{text-align:center;padding:3rem 1rem;color:var(--ink-3);font-size:14px;background:rgba(255,255,255,.6);border-radius:18px;border:1px dashed var(--line)}
 
+/* 門市選擇 */
+.picker{display:flex;flex-direction:column;gap:12px;max-width:420px;margin:1rem auto 0}
+.picker-title{text-align:center;font-size:12.5px;font-weight:700;color:var(--ink-3);letter-spacing:2px;margin-bottom:4px}
+.picker-btn{display:flex;align-items:center;gap:12px;padding:18px 20px;border-radius:16px;border:1px solid rgba(255,255,255,.9);background:rgba(255,255,255,.85);cursor:pointer;font-family:inherit;transition:all .18s;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -12px rgba(15,23,42,.08)}
+.picker-btn:hover{transform:translateY(-2px);border-color:var(--brand)}
+.pb-name{font-size:16px;font-weight:700;color:var(--ink)}
+.pb-arrow{margin-left:auto;color:var(--ink-3);font-size:20px}
+
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:11px 20px;border-radius:12px;font-size:13.5px;font-weight:600;color:#fff;z-index:99;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw}
 .toast.ok{background:#059669}
 .toast.err{background:#dc2626}
@@ -249,11 +257,12 @@ function activeItems(){
 // ============================================
 // 狀態
 // ============================================
-var curStore = sessionStorage.getItem('cd_defect_store') || STORES[0].key;
+var curStore = '';   // 進頁先選門市
 var curMonth = currentMonth();
 // DATA[store] = { employees:[{id,name,level,active}], months:{ 'YYYY-MM': { empId:[{i,d,r}] } } }
 var DATA = {};
 var DIRTY = false;
+var SYNCING = false;
 var EDITING = false;
 var EDIT_LEVEL = '';
 
@@ -308,6 +317,32 @@ function editState(){
 // ============================================
 // 渲染
 // ============================================
+// ---- 門市選擇畫面（進頁先選店，像小結報表）----
+function showSections(show){
+  document.querySelectorAll('.store-row,.month-row,.rules,.toolbar,.hint-banner,.item-panel').forEach(function(el){
+    el.style.display = show ? '' : 'none';
+  });
+}
+function renderPicker(){
+  showSections(false);
+  var list = document.getElementById('empList');
+  list.innerHTML = '';
+  var wrap = document.createElement('div');
+  wrap.className = 'picker';
+  var t = document.createElement('div');
+  t.className = 'picker-title';
+  t.textContent = 'STORE · SELECTION　請選擇門市';
+  wrap.appendChild(t);
+  STORES.forEach(function(s){
+    var b = document.createElement('button');
+    b.className = 'picker-btn';
+    b.innerHTML = '<span class="pb-name">' + s.brand + '・' + s.name + '</span><span class="pb-arrow">›</span>';
+    b.onclick = function(){ switchStore(s.key); };
+    wrap.appendChild(b);
+  });
+  list.appendChild(wrap);
+}
+
 function renderStores(){
   var row = document.getElementById('storeRow');
   row.innerHTML = '';
@@ -321,6 +356,8 @@ function renderStores(){
 }
 
 function render(){
+  if(!curStore){ renderPicker(); return; }
+  showSections(true);
   EDIT_LEVEL = editState();
   EDITING = EDIT_LEVEL !== '';
   renderStores();
@@ -529,8 +566,10 @@ function esc(s){
 function switchStore(key){
   if(DIRTY && EDITING && !confirm('有未儲存的變更，切換門市將不會上傳，確定？')) return;
   curStore = key;
-  sessionStorage.setItem('cd_defect_store', key);
-  pullFromCloud(true).finally(render);
+  loadLocal();
+  render();                                   // 先用本機快取立刻顯示
+  SYNCING = true; refreshSyncBtn();
+  pullFromCloud(true).finally(function(){ SYNCING = false; render(); });
 }
 
 function shiftMonth(delta){
@@ -581,6 +620,7 @@ function markClean(){ DIRTY = false; saveLocal(); refreshSyncBtn(); }
 function refreshSyncBtn(){
   var btn = document.getElementById('syncBtn');
   if(!syncUrl()){ btn.className = 'sync-chip err'; btn.textContent = '⚙️ 未設定雲端'; return; }
+  if(SYNCING){ btn.className = 'sync-chip saving'; btn.textContent = '⏳ 同步中…'; return; }
   if(DIRTY){ btn.className = 'sync-chip dirty'; btn.textContent = '⚠️ 有變更 — 點此上傳'; }
   else { btn.className = 'sync-chip idle'; btn.textContent = '☁️ 已同步'; }
 }
@@ -667,7 +707,7 @@ function showToast(msg, kind){
 // 啟動
 // ============================================
 render();
-Promise.all([pullFromCloud(true), pullConfig()]).finally(render);
+pullConfig().finally(function(){ if(curStore) render(); });
 </script>
 </body>
 </html>
