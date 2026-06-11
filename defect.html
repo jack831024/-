@@ -160,17 +160,16 @@ h1{font-size:24px;font-weight:700;letter-spacing:-0.02em}
 </head>
 <body>
 
-<button class="back-btn" onclick="location.href='home.html'" title="返回主頁">
+<button class="back-btn" onclick="goBack()" title="返回">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
 </button>
 
 <div class="wrap">
   <div class="hero">
     <h1>⚠️ 缺失登記</h1>
-    <p class="subtitle">員工可查看全店紀錄；店長登記需門店密碼</p>
+    <p class="subtitle" id="pageSub">員工可查看全店紀錄；店長登記需門店密碼</p>
   </div>
 
-  <div class="store-row" id="storeRow"></div>
 
   <div class="month-row">
     <button class="mbtn" onclick="shiftMonth(-1)">◀</button>
@@ -338,12 +337,23 @@ function editState(){
 // ============================================
 // ---- 門市選擇畫面（進頁先選店，像小結報表）----
 function showSections(show){
-  document.querySelectorAll('.store-row,.month-row,.rules,.toolbar,.hint-banner,.item-panel').forEach(function(el){
+  document.querySelectorAll('.month-row,.rules,.toolbar,.hint-banner,.item-panel').forEach(function(el){
     el.style.display = show ? '' : 'none';
   });
 }
+function goBack(){
+  if(curStore){
+    if(DIRTY && EDITING && !confirm('有未儲存的變更，離開將不會上傳，確定？')) return;
+    curStore = '';
+    render();
+  } else {
+    location.href = 'home.html';
+  }
+}
+
 function renderPicker(){
   showSections(false);
+  document.getElementById('pageSub').textContent = '員工可查看全店紀錄；店長登記需門店密碼';
   var list = document.getElementById('empList');
   list.innerHTML = '';
   var wrap = document.createElement('div');
@@ -371,24 +381,14 @@ function renderPicker(){
   list.appendChild(wrap);
 }
 
-function renderStores(){
-  var row = document.getElementById('storeRow');
-  row.innerHTML = '';
-  STORES.forEach(function(s){
-    var b = document.createElement('button');
-    b.className = 'store-chip' + (s.key === curStore ? ' on' : '');
-    b.textContent = s.brand + '・' + s.name;
-    b.onclick = function(){ switchStore(s.key); };
-    row.appendChild(b);
-  });
-}
 
 function render(){
   if(!curStore){ renderPicker(); return; }
   showSections(true);
+  var curS = STORES.find(function(x){ return x.key === curStore; });
+  document.getElementById('pageSub').textContent = curS ? (curS.brand + '・' + curS.name) : '員工可查看全店紀錄；店長登記需門店密碼';
   EDIT_LEVEL = editState();
   EDITING = EDIT_LEVEL !== '';
-  renderStores();
   document.getElementById('monthLabel').textContent = curMonth.replace('-', ' 年 ') + ' 月';
   document.getElementById('urlBanner').className = 'hint-banner' + (syncUrl() ? '' : ' show');
   document.getElementById('editBtn').innerHTML = EDITING
