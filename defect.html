@@ -119,16 +119,32 @@ h1{font-size:24px;font-weight:700;letter-spacing:-0.02em}
 
 .empty-state{text-align:center;padding:3rem 1rem;color:var(--ink-3);font-size:14px;background:rgba(255,255,255,.6);border-radius:18px;border:1px dashed var(--line)}
 
-/* 門市選擇（方格狀，同小結報表） */
-.picker{max-width:480px;margin:1rem auto 0}
-.picker-title{text-align:center;font-size:12.5px;font-weight:700;color:var(--ink-3);letter-spacing:2px;margin-bottom:14px}
-.picker-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.picker-btn{background:rgba(255,255,255,.85);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.9);border-radius:18px;padding:1.25rem 1rem;cursor:pointer;transition:all .22s cubic-bezier(.4,0,.2,1);text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;font-family:inherit;box-shadow:0 1px 2px rgba(15,23,42,.04),0 6px 18px -10px rgba(15,23,42,.1)}
-.picker-btn:hover{transform:translateY(-3px);border-color:var(--brand);box-shadow:0 1px 2px rgba(15,23,42,.04),0 18px 36px -14px rgba(15,23,42,.15)}
-.picker-btn:active{transform:translateY(-1px)}
-.pb-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;background:rgba(15,23,42,.04);margin-bottom:4px}
-.pb-brand{font-size:10px;color:var(--ink-3);font-weight:600;letter-spacing:2px;text-transform:uppercase}
-.pb-name{font-size:15px;font-weight:700;color:var(--ink)}
+/* 門市選擇（複製 index.html 小結選店樣式） */
+.picker{max-width:480px;margin:.5rem auto 0}
+.pk-brand-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:1.75rem;color:var(--ink-2);font-size:11px;letter-spacing:3px;font-weight:500;text-transform:uppercase}
+.pk-dot{width:6px;height:6px;border-radius:50%;background:#3b82f6;box-shadow:0 0 12px #3b82f6}
+.pk-hero{text-align:center;margin-bottom:2rem}
+.pk-logo{width:72px;height:72px;margin:0 auto 1rem;border-radius:20px;background:linear-gradient(135deg,#fff 0%,#f1f5f9 100%);box-shadow:0 10px 30px -10px rgba(59,130,246,.35),0 0 0 1px rgba(15,23,42,.04),inset 0 1px 0 rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;font-size:36px;line-height:1}
+.pk-title{font-size:24px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;background:linear-gradient(135deg,#0f172a 0%,#475569 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.pk-sub{font-size:13px;color:var(--ink-2)}
+.store-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem}
+.store-btn{background:rgba(255,255,255,.75);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.8);border-radius:18px;padding:1.25rem 1rem;cursor:pointer;transition:all .22s cubic-bezier(.4,0,.2,1);text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;font-family:inherit;color:inherit;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04),0 6px 18px -10px rgba(15,23,42,.1)}
+.store-btn::after{content:"";position:absolute;top:0;left:0;right:0;height:2px;opacity:0;transition:opacity .22s}
+.store-btn:hover{transform:translateY(-3px);box-shadow:0 1px 2px rgba(15,23,42,.04),0 18px 36px -14px rgba(15,23,42,.15)}
+.store-btn:hover::after{opacity:1}
+.store-btn:active{transform:translateY(-1px)}
+.store-btn .sb-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;line-height:1;margin-bottom:4px;transition:all .22s}
+.store-btn .brand-label{font-size:10px;color:var(--ink-3);font-weight:600;letter-spacing:2px;text-transform:uppercase}
+.store-btn .name{font-size:15px;font-weight:700;color:var(--ink);letter-spacing:-0.01em}
+.store-btn.chudian .sb-icon{background:linear-gradient(135deg,#fed7aa 0%,#fdba74 100%);color:#f97316}
+.store-btn.chudian::after{background:linear-gradient(90deg,#f97316,#fb923c)}
+.store-btn.chudian:hover .sb-icon{background:linear-gradient(135deg,#f97316 0%,#fb923c 100%);color:#fff;transform:scale(1.06)}
+.store-btn.shicheng .sb-icon{background:linear-gradient(135deg,#dbeafe 0%,#bfdbfe 100%);color:#3b82f6}
+.store-btn.shicheng::after{background:linear-gradient(90deg,#3b82f6,#60a5fa)}
+.store-btn.shicheng:hover .sb-icon{background:linear-gradient(135deg,#3b82f6 0%,#60a5fa 100%);color:#fff;transform:scale(1.06)}
+@media(max-width:420px){
+  .store-grid{grid-template-columns:1fr}
+}
 
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:11px 20px;border-radius:12px;font-size:13.5px;font-weight:600;color:#fff;z-index:99;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw}
 .toast.ok{background:#059669}
@@ -332,19 +348,22 @@ function renderPicker(){
   list.innerHTML = '';
   var wrap = document.createElement('div');
   wrap.className = 'picker';
-  var t = document.createElement('div');
-  t.className = 'picker-title';
-  t.textContent = 'STORE · SELECTION　請選擇門市';
-  wrap.appendChild(t);
+  wrap.innerHTML =
+    '<div class="pk-brand-row"><span class="pk-dot"></span><span>STORE · SELECTION</span></div>' +
+    '<div class="pk-hero">' +
+      '<div class="pk-logo">🏪</div>' +
+      '<div class="pk-title">選擇門市</div>' +
+      '<p class="pk-sub">請選擇您要進入的門市</p>' +
+    '</div>';
   var grid = document.createElement('div');
-  grid.className = 'picker-grid';
+  grid.className = 'store-grid';
   STORES.forEach(function(s){
-    var b = document.createElement('button');
-    b.className = 'picker-btn';
     var isSc = s.brand === '十城';
-    b.innerHTML = '<span class="pb-icon">' + (isSc ? '🍛' : '🍲') + '</span>' +
-      '<span class="pb-brand">' + (isSc ? 'SHICHENG' : 'CHUDIAN') + '</span>' +
-      '<span class="pb-name">' + s.name + '</span>';
+    var b = document.createElement('button');
+    b.className = 'store-btn ' + (isSc ? 'shicheng' : 'chudian');
+    b.innerHTML = '<span class="sb-icon">' + (isSc ? '🏮' : '🍲') + '</span>' +
+      '<span class="brand-label">' + (isSc ? 'SHICHENG' : 'CHUDIAN') + '</span>' +
+      '<span class="name">' + s.name + '</span>';
     b.onclick = function(){ switchStore(s.key); };
     grid.appendChild(b);
   });
