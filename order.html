@@ -1,0 +1,2311 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>初殿火鍋｜叫貨系統</title>
+  <style>
+    /* ───── 暖色調基底 ───── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Microsoft JhengHei', 'Helvetica Neue', sans-serif;
+      color: #3b2415;
+      background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
+      min-height: 100vh;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button { font-family: inherit; cursor: pointer; }
+    input { font-family: inherit; }
+
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* ───── 載入中 ───── */
+    .loading {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255, 247, 237, 0.9);
+      z-index: 100; font-size: 14px; color: #92400e;
+    }
+    .spinner {
+      width: 24px; height: 24px;
+      border: 3px solid #fed7aa;
+      border-top-color: #ea580c;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ───── 首頁：選店（長條卡片） ───── */
+    .home { padding: 40px 20px 80px; }
+    .home-eyebrow {
+      text-align: center;
+      font-size: 11px; letter-spacing: 0.18em;
+      color: #b45309; font-weight: 600;
+      margin-bottom: 24px;
+    }
+    .home-eyebrow::before {
+      content: '●'; color: #ea580c;
+      margin-right: 8px; font-size: 8px; vertical-align: middle;
+    }
+    .home-icon {
+      width: 64px; height: 64px;
+      margin: 0 auto 16px;
+      background: linear-gradient(135deg, #ffedd5, #fed7aa);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px;
+      box-shadow: 0 4px 16px rgba(234, 88, 12, 0.15);
+    }
+    .home-title {
+      text-align: center; font-size: 28px; font-weight: 800;
+      color: #7c2d12; margin: 0 0 6px;
+    }
+    .home-subtitle {
+      text-align: center; font-size: 14px;
+      color: #92400e; margin: 0 0 32px;
+    }
+    .store-list {
+      display: flex; flex-direction: column;
+      gap: 12px;
+    }
+    .store-card {
+      display: flex; align-items: center;
+      width: 100%; padding: 16px 18px;
+      background: #ffffff;
+      border: 1px solid #fed7aa;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(234, 88, 12, 0.08);
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      text-align: left;
+      gap: 16px;
+    }
+    .store-card:active {
+      transform: scale(0.98);
+      box-shadow: 0 2px 8px rgba(234, 88, 12, 0.05);
+    }
+    .store-card-icon {
+      flex-shrink: 0;
+      width: 56px; height: 56px;
+      background: linear-gradient(135deg, #fed7aa, #fdba74);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 30px;
+      box-shadow: 0 4px 12px rgba(251, 146, 60, 0.25);
+    }
+    .store-card-text { flex: 1; min-width: 0; }
+    .store-card-label {
+      font-size: 9px; letter-spacing: 0.22em;
+      color: #c2410c; font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .store-card-name {
+      font-size: 18px; font-weight: 700;
+      color: #7c2d12;
+    }
+    .store-card-arrow {
+      flex-shrink: 0;
+      color: #c2410c; font-size: 22px;
+    }
+    .home-footer {
+      text-align: center; margin-top: 32px;
+      font-size: 11px; color: #c2410c;
+      letter-spacing: 0.1em;
+    }
+
+    /* ───── 下訂頁 ───── */
+    .order-header {
+      position: sticky; top: 0;
+      background: #ffffff;
+      box-shadow: 0 1px 0 rgba(234, 88, 12, 0.12);
+      padding: 14px 18px 10px;
+      z-index: 10;
+    }
+    .order-back {
+      background: none; border: none;
+      color: #ea580c; font-size: 14px; padding: 0;
+      margin-bottom: 6px; font-weight: 500;
+    }
+    .order-title-row {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .order-title {
+      font-size: 20px; font-weight: 800; color: #7c2d12;
+    }
+    .order-date { font-size: 12px; color: #92400e; }
+    .order-tomorrow-line {
+      font-size: 12px; color: #92400e; margin-bottom: 10px;
+    }
+    .order-tomorrow-line strong { color: #7c2d12; }
+    .special-rest-summary {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin: -4px 0 10px;
+      font-size: 12px;
+      color: #b91c1c;
+      line-height: 1.55;
+    }
+    .special-rest-summary .summary-title {
+      font-weight: 700; color: #991b1b;
+      margin-bottom: 4px; font-size: 11px; letter-spacing: 0.05em;
+    }
+    .special-rest-line {
+      display: flex; gap: 4px; align-items: baseline; flex-wrap: wrap;
+    }
+    .special-rest-line strong { color: #7c2d12; font-weight: 700; }
+    .special-rest-line .colon { color: #7c2d12; }
+    .special-rest-line .range { color: #b91c1c; font-weight: 600; }
+    .special-rest-line .note { color: #92400e; font-size: 11px; }
+    .revenue-row {
+        display: flex; align-items: center; gap: 10px;
+        padding: 10px 12px;
+        background: #fff7ed;
+        border-radius: 10px;
+        border: 1px solid #fed7aa;
+      }
+      .revenue-row label {
+        font-size: 13px; color: #92400e; flex-shrink: 0;
+      }
+      .revenue-row input {
+        flex: 1; border: none; background: transparent;
+        font-size: 18px; font-weight: 700; color: #7c2d12;
+        outline: none; text-align: right;
+        width: 60px; min-width: 0;
+      }
+      .revenue-row .unit {
+        font-size: 13px; color: #b45309; flex-shrink: 0;
+      }
+
+    /* 廠商區塊 ── 可摺疊 */
+    .vendor-list { padding: 14px 14px 100px; }
+    .vendor-card {
+      background: #ffffff;
+      border-radius: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(234, 88, 12, 0.08);
+      border: 1px solid #ffedd5;
+      overflow: hidden;
+    }
+    .vendor-card.is-rest {
+      background: #f8eee0;
+      box-shadow: none;
+      border-color: #e7d2b6;
+    }
+    .vendor-head {
+      display: flex; align-items: center;
+      padding: 12px 14px;
+      cursor: pointer;
+      user-select: none;
+      gap: 8px;
+    }
+    .vendor-head-text { flex: 1; min-width: 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; }
+    .vendor-name {
+      font-size: 16px; font-weight: 700; color: #7c2d12;
+    }
+    .vendor-rest-label {
+      font-size: 11px; color: #dc2626; font-weight: 600;
+    }
+    .vendor-cover-label {
+      font-size: 11px; color: #b91c1c; font-weight: 700;
+      background: #fee2e2; border-radius: 999px; padding: 2px 8px;
+      flex-shrink: 0;
+    }
+    .vendor-rest-toggle {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 12px; color: #92400e;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .vendor-rest-toggle input {
+      margin: 0;
+      accent-color: #ea580c;
+      width: 14px; height: 14px;
+    }
+    .vendor-arrow {
+      flex-shrink: 0;
+      color: #c2410c; font-size: 14px;
+      transition: transform 0.2s;
+    }
+    .vendor-card.collapsed .vendor-arrow { transform: rotate(-90deg); }
+
+    .vendor-body { padding: 0 14px 8px; }
+    .vendor-card.collapsed .vendor-body { display: none; }
+
+    .vendor-special-note {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+      font-size: 12px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+    .vendor-special-note + .vendor-special-note {
+      margin-top: -6px;
+    }
+
+    .vendor-card.is-rest .vendor-name,
+    .vendor-card.is-rest .item-row { opacity: 0.6; }
+
+    .item-row {
+      display: grid; grid-template-columns: 1fr auto;
+      gap: 8px 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid #fff0e0;
+    }
+    .item-row:last-child { border-bottom: none; }
+    .item-name {
+      font-size: 14px; font-weight: 600; color: #3b2415;
+    }
+    .item-meta { font-size: 11px; color: #a16207; margin-top: 1px; }
+    .item-suggest {
+      font-size: 11px; color: #ea580c;
+      margin-top: 4px; font-weight: 600;
+    }
+    .item-call-empty {
+      font-size: 11px; color: #a8a29e;
+      font-style: italic; margin-top: 4px;
+    }
+    .item-internal {
+      font-size: 11px; color: #b91c1c;
+      background: #fef2f2; border: 1px solid #fecaca;
+      padding: 3px 8px; border-radius: 6px;
+      margin-top: 4px; display: inline-block;
+      font-weight: 500;
+    }
+    .item-controls {
+      display: flex; flex-direction: column;
+      gap: 6px; align-items: flex-end;
+    }
+    .stock-input {
+      width: 72px; padding: 6px 8px;
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+      font-size: 14px; text-align: center;
+      outline: none;
+      background: #ffffff;
+      color: #3b2415;
+    }
+    .stock-input:focus { border-color: #ea580c; }
+    .stock-input::placeholder { color: #fed7aa; }
+    .item-need {
+      font-size: 12px; color: #92400e; font-weight: 600;
+    }
+    .item-need.has-need { color: #dc2626; }
+    .item-need.no-need { color: #15803d; }
+
+    /* ───── Sticky 底部 ───── */
+    .order-action {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      padding: 12px 16px 20px;
+      background: linear-gradient(180deg, transparent, rgba(255, 247, 237, 0.95) 30%, #fff7ed);
+      max-width: 480px; margin: 0 auto;
+    }
+    .btn-primary {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, #ea580c, #c2410c);
+      color: #ffffff; border: none;
+      border-radius: 12px;
+      font-size: 16px; font-weight: 700;
+      box-shadow: 0 4px 16px rgba(234, 88, 12, 0.3);
+      transition: transform 0.1s;
+    }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-secondary {
+      width: 100%; padding: 12px;
+      background: #ffffff; color: #ea580c;
+      border: 1.5px solid #ea580c;
+      border-radius: 10px;
+      font-size: 14px; font-weight: 600;
+    }
+
+    /* ───── 結果頁 ───── */
+    .result-overlay {
+      position: fixed; inset: 0;
+      background: rgba(60, 36, 21, 0.55);
+      z-index: 50;
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    .result-sheet {
+      width: 100%; max-width: 480px; max-height: 92vh;
+      background: #ffffff;
+      border-radius: 22px 22px 0 0;
+      padding: 18px 18px 24px;
+      overflow-y: auto;
+      animation: slideUp 0.25s ease-out;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .result-title {
+      font-size: 18px; font-weight: 800; color: #7c2d12; margin: 0 0 4px;
+    }
+    .result-subtitle { font-size: 12px; color: #92400e; margin: 0 0 16px; }
+    .order-block {
+      background: #fff7ed;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      border: 1px solid #fed7aa;
+    }
+    .order-block-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px;
+    }
+    .order-block-vendor {
+      font-size: 14px; font-weight: 700; color: #7c2d12;
+    }
+    .copy-btn {
+      background: #ffffff;
+      border: 1px solid #fed7aa;
+      color: #ea580c;
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+    .copy-btn.copied {
+      background: #dcfce7; border-color: #16a34a; color: #15803d;
+    }
+    .order-block-text {
+      width: 100%;
+      box-sizing: border-box;
+      display: block;
+      font-family: -apple-system, 'SF Mono', Menlo, Consolas, monospace;
+      font-size: 12px; color: #3b2415;
+      white-space: pre-wrap; line-height: 1.6;
+      background: #ffffff;
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+      padding: 8px 10px;
+      resize: vertical;
+      min-height: 80px;
+      outline: none;
+    }
+    .order-block-text:focus { border-color: #ea580c; }
+    .order-block-hint {
+      font-size: 11px; color: #c2410c; margin-top: 6px;
+    }
+    .result-actions {
+      margin-top: 12px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .toast {
+      position: fixed; top: 30px; left: 50%;
+      transform: translateX(-50%);
+      background: #7c2d12; color: #ffffff;
+      padding: 10px 20px;
+      border-radius: 999px;
+      font-size: 13px;
+      z-index: 200;
+      animation: fadeInOut 2s ease forwards;
+    }
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translate(-50%, -10px); }
+      15% { opacity: 1; transform: translate(-50%, 0); }
+      85% { opacity: 1; }
+      100% { opacity: 0; transform: translate(-50%, -10px); }
+    }
+
+    .empty-state {
+      text-align: center; padding: 60px 20px;
+      color: #c2410c; font-size: 14px;
+    }
+
+    /* ───── 主管後台 ───── */
+    .admin-link {
+      display: block; width: 100%;
+      margin-top: 12px; padding: 8px;
+      background: none; border: none;
+      font-size: 12px; color: #c2410c;
+      cursor: pointer; text-align: center;
+      letter-spacing: 0.05em;
+    }
+    .admin-page { padding: 16px 20px 80px; }
+    .admin-back {
+      background: none; border: none;
+      color: #ea580c; font-size: 14px; padding: 0;
+      margin-bottom: 12px; font-weight: 500;
+    }
+    .admin-title {
+      font-size: 20px; font-weight: 800;
+      color: #7c2d12; margin: 0 0 16px;
+    }
+    .admin-form-row { margin-bottom: 14px; }
+    .admin-form-row label {
+      display: block;
+      font-size: 13px; color: #92400e;
+      margin-bottom: 6px; font-weight: 500;
+    }
+    .admin-form-row input,
+    .admin-form-row select,
+    .admin-form-row textarea {
+      width: 100%; box-sizing: border-box;
+      padding: 10px 12px;
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+      font-size: 14px; outline: none;
+      background: #ffffff; color: #3b2415;
+    }
+    .admin-form-row textarea {
+      font-family: -apple-system, 'SF Mono', Menlo, Consolas, monospace;
+      font-size: 12px; resize: vertical;
+      min-height: 80px; white-space: pre-wrap;
+    }
+    .admin-form-row input:focus,
+    .admin-form-row select:focus,
+    .admin-form-row textarea:focus { border-color: #ea580c; }
+    .admin-menu-item {
+      display: block; width: 100%;
+      padding: 16px 18px; margin-bottom: 10px;
+      background: #ffffff;
+      border: 1px solid #fed7aa;
+      border-radius: 12px;
+      text-align: left;
+      font-size: 15px; color: #7c2d12;
+      cursor: pointer; font-weight: 500;
+    }
+    .admin-help {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 11px; color: #92400e;
+      line-height: 1.7; margin-bottom: 14px;
+    }
+    .admin-help code {
+      background: #fed7aa; color: #7c2d12;
+      padding: 1px 5px; border-radius: 4px;
+      font-size: 11px;
+    }
+    .admin-preview {
+      background: #ffffff;
+      border: 1px dashed #fed7aa;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: -apple-system, 'SF Mono', Menlo, Consolas, monospace;
+      font-size: 12px; white-space: pre-wrap;
+      line-height: 1.6; color: #3b2415;
+      min-height: 80px;
+    }
+    .admin-section-title {
+      font-size: 12px; color: #92400e;
+      font-weight: 600; margin: 16px 0 8px;
+      letter-spacing: 0.05em;
+    }
+    .tpl-group {
+      background: #ffffff; border: 1px solid #fed7aa;
+      border-radius: 10px; padding: 6px 12px;
+      margin-bottom: 6px;
+    }
+    .tpl-opt {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 0; cursor: pointer;
+      font-size: 14px; color: #3b2415;
+      border-bottom: 1px solid #fff0e0;
+    }
+    .tpl-opt:last-child { border-bottom: none; }
+    .tpl-opt input { accent-color: #ea580c; width: 16px; height: 16px; margin: 0; }
+
+    /* 臨時休息日 */
+    .sr-add {
+      background: #ffffff; border: 1px solid #fed7aa;
+      border-radius: 12px; padding: 12px 14px;
+      margin-bottom: 16px;
+    }
+    .sr-card {
+      background: #ffffff; border: 1px solid #fed7aa;
+      border-radius: 10px; padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+    .sr-vendor {
+      font-size: 14px; font-weight: 700; color: #7c2d12;
+      margin-bottom: 6px;
+    }
+    .sr-rest-label {
+      font-size: 11px; color: #b45309; font-weight: 500;
+      margin-left: 8px;
+    }
+    .sr-empty {
+      font-size: 12px; color: #a8a29e; font-style: italic;
+      padding: 4px 0;
+    }
+    .sr-line {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 0; border-top: 1px solid #fff0e0;
+      font-size: 13px; color: #3b2415;
+    }
+    .sr-del {
+      background: #fef2f2; border: 1px solid #fecaca;
+      color: #b91c1c; font-size: 11px;
+      padding: 3px 10px; border-radius: 6px;
+      cursor: pointer; font-weight: 500;
+    }
+    .sr-edit {
+      background: #fff7ed; border: 1px solid #fed7aa;
+      color: #9a3412; font-size: 11px;
+      padding: 3px 10px; border-radius: 6px;
+      cursor: pointer; font-weight: 500;
+      margin-right: 6px;
+    }
+    .sr-actions { display: flex; align-items: center; }
+    .sr-edit-form {
+      background: #fff7ed; border: 1px solid #fed7aa;
+      border-radius: 8px; padding: 10px 12px;
+      margin: 6px 0;
+    }
+    .sr-edit-form .admin-form-row { margin-bottom: 8px; }
+    .sr-edit-form .sr-edit-btns {
+      display: flex; gap: 8px; margin-top: 4px;
+    }
+    .sr-edit-form .sr-edit-btns button { flex: 1; }
+    .btn-cancel {
+      background: #f5f5f4; border: 1px solid #d6d3d1;
+      color: #44403c; font-size: 13px; font-weight: 600;
+      padding: 8px 12px; border-radius: 8px;
+    }
+
+    /* 廠商管理 */
+    .vd-card {
+      background: #ffffff; border: 1px solid #fed7aa;
+      border-radius: 10px; padding: 12px 14px;
+      margin-bottom: 8px;
+    }
+    .vd-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; margin-bottom: 4px;
+    }
+    .vd-name {
+      font-size: 15px; font-weight: 700; color: #7c2d12;
+      flex: 1; min-width: 0;
+    }
+    .vd-meta {
+      font-size: 11px; color: #92400e; line-height: 1.5;
+    }
+    .vd-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .vd-btn-edit {
+      background: #fff7ed; border: 1px solid #fed7aa;
+      color: #ea580c; font-size: 12px;
+      padding: 4px 12px; border-radius: 6px;
+      cursor: pointer; font-weight: 500;
+    }
+    .vd-btn-del {
+      background: #fef2f2; border: 1px solid #fecaca;
+      color: #b91c1c; font-size: 12px;
+      padding: 4px 12px; border-radius: 6px;
+      cursor: pointer; font-weight: 500;
+    }
+    .vd-day-row {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      background: #ffffff; border: 1px solid #fed7aa;
+      border-radius: 8px; padding: 10px 12px;
+    }
+    .vd-day-chk {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 14px; color: #3b2415; cursor: pointer;
+      padding: 4px 8px;
+    }
+    .vd-day-chk input { accent-color: #ea580c; width: 16px; height: 16px; margin: 0; }
+
+    /* 品項管理 */
+    .im-group {
+      background: #ffffff; border: 1px solid #fed7aa;
+      border-radius: 10px; padding: 6px 0;
+      margin-bottom: 8px;
+    }
+    .im-group-head {
+      font-size: 13px; font-weight: 700; color: #7c2d12;
+      padding: 8px 14px; border-bottom: 1px solid #fff0e0;
+      background: #fff7ed;
+    }
+    .im-count { font-size: 11px; font-weight: 500; color: #b45309; }
+    .im-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; padding: 10px 14px;
+      border-bottom: 1px solid #fff0e0;
+    }
+    .im-row:last-child { border-bottom: none; }
+    .im-row-text { flex: 1; min-width: 0; }
+    .im-name {
+      font-size: 14px; font-weight: 600; color: #3b2415;
+    }
+    .im-meta {
+      font-size: 11px; color: #92400e; line-height: 1.5; margin-top: 2px;
+    }
+    .im-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    /* 「+ 新增廠商」彈窗 */
+    .qv-overlay {
+      position: fixed; inset: 0;
+      background: rgba(60, 36, 21, 0.55);
+      z-index: 80;
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    .qv-sheet {
+      width: 100%; max-width: 480px; max-height: 92vh;
+      background: #ffffff;
+      border-radius: 22px 22px 0 0;
+      padding: 18px 18px 24px;
+      overflow-y: auto;
+      animation: slideUp 0.25s ease-out;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app" id="app"></div>
+  <div class="loading" id="loading"><div class="spinner"></div><span>載入中…</span></div>
+
+<script>
+  // ─────────────────────────────────────
+  // 狀態
+  // ─────────────────────────────────────
+  const state = {
+    bootstrap: null,
+    storeKey: null,
+    storeData: null,
+    revenue: '',
+    inventory: {},          // { itemName: number | '' }
+    manualRest: {},         // { vendorName: bool } 店員手動覆寫的「今日休息」
+    collapsed: {},          // { vendorName: bool } 摺疊狀態
+    showResult: false,
+    orderText: null,        // [{vendor, text}]
+    // 主管後台
+    adminMode: false,
+    adminScreen: 'login',
+    adminAuth: { storeKey: '', password: '' },
+    adminData: null,
+    adminTplDraft: { order: '', line: '' },         // 進階模式：自由文字
+    adminTplCfg: {                                  // 簡易模式：勾選設定
+      showStore: true, showTomorrowDate: true, showVendor: false,
+      dateFormat: 'short', lineFormat: 'standard',
+    },
+    adminVendors: null,                             // 後台讀到的廠商清單
+    adminSpecialDraft: { vendor: '', start: '', end: '', note: '', syncSiblings: false },
+    adminSpecialEdit: { vendor: null, idx: -1, start: '', end: '', note: '' },  // 行內編輯
+    adminVendorEditing: null,                       // 廠商編輯中的 draft
+    adminItems: null,                               // 後台讀到的品項清單
+    adminItemEditing: null,                         // 品項編輯中的 draft
+    adminQuickVendor: null,                         // 「+ 新增廠商」彈窗 draft
+  };
+
+  // 範本變數套用：把 {key} 替換成 vars[key]
+  function renderTpl(tpl, vars) {
+    return String(tpl || '').replace(/\{(\w+)\}/g, function (_, k) {
+      return vars[k] !== undefined ? vars[k] : '';
+    });
+  }
+
+  // ─────────────────────────────────────
+  // 後端 API
+  // ─────────────────────────────────────
+  var API_URL = 'https://script.google.com/macros/s/AKfycbwaFXqI3MgH7C2ZuEjxE9XrnON3znbiFgo7YAD4FYVVfWrTx-Ev36irSwcNLRf_2MSG/exec';
+
+  function call(method) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: method, args: args })
+    }).then(function (r) { return r.json(); }).then(function (res) {
+      if (res && res.ok) return res.data;
+      throw new Error((res && res.error) || ('API error: ' + method));
+    });
+  }
+  function showLoading(on) {
+    document.getElementById('loading').style.display = on ? 'flex' : 'none';
+  }
+  function toast(msg) {
+    const t = document.createElement('div');
+    t.className = 'toast'; t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 2000);
+  }
+
+  // ─────────────────────────────────────
+  // 首頁渲染（長條卡片）
+  // ─────────────────────────────────────
+  function renderHome() {
+    const stores = state.bootstrap.stores;
+    const cards = stores.map(function (s) {
+      return '<button class="store-card" onclick="enterStore(\'' + s.key + '\')">' +
+        '<div class="store-card-icon">' + s.emoji + '</div>' +
+        '<div class="store-card-text">' +
+          '<div class="store-card-label">' + s.label + '</div>' +
+          '<div class="store-card-name">' + s.name + '</div>' +
+        '</div>' +
+        '<div class="store-card-arrow">›</div>' +
+      '</button>';
+    }).join('');
+
+    document.getElementById('app').innerHTML =
+      '<div class="home">' +
+        '<div class="home-eyebrow">STORE · SELECTION</div>' +
+        '<div class="home-icon">🏪</div>' +
+        '<h1 class="home-title">選擇門市</h1>' +
+        '<p class="home-subtitle">請選擇您要進入的門市</p>' +
+        '<div class="store-list">' + cards + '</div>' +
+        '<div class="home-footer">© INTERNAL SYSTEM</div>' +
+        '<button class="admin-link" onclick="showAdminLogin()">⚙ 主管後台</button>' +
+      '</div>';
+  }
+
+  function enterStore(storeKey) {
+    state.storeKey = storeKey;
+    state.revenue = '';
+    state.inventory = {};
+    state.manualRest = {};
+    state.collapsed = {};
+    state.showResult = false;
+    state.orderText = null;
+    showLoading(true);
+    call('getStoreData', storeKey)
+      .then(function (data) {
+        state.storeData = data;
+        // 初始化「今日休息」狀態：用後端 tomorrowIsRest 當預設
+        // 所有廠商預設都摺疊起來，使用者點開要的那一個就好
+        Object.keys(data.vendors).forEach(function (v) {
+          state.manualRest[v] = !!data.vendors[v].tomorrowIsRest;
+          state.collapsed[v] = true;
+        });
+        renderOrder();
+      })
+      .catch(function (err) {
+        alert('載入失敗：' + (err.message || err));
+        renderHome();
+      })
+      .finally(function () { showLoading(false); });
+  }
+
+  function backHome() {
+    state.storeKey = null; state.storeData = null;
+    renderHome();
+  }
+
+  // ─────────────────────────────────────
+  // 下訂頁
+  // ─────────────────────────────────────
+  function renderOrder() {
+    const d = state.storeData;
+    const groups = groupByVendor(d.items, d.vendors, d.categoryOrder);
+    const blocks = groups.map(function (g) { return renderVendorBlock(g, d.vendors[g.vendor]); }).join('');
+    const specialSummaryHtml = renderSpecialRestSummary(d);
+
+    document.getElementById('app').innerHTML =
+      '<div class="order-page">' +
+        '<div class="order-header">' +
+          '<button class="order-back" onclick="backHome()">‹ 返回選店</button>' +
+          '<div class="order-title-row">' +
+            '<div class="order-title">' + d.store.name + '</div>' +
+            '<div class="order-date">' + d.today + ' ' + d.todayDow + '</div>' +
+          '</div>' +
+          '<div class="order-tomorrow-line">明天送貨日：<strong>' + d.tomorrow + ' ' + d.tomorrowDow + '</strong></div>' +
+          specialSummaryHtml +
+          (isDailyStore() ? '' : ('<div class="revenue-row">' +
+                '<label>平均每日預估</label>' +
+                '<input id="revenue" type="number" inputmode="decimal" placeholder="0" value="' + state.revenue + '" oninput="onRevenueChange(this.value)" />' +
+                '<span class="unit">萬元</span>' +
+              '</div>')) +
+        '</div>' +
+        '<div class="vendor-list">' + (blocks || emptyState()) + '</div>' +
+        '<div class="order-action">' +
+          '<button class="btn-primary" onclick="generateOrder()">產生叫貨清單</button>' +
+        '</div>' +
+        (state.showResult ? renderResult() : '') +
+      '</div>';
+  }
+
+  function emptyState() {
+    return '<div class="empty-state">這家店沒有任何啟用品項<br>請主管先到後台設定</div>';
+  }
+
+  function renderSpecialRestSummary(d) {
+    // 收集所有有 activeSpecialNotes 的廠商
+    const entries = [];
+    Object.keys(d.vendors).forEach(function (vName) {
+      const v = d.vendors[vName];
+      if (!v.activeSpecialNotes || v.activeSpecialNotes.length === 0) return;
+      v.activeSpecialNotes.forEach(function (n) {
+        const range = n.sameDay ? n.startStr : (n.startStr + '-' + n.endStr);
+        // 排序 key：用起始日「月*100+日」
+        const parts = String(n.startStr).split('/').map(Number);
+        const sortKey = (parts[0] || 0) * 100 + (parts[1] || 0);
+        entries.push({ vendor: vName, range: range, note: n.note || '', sortKey: sortKey });
+      });
+    });
+    if (entries.length === 0) return '';
+    entries.sort(function (a, b) {
+      if (a.sortKey !== b.sortKey) return a.sortKey - b.sortKey;
+      return a.vendor.localeCompare(b.vendor, 'zh-Hant');
+    });
+    const lines = entries.map(function (e) {
+      return '<div class="special-rest-line">⚠ <strong>' + escapeHtml(e.vendor) + '</strong>'
+        + '<span class="colon">：</span>'
+        + '<span class="range">' + escapeHtml(e.range) + '休息</span>'
+        + (e.note ? '<span class="note">（' + escapeHtml(e.note) + '）</span>' : '')
+        + '</div>';
+    }).join('');
+    return '<div class="special-rest-summary">' +
+      '<div class="summary-title">近期休息日提醒</div>' +
+      lines +
+      '</div>';
+  }
+
+  function groupByVendor(items, vendors, categoryOrder) {
+    const map = {};
+    items.forEach(function (it) {
+      const v = it.vendor || '（未指定）';
+      if (!map[v]) map[v] = { vendor: v, items: [], firstCatIdx: 999 };
+      map[v].items.push(it);
+      const idx = categoryOrder.indexOf(it.category);
+      if (idx >= 0 && idx < map[v].firstCatIdx) map[v].firstCatIdx = idx;
+    });
+    const arr = Object.keys(map).map(function (k) { return map[k]; });
+    arr.sort(function (a, b) {
+      // 1. 休息中的廠商排到最後（不分分類）
+      const aRest = isVendorResting(a.vendor) ? 1 : 0;
+      const bRest = isVendorResting(b.vendor) ? 1 : 0;
+      if (aRest !== bRest) return aRest - bRest;
+      // 2. 手動排序（廠商分頁 L 欄；數字小的在前；0/空＝視為 9999 排在後面）
+      const aOrd = (vendors[a.vendor] && Number(vendors[a.vendor].sortOrder)) || 0;
+      const bOrd = (vendors[b.vendor] && Number(vendors[b.vendor].sortOrder)) || 0;
+      const aSort = aOrd > 0 ? aOrd : 9999;
+      const bSort = bOrd > 0 ? bOrd : 9999;
+      if (aSort !== bSort) return aSort - bSort;
+      // 3. 都沒手動排序 → 按分類
+      if (a.firstCatIdx !== b.firstCatIdx) return a.firstCatIdx - b.firstCatIdx;
+      // 4. 廠商名（中文排序）
+      return a.vendor.localeCompare(b.vendor, 'zh-Hant');
+    });
+    return arr;
+  }
+
+  function isVendorResting(vendorName) {
+    const v = state.storeData.vendors[vendorName];
+    if (!v) return false;
+    if (state.manualRest[vendorName] !== undefined) return state.manualRest[vendorName];
+    return !!v.tomorrowIsRest;
+  }
+
+  function renderVendorBlock(group, vendor) {
+    const revenue = parseFloat(state.revenue) || 0;
+    const resting = isVendorResting(group.vendor);
+    const collapsed = state.collapsed[group.vendor] === true;
+
+    const restLabelHtml = (vendor && vendor.restDayLabel)
+      ? '<span class="vendor-rest-label">' + escapeHtml(vendor.restDayLabel) + '</span>'
+      : '';
+
+    const coverHtml = (vendor && vendor.coverageDays > 1 && !resting)
+        ? '<span class="vendor-cover-label">需叫 ' + vendor.coverageDays + ' 天份</span>'
+        : '';
+
+      const checkedAttr = resting ? ' checked' : '';
+    const restToggleHtml =
+      '<label class="vendor-rest-toggle" onclick="event.stopPropagation()">' +
+        '<input type="checkbox"' + checkedAttr + ' onchange="onVendorRestToggle(\'' + escapeAttr(group.vendor) + '\', this.checked)" />' +
+        '今日休息' +
+      '</label>';
+
+    const itemRows = group.items.map(function (it) {
+      return renderItemRow(it, revenue, resting);
+    }).join('');
+
+    return '<div class="vendor-card' + (resting ? ' is-rest' : '') + (collapsed ? ' collapsed' : '') + '">' +
+      '<div class="vendor-head" onclick="onVendorHeadClick(\'' + escapeAttr(group.vendor) + '\')">' +
+        '<div class="vendor-head-text">' +
+          '<span class="vendor-name">' + escapeHtml(group.vendor) + '</span>' +
+          restLabelHtml +
+        coverHtml +
+        '</div>' +
+        restToggleHtml +
+        '<span class="vendor-arrow">▾</span>' +
+      '</div>' +
+      '<div class="vendor-body">' +
+        itemRows +
+      '</div>' +
+    '</div>';
+  }
+
+  function isDailyStore() {
+  return !!(state.storeData && state.storeData.store && state.storeData.store.key === 'shicheng');
+}
+
+function renderItemRow(it, revenue, resting) {
+    const stockVal = state.inventory[it.name];
+    const stockDisplay = (stockVal === undefined || stockVal === null) ? '' : stockVal;
+    const stockNum = parseFloat(stockVal);
+    const stock = isNaN(stockNum) ? 0 : stockNum;
+
+    let suggestHtml = '';
+    let needHtml = '';
+
+    if (!isDailyStore() && it.ratio > 0) {
+      // 有比例：自動算「建議總量 - 庫存 = 需叫」
+      const suggested = revenue * it.ratio;
+      suggestHtml = '<div class="item-suggest">建議 ' + roundQty(suggested) + ' ' + it.unit + '</div>';
+      if (stockDisplay === '' || stockDisplay === null) {
+        // 沒填庫存 → 不放進叫貨清單（要叫滿請填 0）
+        needHtml = '<div class="item-need" style="color:#a8a29e;font-style:italic">等你填庫存</div>';
+      } else {
+        const need = Math.max(0, suggested - stock);
+        const needCls = need > 0 ? 'has-need' : 'no-need';
+        needHtml = '<div class="item-need ' + needCls + '">' + (need > 0 ? '需叫 ' + ceilQty(need) + it.unit : '不用叫') + '</div>';
+      }
+    } else {
+      // 比例 = 0：使用者直接填要叫的量
+      // 沒寫內部提醒時，才印預設的「⚠ 快沒再叫」灰字（避免跟紅色內部提醒重複）
+      if (isDailyStore() && it.ratio > 0) {
+      suggestHtml = '<div class="item-suggest">每日需求量 ' + roundQty(it.ratio) + ' ' + it.unit + '</div>';
+    } else if (!isDailyStore() && !it.internalNote) {
+        suggestHtml = '<div class="item-call-empty">⚠ 快沒再叫' + (it.note ? '（' + escapeHtml(it.note) + '）' : '') + '</div>';
+      }
+      if (stock > 0) {
+        needHtml = '<div class="item-need has-need">叫 ' + ceilQty(stock) + it.unit + '</div>';
+      } else {
+        needHtml = '<div class="item-need" style="color:#a8a29e;font-style:italic">輸入要叫的量</div>';
+      }
+    }
+
+    const meta = it.unit + (it.note && (it.ratio > 0 || isDailyStore()) ? ' · ' + escapeHtml(it.note) : '');
+    const placeholder = isDailyStore() ? '今日要量' : (it.ratio > 0 ? '庫存' : '叫貨');
+    const internalHtml = it.internalNote
+      ? '<div class="item-internal">💡 ' + escapeHtml(it.internalNote) + '</div>'
+      : '';
+
+    return '<div class="item-row">' +
+      '<div>' +
+        '<div class="item-name">' + escapeHtml(it.name) + '</div>' +
+        '<div class="item-meta">' + meta + '</div>' +
+        internalHtml +
+        suggestHtml +
+      '</div>' +
+      '<div class="item-controls">' +
+        '<input class="stock-input" type="number" inputmode="decimal" placeholder="' + placeholder + '" value="' + stockDisplay + '"' +
+          ' oninput="onStockChange(\'' + escapeAttr(it.name) + '\', this.value, this)" />' +
+        needHtml +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderResult() {
+    const blocks = (state.orderText || []).map(function (b, i) {
+      const rows = (b.text || '').split('\n').length + 1;
+      return '<div class="order-block">' +
+        '<div class="order-block-head">' +
+          '<div class="order-block-vendor">' + escapeHtml(b.vendor) + '</div>' +
+              '' +
+        '</div>' +
+        '<textarea class="order-block-text" id="ot' + i + '" readonly rows="' + rows + '" onclick="this.select()">' + escapeHtml(b.text) + '</textarea>' +
+        '<div class="order-block-hint">點文字可全選複製</div>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="result-overlay" onclick="if (event.target === this) closeResult()">' +
+      '<div class="result-sheet">' +
+        '<h2 class="result-title">叫貨清單</h2>' +
+        '<p class="result-subtitle">' + state.storeData.store.name + ' · ' + state.storeData.tomorrow + ' ' + state.storeData.tomorrowDow + ' 送貨</p>' +
+        (blocks || '<div class="empty-state">沒有任何品項需要叫貨</div>') +
+        '<div class="result-actions">' +
+          (blocks ? '<button class="btn-primary" onclick="confirmSubmit()">複製並記錄</button>' : '') +
+          '<button class="btn-secondary" onclick="closeResult()">回去再修改</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // ─────────────────────────────────────
+  // 邏輯
+  // ─────────────────────────────────────
+  function onRevenueChange(v) {
+    state.revenue = v;
+    rerenderItemsOnly();
+  }
+  // 庫存/叫貨輸入：只更新「需叫」顯示，不重繪整個清單（避免手機鍵盤被收起來）
+  function onStockChange(itemName, v, inputEl) {
+    state.inventory[itemName] = v;
+    const it = state.storeData.items.find(function (x) { return x.name === itemName; });
+    if (!it || !inputEl) return;
+    const needEl = inputEl.parentElement.querySelector('.item-need');
+    if (!needEl) return;
+    const stockNum = parseFloat(v);
+    const stock = isNaN(stockNum) ? 0 : stockNum;
+
+    if (!isDailyStore() && it.ratio > 0) {
+      if (v === '' || v === null || v === undefined) {
+        needEl.className = 'item-need';
+        needEl.style.cssText = 'color:#a8a29e;font-style:italic';
+        needEl.textContent = '等你填庫存';
+      } else {
+        const revenue = parseFloat(state.revenue) || 0;
+        const suggested = revenue * it.ratio;
+        const needAmt = Math.max(0, suggested - stock);
+        const cls = needAmt > 0 ? 'has-need' : 'no-need';
+        needEl.className = 'item-need ' + cls;
+        needEl.style.cssText = '';
+        needEl.textContent = needAmt > 0 ? '需叫 ' + ceilQty(needAmt) + it.unit : '不用叫';
+      }
+    } else {
+      // 比例 = 0：直接把輸入當作要叫的量
+      if (stock > 0) {
+        needEl.className = 'item-need has-need';
+        needEl.style.cssText = '';
+        needEl.textContent = '叫 ' + ceilQty(stock) + it.unit;
+      } else {
+        needEl.className = 'item-need';
+        needEl.style.cssText = 'color:#a8a29e;font-style:italic';
+        needEl.textContent = '輸入要叫的量';
+      }
+    }
+  }
+  function onVendorRestToggle(vendorName, checked) {
+    state.manualRest[vendorName] = checked;
+    rerenderItemsOnly();
+  }
+  function onVendorHeadClick(vendorName) {
+    state.collapsed[vendorName] = !state.collapsed[vendorName];
+    rerenderItemsOnly();
+  }
+
+  function rerenderItemsOnly() {
+    const d = state.storeData;
+    const groups = groupByVendor(d.items, d.vendors, d.categoryOrder);
+    const blocks = groups.map(function (g) { return renderVendorBlock(g, d.vendors[g.vendor]); }).join('');
+    const list = document.querySelector('.vendor-list');
+    if (list) list.innerHTML = blocks || emptyState();
+  }
+
+  function generateOrder() {
+    const d = state.storeData;
+    const revenue = parseFloat(state.revenue) || 0;
+    if (revenue <= 0 && !isDailyStore()) {
+      alert('請先輸入預估營業額');
+      const r = document.getElementById('revenue');
+      if (r) r.focus();
+      return;
+    }
+
+    const groups = groupByVendor(d.items, d.vendors, d.categoryOrder);
+    const orders = [];
+    groups.forEach(function (g) {
+      if (isVendorResting(g.vendor)) return; // 反灰廠商跳過
+
+      const lines = [];
+      // 從後端取範本（找不到就用預設）
+      const orderTpl = (d.templates && d.templates.order) || '{store}\n{tomorrow_date} {tomorrow_dow} 叫貨\n\n{lines}';
+      const lineTpl = (d.templates && d.templates.line) || '{name} {qty}{unit}{note_suffix}';
+
+      g.items.forEach(function (it) {
+        const rawVal = state.inventory[it.name];
+        // 沒填數字（包含空字串/undefined）→ 略過，不放進叫貨清單
+        if (rawVal === undefined || rawVal === null || rawVal === '') return;
+        const stockNum = parseFloat(rawVal);
+        if (isNaN(stockNum)) return; // 非數字也略過
+        const stock = stockNum;
+        let need;
+        if (!isDailyStore() && it.ratio > 0) {
+          // 有比例：自動算（要叫滿就填 0）
+          const suggested = revenue * it.ratio;
+          need = Math.max(0, suggested - stock);
+        } else {
+          // 比例 = 0：使用者輸入的數字就是要叫的量
+          need = stock;
+        }
+        if (need <= 0) return;
+        lines.push(renderTpl(lineTpl, {
+          name: it.name,
+          qty: ceilQty(need),
+          unit: it.unit,
+          note: it.note || '',
+          note_suffix: it.note ? ' (' + it.note + ')' : '',
+          category: it.category || '',
+          vendor: g.vendor,
+        }));
+      });
+
+      if (lines.length === 0) return;
+
+      const text = renderTpl(orderTpl, {
+        store: d.store.name,
+        vendor: g.vendor,
+        today_date: d.today,
+        today_dow: d.todayDow,
+        tomorrow_date: d.tomorrow,
+        tomorrow_dow: d.tomorrowDow,
+        tomorrow_short: d.tomorrowShort || d.tomorrow,
+        tomorrow_dow_short: d.tomorrowDowShort || d.tomorrowDow,
+        lines: lines.join('\n'),
+      });
+      orders.push({ vendor: g.vendor, text: text });
+    });
+
+    state.orderText = orders;
+    state.showResult = true;
+    renderOrder();
+  }
+
+  function closeResult() {
+    state.showResult = false; state.orderText = null;
+    renderOrder();
+  }
+
+  function copyText(btn, text) {
+    const decoded = unescapeAttr(text);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(decoded).then(function () { markCopied(btn); })
+        .catch(function () { fallbackCopy(decoded); markCopied(btn); });
+    } else {
+      fallbackCopy(decoded); markCopied(btn);
+    }
+  }
+  // 從畫面上的 textarea 複製（在 Apps Script iframe 沙箱內最穩定）
+  function copyOrderText(btn, idx) {
+    const ta = document.getElementById('ot' + idx);
+    if (!ta) return;
+    ta.focus();
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    if (!ok && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(ta.value).then(function () { markCopied(btn); })
+        .catch(function () { toast('請手動長按文字選取再複製'); });
+      return;
+    }
+    if (ok) markCopied(btn);
+    else toast('請手動長按文字選取再複製');
+  }
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    ta.remove();
+  }
+  function markCopied(btn) {
+    btn.classList.add('copied'); btn.textContent = '已複製 ✓';
+    setTimeout(function () { btn.classList.remove('copied'); btn.textContent = '複製'; }, 1800);
+  }
+
+  function confirmSubmit() {
+    var btn = document.querySelector('.result-actions .btn-primary');
+    if (btn && btn.disabled) return;
+    var fullText = (state.orderText || []).map(function (b) { return b.text; }).join('\n\n');
+    if (fullText) { try { fallbackCopy(fullText); } catch (e) {} }
+    if (btn) { btn.disabled = true; btn.textContent = '處理中…'; }
+    var d = state.storeData;
+    var payload = { storeKey: d.store.key, revenue: parseFloat(state.revenue) || 0, inventory: {}, orders: state.orderText || [] };
+    Object.keys(state.inventory).forEach(function (k) {
+      var v = state.inventory[k];
+      if (v !== '' && v !== null && v !== undefined && !isNaN(parseFloat(v))) payload.inventory[k] = parseFloat(v);
+    });
+    showLoading(true);
+    call('submitOrder', payload)
+      .then(function (res) { showLoading(false); toast('已複製並記錄 · ' + res.batchId); if (btn) { btn.textContent = '已記錄 ✓'; } })
+      .catch(function (err) { showLoading(false); if (btn) { btn.disabled = false; btn.textContent = '複製並記錄'; } alert('記錄失敗（清單已複製，可重試）：' + (err.message || err)); });
+  }
+
+  // ─────────────────────────────────────
+  // 工具
+  // ─────────────────────────────────────
+  // 建議叫貨量用：四捨五入到 0.1（顯示用，呈現準確估算）
+  function roundQty(n) {
+    if (n === 0) return '0';
+    const r = Math.round(n * 10) / 10;
+    return r % 1 === 0 ? r.toString() : r.toFixed(1);
+  }
+  // 實際叫貨量用：無條件進位（你不可能叫 2.8 袋）
+  function ceilQty(n) {
+    if (n <= 0) return '0';
+    return String(Math.ceil(n));
+  }
+  function escapeHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function escapeAttr(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/\n/g, '&#10;');
+  }
+  function unescapeAttr(s) {
+    return String(s).replace(/&#10;/g, '\n').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+  }
+
+  // ─────────────────────────────────────
+  // 主管後台
+  // ─────────────────────────────────────
+  function showAdminLogin() {
+    state.adminMode = true;
+    state.adminScreen = 'login';
+    state.adminAuth = { storeKey: state.bootstrap.stores[0].key, password: '' };
+    renderAdmin();
+  }
+
+  function exitAdmin() {
+    state.adminMode = false;
+    state.adminData = null;
+    renderHome();
+  }
+
+  function renderAdmin() {
+    if (state.adminScreen === 'login') return renderAdminLogin();
+    if (state.adminScreen === 'menu') return renderAdminMenu();
+    if (state.adminScreen === 'templates_simple') return renderAdminTemplatesSimple();
+    if (state.adminScreen === 'templates_advanced') return renderAdminTemplates();
+    if (state.adminScreen === 'special_rest') return renderAdminSpecialRest();
+    if (state.adminScreen === 'vendors') return renderAdminVendors();
+    if (state.adminScreen === 'vendor_edit') return renderAdminVendorEdit();
+    if (state.adminScreen === 'items') return renderAdminItems();
+    if (state.adminScreen === 'item_edit') return renderAdminItemEdit();
+    return renderAdminLogin();
+  }
+
+  function renderAdminLogin() {
+    const stores = state.bootstrap.stores;
+    const opts = stores.map(function (s) {
+      const sel = s.key === state.adminAuth.storeKey ? ' selected' : '';
+      return '<option value="' + s.key + '"' + sel + '>' + escapeHtml(s.name) + '</option>';
+    }).join('');
+
+    document.getElementById('app').innerHTML =
+      '<div class="admin-page">' +
+        '<button class="admin-back" onclick="exitAdmin()">‹ 返回首頁</button>' +
+        '<h1 class="admin-title">主管後台</h1>' +
+        '<div class="admin-form-row">' +
+          '<label>選擇門市</label>' +
+          '<select onchange="state.adminAuth.storeKey = this.value">' + opts + '</select>' +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label>密碼</label>' +
+          '<input type="password" placeholder="輸入該店密碼" oninput="state.adminAuth.password = this.value" onkeydown="if(event.key===\'Enter\') adminLogin()" />' +
+        '</div>' +
+        '<button class="btn-primary" onclick="adminLogin()">登入</button>' +
+      '</div>';
+  }
+
+  function adminLogin() {
+    if (!state.adminAuth.password) { alert('請輸入密碼'); return; }
+    showLoading(true);
+    call('getAdminData', state.adminAuth.storeKey, state.adminAuth.password)
+      .then(function (data) {
+        state.adminData = data;
+        state.adminScreen = 'menu';
+        renderAdmin();
+      })
+      .catch(function (err) {
+        alert('登入失敗：' + (err.message || err));
+      })
+      .finally(function () { showLoading(false); });
+  }
+
+  function renderAdminMenu() {
+    const d = state.adminData;
+    document.getElementById('app').innerHTML =
+      '<div class="admin-page">' +
+        '<button class="admin-back" onclick="exitAdmin()">‹ 返回首頁</button>' +
+        '<h1 class="admin-title">主管後台 · ' + escapeHtml(d.storeName) + '</h1>' +
+        '<button class="admin-menu-item" onclick="openTemplatesSimple()">📝 編輯訂單格式</button>' +
+        '<button class="admin-menu-item" onclick="openSpecialRest()">📅 廠商臨時休息日</button>' +
+        '<button class="admin-menu-item" onclick="openVendors()">🏪 廠商管理（新增 / 編輯 / 刪除）</button>' +
+        '<button class="admin-menu-item" onclick="openItems()">📦 品項管理（新增 / 編輯 / 刪除）</button>' +
+        '<div class="admin-help">後續會新增：變更密碼、查歷史叫貨紀錄</div>' +
+      '</div>';
+  }
+
+  function openTemplatesSimple() {
+    // 從後端拉的設定複製一份；如果之前是 advanced，沿用上次的 cfg 也 OK（後端會給預設）
+    const cfg = state.adminData.templateConfig || {};
+    state.adminTplCfg = {
+      showStore: cfg.showStore !== false,
+      showTomorrowDate: cfg.showTomorrowDate !== false,
+      showVendor: !!cfg.showVendor,
+      dateFormat: cfg.dateFormat || 'short',
+      lineFormat: cfg.lineFormat || 'standard',
+    };
+    state.adminScreen = 'templates_simple';
+    renderAdmin();
+  }
+
+  function openTemplatesAdvanced() {
+    state.adminTplDraft = {
+      order: state.adminData.templates.order,
+      line: state.adminData.templates.line,
+    };
+    state.adminScreen = 'templates_advanced';
+    renderAdmin();
+  }
+
+  function openSpecialRest() {
+    state.adminSpecialDraft = { vendor: '', start: '', end: '', note: '', syncSiblings: false };
+    showLoading(true);
+    call('getAdminVendors', state.adminAuth.storeKey, state.adminAuth.password)
+      .then(function (vendors) {
+        state.adminVendors = vendors;
+        if (!state.adminSpecialDraft.vendor && vendors.length > 0) {
+          state.adminSpecialDraft.vendor = vendors[0].name;
+        }
+        state.adminScreen = 'special_rest';
+        renderAdmin();
+      })
+      .catch(function (err) { alert('載入廠商失敗：' + (err.message || err)); })
+      .finally(function () { showLoading(false); });
+  }
+
+  // 範例變數（兩種模式共用）
+  function _sampleVars() {
+    return {
+      store: '中和店', vendor: '菜商',
+      today_date: '2026/05/01', today_dow: '週五',
+      tomorrow_date: '2026/05/02', tomorrow_dow: '週六',
+      tomorrow_short: '5/2', tomorrow_dow_short: '六',
+    };
+  }
+  function _sampleLineVars() {
+    return [
+      { name: '青江菜', qty: '14', unit: '斤', note: '2斤裝1袋', note_suffix: ' (2斤裝1袋)' },
+      { name: '高麗菜', qty: '12', unit: '斤', note: '', note_suffix: '' },
+      { name: '蔥花', qty: '5', unit: '兩', note: '', note_suffix: '' },
+    ];
+  }
+
+  function _samplePreview() {
+    const sampleLines = _sampleLineVars().map(function (s) {
+      return renderTpl(state.adminTplDraft.line, Object.assign({ category: '菜商', vendor: '菜商' }, s));
+    }).join('\n');
+    return renderTpl(state.adminTplDraft.order, Object.assign({}, _sampleVars(), { lines: sampleLines }));
+  }
+
+  // ─── 簡易範本：把 cfg 編譯成範本字串（與後端 _compileSimpleTemplate 對齊）
+  function _compileSimpleClient(cfg) {
+    cfg = cfg || {};
+    const headerParts = [];
+    if (cfg.showStore) headerParts.push('{store}');
+    if (cfg.showVendor) headerParts.push('{vendor}');
+    const headerLine = headerParts.join(' ');
+
+    let dateLine = '';
+    if (cfg.showTomorrowDate) {
+      if (cfg.dateFormat === 'full') dateLine = '{tomorrow_date} {tomorrow_dow} 叫貨';
+      else if (cfg.dateFormat === 'tomorrow') dateLine = '明天 {tomorrow_short} {tomorrow_dow} 叫貨';
+      else dateLine = '{tomorrow_short} ({tomorrow_dow_short}) 叫貨';
+    }
+
+    const sections = [];
+    if (headerLine) sections.push(headerLine);
+    if (dateLine) sections.push(dateLine);
+    const order = sections.length > 0 ? sections.join('\n') + '\n\n{lines}' : '{lines}';
+    const line = cfg.lineFormat === 'with_note'
+      ? '{name} {qty}{unit}{note_suffix}'
+      : '{name} {qty}{unit}';
+    return { order: order, line: line };
+  }
+
+  function _simplePreview(cfg) {
+    const tpl = _compileSimpleClient(cfg);
+    const sampleLines = _sampleLineVars().map(function (s) {
+      return renderTpl(tpl.line, Object.assign({ category: '菜商', vendor: '菜商' }, s));
+    }).join('\n');
+    return renderTpl(tpl.order, Object.assign({}, _sampleVars(), { lines: sampleLines }));
+  }
+
+  function renderAdminTemplates() {
+    const preview = _samplePreview();
+    document.getElementById('app').innerHTML =
+      '<div class="admin-page">' +
+        '<button class="admin-back" onclick="state.adminScreen=\'menu\'; renderAdmin();">‹ 返回後台</button>' +
+        '<h1 class="admin-title">進階：直接編輯範本</h1>' +
+        '<div class="admin-help">' +
+          '可用變數：<br>' +
+          '• <code>{store}</code> 店名 · <code>{vendor}</code> 廠商<br>' +
+          '• <code>{today_date}</code> <code>{today_dow}</code> 今天日期/星期<br>' +
+          '• <code>{tomorrow_date}</code> <code>{tomorrow_dow}</code> 明天日期/星期（完整）<br>' +
+          '• <code>{tomorrow_short}</code> 明天 M/d · <code>{tomorrow_dow_short}</code> 星期單字<br>' +
+          '• 整體範本：<code>{lines}</code> 自動展開所有品項<br>' +
+          '• 單行範本：<code>{name}</code> 品項 · <code>{qty}</code> 數量 · <code>{unit}</code> 單位 · <code>{note}</code> 備註 · <code>{note_suffix}</code> 備註括號版「 (XX)」 · <code>{category}</code> 分類' +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label>整體範本</label>' +
+          '<textarea rows="6" oninput="state.adminTplDraft.order = this.value; _liveTplPreview();">' + escapeHtml(state.adminTplDraft.order) + '</textarea>' +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label>單行範本</label>' +
+          '<textarea rows="2" oninput="state.adminTplDraft.line = this.value; _liveTplPreview();">' + escapeHtml(state.adminTplDraft.line) + '</textarea>' +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label>預覽（範例資料）</label>' +
+          '<div class="admin-preview" id="tplPreview">' + escapeHtml(preview) + '</div>' +
+        '</div>' +
+        '<button class="btn-primary" onclick="saveTemplates()">儲存</button>' +
+        '<div style="height:8px"></div>' +
+        '<button class="btn-secondary" onclick="resetTplToDefault()">還原預設值</button>' +
+      '</div>';
+  }
+
+  function _liveTplPreview() {
+    const el = document.getElementById('tplPreview');
+    if (el) el.textContent = _samplePreview();
+  }
+
+  function resetTplToDefault() {
+    if (!confirm('還原為系統預設值？')) return;
+    state.adminTplDraft = {
+      order: state.adminData.defaults.order,
+      line: state.adminData.defaults.line,
+    };
+    renderAdmin();
+  }
+
+  function saveTemplates() {
+    showLoading(true);
+    call('updateTemplates', state.adminAuth.storeKey, state.adminAuth.password, state.adminTplDraft)
+      .then(function (res) {
+        showLoading(false);
+        toast('已儲存 · ' + res.savedAt);
+        state.adminData.templates = {
+          order: state.adminTplDraft.order,
+          line: state.adminTplDraft.line,
+        };
+        state.adminData.templateMode = 'advanced';
+      })
+      .catch(function (err) {
+        showLoading(false);
+        alert('儲存失敗：' + (err.message || err));
+      });
+  }
+
+  // ─────────────────────────────────────
+  // 主管後台 · 簡易範本編輯
+  // ─────────────────────────────────────
+  function renderAdminTemplatesSimple() {
+    const cfg = state.adminTplCfg;
+    const preview = _simplePreview(cfg);
+
+    function chk(name, label) {
+      const checked = cfg[name] ? ' checked' : '';
+      return '<label class="tpl-opt"><input type="checkbox"' + checked +
+        ' onchange="state.adminTplCfg.' + name + ' = this.checked; _liveSimplePreview();" /> ' + label + '</label>';
+    }
+    function rad(group, val, label) {
+      const checked = cfg[group] === val ? ' checked' : '';
+      return '<label class="tpl-opt"><input type="radio" name="' + group + '" value="' + val + '"' + checked +
+        ' onchange="state.adminTplCfg.' + group + ' = this.value; _liveSimplePreview();" /> ' + label + '</label>';
+    }
+
+    document.getElementById('app').innerHTML =
+      '<div class="admin-page">' +
+        '<button class="admin-back" onclick="state.adminScreen=\'menu\'; renderAdmin();">‹ 返回後台</button>' +
+        '<h1 class="admin-title">編輯訂單格式</h1>' +
+        '<div class="admin-section-title">標題顯示</div>' +
+        '<div class="tpl-group">' +
+          chk('showStore', '店名（中和店）') +
+          chk('showTomorrowDate', '明天日期（5/2）') +
+          chk('showVendor', '廠商名（菜商）') +
+        '</div>' +
+        '<div class="admin-section-title">日期格式</div>' +
+        '<div class="tpl-group">' +
+          rad('dateFormat', 'short', '簡短（5/2 (六)）') +
+          rad('dateFormat', 'full', '完整（2026/05/02 週六）') +
+          rad('dateFormat', 'tomorrow', '含「明天」（明天 5/2 週六）') +
+        '</div>' +
+        '<div class="admin-section-title">品項行</div>' +
+        '<div class="tpl-group">' +
+          rad('lineFormat', 'standard', '標準（高麗菜 14斤）') +
+          rad('lineFormat', 'with_note', '含備註（高麗菜 14斤 (2斤裝1袋)）') +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label>預覽</label>' +
+          '<div class="admin-preview" id="tplPreviewSimple">' + escapeHtml(preview) + '</div>' +
+        '</div>' +
+        '<button class="btn-primary" onclick="saveTemplatesSimple()">儲存</button>' +
+        '<div style="height:8px"></div>' +
+        '<button class="btn-secondary" onclick="resetSimpleToDefault()">還原預設值</button>' +
+      '</div>';
+  }
+
+  function _liveSimplePreview() {
+    const el = document.getElementById('tplPreviewSimple');
+    if (el) el.textContent = _simplePreview(state.adminTplCfg);
+  }
+
+  function resetSimpleToDefault() {
+    if (!confirm('還原為系統預設？')) return;
+    state.adminTplCfg = {
+      showStore: true, showTomorrowDate: true, showVendor: false,
+      dateFormat: 'short', lineFormat: 'standard',
+    };
+    renderAdmin();
+  }
+
+  function saveTemplatesSimple() {
+    showLoading(true);
+    call('updateTemplatesSimple', state.adminAuth.storeKey, state.adminAuth.password, state.adminTplCfg)
+      .then(function (res) {
+        showLoading(false);
+        toast('已儲存 · ' + res.savedAt);
+        state.adminData.templates = res.compiled;
+        state.adminData.templateMode = 'simple';
+        state.adminData.templateConfig = Object.assign({}, state.adminTplCfg);
+      })
+      .catch(function (err) {
+        showLoading(false);
+        alert('儲存失敗：' + (err.message || err));
+      });
+  }
+
+  // ─────────────────────────────────────
+  // 主管後台 · 臨時休息日
+  // ─────────────────────────────────────
+  function renderAdminSpecialRest() {
+    const vendors = state.adminVendors || [];
+    const draft = state.adminSpecialDraft;
+
+    const vendorOpts = vendors.map(function (v) {
+      const sel = v.name === draft.vendor ? ' selected' : '';
+      return '<option value="' + escapeHtml(v.name) + '"' + sel + '>' + escapeHtml(v.name) + '</option>';
+    }).join('');
+
+    // 列表：每個廠商一張卡片，列出現有臨時休息日
+    const edit = state.adminSpecialEdit;
+    const list = vendors.map(function (v) {
+      const lines = v.specialRestLines.length === 0
+        ? '<div class="sr-empty">（尚無）</div>'
+        : v.specialRestLines.map(function (line, i) {
+            const isEditing = edit.vendor === v.name && edit.idx === i;
+            if (isEditing) {
+              return '<div class="sr-edit-form">' +
+                '<div class="admin-form-row">' +
+                  '<label>開始日期</label>' +
+                  '<input type="date" value="' + escapeAttr(edit.start) + '" oninput="state.adminSpecialEdit.start = this.value" />' +
+                '</div>' +
+                '<div class="admin-form-row">' +
+                  '<label>結束日期（可空）</label>' +
+                  '<input type="date" value="' + escapeAttr(edit.end) + '" oninput="state.adminSpecialEdit.end = this.value" />' +
+                '</div>' +
+                '<div class="admin-form-row">' +
+                  '<label>備註</label>' +
+                  '<input type="text" placeholder="例：員工旅遊" value="' + escapeAttr(edit.note) + '" oninput="state.adminSpecialEdit.note = this.value" />' +
+                '</div>' +
+                '<div class="sr-edit-btns">' +
+                  '<button class="btn-cancel" onclick="cancelEditSpecialRestLine()">取消</button>' +
+                  '<button class="btn-primary" onclick="saveEditSpecialRestLine()">儲存</button>' +
+                '</div>' +
+              '</div>';
+            }
+            return '<div class="sr-line">' +
+              '<span>' + escapeHtml(line) + '</span>' +
+              '<span class="sr-actions">' +
+                '<button class="sr-edit" onclick="editSpecialRestLine(\'' + escapeAttr(v.name) + '\', ' + i + ')">編輯</button>' +
+                '<button class="sr-del" onclick="removeSpecialRestLine(\'' + escapeAttr(v.name) + '\', ' + i + ')">刪除</button>' +
+              '</span>' +
+            '</div>';
+          }).join('');
+      return '<div class="sr-card">' +
+        '<div class="sr-vendor">' + escapeHtml(v.name) + ' <span class="sr-rest-label">' + escapeHtml(v.restDayLabel) + '</span></div>' +
+        lines +
+      '</div>';
+    }).join('');
+
+    document.getElementById('app').innerHTML =
+      '<div class="admin-page">' +
+        '<button class="admin-back" onclick="state.adminScreen=\'menu\'; renderAdmin();">‹ 返回後台</button>' +
+        '<h1 class="admin-title">廠商臨時休息日</h1>' +
+        '<div class="admin-help">新增後會自動顯示在前端該廠商區塊（紅色提醒），到期後自動消失。</div>' +
+        '<div class="sr-add">' +
+          '<div class="admin-section-title">＋ 新增臨時休息日</div>' +
+          '<div class="admin-form-row">' +
+            '<label>廠商</label>' +
+            '<select onchange="state.adminSpecialDraft.vendor = this.value; state.adminSpecialDraft.syncSiblings = false; renderAdmin();">' + vendorOpts + '</select>' +
+          '</div>' +
+          '<div class="admin-form-row">' +
+            '<label>開始日期</label>' +
+            '<input type="date" value="' + escapeAttr(draft.start) + '" oninput="state.adminSpecialDraft.start = this.value" />' +
+          '</div>' +
+          '<div class="admin-form-row">' +
+            '<label>結束日期（可空＝單日）</label>' +
+            '<input type="date" value="' + escapeAttr(draft.end) + '" oninput="state.adminSpecialDraft.end = this.value" />' +
+          '</div>' +
+          '<div class="admin-form-row">' +
+            '<label>備註</label>' +
+            '<input type="text" placeholder="例：員工旅遊、臨時休" value="' + escapeAttr(draft.note) + '" oninput="state.adminSpecialDraft.note = this.value" />' +
+          '</div>' +
+          (_isStoreSpecificVendorName(draft.vendor) ?
+            '<div class="admin-form-row">' +
+              '<label class="vd-day-chk" style="background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:10px 12px">' +
+                '<input type="checkbox"' + (draft.syncSiblings ? ' checked' : '') + ' onchange="state.adminSpecialDraft.syncSiblings = this.checked" />' +
+                ' 同步套用到所有同名分店（' + _siblingNamesPreview(draft.vendor) + '）' +
+              '</label>' +
+            '</div>'
+            : '') +
+          '<button class="btn-primary" onclick="addSpecialRestLine()">新增</button>' +
+        '</div>' +
+        '<div class="admin-section-title">現有臨時休息日</div>' +
+        list +
+      '</div>';
+  }
+
+  // 判斷廠商是否為店別專屬（名稱結尾為 (中和)/(永春)/(新莊)）
+  function _isStoreSpecificVendorName(name) {
+    if (!name) return false;
+    const m = name.match(/^(.+)\(([^)]+)\)$/);
+    if (!m) return false;
+    const stores = (state.bootstrap && state.bootstrap.stores) || [];
+    // bootstrap.stores 沒帶 shortName，硬編
+    const shortNames = ['中和', '永春', '新莊'];
+    return shortNames.indexOf(m[2]) >= 0;
+  }
+
+  // 給 checkbox 標籤顯示「(永春)、(新莊)」這種兄弟列表
+  function _siblingNamesPreview(name) {
+    const m = name.match(/^(.+)\(([^)]+)\)$/);
+    if (!m) return '';
+    const base = m[1], my = m[2];
+    const all = ['中和', '永春', '新莊'];
+    return all.filter(function (x) { return x !== my; }).map(function (x) { return base + '(' + x + ')'; }).join('、');
+  }
+
+  // 把 yyyy-mm-dd 轉成 M/d
+  function _ymdToShort(s) {
+    if (!s) return '';
+    const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return s;
+    return Number(m[2]) + '/' + Number(m[3]);
+  }
+
+  function addSpecialRestLine() {
+    const d = state.adminSpecialDraft;
+    if (!d.vendor) { alert('請選廠商'); return; }
+    if (!d.start) { alert('請選開始日期'); return; }
+    const s = _ymdToShort(d.start);
+    const e = d.end ? _ymdToShort(d.end) : '';
+    const datePart = e && e !== s ? (s + '-' + e) : s;
+    const newLine = (d.note ? (datePart + ' ' + d.note) : datePart).trim();
+    const sync = !!d.syncSiblings;
+
+    showLoading(true);
+    call('appendVendorSpecialRest', state.adminAuth.storeKey, state.adminAuth.password, d.vendor, newLine, sync)
+      .then(function (res) {
+        // 重新拉廠商清單（後端可能更新了多個 sibling）
+        return call('getAdminVendors', state.adminAuth.storeKey, state.adminAuth.password)
+          .then(function (vendors) { return { res: res, vendors: vendors }; });
+      })
+      .then(function (data) {
+        state.adminVendors = data.vendors;
+        state.adminSpecialDraft = { vendor: d.vendor, start: '', end: '', note: '', syncSiblings: sync };
+        showLoading(false);
+        const msg = (data.res.updated && data.res.updated.length > 1)
+          ? ('已套用到 ' + data.res.updated.length + ' 個廠商：' + data.res.updated.join('、'))
+          : '已新增';
+        toast(msg);
+        renderAdmin();
+      })
+      .catch(function (err) {
+        showLoading(false);
+        alert('儲存失敗：' + (err.message || err));
+      });
+  }
+
+  function removeSpecialRestLine(vendorName, idx) {
+    const vendor = state.adminVendors.find(function (x) { return x.name === vendorName; });
+    if (!vendor) return;
+    if (!confirm('刪除：' + vendor.specialRestLines[idx] + '？')) return;
+    const newLines = vendor.specialRestLines.slice();
+    newLines.splice(idx, 1);
+    _saveSpecialRest(vendor.name, newLines.join('\n'), null);
+  }
+
+  // 把 "5/12" 或 "2026/5/12" 轉回 yyyy-mm-dd（給 input[type=date]）
+  function _shortToYmd(s) {
+    if (!s) return '';
+    const pad2 = function (n) { return ('0' + n).slice(-2); };
+    const parts = String(s).split('/').map(function (x) { return Number(x); });
+    if (parts.length === 2) {
+      const y = new Date().getFullYear();
+      return y + '-' + pad2(parts[0]) + '-' + pad2(parts[1]);
+    }
+    if (parts.length === 3) {
+      return parts[0] + '-' + pad2(parts[1]) + '-' + pad2(parts[2]);
+    }
+    return '';
+  }
+
+  // 把 "5/12 員工旅遊" 或 "5/12-5/15 員工旅遊" 拆成 {start, end, note}
+  function _parseSpecialLine(line) {
+    const trimmed = String(line || '').trim();
+    if (!trimmed) return { start: '', end: '', note: '' };
+    const idx = trimmed.search(/\s/);
+    const dateStr = idx < 0 ? trimmed : trimmed.substring(0, idx);
+    const note = idx < 0 ? '' : trimmed.substring(idx + 1).trim();
+    const range = dateStr.split(/[-~]/);
+    return {
+      start: _shortToYmd(range[0]),
+      end: range.length > 1 ? _shortToYmd(range[1]) : '',
+      note: note,
+    };
+  }
+
+  function editSpecialRestLine(vendorName, idx) {
+    const vendor = state.adminVendors.find(function (x) { return x.name === vendorName; });
+    if (!vendor) return;
+    const line = vendor.specialRestLines[idx];
+    const parsed = _parseSpecialLine(line);
+    state.adminSpecialEdit = {
+      vendor: vendorName,
+      idx: idx,
+      start: parsed.start,
+      end: parsed.end,
+      note: parsed.note,
+    };
+    renderAdmin();
+  }
+
+  function cancelEditSpecialRestLine() {
+    state.adminSpecialEdit = { vendor: null, idx: -1, start: '', end: '', note: '' };
+    renderAdmin();
+  }
+
+  function saveEditSpecialRestLine() {
+    const e = state.adminSpecialEdit;
+    if (!e.vendor || e.idx < 0) return;
+    if (!e.start) { alert('請選開始日期'); return; }
+    const s = _ymdToShort(e.start);
+    const ed = e.end ? _ymdToShort(e.end) : '';
+    const datePart = ed && ed !== s ? (s + '-' + ed) : s;
+    const newLine = (e.note ? (datePart + ' ' + e.note) : datePart).trim();
+    const vendor = state.adminVendors.find(function (x) { return x.name === e.vendor; });
+    if (!vendor) return;
+    const newLines = vendor.specialRestLines.slice();
+    newLines[e.idx] = newLine;
+    state.adminSpecialEdit = { vendor: null, idx: -1, start: '', end: '', note: '' };
+    _saveSpecialRest(vendor.name, newLines.join('\n'), null);
+  }
+
+  function _saveSpecialRest(vendorName, fullText, afterSave) {
+    showLoading(true);
+    call('setVendorSpecialRest', state.adminAuth.storeKey, state.adminAuth.password, vendorName, fullText)
+      .then(function (res) {
+        // 更新本地 cache
+        const vendor = state.adminVendors.find(function (x) { return x.name === vendorName; });
+        if (vendor) {
+          vendor.specialRestRaw = fullText;
+          vendor.specialRestLines = fullText.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+        }
+        if (afterSave) afterSave();
+        showLoading(false);
+        toast('已儲存 · ' + res.savedAt);
+        renderAdmin();
+      })
+      .catch(function (err) {
+        showLoading(false);
+        alert('儲存失敗：' + (err.message || err));
+      });
+  }
+
+  // ─────────────────────────────────────
+  // 主管後台 · 廠商管理
+  // ─────────────────────────────────────
+  function openVendors() {
+    showLoading(true);
+    call('getAdminVendors', state.adminAuth.storeKey, state.adminAuth.password)
+      .then(function (vendors) {
+        state.adminVendors = vendors;
+        state.adminScreen = 'vendors';
+        renderAdmin();
+      })
+      .catch(function (err) { alert('載入廠商失敗：' + (err.message || err)); })
+      .finally(function () { showLoading(false); });
+  }
+
+  function renderAdminVendors() {
+    const vendors = state.adminVendors || [];
+    const cards = vendors.map(function (v) {
+      const meta = [];
+      meta.push(escapeHtml(v.restDayLabel));
+      if (v.lineGroupId) meta.push('LINE: ' + escapeHtml(v.lineGroupId.substring(0, 14)) + (v.lineGroupId.length > 14 ? '…' : ''));
+      if (v.note) meta.push(escapeHtml(v.note));
+      return '<div class="vd-card">' +
+        '<div class="vd-row">' +
+          '<div class="vd-name">' + escapeHtml(v.name) + '</div>' +
+          '<div class="vd-actions">' +
+            '<button class="vd-btn-edit" onclick="openVendorEdit(\'' + escapeAttr(v.name) + '\')">編輯</button>' +
+            '<button class="vd-btn-del" onclick="deleteVendorClick(\'' + escapeAttr(v.name) + '\')">刪除</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="vd-meta">' + meta.join(' · ') + '</div>' +
+      '</div>';
+    }).join('');
+
+    document.getElementById('app').innerHTML =
+      '<div class="admin-page">' +
+        '<button class="admin-back" onclick="state.adminScreen=\'menu\'; renderAdmin();">‹ 返回後台</button>' +
+        '<h1 class="admin-title">廠商管理</h1>' +
+        '<button class="btn-primary" onclick="openVendorEdit(null)" style="margin-bottom:16px">＋ 新增廠商</button>' +
+        '<div class="admin-help">店別專屬廠商請命名為 <code>開元(中和)</code> <code>開元(永春)</code> 等。刪除前會檢查是否還有品項在用。改名會自動把所有店的品項一起改。</div>' +
+        cards +
+      '</div>';
+  }
+
+  function openVendorEdit(originalName) {
+    if (originalName) {
+      const v = state.adminVendors.find(function (x) { return x.name === originalName; });
+      if (!v) { alert('找不到廠商：' + originalName); return; }
+      state.adminVendorEditing = {
+        isNew: false,
+        originalName: v.name,
+        name: v.name,
+        restDays: v.restDays.slice(),
+        lineGroupId: v.lineGroupId,
+        note: v.note,
+        sortOrder: v.sortOrder || 0,
+      };
+    } else {
+      state.adminVendorEditing = {
+        isNew: true,
+        originalName: '',
+        name: '',
+        restDays: [false, false, false, false, false, false, false],
+        lineGroupId: '',
+        note: '',
+        sortOrder: 0,
+      };
+    }
+    state.adminScreen = 'vendor_edit';
+    renderAdmin();
+  }
+
+  function renderAdminVendorEdit() {
+    const e = state.adminVendorEditing;
+    if (!e) { state.adminScreen = 'vendors'; return renderAdmin(); }
+    const dowNames = ['一', '二', '三', '四', '五', '六', '日'];
+    const dayChks = dowNames.map(function (d, i) {
+      const checked = e.restDays[i] ? ' checked' : '';
+      return '<label class="vd-day-chk"><input type="checkbox"' + checked +
+        ' onchange="state.adminVendorEditing.restDays[' + i + '] = this.checked" /> ' + d + '</label>';
+    }).join('');
+
+    document.getElementById('app').innerHTML =
+      '<div class="admin-page">' +
+        '<button class="admin-back" onclick="state.adminScreen=\'vendors\'; renderAdmin();">‹ 返回廠商列表</button>' +
+        '<h1 class="admin-title">' + (e.isNew ? '新增廠商' : '編輯廠商「' + escapeHtml(e.originalName) + '」') + '</h1>' +
+        '<div class="admin-form-row">' +
+          '<label>廠商名稱</label>' +
+          '<input type="text" placeholder="例：菜商、開元(中和)" value="' + escapeAttr(e.name) + '" oninput="state.adminVendorEditing.name = this.value" />' +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label>週固定休（可複選）</label>' +
+          '<div class="vd-day-row">' + dayChks + '</div>' +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label>LINE 群組 ID（可空）</label>' +
+          '<input type="text" placeholder="C123abc... (之後串 LINE 用)" value="' + escapeAttr(e.lineGroupId) + '" oninput="state.adminVendorEditing.lineGroupId = this.value" />' +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label>備註（可空）</label>' +
+          '<input type="text" value="' + escapeAttr(e.note) + '" oninput="state.adminVendorEditing.note = this.value" />' +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label>顯示順序（小的在前；空白＝自動）</label>' +
+          '<input type="number" placeholder="例：10、20、30" value="' + (e.sortOrder || '') + '" oninput="state.adminVendorEditing.sortOrder = Number(this.value) || 0" />' +
+        '</div>' +
+        '<button class="btn-primary" onclick="saveVendor()">儲存</button>' +
+        (e.isNew ? '' :
+          '<div style="height:12px"></div>' +
+          '<button class="btn-secondary" onclick="deleteVendorClick(\'' + escapeAttr(e.originalName) + '\')" style="border-color:#dc2626;color:#dc2626">刪除廠商</button>'
+        ) +
+      '</div>';
+  }
+
+  function saveVendor() {
+    const e = state.adminVendorEditing;
+    if (!e) return;
+    if (!e.name || !e.name.trim()) { alert('請輸入廠商名稱'); return; }
+    showLoading(true);
+    const payload = {
+      name: e.name.trim(),
+      restDays: e.restDays,
+      lineGroupId: e.lineGroupId,
+      note: e.note,
+      sortOrder: Number(e.sortOrder) || 0,
+    };
+    const promise = e.isNew
+      ? call('addAdminVendor', state.adminAuth.storeKey, state.adminAuth.password, payload)
+      : call('updateAdminVendor', state.adminAuth.storeKey, state.adminAuth.password, e.originalName, payload);
+    promise
+      .then(function (res) {
+        showLoading(false);
+        const msg = res.cascadeCount ? ('已儲存 · 同步更新 ' + res.cascadeCount + ' 個品項') : '已儲存';
+        toast(msg);
+        // 重新讀廠商清單
+        return call('getAdminVendors', state.adminAuth.storeKey, state.adminAuth.password);
+      })
+      .then(function (vendors) {
+        state.adminVendors = vendors;
+        state.adminScreen = 'vendors';
+        renderAdmin();
+      })
+      .catch(function (err) {
+        showLoading(false);
+        alert('儲存失敗：' + (err.message || err));
+      });
+  }
+
+  function deleteVendorClick(vendorName) {
+    if (!confirm('確定刪除廠商「' + vendorName + '」？\n（如果有品項在用會被擋下來）')) return;
+    showLoading(true);
+    call('deleteAdminVendor', state.adminAuth.storeKey, state.adminAuth.password, vendorName)
+      .then(function (res) {
+        showLoading(false);
+        toast('已刪除 · ' + res.savedAt);
+        return call('getAdminVendors', state.adminAuth.storeKey, state.adminAuth.password);
+      })
+      .then(function (vendors) {
+        state.adminVendors = vendors;
+        state.adminScreen = 'vendors';
+        renderAdmin();
+      })
+      .catch(function (err) {
+        showLoading(false);
+        alert('刪除失敗：' + (err.message || err));
+      });
+  }
+
+  // ─────────────────────────────────────
+  // 主管後台 · 品項管理
+  // ─────────────────────────────────────
+  function openItems() {
+    showLoading(true);
+    Promise.all([
+      call('getAdminItems', state.adminAuth.storeKey, state.adminAuth.password),
+      call('getAdminVendors', state.adminAuth.storeKey, state.adminAuth.password),
+    ]).then(function (res) {
+      state.adminItems = res[0];
+      state.adminVendors = res[1];
+      state.adminScreen = 'items';
+      renderAdmin();
+    })
+      .catch(function (err) { alert('載入失敗：' + (err.message || err)); })
+      .finally(function () { showLoading(false); });
+  }
+
+  function renderAdminItems() {
+    const items = state.adminItems || [];
+    // 按廠商分組 + 用 categoryOrder 排序
+    const catOrder = ['菜商', '肉商', '海鮮', '火鍋料', '開元', '其他'];
+    const groups = {};
+    items.forEach(function (it) {
+      const v = it.vendor || '（未指定）';
+      if (!groups[v]) groups[v] = { vendor: v, items: [], firstCatIdx: 999 };
+      groups[v].items.push(it);
+      const idx = catOrder.indexOf(it.category);
+      if (idx >= 0 && idx < groups[v].firstCatIdx) groups[v].firstCatIdx = idx;
+    });
+    const groupArr = Object.keys(groups).map(function (k) { return groups[k]; });
+    groupArr.sort(function (a, b) {
+      if (a.firstCatIdx !== b.firstCatIdx) return a.firstCatIdx - b.firstCatIdx;
+      return a.vendor.localeCompare(b.vendor, 'zh-Hant');
+    });
+
+    const groupHtml = groupArr.map(function (g) {
+      const rows = g.items.map(function (it) {
+        const meta = [];
+        meta.push(it.unit || '—');
+        meta.push('比例 ' + (it.ratio || 0));
+        if (it.note) meta.push(escapeHtml(it.note));
+        if (!it.enabled) meta.push('<span style="color:#dc2626">未啟用</span>');
+        return '<div class="im-row">' +
+          '<div class="im-row-text">' +
+            '<div class="im-name">' + escapeHtml(it.name) + '</div>' +
+            '<div class="im-meta">' + meta.join(' · ') + '</div>' +
+          '</div>' +
+          '<div class="im-actions">' +
+            '<button class="vd-btn-edit" onclick="openItemEdit(\'' + escapeAttr(it.name) + '\')">編輯</button>' +
+            '<button class="vd-btn-del" onclick="deleteItemClick(\'' + escapeAttr(it.name) + '\')">刪除</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+      return '<div class="im-group">' +
+        '<div class="im-group-head">' + escapeHtml(g.vendor) + ' <span class="im-count">(' + g.items.length + ')</span></div>' +
+        rows +
+      '</div>';
+    }).join('');
+
+    document.getElementById('app').innerHTML =
+      '<div class="admin-page">' +
+        '<button class="admin-back" onclick="state.adminScreen=\'menu\'; renderAdmin();">‹ 返回後台</button>' +
+        '<h1 class="admin-title">品項管理 · ' + escapeHtml(state.adminData.storeName) + '</h1>' +
+        '<button class="btn-primary" onclick="openItemEdit(null)" style="margin-bottom:16px">＋ 新增品項</button>' +
+        '<div class="admin-help">「比例」是每萬元預估數量（0 = 快沒了再叫，沒自動計算）。「啟用」未勾的品項不會出現在叫貨頁。</div>' +
+        (items.length === 0 ? '<div class="sr-empty">（尚無品項）</div>' : groupHtml) +
+      '</div>';
+  }
+
+  function openItemEdit(originalName) {
+    if (originalName) {
+      const it = state.adminItems.find(function (x) { return x.name === originalName; });
+      if (!it) { alert('找不到品項：' + originalName); return; }
+      state.adminItemEditing = {
+        isNew: false,
+        originalName: it.name,
+        name: it.name,
+        category: it.category,
+        vendor: it.vendor,
+        unit: it.unit,
+        ratio: it.ratio,
+        note: it.note,
+        enabled: it.enabled,
+        internalNote: it.internalNote || '',
+      };
+    } else {
+      state.adminItemEditing = {
+        isNew: true,
+        originalName: '',
+        name: '',
+        category: '菜商',
+        vendor: (state.adminVendors && state.adminVendors[0]) ? state.adminVendors[0].name : '',
+        unit: '',
+        ratio: 0,
+        note: '',
+        enabled: true,
+        internalNote: '',
+      };
+    }
+    state.adminScreen = 'item_edit';
+    renderAdmin();
+  }
+
+  function renderAdminItemEdit() {
+    const e = state.adminItemEditing;
+    if (!e) { state.adminScreen = 'items'; return renderAdmin(); }
+
+    const cats = ['菜商', '肉商', '海鮮', '火鍋料', '開元', '其他'];
+    const catOpts = cats.map(function (c) {
+      const sel = c === e.category ? ' selected' : '';
+      return '<option value="' + c + '"' + sel + '>' + c + '</option>';
+    }).join('');
+
+    // 廠商下拉：來自當前店的廠商清單；最後加「+ 新增廠商」
+    const vendors = state.adminVendors || [];
+    const vendorOpts = vendors.map(function (v) {
+      const sel = v.name === e.vendor ? ' selected' : '';
+      return '<option value="' + escapeHtml(v.name) + '"' + sel + '>' + escapeHtml(v.name) + '</option>';
+    }).join('');
+    // 如果現有廠商不在清單裡（例如已刪除），補一個保留
+    const vendorInList = vendors.some(function (v) { return v.name === e.vendor; });
+    const fallbackOpt = (!vendorInList && e.vendor) ?
+      '<option value="' + escapeHtml(e.vendor) + '" selected>' + escapeHtml(e.vendor) + '（已刪除？）</option>' : '';
+
+    const modalHtml = state.adminQuickVendor ? renderQuickVendorModal() : '';
+
+    document.getElementById('app').innerHTML =
+      '<div class="admin-page">' +
+        '<button class="admin-back" onclick="state.adminScreen=\'items\'; renderAdmin();">‹ 返回品項列表</button>' +
+        '<h1 class="admin-title">' + (e.isNew ? '新增品項' : '編輯「' + escapeHtml(e.originalName) + '」') + '</h1>' +
+        '<div class="admin-form-row">' +
+          '<label>品名</label>' +
+          '<input type="text" placeholder="例：高麗菜、玉米" value="' + escapeAttr(e.name) + '" oninput="state.adminItemEditing.name = this.value" />' +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label>廠商</label>' +
+          '<select onchange="onItemVendorChange(this.value)">' +
+            fallbackOpt + vendorOpts +
+            '<option value="__new__">＋ 新增廠商…</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label>分類</label>' +
+          '<select onchange="state.adminItemEditing.category = this.value">' + catOpts + '</select>' +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label>單位</label>' +
+          '<input type="text" placeholder="例：斤、袋、兩、包" value="' + escapeAttr(e.unit) + '" oninput="state.adminItemEditing.unit = this.value" />' +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label>比例（每萬元預估數量；0 = 快沒再叫）</label>' +
+          '<input type="number" step="0.1" placeholder="0" value="' + (e.ratio || '') + '" oninput="state.adminItemEditing.ratio = parseFloat(this.value) || 0" />' +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label>備註（會印在叫貨清單給廠商看，例：5斤裝一袋）</label>' +
+          '<input type="text" placeholder="" value="' + escapeAttr(e.note) + '" oninput="state.adminItemEditing.note = this.value" />' +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label>內部提醒（只給叫貨人員看，不會給廠商，例：快沒了再叫）</label>' +
+          '<input type="text" placeholder="" value="' + escapeAttr(e.internalNote || '') + '" oninput="state.adminItemEditing.internalNote = this.value" />' +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label class="vd-day-chk" style="background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:10px 12px">' +
+            '<input type="checkbox"' + (e.enabled ? ' checked' : '') + ' onchange="state.adminItemEditing.enabled = this.checked" /> 啟用（不勾的話前端不會顯示）' +
+          '</label>' +
+        '</div>' +
+        '<button class="btn-primary" onclick="saveItem()">儲存</button>' +
+        (e.isNew ? '' :
+          '<div style="height:12px"></div>' +
+          '<button class="btn-secondary" onclick="deleteItemClick(\'' + escapeAttr(e.originalName) + '\')" style="border-color:#dc2626;color:#dc2626">刪除品項</button>'
+        ) +
+      '</div>' +
+      modalHtml;
+  }
+
+  function onItemVendorChange(value) {
+    if (value === '__new__') {
+      // 開「+ 新增廠商」彈窗
+      state.adminQuickVendor = {
+        name: '',
+        restDays: [false, false, false, false, false, false, false],
+        lineGroupId: '',
+        note: '',
+      };
+      renderAdmin();
+    } else {
+      state.adminItemEditing.vendor = value;
+    }
+  }
+
+  function renderQuickVendorModal() {
+    const q = state.adminQuickVendor;
+    const dowNames = ['一', '二', '三', '四', '五', '六', '日'];
+    const dayChks = dowNames.map(function (d, i) {
+      const checked = q.restDays[i] ? ' checked' : '';
+      return '<label class="vd-day-chk"><input type="checkbox"' + checked +
+        ' onchange="state.adminQuickVendor.restDays[' + i + '] = this.checked" /> ' + d + '</label>';
+    }).join('');
+
+    return '<div class="qv-overlay" onclick="if(event.target===this) closeQuickVendor()">' +
+      '<div class="qv-sheet">' +
+        '<h2 class="result-title">＋ 新增廠商</h2>' +
+        '<div class="admin-form-row">' +
+          '<label>廠商名稱</label>' +
+          '<input type="text" placeholder="例：正昌（如果只有這家店用，可命名 正昌(' + escapeHtml(state.adminData.storeName.replace(/店$/, '')) + ')）" value="' + escapeAttr(q.name) + '" oninput="state.adminQuickVendor.name = this.value" />' +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label>週固定休（可複選）</label>' +
+          '<div class="vd-day-row">' + dayChks + '</div>' +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label>LINE 群組 ID（可空）</label>' +
+          '<input type="text" placeholder="C123abc..." value="' + escapeAttr(q.lineGroupId) + '" oninput="state.adminQuickVendor.lineGroupId = this.value" />' +
+        '</div>' +
+        '<div class="admin-form-row">' +
+          '<label>備註（可空）</label>' +
+          '<input type="text" value="' + escapeAttr(q.note) + '" oninput="state.adminQuickVendor.note = this.value" />' +
+        '</div>' +
+        '<button class="btn-primary" onclick="saveQuickVendor()">確定</button>' +
+        '<div style="height:8px"></div>' +
+        '<button class="btn-secondary" onclick="closeQuickVendor()">取消</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function closeQuickVendor() {
+    state.adminQuickVendor = null;
+    renderAdmin();
+  }
+
+  function saveQuickVendor() {
+    const q = state.adminQuickVendor;
+    if (!q.name || !q.name.trim()) { alert('請輸入廠商名稱'); return; }
+    showLoading(true);
+    call('addAdminVendor', state.adminAuth.storeKey, state.adminAuth.password, {
+      name: q.name.trim(),
+      restDays: q.restDays,
+      lineGroupId: q.lineGroupId,
+      note: q.note,
+    })
+      .then(function () {
+        return call('getAdminVendors', state.adminAuth.storeKey, state.adminAuth.password);
+      })
+      .then(function (vendors) {
+        state.adminVendors = vendors;
+        // 自動選中新廠商
+        state.adminItemEditing.vendor = q.name.trim();
+        state.adminQuickVendor = null;
+        showLoading(false);
+        toast('已新增廠商「' + q.name.trim() + '」');
+        renderAdmin();
+      })
+      .catch(function (err) {
+        showLoading(false);
+        alert('新增失敗：' + (err.message || err));
+      });
+  }
+
+  function saveItem() {
+    const e = state.adminItemEditing;
+    if (!e) return;
+    if (!e.name || !e.name.trim()) { alert('請輸入品名'); return; }
+    if (!e.vendor) { alert('請選擇廠商'); return; }
+    if (!e.unit) { alert('請輸入單位'); return; }
+    showLoading(true);
+    const payload = {
+      category: e.category,
+      name: e.name.trim(),
+      vendor: e.vendor,
+      unit: e.unit,
+      ratio: e.ratio,
+      note: e.note,
+      enabled: e.enabled,
+      internalNote: e.internalNote || '',
+    };
+    const promise = e.isNew
+      ? call('addAdminItem', state.adminAuth.storeKey, state.adminAuth.password, payload)
+      : call('updateAdminItem', state.adminAuth.storeKey, state.adminAuth.password, e.originalName, payload);
+    promise
+      .then(function () {
+        return call('getAdminItems', state.adminAuth.storeKey, state.adminAuth.password);
+      })
+      .then(function (items) {
+        state.adminItems = items;
+        state.adminScreen = 'items';
+        showLoading(false);
+        toast('已儲存');
+        renderAdmin();
+      })
+      .catch(function (err) {
+        showLoading(false);
+        alert('儲存失敗：' + (err.message || err));
+      });
+  }
+
+  function deleteItemClick(itemName) {
+    if (!confirm('確定刪除品項「' + itemName + '」？')) return;
+    showLoading(true);
+    call('deleteAdminItem', state.adminAuth.storeKey, state.adminAuth.password, itemName)
+      .then(function () {
+        return call('getAdminItems', state.adminAuth.storeKey, state.adminAuth.password);
+      })
+      .then(function (items) {
+        state.adminItems = items;
+        state.adminScreen = 'items';
+        showLoading(false);
+        toast('已刪除');
+        renderAdmin();
+      })
+      .catch(function (err) {
+        showLoading(false);
+        alert('刪除失敗：' + (err.message || err));
+      });
+  }
+
+  // ─────────────────────────────────────
+  // 啟動
+  // ─────────────────────────────────────
+  showLoading(true);
+  call('getBootstrap')
+    .then(function (b) { state.bootstrap = b; renderHome(); })
+    .catch(function (err) { alert('系統初始化失敗：' + (err.message || err)); })
+    .finally(function () { showLoading(false); });
+</script>
+
+
+</body>
+</html>
