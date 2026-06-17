@@ -1,0 +1,2005 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#FBF1DC">
+<title>初殿鍋物 — 店內 SOP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
+<style>
+:root {
+  --bg: #FBF1DC;
+  --bg-deep: #F5E5C4;
+  --bg-warm: #FFEBC8;
+  --surface: #FFFDF8;
+  --surface-soft: #FFF7E8;
+  --border: rgba(120, 70, 30, 0.10);
+  --border-strong: rgba(120, 70, 30, 0.20);
+  --text: #3D2410;
+  --text-muted: #7A5C3E;
+  --text-soft: #B89B7A;
+  --brand: #D14545;
+  --brand-deep: #B91C1C;
+  --brand-soft: #FEE2E2;
+  --accent: #E8932B;
+  --accent-deep: #C26A0E;
+  --accent-soft: #FEF3C7;
+  --warn: #C26A0E;
+  --warn-soft: #FFEBC8;
+  --danger: #B91C1C;
+  --danger-soft: #FEE2E2;
+  --success: #4D7C0F;
+  --success-soft: #ECFCCB;
+  --info: #0369A1;
+  --info-soft: #DCEEFB;
+  --radius: 18px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --shadow-card: 0 1px 2px rgba(120,70,30,0.06), 0 4px 14px rgba(120,70,30,0.06);
+  --shadow-pop: 0 6px 22px rgba(120,70,30,0.14);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; padding: 0; overscroll-behavior-y: contain; }
+body {
+  font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", sans-serif;
+  background: var(--bg);
+  background-image:
+    radial-gradient(circle at 0% 0%, rgba(232,147,43,0.08) 0%, transparent 40%),
+    radial-gradient(circle at 100% 100%, rgba(209,69,69,0.06) 0%, transparent 40%);
+  background-attachment: fixed;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.01em;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.app {
+  max-width: 600px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding-bottom: 40px;
+  position: relative;
+}
+
+/* ============ HEADER ============ */
+header {
+  padding: 22px 18px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.logo {
+  width: 48px; height: 48px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #FFB347 0%, #D14545 100%);
+  color: #FFF;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  flex-shrink: 0;
+  box-shadow: 0 6px 16px rgba(209,69,69,0.30);
+}
+.brand-meta { flex: 1; min-width: 0; }
+.brand-title { font-size: 17px; font-weight: 700; line-height: 1.25; }
+.brand-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.crumb-back {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  height: 44px;
+  padding: 0 16px 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.crumb-back i { font-size: 20px; }
+.crumb-back:active { background: var(--bg-warm); transform: scale(0.97); }
+
+/* ============ SEARCH ============ */
+.search-bar {
+  margin: 0 18px 12px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  height: 56px;
+  box-shadow: var(--shadow-card);
+  transition: all 0.15s;
+}
+.search-bar:focus-within {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 5px rgba(209,69,69,0.10), var(--shadow-card);
+}
+.search-emoji { font-size: 22px; margin-right: 10px; line-height: 1; }
+#searchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 16px;
+  color: var(--text);
+  font-family: inherit;
+  font-weight: 500;
+  min-width: 0;
+}
+#searchInput::placeholder { color: var(--text-soft); font-weight: 400; }
+.search-clear {
+  cursor: pointer;
+  color: var(--text-soft);
+  padding: 6px;
+  border-radius: 999px;
+  display: none;
+  font-size: 20px;
+  background: var(--bg-warm);
+  width: 28px; height: 28px;
+  align-items: center; justify-content: center;
+}
+.search-clear.show { display: flex; }
+
+/* ============ SECTION LABEL ============ */
+.section-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  padding: 22px 18px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-label-emoji { font-size: 18px; line-height: 1; }
+
+/* ============ QUICK CHIPS ============ */
+.chips {
+  padding: 0 14px 4px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex-shrink: 0;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  padding: 10px 16px 10px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: var(--shadow-card);
+}
+.chip:active { transform: scale(0.96); background: var(--bg-warm); }
+.chip-emoji { font-size: 18px; line-height: 1; }
+
+/* ============ CATEGORY TILES ============ */
+.tiles {
+  padding: 4px 14px 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.tile {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 20px 16px 18px;
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  overflow: hidden;
+  text-align: left;
+  font-family: inherit;
+}
+.tile::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 4px;
+}
+.tile[data-key="kitchen"]::before { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
+.tile[data-key="floor"]::before { background: linear-gradient(90deg, #D14545, #F87171); }
+.tile[data-key="complaint"]::before { background: linear-gradient(90deg, #EC4899, #F9A8D4); }
+.tile[data-key="pos"]::before { background: linear-gradient(90deg, #3B82F6, #60A5FA); }
+.tile:active { transform: scale(0.97); box-shadow: var(--shadow-pop); }
+.tile-emoji {
+  font-size: 36px;
+  line-height: 1;
+  margin-bottom: 12px;
+  display: block;
+}
+.tile-title { font-size: 16px; font-weight: 700; }
+.tile-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.5; font-weight: 400; }
+.tile-count {
+  font-size: 11px;
+  color: var(--text-soft);
+  margin-top: 10px;
+  font-weight: 500;
+}
+
+/* ============ INSIDE CATEGORY: HERO ============ */
+.cat-hero {
+  margin: 6px 14px 14px;
+  padding: 22px 20px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.cat-hero::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 4px;
+}
+.cat-hero[data-key="kitchen"]::before { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
+.cat-hero[data-key="floor"]::before { background: linear-gradient(90deg, #D14545, #F87171); }
+.cat-hero[data-key="complaint"]::before { background: linear-gradient(90deg, #EC4899, #F9A8D4); }
+.cat-hero[data-key="pos"]::before { background: linear-gradient(90deg, #3B82F6, #60A5FA); }
+.cat-hero-emoji { font-size: 44px; line-height: 1; flex-shrink: 0; }
+.cat-hero-title { font-size: 22px; font-weight: 700; line-height: 1.2; }
+.cat-hero-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; line-height: 1.55; }
+
+/* ============ SECTIONS ============ */
+.sections-list { padding: 0 14px; }
+.section-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.15s;
+}
+.section-card[data-priority="danger"] { border-color: rgba(185,28,28,0.30); }
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 18px;
+  cursor: pointer;
+  user-select: none;
+  min-height: 64px;
+}
+.section-head:active { background: var(--bg-warm); }
+.section-emoji {
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 44px;
+  text-align: center;
+}
+.section-info { flex: 1; min-width: 0; }
+.section-title { font-size: 15.5px; font-weight: 700; line-height: 1.4; }
+.section-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 3px; line-height: 1.5; }
+.section-chev { color: var(--text-soft); font-size: 24px; transition: transform 0.25s; }
+.section-card.open .section-chev { transform: rotate(90deg); color: var(--brand); }
+.section-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+.section-card.open .section-body { max-height: 8000px; }
+.section-body-inner { padding: 4px 18px 20px; border-top: 1px dashed var(--border); margin-top: 4px; }
+
+/* ============ FLOW STEPS ============ */
+.flow-step {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  padding: 10px 0;
+}
+.flow-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 17px;
+  top: 38px;
+  bottom: -4px;
+  width: 2.5px;
+  background: var(--brand-soft);
+  border-radius: 2px;
+}
+.step-num {
+  width: 34px; height: 34px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #F87171 0%, #D14545 100%);
+  color: #FFF;
+  font-size: 15px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  z-index: 1;
+  box-shadow: 0 4px 12px rgba(209,69,69,0.30);
+}
+.step-content {
+  flex: 1; min-width: 0;
+  padding-top: 4px;
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: var(--text);
+  font-weight: 500;
+}
+.step-pre {
+  display: inline-block;
+  background: var(--brand-soft);
+  color: var(--brand-deep);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-right: 8px;
+  vertical-align: 2px;
+}
+.step-sub {
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: var(--bg-warm);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.step-sub div { padding: 3px 0; padding-left: 18px; position: relative; }
+.step-sub div::before {
+  content: '◆';
+  position: absolute;
+  left: 4px;
+  top: 3px;
+  color: var(--accent);
+  font-size: 10px;
+}
+
+/* ============ ENTRY ============ */
+.entry {
+  padding: 14px 0;
+  border-bottom: 1.5px dashed var(--border);
+}
+.entry:last-child { border-bottom: none; padding-bottom: 4px; }
+.entry-label {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.entry-value {
+  color: var(--text-muted);
+  font-size: 14.5px;
+  white-space: pre-line;
+  line-height: 1.7;
+  font-weight: 400;
+}
+.entry-sub {
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: var(--bg-warm);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text-muted);
+}
+.entry-sub div { padding: 3px 0; padding-left: 18px; position: relative; }
+.entry-sub div::before {
+  content: '◆';
+  position: absolute;
+  left: 4px;
+  top: 3px;
+  color: var(--accent);
+  font-size: 10px;
+}
+
+/* ============ CALLOUTS ============ */
+.callout {
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  margin: 12px 0;
+  line-height: 1.65;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-weight: 500;
+}
+.callout-emoji { font-size: 20px; flex-shrink: 0; line-height: 1.3; }
+.callout.warn { background: var(--warn-soft); color: var(--warn); border: 1px solid rgba(194,106,14,0.20); }
+.callout.danger { background: var(--danger-soft); color: var(--danger); border: 1px solid rgba(185,28,28,0.20); }
+.callout.info { background: var(--info-soft); color: var(--info); border: 1px solid rgba(3,105,161,0.15); }
+
+/* ============ EMPTY ============ */
+.empty {
+  text-align: center;
+  padding: 70px 20px;
+  color: var(--text-soft);
+}
+.empty-emoji { font-size: 64px; display: block; margin-bottom: 16px; }
+.empty-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.empty-sub { font-size: 14px; }
+
+/* ============ MARK ============ */
+mark {
+  background: linear-gradient(180deg, transparent 60%, #FDE68A 60%);
+  color: var(--text);
+  padding: 0 2px;
+  font-weight: 600;
+}
+
+/* ============ FOOTER HINT ============ */
+.foot-hint {
+  margin: 30px 14px 0;
+  padding: 16px 18px;
+  background: var(--surface-soft);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border-strong);
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+.foot-hint-title { font-weight: 700; color: var(--text); margin-bottom: 4px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+.foot-hint code { background: var(--bg-warm); padding: 1px 6px; border-radius: 4px; font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 12px; color: var(--brand-deep); }
+
+/* ============ MOBILE OPTIMIZATIONS ============ */
+@media (max-width: 480px) {
+  body { font-size: 16px; }
+  header { padding: 18px 14px 10px; }
+  .logo { width: 44px; height: 44px; font-size: 22px; border-radius: 14px; }
+  .brand-title { font-size: 16px; }
+  .search-bar { margin: 0 14px 10px; height: 52px; padding: 0 16px; }
+  .search-emoji { font-size: 20px; }
+  #searchInput { font-size: 16px; }
+  .section-label { padding: 18px 14px 10px; }
+  .chips { padding: 0 10px 4px; }
+  .chip { padding: 9px 14px 9px 12px; font-size: 13.5px; }
+  .tiles { padding: 4px 10px 0; gap: 10px; }
+  .tile { padding: 18px 14px 16px; border-radius: 16px; }
+  .tile-emoji { font-size: 32px; margin-bottom: 10px; }
+  .tile-title { font-size: 15px; }
+  .tile-sub { font-size: 11.5px; }
+  .cat-hero { margin: 4px 10px 12px; padding: 18px 16px; gap: 14px; border-radius: 16px; }
+  .cat-hero-emoji { font-size: 38px; }
+  .cat-hero-title { font-size: 19px; }
+  .sections-list { padding: 0 10px; }
+  .section-card { border-radius: 16px; margin-bottom: 10px; }
+  .section-head { padding: 16px 14px; gap: 12px; min-height: 60px; }
+  .section-emoji { font-size: 26px; width: 40px; }
+  .section-title { font-size: 15px; }
+  .section-body-inner { padding: 4px 14px 16px; }
+  .step-content { font-size: 15px; }
+  .step-num { width: 32px; height: 32px; font-size: 14px; }
+  .flow-step:not(:last-child)::before { left: 16px; top: 36px; }
+  .foot-hint { margin: 24px 10px 0; padding: 14px 16px; }
+}
+
+/* ============ DESKTOP ============ */
+@media (min-width: 720px) {
+  body { font-size: 15px; }
+  .tiles { grid-template-columns: repeat(4, 1fr); }
+  .tile-emoji { font-size: 32px; }
+}
+
+/* ============ ADMIN MODE ============ */
+.admin-badge {
+  background: linear-gradient(135deg, #D14545, #F87171);
+  color: #FFF;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-left: 6px;
+}
+.icon-btn {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+  margin-left: 4px;
+}
+.icon-btn:active { transform: scale(0.92); }
+.icon-btn.danger { color: var(--danger); }
+.section-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: 8px;
+}
+.item-actions {
+  display: none;
+  gap: 4px;
+  margin-left: 8px;
+}
+.entry:hover .item-actions, .flow-step:hover .item-actions, .admin-mode .item-actions { display: flex; }
+.admin-mode .item-actions { display: flex; }
+.add-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--brand);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.add-btn:active { background: var(--bg-warm); }
+
+/* ============ MODAL ============ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(40, 25, 10, 0.55);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+.modal {
+  background: var(--surface);
+  border-radius: var(--radius);
+  max-width: 480px;
+  width: 100%;
+  max-height: 92vh;
+  overflow: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.30);
+  border: 1px solid var(--border);
+}
+.modal-head {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.modal-title { font-size: 17px; font-weight: 700; flex: 1; }
+.modal-close {
+  width: 32px; height: 32px;
+  border-radius: 999px;
+  border: none;
+  background: var(--bg-warm);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit;
+}
+.modal-body { padding: 16px 20px; }
+.modal-foot {
+  padding: 14px 20px 18px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border);
+}
+.field {
+  margin-bottom: 14px;
+}
+.field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.field-hint {
+  font-size: 11px;
+  color: var(--text-soft);
+  margin-top: 4px;
+}
+.field input, .field textarea, .field select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 14.5px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+}
+.field input:focus, .field textarea:focus, .field select:focus {
+  border-color: var(--brand);
+}
+.field textarea { min-height: 100px; resize: vertical; line-height: 1.5; }
+.btn {
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+}
+.btn-primary {
+  background: var(--brand);
+  color: #FFF;
+}
+.btn-primary:active { background: var(--brand-deep); }
+.btn-primary:disabled { opacity: 0.5; cursor: wait; }
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+.btn-secondary:active { background: var(--bg-warm); }
+.btn-danger {
+  background: var(--danger);
+  color: #FFF;
+}
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--text);
+  color: var(--surface);
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  z-index: 200;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.20);
+}
+.toast.error { background: var(--danger); }
+.toast.success { background: var(--success); }
+
+/* ============ LOADING ============ */
+.loading-state {
+  padding: 80px 20px;
+  text-align: center;
+  color: var(--text-soft);
+}
+.loading-state .spinner {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 14px;
+  border: 3px solid var(--border);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.loading-text { font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+// ============================================================
+//  ★ 設定：部署完 Apps Script 後，把下面 URL 換成你的 Web App URL
+// ============================================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbwiMQGasr-5qF0D6Ttcb-1uXPaFoDyrF2zqlVP2gKQLietLAgGV1ol1VkIPKSBbfkvi/exec'; // 例如：'https://script.google.com/macros/s/AKfycb.../exec'
+
+// ============= DATA (預設值 / API 載入失敗時的 fallback) =============
+let SOP_DATA = {
+  kitchen: {
+    title: '內場 SOP',
+    emoji: '🥘',
+    short: '湯底 · 調料 · 飲料',
+    note: '所有湯底、調料、飲料、肉品克數標準',
+    sections: [
+      {
+        title: '調湯、調汁配方',
+        emoji: '🧪',
+        items: [
+          { label: '原味湯比例', value: '水的克數 ÷ 85 = 原味粉的克數' },
+          { label: '藥膳汁', value: '300g 藥膳粉 + 1 罐米酒' },
+          { label: '孜然汁', value: '300g 孜然粉 + 600g RO 水' },
+          { label: '泡菜汁', value: '300g 泡菜粉 + 600g RO 水' },
+          { label: '牛奶比例', value: '鮮奶油 1 瓶 + 牛奶 2 瓶' },
+          { label: '素食汁', value: '100g 素食粉 + 200g RO 水' },
+          { label: '泡菜包', value: '70g 泡菜 + 1 湯匙泡菜汁（20cc）' }
+        ]
+      },
+      {
+        title: '出湯比例',
+        emoji: '🍜',
+        items: [
+          { label: '原味湯', value: '800cc' },
+          { label: '藥膳湯', value: '800cc 原味湯 + 藥膳汁 + 枸杞 + 紅棗', sub: ['淡口味：加 35cc 藥膳汁', '正常口味：加 40cc 藥膳汁', '重口味：加 45cc 藥膳汁'] },
+          { label: '孜然湯', value: '800cc 原味湯 + 孜然汁 + 枸杞', sub: ['淡口味：加 35cc 孜然汁', '正常口味：加 40cc 孜然汁', '重口味：加 45cc 孜然汁'] },
+          { label: '麻辣湯', value: '800cc 原味湯 + 麻辣醬 + 朝天椒', sub: ['微辣：麻辣醬 1 平匙', '小辣：麻辣醬 1 平匙 + 辣油 1 湯匙', '中辣：麻辣醬 1 平匙 + 辣油 2 湯匙', '大辣：麻辣醬 1 平匙 + 辣油 3 湯匙'] },
+          { label: '泡菜湯', value: '800cc 原味湯 + 40cc 泡菜汁 + 1 包泡菜' },
+          { label: '牛奶湯', value: '步驟：先加 1 茶匙雞粉 → 倒入 500cc 原味湯沖開 → 再加 300cc 牛奶' },
+          { label: '素食湯', value: '30cc 素食汁 + 800cc 水' },
+          { label: '素食藥膳湯', value: '30cc 素食汁 + 800cc 水 + 40cc 藥膳汁 + 紅棗 + 枸杞' }
+        ]
+      },
+      {
+        title: '加湯比例',
+        emoji: '💧',
+        items: [
+          { label: '藥膳 / 孜然 / 泡菜', value: '40cc 汁 + 原湯加滿' },
+          { label: '牛奶', value: '1 茶匙雞粉 + 300cc 牛奶 + 原湯加滿' },
+          { label: '麻辣', value: '麻辣醬 1 鐵匙 + 1 湯匙辣油 + 原湯加滿' },
+          { label: '素食', value: '30cc 原汁 + 開水加滿' },
+          { label: '素食藥膳', value: '30cc 原汁 + 40cc 藥膳汁 + 開水加滿' },
+          { label: '雞湯 / 原味', value: '原味湯加滿' }
+        ]
+      },
+      {
+        title: '燉煮食品',
+        emoji: '🍲',
+        items: [
+          {
+            label: '滷肉',
+            value: '',
+            sub: [
+              '1. 1 包豬油丁 + 1 公斤爌肉 + 3500cc 水川燙，川燙後洗乾淨',
+              '2. 調味：700g 醬油膏 / 350g 味霖 / 175g 米酒 / 150g 蒜 / 100g 油蔥酥 / 100g 雞粉 / 50g 胡椒 / 100g 冰糖 / 2500cc 水',
+              '3. 豬油丁 + 調料大火煮滾後關小火 2 小時'
+            ]
+          },
+          {
+            label: '白飯',
+            value: '水 = 米的克數 + 500',
+            sub: [
+              '米搓洗三次後蒸',
+              '蒸飯鍋：先壓左開關 → 再壓右開關 → 再壓左開關確認火點著 → 左開關下的開關上勾',
+              '隔日飯若太乾不黏手，加一點 RO 水，手將硬塊搓開'
+            ]
+          }
+        ]
+      },
+      {
+        title: '飲料 / 醬料 / 其他',
+        emoji: '🧃',
+        items: [
+          { label: '蜂蜜檸檬', value: '1500g 蜂蜜 + 500g 檸檬汁 + 10000cc RO 水' },
+          { label: '奶茶', value: '1500cc 水煮滾 + 1 包奶茶 + 7750cc RO 水' },
+          {
+            label: '紅茶（一桶）',
+            value: '2000cc 熱水 + 7 包茶包 + 600g 糖 + 10000cc RO 水',
+            sub: [
+              '半桶：2000cc 熱水 + 3 包茶包 + 257g 糖 + 3150cc RO 水',
+              '步驟 1：水煮滾後丟 7 包茶包',
+              '步驟 2：關火悶 15 分鐘',
+              '步驟 3：倒入 5000cc RO 水沖茶包',
+              '步驟 4：拿起茶包瀝乾，加入 600g 糖',
+              '步驟 5：攪拌均勻後再倒入 5000cc RO 水攪拌'
+            ]
+          },
+          {
+            label: '綠茶（一桶）',
+            value: '2000cc 熱水 + 7 包茶包 + 10000cc RO 水（不加糖）',
+            sub: ['半桶：2000cc 熱水 + 3 包茶包 + 3150cc RO 水', '步驟同紅茶但不加糖']
+          },
+          {
+            label: '珍珠',
+            value: '平日：2500cc 水 + 300g 珍珠 + 100g 糖 1 碗\n假日：2500cc 水 + 500g 珍珠 + 100g 糖 2 碗',
+            sub: [
+              '水煮滾後倒入珍珠攪拌',
+              '再次大滾後蓋蓋子，關小火煮 15 分鐘',
+              '關火再悶 15 分鐘',
+              '倒入盆內洗，最後 RO 水洗淨裝盆'
+            ]
+          },
+          { label: '醬油', value: '2500cc RO 水 + 250g 味霖 + 400g 糖攪拌均勻，醬油倒滿' },
+          { label: '豆瓣醬', value: '開罐後 + 500cc 味霖攪拌' },
+          { label: '蛤蜊換水', value: '1 匙鹽巴 + 1200cc 水' },
+          {
+            label: '辣椒蒜油',
+            value: '800g 油 + 100g 乾諜 + 100g 蒜 + 100g 辣椒片（需攪拌）',
+            sub: [
+              '剩底料：等煉完新的辣蒜油最後再加進去',
+              '剩油：等炒下次的辣蒜，按比例加油',
+              '例：剩 200g 的油 → 再秤 200g 沙拉油 + 各 50g 底料下去炒'
+            ]
+          }
+        ]
+      },
+      {
+        title: '肉品 / 海鮮分量',
+        emoji: '🥩',
+        items: [
+          { label: '基本肉量', value: '所有肉品皆為 160g' },
+          { label: '平日套餐小份', value: '80g' },
+          {
+            label: '肉品擺法',
+            value: '',
+            sub: [
+              '正常份量：160g 綠盤（平放）',
+              '大份加量 50%：240g 綠盤（花狀）',
+              '大份加量 50% + 雙拼：160g 綠盤 × 1 + 加量 50% 雙拼肉品 × 1'
+            ]
+          },
+          {
+            label: '100 元 / 150 元海鮮',
+            value: '',
+            sub: ['蛤蜊 8', '白蝦 4', '鯛魚 6', '孔雀蛤 4', '韓國牡蠣 2', '雪花魚捲 2', '天使紅蝦 2', '扇貝 2']
+          }
+        ]
+      }
+    ]
+  },
+
+  floor: {
+    title: '外場 SOP',
+    emoji: '📒',
+    short: '帶位 · 介紹 · 結帳',
+    note: '從客人進門到離店的完整話術',
+    sections: [
+      {
+        title: '帶位',
+        emoji: '🚪',
+        flow: [
+          { pre: '話術', text: '「您好，請問幾位？」' },
+          { pre: '動作', text: '「這邊請」' },
+          { text: '有女性 → 主動拿髮圈' }
+        ]
+      },
+      {
+        title: '用餐介紹',
+        emoji: '🗣️',
+        flow: [
+          { text: '我們會推薦雙人套餐，內容更超值' },
+          { text: '第一次加入 LINE 好友任選湯頭半價，結帳再出示「賴就可以折抵」' },
+          { text: '等一下是用桌上的 QR Code 掃描點餐' },
+          { text: '再幫我們留意一下店內的注意事項，有問題都可以跟我們說' },
+          { text: '女性詢問是否需要髮圈' },
+          { text: '東西多的客人詢問是否要置物籃' }
+        ],
+        callout: { type: 'warn', emoji: '👶', text: '遇到共鍋（主動向小孩說明）：120-140 公分共鍋費 $150／141 公分以上共鍋費 $268' }
+      },
+      {
+        title: '餐期：補料 / 收餐 / 送餐',
+        emoji: '🍽️',
+        items: [
+          { label: '送湯品', value: '「湯如果覺得太鹹太淡都可以調整唷」' },
+          { label: '送蛤蜊', value: '「蛤蜊如果有吃到沙的話都可以跟我們說，幫您換新的」（附上撈網）' },
+          { label: '送蝦類', value: '附上濕紙巾「等等剝完蝦可以擦手用」' },
+          { label: '送雪花魚捲', value: '「魚捲要煮 5 分鐘再食用」' },
+          { label: '詢問加湯', value: '「請問會太鹹或太淡嗎？」' },
+          { label: '生日蛋糕', value: '結帳出示證件 + 拍照打卡做折抵' }
+        ]
+      },
+      {
+        title: '結帳',
+        emoji: '💳',
+        flow: [
+          { text: '「請問有幫我們加 LINE 好友嗎？可以做湯頭折抵」' },
+          { text: '「今天一共 xxx 元，請問統編／載具有需要嗎？」' },
+          { text: '「請問有需要集點嗎？我們一鍋一點，集滿 7 點可以送蛤蜊 + 肉」' },
+          { text: '「後面桌上有芳香劑可以使用，讓身上的火鍋味不會那麼重」' }
+        ],
+        callout: { type: 'info', emoji: '🎟️', text: '客人有用湯頭券 → 提醒：「LINE 裡面有 1 張第二鍋 6 折券，記得 14 天內回來用喔」' }
+      },
+      {
+        title: '接電話訂位',
+        emoji: '📞',
+        flow: [
+          { text: '「初殿鍋物新莊店您好」' },
+          { text: '「請問什麼時候呢？」' },
+          { text: '「請問幾位呢？」' },
+          { text: '「跟您留個姓名電話」' },
+          { text: '重複以上訂位資訊及確認訂的是新莊店，並告知位置保留 10 分鐘' }
+        ]
+      }
+    ]
+  },
+
+  complaint: {
+    title: '客訴處理',
+    emoji: '🆘',
+    short: '6 種情境 · 標準處理',
+    note: '客人發生什麼事？點選對應情境直接看處理步驟',
+    sections: [
+      {
+        title: '異物（湯/菜/肉/自助吧有東西）',
+        emoji: '🐛',
+        flow: [
+          { text: '更換新的一份給客人' },
+          { text: '招待蛤蜊一份' },
+          { text: '送蛤蜊時關心客人狀況' },
+          { text: '如果客人仍不悅 → 表示抱歉 + 提供 9 折優惠' }
+        ]
+      },
+      {
+        title: '食材問題（壞掉 / 味道不對 / 太油）',
+        emoji: '🥬',
+        flow: [
+          { text: '試吃該食材以確認是否有問題' },
+          { text: '若無問題 → 告知客人並免費更換同價位食材' },
+          { text: '若有問題 → 招待蛤蜊一份' },
+          { text: '送蛤蜊時關心客人狀況' },
+          { text: '如果客人仍不悅 → 表示抱歉 + 提供 9 折優惠' }
+        ]
+      },
+      {
+        title: '食物中毒（嘔吐 / 腹瀉 / 不適）',
+        emoji: '🤢',
+        subtitle: '最高優先級 · 立即呈報主管',
+        priority: 'danger',
+        callout: { type: 'danger', emoji: '🚨', text: '此類客訴必須立即向主管報告，並全程記錄。' },
+        flow: [
+          { text: '聽取顧客的情況，立即向主管報告' },
+          { text: '安撫顧客，表示關心並願意提供協助' },
+          { text: '請顧客立即前往急診（急診可進行檢體採檢，一般診所無法）' },
+          { text: '告知顧客：急診費用由餐廳全額負擔' },
+          { text: '記錄顧客的姓名和聯絡電話' },
+          { text: '留下詳細的食物消費記錄' },
+          { text: '請顧客保存急診收據，可憑收據向餐廳報銷' },
+          { text: '保存相關食物樣品，進行內部檢查' },
+          { text: '調查食品供應鏈和處理流程' },
+          { text: '後續電話聯絡顧客，關心身體狀況' },
+          { text: '若檢測結果與餐廳無關 → 告知並要求退還急診費用' },
+          { text: '加強食品安全和衛生培訓，防止類似事件再發生' }
+        ]
+      },
+      {
+        title: '衛生問題（看到蟑螂 / 老鼠）',
+        emoji: '❗️',
+        flow: [
+          { text: '招待蛤蜊一份' },
+          { text: '送蛤蜊時關心客人狀況' },
+          { text: '如果客人仍不悅 → 表示抱歉 + 提供 9 折優惠' },
+          { text: '告知客人：我們已安排消毒公司每週進行清潔' }
+        ],
+        callout: { type: 'warn', emoji: '⚠️', text: '若客人吃到一半發現蟑螂在食物上：直接免單；關心客人後續狀況並依食物中毒 SOP 處理；如客人想繼續用餐，換新的一份。' }
+      },
+      {
+        title: '結帳時的客訴處理',
+        emoji: '💵',
+        subtitle: '不管哪種客訴，結帳時的標準動作',
+        flow: [
+          { text: '先關心客人狀況' },
+          { text: '如果客人仍不悅 → 直接提供半價優惠' },
+          { text: '表示抱歉，告知我們會立即改進' }
+        ]
+      },
+      {
+        title: '爭執 / 奧客處理',
+        emoji: '😤',
+        flow: [
+          { text: '靜心聆聽客人意見，不需要給予強烈回應' },
+          { text: '表示了解並會向上級反映' }
+        ],
+        callout: { type: 'warn', emoji: '📢', text: '不管什麼客訴都要回報現場主管，主管需要追蹤後續狀況。' }
+      }
+    ]
+  },
+
+  pos: {
+    title: 'POS / 網路',
+    emoji: '💻',
+    short: 'WiFi · 跳單 · 錢櫃',
+    note: '依序排查，上一步無法解決才進下一步',
+    sections: [
+      {
+        title: 'WiFi 密碼資訊',
+        emoji: '📡',
+        callout: { type: 'info', emoji: 'ℹ️', text: '左邊小箭頭點開可看 POS 機與 WiFi 密碼' }
+      },
+      {
+        title: 'POS 沒跳單 / 沒辦法開錢櫃',
+        emoji: '⚠️',
+        priority: 'danger',
+        callout: { type: 'warn', emoji: '📶', text: 'iPad 的 POS 機只能連固定的 WiFi 才會跳單跟開錢櫃，其他都無法。' },
+        flow: [
+          { pre: '步驟 1', text: '先確認 WiFi 名稱連到正確的 WiFi（其他都不能）', sub: ['若無法解決 → 進步驟 2'] },
+          { pre: '步驟 2', text: '檢查廚房裡的 WiFi 分享器是否有亮燈', sub: ['沒有亮燈：WiFi 分享器插頭的線沒插好，插好後會重新亮燈', '有亮燈或分享器重開後：確認 iPad 的 WiFi 是連到「正確的 WiFi」', '若無法解決 → 進步驟 3'] },
+          { pre: '步驟 3', text: 'App 關掉重開；仍無法 → iPad 關掉重開', sub: ['若無法解決 → 進步驟 4'] },
+          { pre: '步驟 4', text: '壞掉了 GG — 聯絡廠商', sub: ['緊急應對：手寫單，事後輸入系統'] }
+        ]
+      }
+    ]
+  }
+};
+
+// ============= QUICK SCENARIOS（內建預設，API 載入後會覆蓋） =============
+SOP_DATA._scenarios = [
+  { id: 1, text: '客人說太鹹', emoji: '🧂', action: 'search', target: '太鹹' },
+  { id: 2, text: '看到蟑螂', emoji: '❗️', action: 'jump', target: 'complaint/4' },
+  { id: 3, text: '客人吐了', emoji: '🤢', action: 'jump', target: 'complaint/3' },
+  { id: 4, text: 'POS 沒跳單', emoji: '⚠️', action: 'jump', target: 'pos/2' },
+  { id: 5, text: '麻辣湯怎麼配', emoji: '🌶️', action: 'search', target: '麻辣湯' },
+  { id: 6, text: '怎麼結帳', emoji: '💳', action: 'jump', target: 'floor/4' },
+  { id: 7, text: '接電話訂位', emoji: '📞', action: 'jump', target: 'floor/5' },
+  { id: 8, text: '異物處理', emoji: '🐛', action: 'jump', target: 'complaint/1' }
+];
+
+// ============= STATE =============
+const STATE = {
+  route: 'home', cat: null, openSection: null, query: '',
+  admin: false, pin: sessionStorage.getItem('sop_pin') || null,
+  loading: true   // 首次資料載入完成前為 true
+};
+
+// 啟動時若 URL 有 ?admin=1 → 進編輯模式
+(function initAdmin() {
+  try {
+    const p = new URLSearchParams(location.search);
+    if (p.get('admin') === '1') {
+      // 等 DOM ready 後再 prompt
+      setTimeout(promptForPin, 200);
+    }
+  } catch (e) {}
+})();
+
+function exitAdmin() {
+  STATE.admin = false;
+  STATE.pin = null;
+  sessionStorage.removeItem('sop_pin');
+  document.body.classList.remove('admin-mode');
+  toast('已退出編輯模式', 'success');
+  render();
+}
+
+function promptForPin() {
+  if (STATE.pin) {
+    runRPC('verifyAdminPin', STATE.pin, function(ok) {
+      if (ok === true) {
+        STATE.admin = true;
+        document.body.classList.add('admin-mode');
+        toast('已進入編輯模式', 'success');
+        render();
+      } else {
+        sessionStorage.removeItem('sop_pin');
+        STATE.pin = null;
+        promptForPin();
+      }
+    });
+    return;
+  }
+  showPrompt('管理員登入', {
+    label: '請輸入管理員 PIN',
+    placeholder: '管理員 PIN',
+    password: true,
+    okText: '進入編輯'
+  }, function(pin) {
+    if (!pin) return;
+    runRPC('verifyAdminPin', pin, function(ok) {
+      if (ok === true) {
+        STATE.pin = pin;
+        STATE.admin = true;
+        sessionStorage.setItem('sop_pin', pin);
+        document.body.classList.add('admin-mode');
+        toast('已進入編輯模式', 'success');
+        render();
+      } else {
+        toast('PIN 錯誤', 'error');
+      }
+    });
+  });
+}
+
+// ============= RPC 包裝 =============
+function apiCall(action, payload) {
+  var args = (payload === undefined) ? [] : [payload];
+  return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: action, args: args }) })
+    .then(function(r){ return r.json(); })
+    .then(function(res){ if (res && res.ok) return res.data; throw new Error((res && res.error) || ('API error: ' + action)); });
+}
+
+function runRPC(fnName, payload, onSuccess) {
+  apiCall(fnName, payload).then(function(data){ if (onSuccess) onSuccess(data); }).catch(function(err){ console.error(err); toast('伺服器錯誤：' + (err.message || err), 'error'); });
+}
+
+// ============= Toast =============
+function toast(msg, type) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const t = el('div', { cls: 'toast' + (type ? ' ' + type : '') }, msg);
+  document.body.appendChild(t);
+  setTimeout(function() { t.remove(); }, 2200);
+}
+
+// ============= Modal =============
+function showModal(title, bodyEls, footerEls) {
+  closeModal();
+  const overlay = el('div', { cls: 'modal-overlay', onclick: function(e) { if (e.target === overlay) closeModal(); } });
+  const modal = el('div', { cls: 'modal' });
+  modal.appendChild(el('div', { cls: 'modal-head' }, [
+    el('div', { cls: 'modal-title' }, title),
+    el('button', { cls: 'modal-close', onclick: closeModal }, '✕')
+  ]));
+  modal.appendChild(el('div', { cls: 'modal-body' }, bodyEls));
+  if (footerEls) modal.appendChild(el('div', { cls: 'modal-foot' }, footerEls));
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+}
+
+function closeModal() {
+  const m = document.querySelector('.modal-overlay');
+  if (m) m.remove();
+}
+
+// ============= 自訂 Confirm / Prompt =============
+function showConfirm(title, message, onConfirm, opts) {
+  opts = opts || {};
+  showModal(title, [
+    el('div', { style: 'font-size: 15px; line-height: 1.65; color: var(--text); white-space: pre-line;' }, message || '')
+  ], [
+    el('button', { cls: 'btn btn-secondary', onclick: closeModal }, opts.cancelText || '取消'),
+    el('button', { cls: 'btn ' + (opts.danger ? 'btn-danger' : 'btn-primary'), onclick: function() {
+      closeModal();
+      try { onConfirm(); } catch (e) { console.error(e); }
+    } }, opts.okText || '確認')
+  ]);
+}
+
+function showPrompt(title, opts, onSubmit) {
+  opts = opts || {};
+  const input = el('input', {
+    type: opts.password ? 'password' : 'text',
+    placeholder: opts.placeholder || '',
+    value: opts.defaultValue || ''
+  });
+  function submit() {
+    const v = input.value;
+    closeModal();
+    try { onSubmit(v); } catch (e) { console.error(e); }
+  }
+  input.addEventListener('keydown', function(e) { if (e.key === 'Enter') submit(); });
+  showModal(title, [
+    opts.label ? el('div', { style: 'font-size:14px; color:var(--text-muted); margin-bottom:10px;' }, opts.label) : null,
+    el('div', { cls: 'field' }, [input])
+  ], [
+    el('button', { cls: 'btn btn-secondary', onclick: closeModal }, '取消'),
+    el('button', { cls: 'btn btn-primary', onclick: submit }, opts.okText || '確認')
+  ]);
+  setTimeout(function() { input.focus(); }, 80);
+}
+
+// ============= 重新載入資料 =============
+function reloadData() {
+  apiCall('getSOPData').then(function(data){
+    if (data && data.error) { toast('資料重載失敗：' + data.error, 'error'); return; }
+    if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+      SOP_DATA = data;
+      if (STATE.cat && STATE.openSection != null) {
+        var sections = (SOP_DATA[STATE.cat] && SOP_DATA[STATE.cat].sections) || [];
+        var stillExists = sections.some(function(s) { return Number(s._secNum) === Number(STATE.openSection); });
+        if (!stillExists) STATE.openSection = null;
+      }
+      render();
+    }
+  }).catch(function(err){ toast('資料重載失敗：' + (err.message || err), 'error'); });
+}
+
+// ============= 編輯 / 新增 / 刪除：章節 =============
+function openEditSectionModal(cat, secNum, currentTitle, currentEmoji, currentSub, currentPriority) {
+  const titleIn = el('input', { type: 'text', value: currentTitle || '' });
+  const emojiIn = el('input', { type: 'text', value: currentEmoji || '', maxlength: 8 });
+  const subIn = el('input', { type: 'text', value: currentSub || '' });
+  const priIn = el('select');
+  priIn.appendChild(el('option', { value: '' }, '一般'));
+  priIn.appendChild(el('option', { value: 'danger' }, '🚨 緊急（紅框）'));
+  priIn.value = currentPriority === 'danger' ? 'danger' : '';
+
+  showModal('編輯章節', [
+    el('div', { cls: 'field' }, [
+      el('label', { cls: 'field-label' }, '章節標題'),
+      titleIn
+    ]),
+    el('div', { cls: 'field' }, [
+      el('label', { cls: 'field-label' }, 'Emoji'),
+      emojiIn,
+      el('div', { cls: 'field-hint' }, '可貼任何 emoji，例如 🥬 🪳 ⚠️')
+    ]),
+    el('div', { cls: 'field' }, [
+      el('label', { cls: 'field-label' }, '副標（可選）'),
+      subIn
+    ]),
+    el('div', { cls: 'field' }, [
+      el('label', { cls: 'field-label' }, '優先級'),
+      priIn
+    ])
+  ], [
+    el('button', { cls: 'btn btn-secondary', onclick: closeModal }, '取消'),
+    el('button', { cls: 'btn btn-primary', onclick: function() {
+      runRPC('adminUpdateSection', {
+        pin: STATE.pin, cat: cat, secNum: secNum,
+        fields: {
+          title: titleIn.value, emoji: emojiIn.value,
+          subtitle: subIn.value, priority: priIn.value
+        }
+      }, function(res) {
+        if (res && res.error) toast(res.error, 'error');
+        else { toast('已儲存', 'success'); closeModal(); reloadData(); }
+      });
+    } }, '儲存')
+  ]);
+}
+
+function openAddSectionModal(cat) {
+  const titleIn = el('input', { type: 'text', placeholder: '例：客人小孩走失' });
+  const emojiIn = el('input', { type: 'text', value: '📌', maxlength: 8 });
+  const subIn = el('input', { type: 'text' });
+  const priIn = el('select');
+  priIn.appendChild(el('option', { value: '' }, '一般'));
+  priIn.appendChild(el('option', { value: 'danger' }, '🚨 緊急（紅框）'));
+
+  showModal('新增章節', [
+    el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '章節標題'), titleIn]),
+    el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, 'Emoji'), emojiIn]),
+    el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '副標（可選）'), subIn]),
+    el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '優先級'), priIn])
+  ], [
+    el('button', { cls: 'btn btn-secondary', onclick: closeModal }, '取消'),
+    el('button', { cls: 'btn btn-primary', onclick: function() {
+      if (!titleIn.value.trim()) return toast('請填章節標題', 'error');
+      runRPC('adminAddSection', {
+        pin: STATE.pin, cat: cat,
+        title: titleIn.value, emoji: emojiIn.value,
+        subtitle: subIn.value, priority: priIn.value
+      }, function(res) {
+        if (res && res.error) toast(res.error, 'error');
+        else { toast('已新增章節', 'success'); closeModal(); reloadData(); }
+      });
+    } }, '新增')
+  ]);
+}
+
+function confirmDeleteSection(cat, secNum, title) {
+  showConfirm('刪除章節', '確定刪除「' + title + '」這個章節嗎？\n\n章節內所有項目都會一併刪除！', function() {
+    runRPC('adminDeleteSection', { pin: STATE.pin, cat: cat, secNum: secNum }, function(res) {
+      if (res && res.error) toast(res.error, 'error');
+      else { toast('已刪除', 'success'); reloadData(); }
+    });
+  }, { danger: true, okText: '刪除' });
+}
+
+// ============= 編輯 / 新增 / 刪除：項目 =============
+function openEditItemModal(cat, secNum, itemNum, type, currentPre, currentTitle, currentContent, currentSubs) {
+  const typeIn = el('select');
+  ['flow', 'item', 'callout'].forEach(function(t) {
+    typeIn.appendChild(el('option', { value: t }, ({flow:'流程步驟', item:'項目（標題+內容）', callout:'警示框'})[t]));
+  });
+  typeIn.value = type || 'flow';
+  const preIn = el('input', { type: 'text', value: currentPre || '', placeholder: '可選，如「步驟 1」「話術」' });
+  const titleIn = el('input', { type: 'text', value: currentTitle || '', placeholder: 'item 用作標題；callout 用 emoji' });
+  const contentIn = el('textarea', { placeholder: '主要內容' });
+  contentIn.value = currentContent || '';
+  const subsIn = el('textarea', { placeholder: '一行一個子項目' });
+  subsIn.value = (currentSubs || '').replace(/\|\|/g, '\n');
+
+  showModal('編輯項目', [
+    el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '類型'), typeIn]),
+    el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '前綴 / Callout 類型'), preIn,
+      el('div', { cls: 'field-hint' }, 'flow:前綴文字（可空）；callout:warn / danger / info')]),
+    el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '標題 / Emoji'), titleIn,
+      el('div', { cls: 'field-hint' }, 'item:標題；callout:emoji；flow:不用填')]),
+    el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '內容'), contentIn]),
+    el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '子項目（每行一個）'), subsIn])
+  ], [
+    el('button', { cls: 'btn btn-secondary', onclick: closeModal }, '取消'),
+    el('button', { cls: 'btn btn-primary', onclick: function() {
+      const subsStr = subsIn.value.split('\n').map(function(s){return s.trim();}).filter(Boolean).join('||');
+      runRPC('adminUpdateItem', {
+        pin: STATE.pin, cat: cat, secNum: secNum, itemNum: itemNum,
+        fields: {
+          type: typeIn.value, pre: preIn.value, title: titleIn.value,
+          content: contentIn.value, subs: subsStr
+        }
+      }, function(res) {
+        if (res && res.error) toast(res.error, 'error');
+        else { toast('已儲存', 'success'); closeModal(); reloadData(); }
+      });
+    } }, '儲存')
+  ]);
+}
+
+function openAddItemModal(cat, secNum) {
+  openEditItemModalAdd(cat, secNum);
+}
+
+function openEditItemModalAdd(cat, secNum) {
+  const typeIn = el('select');
+  ['flow', 'item', 'callout'].forEach(function(t) {
+    typeIn.appendChild(el('option', { value: t }, ({flow:'流程步驟', item:'項目（標題+內容）', callout:'警示框'})[t]));
+  });
+  const preIn = el('input', { type: 'text', placeholder: '可選' });
+  const titleIn = el('input', { type: 'text' });
+  const contentIn = el('textarea', { placeholder: '主要內容' });
+  const subsIn = el('textarea', { placeholder: '一行一個子項目' });
+
+  showModal('新增項目', [
+    el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '類型'), typeIn]),
+    el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '前綴 / Callout 類型'), preIn]),
+    el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '標題 / Emoji'), titleIn]),
+    el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '內容'), contentIn]),
+    el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '子項目（每行一個）'), subsIn])
+  ], [
+    el('button', { cls: 'btn btn-secondary', onclick: closeModal }, '取消'),
+    el('button', { cls: 'btn btn-primary', onclick: function() {
+      const subsStr = subsIn.value.split('\n').map(function(s){return s.trim();}).filter(Boolean).join('||');
+      runRPC('adminAddItem', {
+        pin: STATE.pin, cat: cat, secNum: secNum,
+        fields: {
+          type: typeIn.value, pre: preIn.value, title: titleIn.value,
+          content: contentIn.value, subs: subsStr
+        }
+      }, function(res) {
+        if (res && res.error) toast(res.error, 'error');
+        else { toast('已新增', 'success'); closeModal(); reloadData(); }
+      });
+    } }, '新增')
+  ]);
+}
+
+function confirmDeleteItem(cat, secNum, itemNum) {
+  showConfirm('刪除項目', '確定刪除這一項嗎？', function() {
+    runRPC('adminDeleteItem', { pin: STATE.pin, cat: cat, secNum: secNum, itemNum: itemNum }, function(res) {
+      if (res && res.error) toast(res.error, 'error');
+      else { toast('已刪除', 'success'); reloadData(); }
+    });
+  }, { danger: true, okText: '刪除' });
+}
+
+// ============= 常見情境：執行 + 編輯 =============
+function triggerScenario(s) {
+  if (s.action === 'jump') {
+    const parts = String(s.target || '').split('/');
+    const cat = parts[0];
+    const secNum = Number(parts[1] || 0);
+    if (!SOP_DATA[cat]) return toast('目標分類不存在：' + cat, 'error');
+    goCat(cat, secNum);
+  } else {
+    // search
+    document.getElementById('searchInput').value = s.target || '';
+    STATE.query = s.target || '';
+    document.querySelector('.search-clear').classList.add('show');
+    renderBody();
+  }
+}
+
+function _scenarioModalBody(s) {
+  const textIn = el('input', { type: 'text', value: s.text || '', placeholder: '例：客人說太鹹' });
+  const emojiIn = el('input', { type: 'text', value: s.emoji || '', maxlength: 8, placeholder: '🧂' });
+  const actionIn = el('select');
+  actionIn.appendChild(el('option', { value: 'search' }, '🔍 搜尋（在所有 SOP 找關鍵字）'));
+  actionIn.appendChild(el('option', { value: 'jump' }, '↗️ 跳轉（直接到某章節）'));
+  actionIn.value = s.action || 'search';
+  const targetIn = el('input', { type: 'text', value: s.target || '' });
+  const targetHint = el('div', { cls: 'field-hint' });
+  function updateHint() {
+    if (actionIn.value === 'search') {
+      targetIn.placeholder = '例：太鹹、麻辣湯';
+      targetHint.textContent = '填關鍵字，點了會搜尋';
+    } else {
+      targetIn.placeholder = '例：complaint/4';
+      targetHint.textContent = '填「分類/章節#」，分類用 kitchen/floor/complaint/pos，章節# 看 SOP tab 第 2 欄';
+    }
+  }
+  actionIn.addEventListener('change', updateHint);
+  updateHint();
+  return {
+    body: [
+      el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '顯示文字'), textIn]),
+      el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, 'Emoji'), emojiIn]),
+      el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '動作類型'), actionIn]),
+      el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '目標'), targetIn, targetHint])
+    ],
+    getValues: function() {
+      return { text: textIn.value, emoji: emojiIn.value, action: actionIn.value, target: targetIn.value };
+    }
+  };
+}
+
+function openEditScenarioModal(s) {
+  const form = _scenarioModalBody(s);
+  showModal('編輯情境', form.body, [
+    el('button', { cls: 'btn btn-secondary', onclick: closeModal }, '取消'),
+    el('button', { cls: 'btn btn-primary', onclick: function() {
+      runRPC('adminUpdateScenario', { pin: STATE.pin, id: s.id, fields: form.getValues() }, function(res) {
+        if (res && res.error) toast(res.error, 'error');
+        else { toast('已儲存', 'success'); closeModal(); reloadData(); }
+      });
+    } }, '儲存')
+  ]);
+}
+
+function openAddScenarioModal() {
+  const form = _scenarioModalBody({});
+  showModal('新增情境', form.body, [
+    el('button', { cls: 'btn btn-secondary', onclick: closeModal }, '取消'),
+    el('button', { cls: 'btn btn-primary', onclick: function() {
+      const v = form.getValues();
+      if (!v.text.trim()) return toast('請填顯示文字', 'error');
+      runRPC('adminAddScenario', { pin: STATE.pin, fields: v }, function(res) {
+        if (res && res.error) toast(res.error, 'error');
+        else { toast('已新增', 'success'); closeModal(); reloadData(); }
+      });
+    } }, '新增')
+  ]);
+}
+
+function confirmDeleteScenario(id, text) {
+  showConfirm('刪除情境', '確定刪除「' + text + '」嗎？', function() {
+    runRPC('adminDeleteScenario', { pin: STATE.pin, id: id }, function(res) {
+      if (res && res.error) toast(res.error, 'error');
+      else { toast('已刪除', 'success'); reloadData(); }
+    });
+  }, { danger: true, okText: '刪除' });
+}
+
+// ============= 回收桶 =============
+function openTrashModal() {
+  showModal('♻️ 回收桶（最近 50 筆刪除）', [
+    el('div', { id: 'trashList', style: 'min-height: 80px; padding: 8px 0;' }, [
+      el('div', { style: 'text-align: center; color: var(--text-soft); padding: 20px 0;' }, '載入中...')
+    ])
+  ], [
+    el('button', { cls: 'btn btn-secondary', onclick: closeModal }, '關閉')
+  ]);
+  runRPC('adminListTrash', { pin: STATE.pin }, function(res) {
+    const list = document.getElementById('trashList');
+    if (!list) return;
+    list.innerHTML = '';
+    if (res && res.error) {
+      list.appendChild(el('div', { style: 'color: var(--danger); text-align: center; padding: 20px 0;' }, res.error));
+      return;
+    }
+    const items = (res && res.items) || [];
+    if (items.length === 0) {
+      list.appendChild(el('div', { style: 'text-align: center; color: var(--text-soft); padding: 30px 0;' }, '🎉 回收桶是空的'));
+      return;
+    }
+    items.forEach(function(it) {
+      const typeLabel = ({ item: '📄 項目', section: '📚 章節', scenario: '⚡ 情境' })[it.type] || it.type;
+      const card = el('div', {
+        style: 'padding: 12px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px;'
+      }, [
+        el('div', { style: 'flex: 1; min-width: 0;' }, [
+          el('div', { style: 'font-weight: 600; font-size: 13px;' }, typeLabel + ' · ' + (it.label || '(無描述)').substring(0, 40)),
+          el('div', { style: 'font-size: 11px; color: var(--text-soft); margin-top: 2px;' },
+            (it.time instanceof Date ? it.time.toLocaleString('zh-TW') : String(it.time)))
+        ]),
+        el('button', {
+          cls: 'btn btn-primary',
+          style: 'padding: 6px 14px; font-size: 13px;',
+          onclick: function() {
+            runRPC('adminRestoreTrash', { pin: STATE.pin, rowIdx: it.rowIdx }, function(r) {
+              if (r && r.error) toast(r.error, 'error');
+              else { toast('已復原（' + (r.restored || 1) + ' 筆）', 'success'); closeModal(); reloadData(); }
+            });
+          }
+        }, '復原')
+      ]);
+      list.appendChild(card);
+    });
+  });
+}
+
+function openChangePinModal() {
+  const oldIn = el('input', { type: 'password', placeholder: '舊 PIN' });
+  const newIn = el('input', { type: 'password', placeholder: '新 PIN（至少 4 位）' });
+  const newIn2 = el('input', { type: 'password', placeholder: '再輸入一次新 PIN' });
+  showModal('修改管理員 PIN', [
+    el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '舊 PIN'), oldIn]),
+    el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '新 PIN'), newIn]),
+    el('div', { cls: 'field' }, [el('label', { cls: 'field-label' }, '確認新 PIN'), newIn2])
+  ], [
+    el('button', { cls: 'btn btn-secondary', onclick: closeModal }, '取消'),
+    el('button', { cls: 'btn btn-primary', onclick: function() {
+      if (newIn.value !== newIn2.value) return toast('新 PIN 兩次不一致', 'error');
+      if (!newIn.value || newIn.value.length < 4) return toast('新 PIN 至少 4 位', 'error');
+      runRPC('adminSetPin', { oldPin: oldIn.value, newPin: newIn.value }, function(res) {
+        if (res && res.error) toast(res.error, 'error');
+        else {
+          STATE.pin = newIn.value;
+          sessionStorage.setItem('sop_pin', newIn.value);
+          toast('PIN 已更新', 'success');
+          closeModal();
+        }
+      });
+    } }, '儲存')
+  ]);
+}
+
+// ============= HELPERS =============
+function el(tag, attrs, children) {
+  const e = document.createElement(tag);
+  if (attrs) for (const k in attrs) {
+    if (k === 'cls') e.className = attrs[k];
+    else if (k === 'html') e.innerHTML = attrs[k];
+    else if (k.startsWith('on')) e.addEventListener(k.substring(2), attrs[k]);
+    else if (k === 'data') for (const dk in attrs[k]) e.setAttribute('data-' + dk, attrs[k][dk]);
+    else e.setAttribute(k, attrs[k]);
+  }
+  if (children) (Array.isArray(children) ? children : [children]).forEach(c => {
+    if (c == null || c === false) return;
+    e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+  });
+  return e;
+}
+
+// XSS 防護：所有透過 innerHTML 插入的使用者輸入都必須先過 esc()
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function highlight(text, q) {
+  if (text == null || text === '') return '';
+  if (!q) return esc(text);
+  const lc = String(text);
+  const idx = lc.toLowerCase().indexOf(String(q).toLowerCase());
+  if (idx < 0) return esc(text);
+  return esc(lc.substring(0, idx)) + '<mark>' + esc(lc.substring(idx, idx + q.length)) + '</mark>' + esc(lc.substring(idx + q.length));
+}
+
+function matchesQuery(section, q) {
+  if (!q) return true;
+  return JSON.stringify(section).toLowerCase().includes(q.toLowerCase());
+}
+
+function goCat(cat, openSecNum) {
+  STATE.route = 'cat';
+  STATE.cat = cat;
+  // openSecNum 是該章節在 Sheet 的「章節#」(_secNum)；null = 預設展開第一個
+  STATE.openSection = (openSecNum != null && openSecNum !== '') ? Number(openSecNum) : null;
+  STATE.query = '';
+  const si = document.getElementById('searchInput');
+  if (si) si.value = '';
+  render();
+}
+
+function goHome() {
+  STATE.route = 'home';
+  STATE.cat = null;
+  STATE.query = '';
+  const si = document.getElementById('searchInput');
+  if (si) si.value = '';
+  render();
+}
+
+// ============= RENDER HEADER + SEARCH =============
+function renderHeader() {
+  const isInside = STATE.route === 'cat';
+  return el('header', null, [
+    isInside
+      ? el('button', { cls: 'crumb-back', onclick: goHome }, [
+          el('i', { cls: 'ti ti-chevron-left' }),
+          el('span', null, '返回')
+        ])
+      : el('div', { cls: 'logo' }, '🍲'),
+    el('div', { cls: 'brand-meta' }, [
+      el('div', { cls: 'brand-title' }, [
+        document.createTextNode(isInside ? '店內 SOP' : '初殿鍋物 SOP'),
+        STATE.admin ? el('span', { cls: 'admin-badge' }, '✏️ 編輯模式') : null
+      ])
+    ]),
+    STATE.admin
+      ? el('div', { style: 'display: flex; gap: 4px; align-items: center;' }, [
+          el('button', { cls: 'icon-btn', title: '回收桶', onclick: openTrashModal }, '♻️'),
+          el('button', { cls: 'icon-btn', title: '修改 PIN', onclick: openChangePinModal }, '🔑'),
+          el('button', { cls: 'icon-btn danger', title: '退出編輯', onclick: exitAdmin }, '🚪')
+        ])
+      : el('button', {
+          cls: 'icon-btn',
+          title: '管理員編輯',
+          style: 'opacity: 0.55;',
+          onclick: promptForPin
+        }, '⚙️')
+  ]);
+}
+
+function renderSearchBar() {
+  return el('div', { cls: 'search-bar' }, [
+    el('span', { cls: 'search-emoji' }, '🔍'),
+    el('input', {
+      type: 'text',
+      id: 'searchInput',
+      placeholder: '搜尋情境、湯底、步驟…',
+      autocomplete: 'off',
+      oninput: function(e) {
+        STATE.query = e.target.value.trim();
+        document.querySelector('.search-clear').classList.toggle('show', !!STATE.query);
+        renderBody();
+      }
+    }),
+    el('span', {
+      cls: 'search-clear',
+      onclick: function() {
+        STATE.query = '';
+        document.getElementById('searchInput').value = '';
+        document.querySelector('.search-clear').classList.remove('show');
+        renderBody();
+      }
+    }, [el('i', { cls: 'ti ti-x' })])
+  ]);
+}
+
+// ============= RENDER HOME =============
+function renderHome() {
+  const body = el('div');
+
+  body.appendChild(el('div', { cls: 'section-label' }, [
+    el('span', { cls: 'section-label-emoji' }, '⚡'),
+    el('span', null, '常見情境（一鍵跳）')
+  ]));
+  const chips = el('div', { cls: 'chips' });
+  const scenarios = SOP_DATA._scenarios || [];
+  scenarios.forEach(s => {
+    const chipChildren = [
+      el('span', { cls: 'chip-emoji' }, s.emoji || '✨'),
+      document.createTextNode(s.text)
+    ];
+    if (STATE.admin) {
+      chipChildren.push(el('span', {
+        style: 'margin-left: 6px; color: var(--text-soft); font-size: 12px;',
+        title: '編輯',
+        onclick: function(e) {
+          e.stopPropagation();
+          openEditScenarioModal(s);
+        }
+      }, '✏️'));
+      chipChildren.push(el('span', {
+        style: 'margin-left: 2px; color: var(--danger); font-size: 12px;',
+        title: '刪除',
+        onclick: function(e) {
+          e.stopPropagation();
+          confirmDeleteScenario(s.id, s.text);
+        }
+      }, '🗑️'));
+    }
+    chips.appendChild(el('button', {
+      cls: 'chip',
+      onclick: function() { triggerScenario(s); }
+    }, chipChildren));
+  });
+  if (STATE.admin) {
+    chips.appendChild(el('button', {
+      cls: 'chip',
+      style: 'border-style: dashed; color: var(--brand);',
+      onclick: openAddScenarioModal
+    }, [
+      el('span', { cls: 'chip-emoji' }, '➕'),
+      document.createTextNode('新增情境')
+    ]));
+  }
+  body.appendChild(chips);
+
+  body.appendChild(el('div', { cls: 'section-label' }, [
+    el('span', { cls: 'section-label-emoji' }, '📖'),
+    el('span', null, '所有 SOP 分類')
+  ]));
+  const tiles = el('div', { cls: 'tiles' });
+  // 明確按 _order 排序，避免 Object.keys 順序受 Apps Script 序列化影響
+  const catKeys = Object.keys(SOP_DATA)
+    .filter(function(k) { return k.charAt(0) !== '_'; })
+    .sort(function(a, b) {
+      const oa = (SOP_DATA[a] && SOP_DATA[a]._order != null) ? SOP_DATA[a]._order : 999;
+      const ob = (SOP_DATA[b] && SOP_DATA[b]._order != null) ? SOP_DATA[b]._order : 999;
+      return oa - ob;
+    });
+  catKeys.forEach(key => {
+    const sop = SOP_DATA[key];
+    tiles.appendChild(el('button', {
+      cls: 'tile',
+      data: { key },
+      onclick: function() { goCat(key); }
+    }, [
+      el('span', { cls: 'tile-emoji' }, sop.emoji),
+      el('div', { cls: 'tile-title' }, sop.title),
+      el('div', { cls: 'tile-sub' }, sop.short),
+      el('div', { cls: 'tile-count' }, sop.sections.length + ' 個章節')
+    ]));
+  });
+  body.appendChild(tiles);
+
+  if (STATE.query) {
+    const results = [];
+    const sortedKeys = Object.keys(SOP_DATA)
+      .filter(function(k) { return k.charAt(0) !== '_'; })
+      .sort(function(a, b) {
+        const oa = (SOP_DATA[a] && SOP_DATA[a]._order != null) ? SOP_DATA[a]._order : 999;
+        const ob = (SOP_DATA[b] && SOP_DATA[b]._order != null) ? SOP_DATA[b]._order : 999;
+        return oa - ob;
+      });
+    sortedKeys.forEach(key => {
+      (SOP_DATA[key].sections || []).forEach((s, idx) => {
+        if (matchesQuery(s, STATE.query)) results.push({ cat: key, section: s, idx });
+      });
+    });
+    body.appendChild(el('div', { cls: 'section-label' }, [
+      el('span', { cls: 'section-label-emoji' }, '🔎'),
+      el('span', null, '搜尋「' + STATE.query + '」（' + results.length + ' 項）')
+    ]));
+    if (results.length === 0) {
+      body.appendChild(el('div', { cls: 'empty' }, [
+        el('span', { cls: 'empty-emoji' }, '🤔'),
+        el('div', { cls: 'empty-title' }, '找不到「' + STATE.query + '」'),
+        el('div', { cls: 'empty-sub' }, '試試其他關鍵字')
+      ]));
+    } else {
+      const list = el('div', { cls: 'sections-list' });
+      results.forEach(r => {
+        list.appendChild(el('div', {
+          cls: 'section-card',
+          onclick: function() { goCat(r.cat, r.section._secNum); }
+        }, [
+          el('div', { cls: 'section-head' }, [
+            el('span', { cls: 'section-emoji' }, r.section.emoji || '📌'),
+            el('div', { cls: 'section-info' }, [
+              el('div', { cls: 'section-title', html: highlight(r.section.title, STATE.query) }),
+              el('div', { cls: 'section-subtitle' }, SOP_DATA[r.cat].emoji + ' ' + SOP_DATA[r.cat].title)
+            ]),
+            el('i', { cls: 'ti ti-chevron-right section-chev' })
+          ])
+        ]));
+      });
+      body.appendChild(list);
+    }
+  } else {
+    // 管理員提示已隱藏（避免干擾員工視覺）
+  }
+
+  return body;
+}
+
+// ============= RENDER CATEGORY =============
+function renderCat() {
+  const sop = SOP_DATA[STATE.cat];
+  const wrap = el('div');
+  const catKey = STATE.cat;
+
+  wrap.appendChild(el('div', { cls: 'cat-hero', data: { key: catKey } }, [
+    el('span', { cls: 'cat-hero-emoji' }, sop.emoji),
+    el('div', null, [
+      el('div', { cls: 'cat-hero-title' }, sop.title),
+      el('div', { cls: 'cat-hero-sub' }, sop.note)
+    ])
+  ]));
+
+  const list = el('div', { cls: 'sections-list' });
+  const visibleSections = sop.sections.filter(s => matchesQuery(s, STATE.query));
+
+  if (visibleSections.length === 0) {
+    list.appendChild(el('div', { cls: 'empty' }, [
+      el('span', { cls: 'empty-emoji' }, '🔍'),
+      el('div', { cls: 'empty-title' }, '在「' + sop.title + '」找不到「' + STATE.query + '」')
+    ]));
+  } else {
+    // 計算預設要展開哪個章節：使用者點過的優先，否則展開第一個
+    const defaultOpenSecNum = (STATE.openSection != null)
+      ? STATE.openSection
+      : (visibleSections[0] && visibleSections[0]._secNum);
+
+    visibleSections.forEach(sec => {
+      const isOpen = !!STATE.query || sec._secNum === defaultOpenSecNum;
+      const secNum = sec._secNum;
+      const card = el('div', {
+        cls: 'section-card' + (isOpen ? ' open' : ''),
+        data: sec.priority ? { priority: sec.priority } : {}
+      });
+
+      // ----- Section head with admin controls -----
+      const headChildren = [
+        el('span', { cls: 'section-emoji' }, sec.emoji || '📌'),
+        el('div', { cls: 'section-info' }, [
+          el('div', { cls: 'section-title', html: highlight(sec.title, STATE.query) }),
+          sec.subtitle ? el('div', { cls: 'section-subtitle', html: highlight(sec.subtitle, STATE.query) }) : null
+        ])
+      ];
+      if (STATE.admin) {
+        headChildren.push(el('div', { cls: 'section-actions' }, [
+          el('button', { cls: 'icon-btn', title: '編輯章節', onclick: function(e) {
+            e.stopPropagation();
+            openEditSectionModal(catKey, secNum, sec.title, sec.emoji, sec.subtitle || '', sec.priority || '');
+          } }, '✏️'),
+          el('button', { cls: 'icon-btn danger', title: '刪除章節', onclick: function(e) {
+            e.stopPropagation();
+            confirmDeleteSection(catKey, secNum, sec.title);
+          } }, '🗑️')
+        ]));
+      }
+      headChildren.push(el('i', { cls: 'ti ti-chevron-right section-chev' }));
+      card.appendChild(el('div', {
+        cls: 'section-head',
+        onclick: function() {
+          card.classList.toggle('open');
+          // 記住目前展開的章節，重新整理 / 編輯儲存後不會跑掉
+          STATE.openSection = card.classList.contains('open') ? sec._secNum : null;
+        }
+      }, headChildren));
+
+      const bodyEl = el('div', { cls: 'section-body' });
+      const inner = el('div', { cls: 'section-body-inner' });
+
+      // ----- Callout -----
+      if (sec.callout) {
+        const calloutEl = el('div', { cls: 'callout ' + sec.callout.type });
+        calloutEl.appendChild(el('span', { cls: 'callout-emoji' }, sec.callout.emoji || 'ℹ️'));
+        calloutEl.appendChild(el('div', { html: highlight(sec.callout.text, STATE.query) }));
+        if (STATE.admin && sec.callout._itemNum) {
+          calloutEl.appendChild(el('div', { cls: 'item-actions' }, [
+            el('button', { cls: 'icon-btn', onclick: function() {
+              openEditItemModal(catKey, secNum, sec.callout._itemNum, 'callout', sec.callout.type, sec.callout.emoji, sec.callout.text, '');
+            } }, '✏️'),
+            el('button', { cls: 'icon-btn danger', onclick: function() {
+              confirmDeleteItem(catKey, secNum, sec.callout._itemNum);
+            } }, '🗑️')
+          ]));
+        }
+        inner.appendChild(calloutEl);
+      }
+
+      // ----- Flow -----
+      if (sec.flow) {
+        sec.flow.forEach((step, i) => {
+          const stepEl = el('div', { cls: 'flow-step' });
+          stepEl.appendChild(el('div', { cls: 'step-num' }, String(i + 1)));
+          const content = el('div', { cls: 'step-content' });
+          let html = '';
+          if (step.pre) html += '<span class="step-pre">' + esc(step.pre) + '</span>';
+          html += highlight(step.text, STATE.query);
+          content.innerHTML = html;
+          if (step.sub) {
+            const sub = el('div', { cls: 'step-sub' });
+            step.sub.forEach(s => sub.appendChild(el('div', { html: highlight(s, STATE.query) })));
+            content.appendChild(sub);
+          }
+          stepEl.appendChild(content);
+          if (STATE.admin) {
+            const itemNum = step._itemNum;
+            stepEl.appendChild(el('div', { cls: 'item-actions' }, [
+              el('button', { cls: 'icon-btn', onclick: function() {
+                openEditItemModal(catKey, secNum, itemNum, 'flow', step.pre || '', '', step.text, (step.sub || []).join('||'));
+              } }, '✏️'),
+              el('button', { cls: 'icon-btn danger', onclick: function() {
+                confirmDeleteItem(catKey, secNum, itemNum);
+              } }, '🗑️')
+            ]));
+          }
+          inner.appendChild(stepEl);
+        });
+      }
+
+      // ----- Items -----
+      if (sec.items) {
+        sec.items.forEach(it => {
+          const entry = el('div', { cls: 'entry' });
+          if (it.label) entry.appendChild(el('div', { cls: 'entry-label', html: highlight(it.label, STATE.query) }));
+          if (it.value) entry.appendChild(el('div', { cls: 'entry-value', html: highlight(it.value, STATE.query) }));
+          if (it.sub) {
+            const sub = el('div', { cls: 'entry-sub' });
+            it.sub.forEach(s => sub.appendChild(el('div', { html: highlight(s, STATE.query) })));
+            entry.appendChild(sub);
+          }
+          if (STATE.admin) {
+            const itemNum = it._itemNum;
+            entry.appendChild(el('div', { cls: 'item-actions' }, [
+              el('button', { cls: 'icon-btn', onclick: function() {
+                openEditItemModal(catKey, secNum, itemNum, 'item', '', it.label, it.value, (it.sub || []).join('||'));
+              } }, '✏️'),
+              el('button', { cls: 'icon-btn danger', onclick: function() {
+                confirmDeleteItem(catKey, secNum, itemNum);
+              } }, '🗑️')
+            ]));
+          }
+          inner.appendChild(entry);
+        });
+      }
+
+      // ----- Add item button (admin only) -----
+      if (STATE.admin) {
+        inner.appendChild(el('button', {
+          cls: 'add-btn',
+          onclick: function() { openAddItemModal(catKey, secNum); }
+        }, '➕ 新增項目'));
+      }
+
+      bodyEl.appendChild(inner);
+      card.appendChild(bodyEl);
+      list.appendChild(card);
+    });
+  }
+
+  // ----- Add section button (admin only) -----
+  if (STATE.admin) {
+    list.appendChild(el('button', {
+      cls: 'add-btn',
+      onclick: function() { openAddSectionModal(catKey); }
+    }, '➕ 新增章節'));
+  }
+
+  wrap.appendChild(list);
+  return wrap;
+}
+
+// ============= ROUTER =============
+function renderLoading() {
+  return el('div', { cls: 'loading-state' }, [
+    el('div', { cls: 'spinner' }),
+    el('div', { cls: 'loading-text' }, '載入 SOP 中...')
+  ]);
+}
+
+function renderBody() {
+  let bodyEl = document.getElementById('appBody');
+  if (!bodyEl) {
+    bodyEl = el('div', { id: 'appBody' });
+    document.getElementById('app').appendChild(bodyEl);
+  }
+  bodyEl.innerHTML = '';
+  if (STATE.loading) {
+    bodyEl.appendChild(renderLoading());
+    return;
+  }
+  if (STATE.route === 'home') bodyEl.appendChild(renderHome());
+  else bodyEl.appendChild(renderCat());
+}
+
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  app.appendChild(renderHeader());
+  app.appendChild(renderSearchBar());
+  renderBody();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ============================================================
+//  ★ 從 Apps Script API 載入最新 SOP（會覆蓋預設值）
+//    自動偵測環境：
+//    - Apps Script 直接 host → 用 google.script.run（最快、無 CORS）
+//    - GitHub Pages 等外部 → 用 fetch(API_URL)
+//    - 兩者都無 → 使用內建預設值
+// ============================================================
+function loadFromAPI() {
+  var startTime = Date.now();
+  apiCall('getSOPData').then(function(data){
+    STATE.loading = false;
+    if (data && typeof data === 'object' && !data.error && Object.keys(data).length > 0) {
+      SOP_DATA = data;
+      console.info('[SOP] 已從 API 載入 (' + (Date.now() - startTime) + 'ms)');
+    } else {
+      toast('資料載入失敗，使用內建預設值', 'error');
+      console.warn('[SOP]', (data && data.error) || 'empty');
+    }
+    render();
+  }).catch(function(err){
+    STATE.loading = false;
+    toast('資料載入失敗，使用內建預設值', 'error');
+    console.warn('[SOP]', (err && err.message) || err);
+    render();
+  });
+}
+
+render();
+loadFromAPI();
+</script>
+
+</body>
+</html>
