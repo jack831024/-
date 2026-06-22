@@ -129,6 +129,8 @@ dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px)}
 .toast.err{background:var(--bad)}
 
 .back-home{position:fixed;left:12px;bottom:calc(86px + env(safe-area-inset-bottom));z-index:30;width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.9);border:1px solid var(--line);box-shadow:0 6px 18px -8px rgba(15,23,42,.3);display:flex;align-items:center;justify-content:center;font-size:19px;text-decoration:none;color:var(--ink-2)}
+.back-top{position:fixed;left:12px;top:calc(12px + env(safe-area-inset-top));z-index:40;display:inline-flex;align-items:center;gap:5px;height:38px;padding:0 15px 0 12px;border-radius:999px;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border:1px solid var(--line);box-shadow:0 6px 18px -8px rgba(15,23,42,.3);font-family:inherit;font-size:13.5px;font-weight:700;color:var(--ink-2);cursor:pointer;transition:transform .12s}
+.back-top:active{transform:scale(.96)}
 .foot{text-align:center;font-size:11px;color:var(--ink-3);padding:8px 0 18px;letter-spacing:.5px}
 
 @media(max-width:380px){
@@ -138,6 +140,7 @@ dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px)}
 </style>
 </head>
 <body>
+<button class="back-top" type="button" onclick="if(history.length>1){history.back()}else{location.href='patrol-board.html'}">← 返回</button>
 <div class="wrap">
   <div class="hero">
     <span class="badge">🛡️ SUPERVISOR · PATROL</span>

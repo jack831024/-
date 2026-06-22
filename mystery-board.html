@@ -31,6 +31,9 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
 .login button:active{transform:scale(.98)}
 .login .err{color:var(--bad);font-size:13px;margin-top:10px;min-height:18px;font-weight:600}
 .login .back{display:inline-block;margin-top:14px;font-size:12.5px;color:var(--ink-3);text-decoration:none}
+/* 右上角工具入口（全域密碼→秘密客連結產生器） */
+.tool-fab{position:fixed;top:calc(14px + env(safe-area-inset-top));right:14px;z-index:50;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border:1px solid var(--line);box-shadow:0 6px 18px -8px rgba(15,23,42,.3);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;color:var(--ink-2);transition:transform .12s}
+.tool-fab:active{transform:scale(.92)}
 
 .top{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
 .top h1{font-size:21px;font-weight:800;flex:1;letter-spacing:-.01em}
@@ -124,6 +127,7 @@ dialog::backdrop{background:rgba(15,23,42,.5)}
 <body>
 
 <div id="loginView">
+  <button class="tool-fab" type="button" title="秘密客連結產生器（需全域密碼）" onclick="var p=prompt('輸入全域密碼進入「秘密客連結產生器」：');if(p!==null){if(p.trim()==='yuanxin2022'){location.href='mystery-shopper/generator.html'}else{alert('密碼錯誤')}}">🔗</button>
   <div class="login">
     <div class="ico">🕵️</div>
     <h1>秘密客評分後台</h1>
