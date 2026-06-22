@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#c2410c" />
+    <title>初殿鍋物秘密客評分表</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="header">
+        <div class="brand-row">
+          <div class="brand-mark">初</div>
+          <div>
+            <p class="eyebrow">初殿鍋物 · 秘密客任務</p>
+            <h1>門市體驗評分表</h1>
+          </div>
+        </div>
+        <p class="header-note">謝謝您協助體驗門市。請依實際感受填寫，沒有標準答案，放輕鬆作答即可。</p>
+      </header>
+
+      <div id="gate" style="display:none;padding:48px 20px;text-align:center">
+        <div id="gateIcon" style="font-size:44px;margin-bottom:12px">🔒</div>
+        <h2 id="gateTitle" style="margin:0 0 8px;font-size:20px"></h2>
+        <p id="gateMsg" style="color:var(--muted);line-height:1.7;font-size:14px"></p>
+      </div>
+
+      <form id="scoreForm" class="form">
+        <!-- Honeypot：真人看不到，請勿填寫。被填代表是機器人，後端會擋掉。 -->
+        <div class="hp-field" aria-hidden="true">
+          <label>公司名稱（請勿填寫）
+            <input id="hpField" type="text" name="company" tabindex="-1" autocomplete="off" />
+          </label>
+        </div>
+
+        <!-- 總部指派任務（連結帶入，唯讀） -->
+        <section class="section" id="taskCard" style="background:#fff7ed;border:1px solid #fed7aa">
+          <div class="section-head"><h2>任務資訊</h2><span>總部指派</span></div>
+          <p style="font-size:13px;color:#9a6a00;margin:2px 0 12px;line-height:1.6">以下由總部指派，請依「指定套餐」前往用餐後評分。</p>
+          <div style="display:grid;gap:9px">
+            <div style="display:flex;gap:12px"><b style="min-width:84px;color:#7c3a16">秘密客代號</b><span id="taskCode" style="font-weight:600">—</span></div>
+            <div style="display:flex;gap:12px"><b style="min-width:84px;color:#7c3a16">指定套餐</b><span id="taskMeal">—</span></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <h2>基本資料</h2>
+            <span>必填</span>
+          </div>
+          <div class="field-grid">
+            <label>
+              門市
+              <select id="storeName" required>
+                <option value="">請選擇門市</option>
+                <option>初殿鍋物中和店</option>
+                <option>初殿鍋物新莊店</option>
+                <option>初殿鍋物永春店</option>
+              </select>
+            </label>
+            <label>
+              用餐日期
+              <input id="visitDate" type="date" required />
+            </label>
+            <label>
+              用餐時段
+              <select id="visitPeriod" required>
+                <option>中午</option>
+                <option>下午</option>
+                <option>晚餐</option>
+              </select>
+            </label>
+            <label>
+              用餐人數
+              <input id="guestCount" type="number" min="1" max="8" value="2" required />
+            </label>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <h2>體驗評分</h2>
+            <span>依感受選擇</span>
+          </div>
+          <p class="section-note">請依當天實際感受，從「很不滿意」到「很滿意」中選一個。每一項都需作答。</p>
+          <div id="scoreItems" class="score-items"></div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <h2>服務 SOP 細項</h2>
+            <span>是／否</span>
+          </div>
+          <p class="section-note">以下是門市標準服務動作，請依當天實際情況選「是」或「否」。每一項都需作答。</p>
+          <div id="sopItems" class="score-items"></div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <h2>顧客可見衛生與安全</h2>
+            <span>勾選觀察</span>
+          </div>
+          <div class="check-list">
+            <label><input type="checkbox" name="visibleSafety" /> 桌面無油膩、菜渣、水漬</label>
+            <label><input type="checkbox" name="visibleSafety" /> 餐具無水痕、破損、異味</label>
+            <label><input type="checkbox" name="visibleSafety" /> 醬料區補齊且無明顯滴漏</label>
+            <label><input type="checkbox" name="visibleSafety" /> 廁所無異味且衛生紙、洗手乳充足</label>
+            <label><input type="checkbox" name="visibleSafety" /> 顧客動線地板無濕滑或障礙物</label>
+            <label><input type="checkbox" name="visibleSafety" /> 員工有提醒爐具、熱湯或兒童安全</label>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <h2>需立即注意</h2>
+            <span>若有請勾</span>
+          </div>
+          <p class="section-note">若發生以下任一項，請務必勾選，總部會優先複查。</p>
+          <div class="danger-list">
+            <label><input type="checkbox" name="critical" /> 食材明顯不新鮮或有異物</label>
+            <label><input type="checkbox" name="critical" /> 餐具或鍋具明顯髒污仍提供使用</label>
+            <label><input type="checkbox" name="critical" /> 員工粗魯爭辯或冷處理客訴</label>
+            <label><input type="checkbox" name="critical" /> 帳單金額錯誤且未主動修正</label>
+            <label><input type="checkbox" name="critical" /> 爐具、瓦斯、電線有安全疑慮</label>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <h2>照片（選填）</h2>
+            <span>有就附上</span>
+          </div>
+          <p class="section-note">不用上傳帳單，金額填在上方即可。以下照片有拍到再附上，幫助總部了解現場。</p>
+          <div class="upload-grid">
+            <label class="upload-card">
+              <strong>鍋物 / 餐點照片</strong>
+              <input type="file" accept="image/*" capture="environment" data-preview="mealPreview" />
+              <output id="mealPreview"></output>
+            </label>
+            <label class="upload-card">
+              <strong>桌面 / 醬料區照片</strong>
+              <input type="file" accept="image/*" capture="environment" data-preview="areaPreview" />
+              <output id="areaPreview"></output>
+            </label>
+            <label class="upload-card">
+              <strong>異常佐證照片</strong>
+              <input type="file" accept="image/*" capture="environment" data-preview="issuePreview" />
+              <output id="issuePreview"></output>
+            </label>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <h2>文字備註</h2>
+            <span>具體描述</span>
+          </div>
+          <label class="wide-label">
+            印象深刻的優點
+            <textarea id="goodNotes" rows="3" placeholder="例如：外場主動加湯，結帳時有清楚說明會員優惠。"></textarea>
+          </label>
+          <label class="wide-label">
+            可以更好的地方
+            <textarea id="badNotes" rows="4" placeholder="例如：醬料區花生粉缺補超過 10 分鐘，入座時未提醒爐具安全。"></textarea>
+          </label>
+        </section>
+
+        <div class="submit-bar">
+          <button type="submit">送出評分</button>
+        </div>
+      </form>
+    </main>
+
+    <dialog id="submittedDialog">
+      <div class="dialog-card">
+        <p class="eyebrow">已收到</p>
+        <h2>評分表已送出</h2>
+        <p id="submittedText">感謝您的填寫，總部已收到這份評分。</p>
+        <button id="closeDialog" type="button">完成</button>
+      </div>
+    </dialog>
+
+    <script src="./config.js"></script>
+    <script src="./script.js"></script>
+  </body>
+</html>
