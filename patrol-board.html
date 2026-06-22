@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>督導巡店後台</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#4f46e5;--brand-dark:#4338ca;--brand-soft:#e0e7ff;
+  --ink:#0f172a;--ink-2:#475569;--ink-3:#94a3b8;--line:#e2e8f0;
+  --ok:#16a34a;--weak:#d97706;--bad:#dc2626;
+  --s1:#4f46e5;--s2:#0891b2;--s3:#db2777; /* 三店色 */
+}
+html,body{height:100%}
+body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;padding:0 0 40px;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #e0e7ff 0%, transparent 50%),
+    radial-gradient(900px 500px at 110% 8%, #cffafe 0%, transparent 55%),
+    linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);background-attachment:fixed}
+.wrap{max-width:920px;margin:0 auto;padding:18px 14px 0}
+
+/* 登入 */
+.login{max-width:380px;margin:9vh auto 0;background:rgba(255,255,255,.85);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.85);border-radius:20px;padding:30px 24px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 18px 40px -18px rgba(15,23,42,.22);text-align:center}
+.login .ico{font-size:42px;margin-bottom:8px}
+.login h1{font-size:20px;font-weight:800;margin-bottom:4px}
+.login p{font-size:13px;color:var(--ink-2);margin-bottom:18px;line-height:1.5}
+.login input{width:100%;font-family:inherit;font-size:16px;text-align:center;letter-spacing:2px;border:1px solid var(--line);border-radius:12px;padding:12px;outline:none}
+.login input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(79,70,229,.12)}
+.login button{width:100%;margin-top:12px;font-family:inherit;font-size:15px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-dark));border:none;border-radius:12px;padding:13px;cursor:pointer;transition:transform .12s}
+.login button:active{transform:scale(.98)}
+.login .err{color:var(--bad);font-size:13px;margin-top:10px;min-height:18px;font-weight:600}
+.login .back{display:inline-block;margin-top:14px;font-size:12.5px;color:var(--ink-3);text-decoration:none}
+
+/* dashboard */
+.top{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.top h1{font-size:21px;font-weight:800;flex:1;letter-spacing:-.01em}
+.top .badge{font-size:11px;font-weight:700;color:var(--brand-dark);background:var(--brand-soft);border-radius:999px;padding:5px 11px;letter-spacing:1px}
+.top button{font-family:inherit;font-size:12.5px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--ink-2);border-radius:10px;padding:7px 12px;cursor:pointer}
+.top button:active{transform:scale(.97)}
+.banner{background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:12.5px;font-weight:600;border-radius:12px;padding:9px 13px;margin-bottom:14px;line-height:1.5}
+
+.sec-title{font-size:13px;font-weight:800;color:var(--ink-2);letter-spacing:1px;margin:20px 2px 10px;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+
+/* 三店總覽卡 */
+.stores{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.scard{background:rgba(255,255,255,.85);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.85);border-radius:16px;padding:15px 14px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 22px -14px rgba(15,23,42,.14);position:relative;overflow:hidden}
+.scard::before{content:"";position:absolute;top:0;left:0;right:0;height:4px}
+.scard.s1::before{background:var(--s1)}.scard.s2::before{background:var(--s2)}.scard.s3::before{background:var(--s3)}
+.scard .nm{font-size:14px;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.scard .dot{width:9px;height:9px;border-radius:50%}
+.scard.s1 .dot{background:var(--s1)}.scard.s2 .dot{background:var(--s2)}.scard.s3 .dot{background:var(--s3)}
+.scard .big{font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.scard .big small{font-size:14px;color:var(--ink-3);font-weight:700}
+.scard .lv{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:3px 10px;margin-top:7px}
+.lv.A{background:#dcfce7;color:#15803d}.lv.B{background:#fef9c3;color:#a16207}.lv.C{background:#fee2e2;color:#b91c1c}.lv.none{background:#f1f5f9;color:var(--ink-3)}
+.scard .meta{font-size:11.5px;color:var(--ink-3);margin-top:9px;line-height:1.6}
+.scard .meta b{color:var(--ink-2);font-weight:700}
+
+/* 類別比較表 */
+.cmp{width:100%;border-collapse:collapse;background:rgba(255,255,255,.85);border:1px solid var(--line);border-radius:14px;overflow:hidden;font-size:13px}
+.cmp th,.cmp td{padding:9px 10px;text-align:center;border-bottom:1px solid #eef1f5}
+.cmp th{background:#f1f5f9;font-weight:700;color:var(--ink-2);font-size:12px}
+.cmp th:first-child,.cmp td:first-child{text-align:left;font-weight:600;color:var(--ink)}
+.cmp tr:last-child td{border-bottom:none}
+.cmp td .cell{display:inline-flex;flex-direction:column;align-items:center;gap:3px}
+.cmp td .v{font-weight:800}
+.cmp td .mini{width:46px;height:5px;border-radius:999px;background:#eef1f5;overflow:hidden}
+.cmp td .mini i{display:block;height:100%;border-radius:999px}
+.cmp .best{background:#f0fdf4}
+.cmp tfoot td{font-weight:800;background:#fafafa;border-top:2px solid var(--line)}
+
+/* 紀錄列表 */
+.recs{background:rgba(255,255,255,.85);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.rec{display:flex;align-items:center;gap:11px;padding:12px 14px;border-bottom:1px solid #eef1f5;cursor:pointer;transition:background .12s}
+.rec:last-child{border-bottom:none}
+.rec:hover{background:#f8fafc}
+.rec .rdot{width:9px;height:9px;border-radius:50%;flex:none}
+.rec .rmain{flex:1;min-width:0}
+.rec .rmain .l1{font-size:14px;font-weight:700;display:flex;align-items:center;gap:7px}
+.rec .rmain .l2{font-size:12px;color:var(--ink-3);margin-top:2px}
+.rec .rtot{font-size:18px;font-weight:800;text-align:right}
+.rec .rlv{font-size:11px;font-weight:800;border-radius:999px;padding:2px 8px}
+.empty{text-align:center;color:var(--ink-3);font-size:13px;padding:30px}
+
+/* modal */
+dialog{border:none;border-radius:20px;padding:0;max-width:520px;width:94%;box-shadow:0 30px 80px -20px rgba(15,23,42,.5)}
+dialog::backdrop{background:rgba(15,23,42,.5)}
+.m{padding:20px}
+.m .mh{display:flex;align-items:flex-start;gap:10px;margin-bottom:6px}
+.m .mh .ttl{flex:1}
+.m .mh h2{font-size:18px;font-weight:800}
+.m .mh .sub{font-size:12.5px;color:var(--ink-3);margin-top:2px}
+.m .mh .x{font-size:22px;color:var(--ink-3);cursor:pointer;line-height:1;background:none;border:none}
+.m .mtot{font-size:34px;font-weight:800;margin:6px 0}
+.m .mtot small{font-size:15px;color:var(--ink-3);font-weight:700}
+.m .mlv{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:3px 11px;margin-left:8px;vertical-align:middle}
+.m .catbar{margin:14px 0}
+.m .catrow{display:flex;align-items:center;gap:9px;padding:5px 0}
+.m .catrow .cn{font-size:12.5px;width:90px;flex:none;color:var(--ink-2)}
+.m .catrow .tk{flex:1;height:8px;border-radius:999px;background:#eef1f5;overflow:hidden}
+.m .catrow .tk i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--brand),#818cf8)}
+.m .catrow .cv{font-size:12px;font-weight:700;width:50px;text-align:right;color:var(--ink-2)}
+.m h3{font-size:13px;color:var(--ink-2);margin:14px 0 7px}
+.m .li{font-size:12.5px;color:var(--ink-2);padding:6px 10px;background:#f8fafc;border-radius:8px;margin-bottom:5px;line-height:1.4}
+.m .li b{color:var(--weak)}.m .li b.bad{color:var(--bad)}
+.m .note{font-size:13px;color:var(--ink);background:#f8fafc;border-radius:10px;padding:11px;line-height:1.6;white-space:pre-wrap}
+.foot{text-align:center;font-size:11px;color:var(--ink-3);padding:22px 0 8px}
+@media(max-width:560px){
+  .stores{grid-template-columns:1fr;gap:10px}
+  .scard{display:flex;align-items:center;gap:14px}
+  .scard::before{width:4px;height:auto;top:0;bottom:0;right:auto}
+  .scard .nm{margin-bottom:0;flex:1}
+  .cmp{font-size:12px}.cmp th,.cmp td{padding:7px 5px}
+  .cmp td .mini{width:32px}
+}
+</style>
+</head>
+<body>
+
+<!-- 登入 -->
+<div id="loginView">
+  <div class="login">
+    <div class="ico">🛡️</div>
+    <h1>督導巡店後台</h1>
+    <p>輸入任一店長密碼即可查看<br>三店巡店分數比較</p>
+    <input id="pw" type="password" inputmode="numeric" placeholder="店長密碼" autocomplete="off">
+    <button id="loginBtn" type="button">進入</button>
+    <div class="err" id="loginErr"></div>
+    <a class="back" href="home.html">← 回主系統</a>
+  </div>
+</div>
+
+<!-- 後台 -->
+<div class="wrap" id="dashView" style="display:none">
+  <div class="top">
+    <h1>督導巡店後台</h1>
+    <span class="badge">三店比較</span>
+    <button id="reloadBtn" type="button">↻ 重新整理</button>
+    <button id="logoutBtn" type="button">登出</button>
+  </div>
+  <div id="banner"></div>
+
+  <div class="sec-title">三店店長評分（店長總分＝門店評分〔現場＋培育〕95％＋秘密客 5％）</div>
+  <div class="stores" id="storeCards"></div>
+
+  <div class="sec-title">評分組成</div>
+  <div style="overflow:auto"><table class="cmp" id="cmpTable"></table></div>
+  <div style="font-size:11.5px;color:var(--ink-3);margin:6px 2px 0;line-height:1.5">※ 門店評分已含人才培育（現場＋培育合一）。當月無秘密客時，店長總分＝門店評分，那 5% 併回門店評分，店長不會被扣分。</div>
+
+  <div class="sec-title">督導巡店紀錄</div>
+  <div class="recs" id="recList"></div>
+
+  <p class="foot">© 初殿鍋物 · 督導巡店系統</p>
+</div>
+
+<dialog id="detailDlg"><div class="m" id="detailBody"></div></dialog>
+
+<script>
+const CONFIG = {
+  // 督導巡店後端（現場分＋培育）
+  SCRIPT_URL: "https://script.google.com/macros/s/AKfycbykLcQUeNNJj4gdDlyxFxOrgQmq1N64l7NDsVkTKQzXHiR041t-Av5Fg62TxxnB6dqCMw/exec",
+  // 秘密客後端（自動抓最新秘密客分數，占 10%）
+  MYSTERY_URL: "https://script.google.com/macros/s/AKfycbw9wU54LVTN6KLUmtSpEFr6EggLwHPbV1J6OiyqahGs3JSvwKVT2M4-tVQ1mCFEqnUZIw/exec"
+};
+const W = { site:0.80, train:0.15, mystery:0.05 };
+
+const STORES = [
+  { key:"chudian-zhonghe",  match:"中和", name:"初殿中和店", cls:"s1" },
+  { key:"chudian-yongchun", match:"永春", name:"初殿永春店", cls:"s2" },
+  { key:"chudian-xinzhuang",match:"新莊", name:"初殿新莊店", cls:"s3" }
+];
+const CAT_DEFS = [
+  {key:"service",name:"服務帶位",weight:14},{key:"soup",name:"出湯出海鮮",weight:8},
+  {key:"shift",name:"開收班",weight:6},{key:"meat",name:"切肉",weight:12},
+  {key:"prep",name:"備料",weight:12},{key:"clean",name:"環境整潔",weight:14},
+  {key:"mentor",name:"帶人",weight:14},{key:"order",name:"叫貨",weight:8},
+  {key:"duty",name:"值班",weight:8},{key:"schedule",name:"排班",weight:4}
+];
+const LEVEL_NAME = { A:"A級", B:"B級", C:"C級" };
+let REPORTS = [];   // 督導巡店
+let MYSTERY = [];   // 秘密客
+
+function levelOf(t){ return t>=90?"A":(t>=75?"B":"C"); }
+function num(v){ return (v===""||v===undefined||v===null||isNaN(Number(v)))?null:Number(v); }
+function storeMeta(key){ return STORES.find(function(s){return s.key===key;}) || {name:key,cls:"s1",match:""}; }
+
+/* ---------- demo 資料（未設定後端時預覽用） ---------- */
+function demoReports(){
+  function mk(store,storeName,total,training,date,reviewer,cats,low,notes){
+    var c={}; CAT_DEFS.forEach(function(d,i){ c[d.key]={name:d.name,weight:d.weight,score:cats[i]}; });
+    return {reportId:"DEMO-"+store+"-"+date, submittedAt:date+"T10:00:00Z", store:store, storeName:storeName,
+      reviewer:reviewer, date:date, total:total, level:levelOf(total), training:training,
+      categories:c, lowItems:low||[], notes:notes||""};
+  }
+  return [
+    mk("chudian-yongchun","初殿永春店",92.5,true,"2026-06-20","客座A級店長",[14,8,6,11,12,12,13,8,8,4],
+       [{cat:"切肉",item:"切肉效率是否足夠",level:"weak"}],"整體穩定。"),
+    mk("chudian-zhonghe","初殿中和店",84,false,"2026-06-18","總部主管",[12,7,6,10,9,11,12,6,7,4],
+       [{cat:"備料",item:"是否先進先出",level:"bad"}],"備料先進先出需改善。"),
+    mk("chudian-xinzhuang","初殿新莊店",72,false,"2026-06-17","客座A級店長",[10,6,4,9,8,9,9,6,7,4],
+       [{cat:"環境整潔",item:"廁所是否髒亂",level:"bad"}],"環境待加強。")
+  ];
+}
+function demoMystery(){
+  return [
+    {storeName:"初殿鍋物永春店", submittedAt:"2026-06-19T13:00:00Z", visitDate:"2026-06-19", total:90, level:"優秀"},
+    {storeName:"初殿鍋物中和店", submittedAt:"2026-06-18T13:00:00Z", visitDate:"2026-06-18", total:83, level:"警戒"}
+  ];
+}
+
+/* ---------- 抓資料 + 登入 ---------- */
+function fetchReports(url,pw){
+  return fetch(url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"getAllReports",pw:pw})})
+    .then(function(r){return r.json();}).catch(function(e){return {ok:false,error:String(e)};});
+}
+
+function tryLogin(){
+  var pw = document.getElementById("pw").value.trim();
+  var err = document.getElementById("loginErr");
+  if(!pw){ err.textContent="請輸入密碼"; return; }
+  err.textContent = "驗證中…";
+  if(!CONFIG.SCRIPT_URL){ REPORTS=demoReports(); MYSTERY=demoMystery(); enterDash(true); return; }
+  Promise.all([fetchReports(CONFIG.SCRIPT_URL,pw), fetchReports(CONFIG.MYSTERY_URL,pw)]).then(function(res){
+    var p=res[0], m=res[1];
+    if(!p || !p.ok){ err.textContent=(p&&p.error==="unauthorized")?"密碼錯誤":("讀取失敗："+((p&&p.error)||"未知")); return; }
+    sessionStorage.setItem("cd_patrol_pw", pw);
+    REPORTS = p.reports || [];
+    MYSTERY = (m && m.ok) ? (m.reports||[]) : [];
+    enterDash(false);
+  }).catch(function(e){ err.textContent = "連線失敗：" + e.message; });
+}
+
+function enterDash(isDemo){
+  document.getElementById("loginView").style.display="none";
+  document.getElementById("dashView").style.display="block";
+  document.getElementById("banner").innerHTML = isDemo
+    ? '<div class="banner">⚠️ 預覽模式：後端尚未設定，以下為示範資料。</div>' : '';
+  render();
+}
+
+function logout(){
+  sessionStorage.removeItem("cd_patrol_pw");
+  document.getElementById("dashView").style.display="none";
+  document.getElementById("loginView").style.display="block";
+  document.getElementById("pw").value="";
+  document.getElementById("loginErr").textContent="";
+}
+
+function reload(){
+  var pw = sessionStorage.getItem("cd_patrol_pw");
+  if(!CONFIG.SCRIPT_URL || !pw){ render(); return; }
+  Promise.all([fetchReports(CONFIG.SCRIPT_URL,pw), fetchReports(CONFIG.MYSTERY_URL,pw)]).then(function(res){
+    if(res[0]&&res[0].ok){ REPORTS=res[0].reports||[]; MYSTERY=(res[1]&&res[1].ok)?(res[1].reports||[]):[]; render(); }
+  });
+}
+
+/* ---------- 計算門店總分 ---------- */
+function latestPatrol(key){
+  var best=null;
+  REPORTS.forEach(function(r){ if(r.store!==key)return; if(!best||new Date(r.submittedAt||r.date)>new Date(best.submittedAt||best.date))best=r; });
+  return best;
+}
+function latestMystery(match){
+  var best=null;
+  MYSTERY.forEach(function(r){ if(String(r.storeName||"").indexOf(match)<0)return; if(!best||new Date(r.submittedAt||r.visitDate)>new Date(best.submittedAt||best.visitDate))best=r; });
+  return best;
+}
+// 門店評分 = 現場＋培育「合一」（培育併進門店評分）；店長總分 = 門店評分×0.95 + 秘密客×0.05。
+// 缺培育→其權重歸現場；缺秘密客→其 5% 併回門店評分。無督導紀錄回 null。
+function storeScore(s){
+  var dp=latestPatrol(s.key);
+  if(!dp) return null;
+  var site=num(dp.total); var siteVal=(site===null?0:site);
+  var hasTrain=(dp.training===true||dp.training===false);
+  var trainVal=(dp.training===true)?100:0;
+  var mm=latestMystery(s.match);
+  var mys=mm?num(mm.total):null;
+  var blkSiteW=W.site + (hasTrain?0:W.train);              // 缺培育→權重歸現場
+  var block=siteVal*blkSiteW + (hasTrain?trainVal*W.train:0); // 現場+培育 區塊（0..95）
+  var grade=block/(W.site+W.train);                       // 門店評分 0-100
+  var fin=(mys!==null) ? (block + mys*W.mystery) : grade;  // 缺秘密客→5% 併回門店評分
+  return { final:Math.round(fin*10)/10, level:levelOf(fin), grade:Math.round(grade*10)/10, site:site, train:dp.training, mys:mys, dp:dp, mm:mm };
+}
+
+/* ---------- 渲染 ---------- */
+function render(){
+  document.getElementById("storeCards").innerHTML = STORES.map(function(s){
+    var sc=storeScore(s);
+    if(!sc){
+      return '<div class="scard '+s.cls+'"><div class="nm"><span class="dot"></span>'+s.name+'</div>'+
+        '<div style="flex:1"><div class="big">—</div><span class="lv none">無紀錄</span>'+
+        '<div class="meta">尚無督導巡店資料</div></div></div>';
+    }
+    var trTxt = sc.train===true?'<span style="color:var(--ok)">有</span>':(sc.train===false?'<span style="color:var(--bad)">尚未</span>':'—');
+    return '<div class="scard '+s.cls+'"><div class="nm"><span class="dot"></span>'+s.name+'</div>'+
+      '<div style="flex:1"><div class="big">'+sc.final+'<small>/100</small></div>'+
+      '<span class="lv '+sc.level+'">店長 '+LEVEL_NAME[sc.level]+'</span>'+
+      '<div class="meta">門店評分 <b>'+sc.grade+'</b>（培育 '+trTxt+'）　秘密客 <b>'+(sc.mys===null?"—":sc.mys)+'</b><br>最近巡店：<b>'+((sc.dp&&sc.dp.date)||"-")+'</b></div></div></div>';
+  }).join("");
+
+  buildComposition();
+
+  var sorted = REPORTS.slice().sort(function(a,b){ return new Date(b.submittedAt||b.date)-new Date(a.submittedAt||a.date); });
+  var rl=document.getElementById("recList");
+  if(!sorted.length){ rl.innerHTML='<div class="empty">尚無督導巡店紀錄</div>'; return; }
+  rl.innerHTML = sorted.map(function(r,i){
+    var sm=storeMeta(r.store); var t=num(r.total); var lv=levelOf(t||0);
+    return '<div class="rec" data-i="'+i+'"><span class="rdot" style="background:var(--'+sm.cls+')"></span>'+
+      '<div class="rmain"><div class="l1">'+sm.name+' <span class="rlv lv '+lv+'">門店'+lv+'</span></div>'+
+      '<div class="l2">'+(r.date||"-")+'　·　'+(r.reviewer||"-")+(r.lowItems&&r.lowItems.length?('　·　需改善 '+r.lowItems.length+' 項'):'')+'</div></div>'+
+      '<div class="rtot">'+(t===null?"—":r.total)+'</div></div>';
+  }).join("");
+  Array.prototype.forEach.call(rl.querySelectorAll(".rec"),function(el){
+    el.addEventListener("click",function(){ openDetail(sorted[Number(el.getAttribute("data-i"))]); });
+  });
+}
+
+function buildComposition(){
+  var scs=STORES.map(storeScore);
+  var head='<thead><tr><th>項目</th>'+STORES.map(function(s){return '<th>'+s.match+'</th>';}).join("")+'</tr></thead>';
+  function numRow(label,vals,suffix){
+    var max=Math.max.apply(null,vals.filter(function(v){return v!==null;}).concat([-1]));
+    return '<tr><td>'+label+'</td>'+vals.map(function(v){
+      if(v===null) return '<td><span class="muted">—</span></td>';
+      return '<td'+((v===max&&max>0)?' class="best"':'')+'><span class="v">'+v+(suffix||'')+'</span></td>';
+    }).join("")+'</tr>';
+  }
+  var siteRow=numRow('　└ 現場操作（43題）', scs.map(function(s){return s?s.site:null;}), '');
+  var trainRow='<tr><td>　└ 人才培育</td>'+scs.map(function(s){
+    if(!s) return '<td><span class="muted">—</span></td>';
+    return s.train===true?'<td><span style="color:var(--ok);font-weight:700">有</span></td>'
+      :(s.train===false?'<td><span style="color:var(--bad);font-weight:700">尚未</span></td>':'<td><span class="muted">未填</span></td>');
+  }).join("")+'</tr>';
+  var gradeRow=numRow('門店評分（95%，含培育）', scs.map(function(s){return s?s.grade:null;}), '');
+  var mysRow=numRow('秘密客（5%）', scs.map(function(s){return s?s.mys:null;}), '');
+  var foot='<tfoot><tr><td>店長總分</td>'+scs.map(function(s){return s?('<td><b>'+s.final+'</b> <span class="lv '+s.level+'" style="font-size:11px;padding:1px 7px">'+LEVEL_NAME[s.level]+'</span></td>'):'<td class="muted">—</td>';}).join("")+'</tr></tfoot>';
+  document.getElementById("cmpTable").innerHTML=head+'<tbody>'+gradeRow+siteRow+trainRow+mysRow+'</tbody>'+foot;
+}
+
+function openDetail(r){
+  var sm=storeMeta(r.store); var site=num(r.total);
+  var hasTrain=(r.training===true||r.training===false), trainVal=(r.training===true)?100:0;
+  var blkSiteW=W.site+(hasTrain?0:W.train);
+  var grade=Math.round((((site===null?0:site)*blkSiteW + (hasTrain?trainVal*W.train:0))/(W.site+W.train))*10)/10;
+  var glv=levelOf(grade);
+  var cats=CAT_DEFS.map(function(d){
+    var c=r.categories&&r.categories[d.key]; var sc=c&&c.score!==""&&c.score!==undefined&&c.score!==null?Number(c.score):null;
+    var pct=sc===null?0:Math.round(sc/d.weight*100);
+    return '<div class="catrow"><span class="cn">'+d.name+'</span><span class="tk"><i style="width:'+pct+'%"></i></span>'+
+      '<span class="cv">'+(sc===null?"不適用":(Math.round(sc*10)/10)+"/"+d.weight)+'</span></div>';
+  }).join("");
+  var trLine=(r.training===true)?'<div class="li"><b style="color:var(--ok)">人才培育：有培育出（已計入門店評分）</b></div>'
+    :(r.training===false?'<div class="li"><b style="color:var(--bad)">人才培育：尚未培育出</b></div>':'');
+  var low=(r.lowItems&&r.lowItems.length)
+    ? '<h3>需改善項目（'+r.lowItems.length+'）</h3>'+r.lowItems.map(function(x){
+        var tg=x.level==="bad"?'<b class="bad">不符合</b>':'<b>待加強</b>';
+        return '<div class="li">'+tg+'　'+x.cat+'：'+x.item+'</div>';}).join("")
+    : '<h3>✅ 所有項目皆符合</h3>';
+  var note=r.notes?('<h3>總評備註</h3><div class="note">'+escapeHtml(r.notes)+'</div>'):"";
+  document.getElementById("detailBody").innerHTML=
+    '<div class="mh"><div class="ttl"><h2>'+sm.name+' · 督導巡店</h2><div class="sub">'+(r.date||"-")+'　·　'+(r.reviewer||"-")+'　·　'+(r.reportId||"")+'</div></div>'+
+    '<button class="x" onclick="document.getElementById(\'detailDlg\').close()">×</button></div>'+
+    '<div class="mtot">'+grade+'<small>/100 門店評分</small><span class="mlv lv '+glv+'">門店'+glv+'</span></div>'+
+    '<div style="font-size:12px;color:var(--ink-3);margin:2px 0 8px">現場 '+(site===null?"-":site)+' ＋ 培育 '+(r.training===true?'有':(r.training===false?'尚未':'未填'))+' → 門店評分 '+grade+'</div>'+
+    (trLine?('<div style="margin:6px 0 2px">'+trLine+'</div>'):'')+
+    '<div class="catbar">'+cats+'</div>'+low+note;
+  document.getElementById("detailDlg").showModal();
+}
+function escapeHtml(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+/* ---------- init ---------- */
+document.getElementById("loginBtn").addEventListener("click",tryLogin);
+document.getElementById("pw").addEventListener("keydown",function(e){ if(e.key==="Enter")tryLogin(); });
+document.getElementById("logoutBtn").addEventListener("click",logout);
+document.getElementById("reloadBtn").addEventListener("click",reload);
+// 已登入過（同分頁）自動進入
+(function(){
+  var pw=sessionStorage.getItem("cd_patrol_pw");
+  if(pw && CONFIG.SCRIPT_URL){ document.getElementById("pw").value=pw; tryLogin(); }
+})();
+</script>
+</body>
+</html>

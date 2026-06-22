@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>秘密客評分後台</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#4f46e5;--brand-dark:#4338ca;--brand-soft:#e0e7ff;
+  --ink:#0f172a;--ink-2:#475569;--ink-3:#94a3b8;--line:#e2e8f0;
+  --ok:#16a34a;--weak:#d97706;--bad:#dc2626;
+  --s1:#4f46e5;--s2:#0891b2;--s3:#db2777;
+}
+html,body{height:100%}
+body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;padding:0 0 40px;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #e0e7ff 0%, transparent 50%),
+    radial-gradient(900px 500px at 110% 8%, #cffafe 0%, transparent 55%),
+    linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);background-attachment:fixed}
+.wrap{max-width:920px;margin:0 auto;padding:18px 14px 0}
+
+.login{max-width:380px;margin:9vh auto 0;background:rgba(255,255,255,.85);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.85);border-radius:20px;padding:30px 24px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 18px 40px -18px rgba(15,23,42,.22);text-align:center}
+.login .ico{font-size:42px;margin-bottom:8px}
+.login h1{font-size:20px;font-weight:800;margin-bottom:4px}
+.login p{font-size:13px;color:var(--ink-2);margin-bottom:18px;line-height:1.5}
+.login input{width:100%;font-family:inherit;font-size:16px;text-align:center;letter-spacing:2px;border:1px solid var(--line);border-radius:12px;padding:12px;outline:none}
+.login input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(79,70,229,.12)}
+.login button{width:100%;margin-top:12px;font-family:inherit;font-size:15px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-dark));border:none;border-radius:12px;padding:13px;cursor:pointer;transition:transform .12s}
+.login button:active{transform:scale(.98)}
+.login .err{color:var(--bad);font-size:13px;margin-top:10px;min-height:18px;font-weight:600}
+.login .back{display:inline-block;margin-top:14px;font-size:12.5px;color:var(--ink-3);text-decoration:none}
+
+.top{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.top h1{font-size:21px;font-weight:800;flex:1;letter-spacing:-.01em}
+.top .badge{font-size:11px;font-weight:700;color:var(--brand-dark);background:var(--brand-soft);border-radius:999px;padding:5px 11px;letter-spacing:1px}
+.top button{font-family:inherit;font-size:12.5px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--ink-2);border-radius:10px;padding:7px 12px;cursor:pointer}
+.top button:active{transform:scale(.97)}
+.banner{background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:12.5px;font-weight:600;border-radius:12px;padding:9px 13px;margin-bottom:14px;line-height:1.5}
+
+.sec-title{font-size:13px;font-weight:800;color:var(--ink-2);letter-spacing:1px;margin:20px 2px 10px;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+
+.stores{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.scard{background:rgba(255,255,255,.85);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.85);border-radius:16px;padding:15px 14px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 22px -14px rgba(15,23,42,.14);position:relative;overflow:hidden}
+.scard::before{content:"";position:absolute;top:0;left:0;right:0;height:4px}
+.scard.s1::before{background:var(--s1)}.scard.s2::before{background:var(--s2)}.scard.s3::before{background:var(--s3)}
+.scard .nm{font-size:14px;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.scard .dot{width:9px;height:9px;border-radius:50%}
+.scard.s1 .dot{background:var(--s1)}.scard.s2 .dot{background:var(--s2)}.scard.s3 .dot{background:var(--s3)}
+.scard .big{font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.scard .big small{font-size:14px;color:var(--ink-3);font-weight:700}
+.scard .lv{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:3px 10px;margin-top:7px}
+.lv.good{background:#dcfce7;color:#15803d}.lv.warn{background:#fef9c3;color:#a16207}.lv.bad{background:#fee2e2;color:#b91c1c}.lv.none{background:#f1f5f9;color:var(--ink-3)}
+.scard .meta{font-size:11.5px;color:var(--ink-3);margin-top:9px;line-height:1.6}
+.scard .meta b{color:var(--ink-2);font-weight:700}
+
+.cmp{width:100%;border-collapse:collapse;background:rgba(255,255,255,.85);border:1px solid var(--line);border-radius:14px;overflow:hidden;font-size:13px}
+.cmp th,.cmp td{padding:9px 10px;text-align:center;border-bottom:1px solid #eef1f5}
+.cmp th{background:#f1f5f9;font-weight:700;color:var(--ink-2);font-size:12px}
+.cmp th:first-child,.cmp td:first-child{text-align:left;font-weight:600;color:var(--ink)}
+.cmp tr:last-child td{border-bottom:none}
+.cmp td .cell{display:inline-flex;flex-direction:column;align-items:center;gap:3px}
+.cmp td .v{font-weight:800}
+.cmp td .mini{width:46px;height:5px;border-radius:999px;background:#eef1f5;overflow:hidden}
+.cmp td .mini i{display:block;height:100%;border-radius:999px}
+.cmp .best{background:#f0fdf4}
+.cmp tbody .sumrow td{background:#f8fafc;font-weight:700}
+.cmp tfoot td{font-weight:800;background:#fafafa;border-top:2px solid var(--line)}
+.muted{color:var(--ink-3)}
+
+.recs{background:rgba(255,255,255,.85);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.rec{display:flex;align-items:center;gap:11px;padding:12px 14px;border-bottom:1px solid #eef1f5;cursor:pointer;transition:background .12s}
+.rec:last-child{border-bottom:none}
+.rec:hover{background:#f8fafc}
+.rec .rdot{width:9px;height:9px;border-radius:50%;flex:none}
+.rec .rmain{flex:1;min-width:0}
+.rec .rmain .l1{font-size:14px;font-weight:700;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.rec .rmain .l2{font-size:12px;color:var(--ink-3);margin-top:2px}
+.rec .rtot{font-size:18px;font-weight:800;text-align:right}
+.rec .crit{font-size:10.5px;font-weight:800;color:#b91c1c;background:#fee2e2;border-radius:999px;padding:2px 7px}
+.empty{text-align:center;color:var(--ink-3);font-size:13px;padding:30px}
+
+dialog{border:none;border-radius:20px;padding:0;max-width:540px;width:94%;box-shadow:0 30px 80px -20px rgba(15,23,42,.5)}
+dialog::backdrop{background:rgba(15,23,42,.5)}
+.m{padding:20px}
+.m .mh{display:flex;align-items:flex-start;gap:10px;margin-bottom:6px}
+.m .mh .ttl{flex:1}
+.m .mh h2{font-size:18px;font-weight:800}
+.m .mh .sub{font-size:12.5px;color:var(--ink-3);margin-top:2px}
+.m .mh .x{font-size:22px;color:var(--ink-3);cursor:pointer;line-height:1;background:none;border:none}
+.m .mtot{font-size:34px;font-weight:800;margin:6px 0}
+.m .mtot small{font-size:15px;color:var(--ink-3);font-weight:700}
+.m .mlv{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:3px 11px;margin-left:8px;vertical-align:middle}
+.m .subscores{display:flex;gap:10px;margin:10px 0}
+.m .subscores .b{flex:1;background:#f8fafc;border-radius:10px;padding:9px 11px;text-align:center}
+.m .subscores .b span{display:block;font-size:11px;color:var(--ink-3);font-weight:600}
+.m .subscores .b strong{font-size:19px}
+.m h3{font-size:13px;color:var(--ink-2);margin:15px 0 7px}
+.m .catrow{display:flex;align-items:center;gap:9px;padding:5px 0}
+.m .catrow .cn{font-size:12.5px;width:84px;flex:none;color:var(--ink-2)}
+.m .catrow .tk{flex:1;height:8px;border-radius:999px;background:#eef1f5;overflow:hidden}
+.m .catrow .tk i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--brand),#818cf8)}
+.m .catrow .cv{font-size:11.5px;font-weight:700;width:80px;text-align:right;color:var(--ink-2)}
+.m .sopgrid{display:grid;grid-template-columns:1fr;gap:4px}
+.m .sopli{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:6px 9px;background:#f8fafc;border-radius:8px;line-height:1.4}
+.m .pill{flex:none;min-width:34px;text-align:center;border-radius:999px;font-weight:800;font-size:11.5px;padding:1px 8px;height:fit-content}
+.m .pill.y{background:#dcfce7;color:#15803d}.m .pill.n{background:#fee2e2;color:#b91c1c}.m .pill.na{background:#f1f5f9;color:var(--ink-3)}
+.m .li{font-size:12.5px;color:var(--ink-2);padding:6px 10px;background:#f8fafc;border-radius:8px;margin-bottom:5px;line-height:1.4}
+.m .li.danger{background:#fef2f2;color:#b91c1c;font-weight:600}
+.m .note{font-size:13px;color:var(--ink);background:#f8fafc;border-radius:10px;padding:11px;line-height:1.6;white-space:pre-wrap}
+.foot{text-align:center;font-size:11px;color:var(--ink-3);padding:22px 0 8px}
+@media(max-width:560px){
+  .stores{grid-template-columns:1fr;gap:10px}
+  .scard{display:flex;align-items:center;gap:14px}
+  .scard::before{width:4px;height:auto;top:0;bottom:0;right:auto}
+  .scard .nm{margin-bottom:0;flex:1}
+  .cmp{font-size:12px}.cmp th,.cmp td{padding:7px 5px}
+  .cmp td .mini{width:30px}
+}
+</style>
+</head>
+<body>
+
+<div id="loginView">
+  <div class="login">
+    <div class="ico">🕵️</div>
+    <h1>秘密客評分後台</h1>
+    <p>輸入任一店長密碼即可查看<br>三店秘密客評分比較</p>
+    <input id="pw" type="password" inputmode="numeric" placeholder="店長密碼" autocomplete="off">
+    <button id="loginBtn" type="button">進入</button>
+    <div class="err" id="loginErr"></div>
+    <a class="back" href="home.html">← 回主系統</a>
+  </div>
+</div>
+
+<div class="wrap" id="dashView" style="display:none">
+  <div class="top">
+    <h1>秘密客評分後台</h1>
+    <span class="badge">三店比較</span>
+    <button id="reloadBtn" type="button">↻ 重新整理</button>
+    <button id="logoutBtn" type="button">登出</button>
+  </div>
+  <div id="banner"></div>
+
+  <div class="sec-title">三店總覽（最新一次）</div>
+  <div class="stores" id="storeCards"></div>
+
+  <div class="sec-title">各維度滿意度比較（最新一次・滿分100）</div>
+  <div style="overflow:auto"><table class="cmp" id="cmpTable"></table></div>
+
+  <div class="sec-title">秘密客評分紀錄</div>
+  <div class="recs" id="recList"></div>
+
+  <p class="foot">© 初殿鍋物 · 秘密客評分系統</p>
+</div>
+
+<dialog id="detailDlg"><div class="m" id="detailBody"></div></dialog>
+
+<script>
+const CONFIG = {
+  // 秘密客後端 Apps Script /exec（與打分頁 config.js 同一支）
+  SCRIPT_URL: "https://script.google.com/macros/s/AKfycbw9wU54LVTN6KLUmtSpEFr6EggLwHPbV1J6OiyqahGs3JSvwKVT2M4-tVQ1mCFEqnUZIw/exec"
+};
+
+const MYS_STORES = [
+  { match:"中和", name:"初殿中和店", cls:"s1" },
+  { match:"新莊", name:"初殿新莊店", cls:"s2" },
+  { match:"永春", name:"初殿永春店", cls:"s3" }
+];
+const SAT_DEFS = [
+  {key:"entry",name:"門口候位",weight:10},{key:"uniform",name:"儀容制服",weight:10},
+  {key:"menu",name:"點餐介紹",weight:10},{key:"service",name:"桌邊服務",weight:20},
+  {key:"food",name:"出餐品質",weight:20},{key:"safety",name:"衛生安全",weight:15},
+  {key:"checkout",name:"結帳會員",weight:10},{key:"brand",name:"品牌一致",weight:5}
+];
+const SOP_DEFS = [
+  "介紹詞有提到加 Line 好友；女生有給髮圈","上湯時有說「太鹹或太淡都可以調整」",
+  "加湯時有詢問「會太鹹或太淡嗎」","老顧客／壽星優惠有說明",
+  "上蛤蠣有給撈網＋說明可更換","上白蝦有給濕紙巾＋說明可擦手",
+  "雪花魚卷有說明需煮 5 分鐘以上","看到手機放桌上主動提供手機支架",
+  "結帳有詢問是否使用湯頭兌換券","結帳有詢問統編／載具",
+  "結帳有詢問集點卡","結帳有告知有芳香劑"
+];
+const SOP_KEYS = ["sop1","sop2","sop3","sop4","sop5","sop6","sop7","sop8","sop9","sop10","sop11","sop12"];
+let REPORTS = [];
+
+function storeMeta(storeName){
+  for(var i=0;i<MYS_STORES.length;i++){ if(String(storeName||"").indexOf(MYS_STORES[i].match)>=0) return MYS_STORES[i]; }
+  return { name:storeName||"未知", cls:"s1", match:"" };
+}
+function lvClass(level, critical){
+  if(critical || level==="一票否決" || level==="需改善") return "bad";
+  if(level==="警戒") return "warn";
+  if(level==="優秀" || level==="合格") return "good";
+  return "none";
+}
+function num(v){ return (v===""||v===undefined||v===null||isNaN(Number(v)))?null:Number(v); }
+function ptsOf(r,key){ var s=r.scores&&r.scores[key]; if(!s)return null; return num(s.points); }
+
+/* demo 資料 */
+function demoReports(){
+  function dims(arr){ var o={}; SAT_DEFS.forEach(function(d,i){ o[d.key]={title:d.name,points:arr[i],weight:d.weight,weightedScore:arr[i]/100*d.weight}; }); return o; }
+  function sopObj(yes){ var o={}; SOP_KEYS.forEach(function(k,i){ o[k]= i<yes?"是":"否"; }); return o; }
+  return [
+    {reportId:"MS-demo1",submittedAt:"2026-06-19T13:00:00Z",storeName:"初殿鍋物中和店",visitDate:"2026-06-19",visitPeriod:"晚餐",shopperCode:"MS-012",
+     total:91.2,satScore:90,sopScore:92,level:"優秀",critical:false,scores:dims([85,100,85,100,85,100,85,100]),sop:sopObj(11),
+     visibleSafety:["桌面無油膩、菜渣、水漬","餐具無水痕、破損、異味"],criticalItems:[],goodNotes:"外場主動加湯，結帳清楚說明會員優惠。",badNotes:"醬料區花生粉一度缺補。"},
+    {reportId:"MS-demo2",submittedAt:"2026-06-18T12:30:00Z",storeName:"初殿鍋物永春店",visitDate:"2026-06-18",visitPeriod:"中午",shopperCode:"MS-031",
+     total:83.5,satScore:82,sopScore:83,level:"警戒",critical:false,scores:dims([65,85,65,85,85,85,65,85]),sop:sopObj(10),
+     visibleSafety:["醬料區補齊且無明顯滴漏"],criticalItems:[],goodNotes:"出餐速度快。",badNotes:"入座未提醒爐具安全。"},
+    {reportId:"MS-demo3",submittedAt:"2026-06-17T19:00:00Z",storeName:"初殿鍋物新莊店",visitDate:"2026-06-17",visitPeriod:"晚餐",shopperCode:"MS-044",
+     total:74,satScore:72,sopScore:75,level:"需改善",critical:true,scores:dims([40,65,65,65,85,65,40,65]),sop:sopObj(9),
+     visibleSafety:[],criticalItems:["帳單金額錯誤且未主動修正"],goodNotes:"",badNotes:"結帳算錯金額，提醒後才更正。"}
+  ];
+}
+
+function tryLogin(){
+  var pw=document.getElementById("pw").value.trim();
+  var err=document.getElementById("loginErr");
+  if(!pw){ err.textContent="請輸入密碼"; return; }
+  err.textContent="驗證中…";
+  if(!CONFIG.SCRIPT_URL){ REPORTS=demoReports(); enterDash(true); return; }
+  fetch(CONFIG.SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify({action:"getAllReports",pw:pw})})
+    .then(function(r){return r.json();}).then(function(res){
+      if(!res||!res.ok){ err.textContent=(res&&res.error==="unauthorized")?"密碼錯誤":("讀取失敗："+((res&&res.error)||"未知")); return; }
+      sessionStorage.setItem("cd_mystery_pw",pw); REPORTS=res.reports||[]; enterDash(false);
+    }).catch(function(e){ err.textContent="連線失敗："+e.message; });
+}
+function enterDash(isDemo){
+  document.getElementById("loginView").style.display="none";
+  document.getElementById("dashView").style.display="block";
+  document.getElementById("banner").innerHTML=isDemo?'<div class="banner">⚠️ 預覽模式：後端尚未設定，以下為示範資料。部署後填入網址即顯示真實秘密客評分。</div>':'';
+  render();
+}
+function logout(){
+  sessionStorage.removeItem("cd_mystery_pw");
+  document.getElementById("dashView").style.display="none";
+  document.getElementById("loginView").style.display="block";
+  document.getElementById("pw").value=""; document.getElementById("loginErr").textContent="";
+}
+function reload(){
+  var pw=sessionStorage.getItem("cd_mystery_pw");
+  if(!CONFIG.SCRIPT_URL||!pw){ render(); return; }
+  fetch(CONFIG.SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify({action:"getAllReports",pw:pw})})
+    .then(function(r){return r.json();}).then(function(res){ if(res&&res.ok){REPORTS=res.reports||[];render();} });
+}
+
+function latestByStore(){
+  var map={};
+  REPORTS.forEach(function(r){
+    var k=storeMeta(r.storeName).match||r.storeName;
+    var cur=map[k];
+    if(!cur || new Date(r.submittedAt||r.visitDate)>new Date(cur.submittedAt||cur.visitDate)) map[k]=r;
+  });
+  return map;
+}
+
+function render(){
+  var latest=latestByStore();
+  document.getElementById("storeCards").innerHTML=MYS_STORES.map(function(s){
+    var r=latest[s.match];
+    if(!r){
+      return '<div class="scard '+s.cls+'"><div class="nm"><span class="dot"></span>'+s.name+'</div>'+
+        '<div style="flex:1"><div class="big">—</div><span class="lv none">無紀錄</span><div class="meta">尚無評分資料</div></div></div>';
+    }
+    var t=num(r.total);
+    return '<div class="scard '+s.cls+'"><div class="nm"><span class="dot"></span>'+s.name+'</div>'+
+      '<div style="flex:1"><div class="big">'+(t===null?"—":t)+'<small>/100</small></div>'+
+      '<span class="lv '+lvClass(r.level,r.critical)+'">'+(r.level||"-")+(r.critical?' ⚠':'')+'</span>'+
+      '<div class="meta">最新：<b>'+(r.visitDate||"-")+'</b></div></div></div>';
+  }).join("");
+
+  buildCmp(latest);
+
+  var sorted=REPORTS.slice().sort(function(a,b){return new Date(b.submittedAt||b.visitDate)-new Date(a.submittedAt||a.visitDate);});
+  var rl=document.getElementById("recList");
+  if(!sorted.length){ rl.innerHTML='<div class="empty">尚無秘密客評分紀錄</div>'; return; }
+  rl.innerHTML=sorted.map(function(r,i){
+    var sm=storeMeta(r.storeName), t=num(r.total);
+    return '<div class="rec" data-i="'+i+'"><span class="rdot" style="background:var(--'+sm.cls+')"></span>'+
+      '<div class="rmain"><div class="l1">'+sm.name+' <span class="lv '+lvClass(r.level,r.critical)+'" style="font-size:11px;padding:2px 8px">'+(r.level||"-")+'</span>'+
+      (r.critical?'<span class="crit">一票否決</span>':'')+'</div>'+
+      '<div class="l2">'+(r.visitDate||"-")+'　·　'+(r.visitPeriod||"-")+'　·　'+(r.shopperCode||"-")+'</div></div>'+
+      '<div class="rtot">'+(t===null?"—":t)+'</div></div>';
+  }).join("");
+  Array.prototype.forEach.call(rl.querySelectorAll(".rec"),function(el){
+    el.addEventListener("click",function(){ openDetail(sorted[Number(el.getAttribute("data-i"))]); });
+  });
+}
+
+function buildCmp(latest){
+  var head='<thead><tr><th>維度</th>'+MYS_STORES.map(function(s){return '<th>'+s.name.replace("初殿","").replace("店","")+'</th>';}).join("")+'</tr></thead>';
+  var rows=SAT_DEFS.map(function(d){
+    var vals=MYS_STORES.map(function(s){ var r=latest[s.match]; return r?ptsOf(r,d.key):null; });
+    var max=Math.max.apply(null,vals.filter(function(v){return v!==null;}).concat([-1]));
+    var tds=vals.map(function(v){
+      if(v===null) return '<td><span class="muted">—</span></td>';
+      var color=v>=85?"var(--ok)":(v>=60?"var(--weak)":"var(--bad)");
+      var best=(v===max&&max>0)?" class=\"best\"":"";
+      return '<td'+best+'><div class="cell"><span class="v">'+v+'</span><span class="mini"><i style="width:'+v+'%;background:'+color+'"></i></span></div></td>';
+    }).join("");
+    return '<tr><td>'+d.name+' <span class="muted" style="font-weight:600">·'+d.weight+'</span></td>'+tds+'</tr>';
+  }).join("");
+  function sumRow(label,field){
+    return '<tr class="sumrow"><td>'+label+'</td>'+MYS_STORES.map(function(s){
+      var r=latest[s.match]; if(!r)return '<td class="muted">—</td>';
+      var v=num(r[field]); return '<td>'+(v===null?"—":v+(field==="sopScore"?"%":""))+'</td>';
+    }).join("")+'</tr>';
+  }
+  var foot='<tfoot><tr><td>總分</td>'+MYS_STORES.map(function(s){var r=latest[s.match];var t=r?num(r.total):null;return '<td>'+(t===null?"—":t)+'</td>';}).join("")+'</tr></tfoot>';
+  document.getElementById("cmpTable").innerHTML=head+'<tbody>'+rows+sumRow("滿意度分數","satScore")+sumRow("SOP 合格率","sopScore")+'</tbody>'+foot;
+}
+
+function openDetail(r){
+  var sm=storeMeta(r.storeName), t=num(r.total);
+  var dims=SAT_DEFS.map(function(d){
+    var p=ptsOf(r,d.key); var pct=p===null?0:p;
+    var raw=(r.scores&&r.scores[d.key]&&r.scores[d.key].rawScore)?(" "+r.scores[d.key].rawScore):"";
+    return '<div class="catrow"><span class="cn">'+d.name+'</span><span class="tk"><i style="width:'+pct+'%"></i></span>'+
+      '<span class="cv">'+(p===null?"—":p)+(raw?'<span class="muted" style="font-weight:600">'+raw+'</span>':"")+'</span></div>';
+  }).join("");
+  var sop=SOP_DEFS.map(function(label,i){
+    var v=r.sop&&r.sop[SOP_KEYS[i]]; var cls=v==="是"?"y":(v==="否"?"n":"na"); var txt=v||"—";
+    return '<div class="sopli"><span>'+(i+1)+'. '+label+'</span><span class="pill '+cls+'">'+txt+'</span></div>';
+  }).join("");
+  var crit=(r.criticalItems&&r.criticalItems.length)
+    ? '<h3 style="color:#b91c1c">需立即注意 / 一票否決</h3>'+r.criticalItems.map(function(x){return '<div class="li danger">⚠ '+x+'</div>';}).join("") : "";
+  var safe=(r.visibleSafety&&r.visibleSafety.length)
+    ? '<h3>顧客可見衛生勾選</h3>'+r.visibleSafety.map(function(x){return '<div class="li">✓ '+x+'</div>';}).join("") : "";
+  var notes="";
+  if(r.goodNotes) notes+='<h3>印象深刻的優點</h3><div class="note">'+escapeHtml(r.goodNotes)+'</div>';
+  if(r.badNotes) notes+='<h3>可以更好的地方</h3><div class="note">'+escapeHtml(r.badNotes)+'</div>';
+  document.getElementById("detailBody").innerHTML=
+    '<div class="mh"><div class="ttl"><h2>'+sm.name+'</h2><div class="sub">'+(r.visitDate||"-")+'　·　'+(r.visitPeriod||"-")+'　·　'+(r.shopperCode||"-")+'</div></div>'+
+    '<button class="x" onclick="document.getElementById(\'detailDlg\').close()">×</button></div>'+
+    '<div class="mtot">'+(t===null?"—":t)+'<small>/100</small><span class="mlv lv '+lvClass(r.level,r.critical)+'">'+(r.level||"-")+'</span></div>'+
+    '<div class="subscores"><div class="b"><span>滿意度</span><strong>'+(num(r.satScore)===null?"—":num(r.satScore))+'</strong></div>'+
+    '<div class="b"><span>SOP 合格率</span><strong>'+(num(r.sopScore)===null?"—":num(r.sopScore)+"%")+'</strong></div></div>'+
+    crit+
+    '<h3>體驗評分（滿意度・滿分100）</h3>'+dims+
+    '<h3>服務 SOP 細項</h3><div class="sopgrid">'+sop+'</div>'+
+    safe+notes;
+  document.getElementById("detailDlg").showModal();
+}
+function escapeHtml(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+document.getElementById("loginBtn").addEventListener("click",tryLogin);
+document.getElementById("pw").addEventListener("keydown",function(e){ if(e.key==="Enter")tryLogin(); });
+document.getElementById("logoutBtn").addEventListener("click",logout);
+document.getElementById("reloadBtn").addEventListener("click",reload);
+(function(){ var pw=sessionStorage.getItem("cd_mystery_pw"); if(pw&&CONFIG.SCRIPT_URL){ document.getElementById("pw").value=pw; tryLogin(); } })();
+</script>
+</body>
+</html>

@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>督導巡店評分表</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#4f46e5;        /* 督導主色 indigo */
+  --brand-dark:#4338ca;
+  --brand-soft:#e0e7ff;
+  --ink:#0f172a;
+  --ink-2:#475569;
+  --ink-3:#94a3b8;
+  --line:#e2e8f0;
+  --bg:#f8fafc;
+  --ok:#16a34a;
+  --weak:#d97706;
+  --bad:#dc2626;
+  --na:#94a3b8;
+}
+html,body{height:100%}
+body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;
+  padding:0 0 calc(96px + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #e0e7ff 0%, transparent 50%),
+    radial-gradient(900px 500px at 110% 8%, #ddd6fe 0%, transparent 55%),
+    linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+  background-attachment:fixed;
+}
+.wrap{max-width:680px;margin:0 auto;padding:18px 14px 0}
+
+/* Header */
+.hero{text-align:center;padding:14px 0 18px}
+.hero .badge{display:inline-flex;align-items:center;gap:7px;padding:5px 13px;border-radius:999px;background:var(--brand-soft);color:var(--brand-dark);font-size:12px;font-weight:700;letter-spacing:2px}
+.hero h1{font-size:23px;font-weight:800;margin:12px 0 4px;letter-spacing:-.01em}
+.hero p{font-size:13px;color:var(--ink-2)}
+
+/* Cards */
+.card{background:rgba(255,255,255,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.85);border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px -14px rgba(15,23,42,.12)}
+.card-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.card-head .cnum{width:26px;height:26px;flex:none;border-radius:8px;background:var(--brand);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.card-head h2{font-size:16px;font-weight:800;flex:1}
+.card-head .cw{font-size:11.5px;font-weight:700;color:var(--brand-dark);background:var(--brand-soft);border-radius:999px;padding:3px 9px;white-space:nowrap}
+.card-head .cscore{font-size:12px;font-weight:700;color:var(--ink-3);margin-left:6px;white-space:nowrap}
+
+/* Meta fields */
+.field{margin-bottom:12px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:12.5px;font-weight:700;color:var(--ink-2);margin-bottom:6px}
+.field select,.field input,.field textarea{width:100%;font-family:inherit;font-size:15px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:11px;padding:11px 12px;outline:none;transition:border-color .15s,box-shadow .15s}
+.field select:focus,.field input:focus,.field textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(79,70,229,.12)}
+.field textarea{resize:vertical;min-height:64px;line-height:1.5}
+
+/* Score item */
+.item{padding:12px 0;border-bottom:1px solid #eef1f5}
+.item:first-of-type{padding-top:2px}
+.item:last-child{border-bottom:none;padding-bottom:2px}
+.item .q{font-size:14px;line-height:1.5;color:var(--ink);margin-bottom:9px;font-weight:500}
+.item .q .qn{color:var(--ink-3);font-weight:700;margin-right:5px}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.seg label{position:relative;display:flex;align-items:center;justify-content:center;gap:4px;padding:9px 4px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-size:13px;font-weight:700;color:var(--ink-2);cursor:pointer;transition:all .13s;user-select:none;text-align:center;line-height:1.15}
+.seg label:active{transform:scale(.96)}
+.seg input{position:absolute;opacity:0;width:0;height:0}
+.seg label.ok.on{border-color:var(--ok);background:var(--ok);color:#fff}
+.seg label.weak.on{border-color:var(--weak);background:var(--weak);color:#fff}
+.seg label.bad.on{border-color:var(--bad);background:var(--bad);color:#fff}
+.seg label.na.on{border-color:var(--na);background:var(--na);color:#fff}
+.seg input:focus-visible+span{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+
+/* Redline */
+.card.redline{border-color:#fecaca;background:linear-gradient(180deg,rgba(254,242,242,.92),rgba(255,255,255,.86))}
+.card.redline .card-head .cnum{background:var(--bad)}
+.card.redline .card-head h2{color:#b91c1c}
+.redline-note{font-size:12px;color:#b91c1c;margin:-4px 0 12px;line-height:1.5}
+.chk{display:flex;align-items:flex-start;gap:11px;padding:11px 12px;border:1.5px solid #fecaca;border-radius:12px;margin-bottom:8px;cursor:pointer;background:#fff;transition:all .13s}
+.chk:last-child{margin-bottom:0}
+.chk input{width:21px;height:21px;flex:none;margin-top:1px;accent-color:var(--bad);cursor:pointer}
+.chk span{font-size:13.5px;line-height:1.5;color:var(--ink);font-weight:500}
+.chk.on{border-color:var(--bad);background:#fef2f2}
+.chk.on span{color:#b91c1c;font-weight:700}
+
+/* Sticky summary bar */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(255,255,255,.9);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line);box-shadow:0 -6px 24px -16px rgba(15,23,42,.3);padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+.bar-inner{max-width:680px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.bar .score-box{display:flex;flex-direction:column;line-height:1.1}
+.bar .score-box .sv{font-size:24px;font-weight:800;letter-spacing:-.02em}
+.bar .score-box .sl{font-size:11px;color:var(--ink-3);font-weight:600}
+.bar .lvl{font-size:13px;font-weight:800;padding:5px 11px;border-radius:999px;white-space:nowrap}
+.bar .lvl.A{background:#dcfce7;color:#15803d}
+.bar .lvl.B{background:#fef9c3;color:#a16207}
+.bar .lvl.C{background:#fee2e2;color:#b91c1c}
+.bar .lvl.veto{background:#fee2e2;color:#b91c1c}
+.bar .prog{flex:1;min-width:0}
+.bar .prog .pt{font-size:11px;color:var(--ink-3);font-weight:600;margin-bottom:4px;display:flex;justify-content:space-between}
+.bar .prog .track{height:7px;border-radius:999px;background:#eef1f5;overflow:hidden}
+.bar .prog .fill{height:100%;background:linear-gradient(90deg,var(--brand),#818cf8);border-radius:999px;transition:width .25s}
+.bar button{flex:none;font-family:inherit;font-size:15px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-dark));border:none;border-radius:13px;padding:13px 18px;cursor:pointer;transition:transform .12s,opacity .15s;box-shadow:0 8px 20px -8px rgba(79,70,229,.6)}
+.bar button:active{transform:scale(.97)}
+.bar button:disabled{opacity:.55;box-shadow:none}
+
+/* Dialog */
+dialog{border:none;border-radius:20px;padding:0;max-width:440px;width:92%;box-shadow:0 30px 80px -20px rgba(15,23,42,.5);background:#fff}
+dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px)}
+.dlg{padding:22px}
+.dlg .dlvl{display:inline-block;font-size:13px;font-weight:800;padding:5px 13px;border-radius:999px;margin-bottom:10px}
+.dlg .dlvl.A{background:#dcfce7;color:#15803d}.dlg .dlvl.B{background:#fef9c3;color:#a16207}.dlg .dlvl.C{background:#fee2e2;color:#b91c1c}
+.dlg h2{font-size:20px;margin-bottom:4px}
+.dlg .dtot{font-size:40px;font-weight:800;letter-spacing:-.02em;margin:6px 0}
+.dlg .dtot small{font-size:16px;color:var(--ink-3);font-weight:700}
+.dlg .vetobox{background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:11px 13px;margin:12px 0;font-size:13px;color:#b91c1c;font-weight:600;line-height:1.5}
+.dlg .lowbox{margin:12px 0;text-align:left}
+.dlg .lowbox h3{font-size:13px;color:var(--ink-2);margin-bottom:7px}
+.dlg .lowbox .li{font-size:12.5px;color:var(--ink-2);padding:6px 10px;background:#f8fafc;border-radius:8px;margin-bottom:5px;line-height:1.4}
+.dlg .lowbox .li b{color:var(--weak)}
+.dlg .lowbox .li b.bad{color:var(--bad)}
+.dlg .row{display:flex;gap:10px;margin-top:16px}
+.dlg button{flex:1;font-family:inherit;font-size:15px;font-weight:700;border-radius:12px;padding:12px;cursor:pointer;border:none;transition:transform .12s}
+.dlg button:active{transform:scale(.97)}
+.dlg .btn-ghost{background:#f1f5f9;color:var(--ink-2)}
+.dlg .btn-primary{background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff}
+.dlg .scroll{max-height:34vh;overflow:auto}
+
+/* toast */
+.toast{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:60;background:var(--ink);color:#fff;font-size:13.5px;font-weight:600;padding:11px 18px;border-radius:12px;box-shadow:0 12px 30px -10px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:90%}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--bad)}
+
+.back-home{position:fixed;left:12px;bottom:calc(86px + env(safe-area-inset-bottom));z-index:30;width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.9);border:1px solid var(--line);box-shadow:0 6px 18px -8px rgba(15,23,42,.3);display:flex;align-items:center;justify-content:center;font-size:19px;text-decoration:none;color:var(--ink-2)}
+.foot{text-align:center;font-size:11px;color:var(--ink-3);padding:8px 0 18px;letter-spacing:.5px}
+
+@media(max-width:380px){
+  .seg label{font-size:12px;padding:8px 2px}
+  .hero h1{font-size:21px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <span class="badge">🛡️ SUPERVISOR · PATROL</span>
+    <h1>督導巡店評分表</h1>
+    <p>現場實測打分，送出後自動算分並通知總部</p>
+  </div>
+
+  <!-- 基本資料 -->
+  <div class="card">
+    <div class="card-head"><span class="cnum">i</span><h2>基本資料</h2></div>
+    <div class="field">
+      <label>考核門店</label>
+      <select id="metaStore">
+        <option value="">請選擇門店</option>
+        <option value="chudian-zhonghe">初殿中和店</option>
+        <option value="chudian-yongchun">初殿永春店</option>
+        <option value="chudian-xinzhuang">初殿新莊店</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>巡店審查人</label>
+      <input id="metaReviewer" type="text" placeholder="例如：客座A級店長 / 總部主管" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>巡店日期</label>
+      <input id="metaDate" type="date">
+    </div>
+  </div>
+
+  <!-- 評分區（JS 動態產生） -->
+  <div id="cats"></div>
+
+  <!-- 人才培育（總部評定，占店長總分 15%） -->
+  <div class="card" id="trainCard">
+    <div class="card-head"><span class="cnum" style="background:#f59e0b">★</span><h2>人才培育</h2><span class="cw">15 分</span></div>
+    <p style="font-size:12.5px;color:var(--ink-2);line-height:1.5;margin:-2px 0 11px">總部評定 · 占店長總分 15%，併入門店評分。是否已培育出下一任店長／副店？</p>
+    <div class="seg" style="grid-template-columns:repeat(2,1fr)">
+      <label class="ok" data-tr="yes"><input type="radio" name="training"><span>有培育出</span></label>
+      <label class="bad" data-tr="no"><input type="radio" name="training"><span>尚未培育出</span></label>
+    </div>
+  </div>
+
+  <!-- 備註 -->
+  <div class="card">
+    <div class="card-head"><span class="cnum">✎</span><h2>總評備註</h2></div>
+    <div class="field">
+      <textarea id="metaNotes" rows="3" placeholder="整體觀察、需改善重點、跨店任務建議…（選填）"></textarea>
+    </div>
+  </div>
+
+  <p class="foot">© 初殿鍋物 · 督導巡店系統</p>
+</div>
+
+<a class="back-home" href="home.html" title="回主系統">⌂</a>
+
+<!-- 底部即時計分條 -->
+<div class="bar">
+  <div class="bar-inner">
+    <div class="score-box"><span class="sv" id="barScore">0</span><span class="sl">現場分 /100</span></div>
+    <span class="lvl C" id="barLevel">—</span>
+    <div class="prog">
+      <div class="pt"><span id="barProgText">已填 0 / 43</span><span id="barNa"></span></div>
+      <div class="track"><div class="fill" id="barFill" style="width:0%"></div></div>
+    </div>
+    <button id="submitBtn" type="button">送出</button>
+  </div>
+</div>
+
+<!-- 結果對話框 -->
+<dialog id="resultDlg">
+  <div class="dlg">
+    <span class="dlvl C" id="dlgLevel">門店評分 C級</span>
+    <h2 id="dlgStore">—</h2>
+    <div class="dtot"><span id="dlgTotal">0</span><small>/100 門店評分</small></div>
+    <div id="dlgTrain" style="margin:8px 0 4px;font-size:13.5px;font-weight:700"></div>
+    <div style="font-size:12px;color:var(--ink-3);line-height:1.5;margin-bottom:8px">最終店長評級＝門店評分（現場＋培育）95%＋秘密客 5%，於後台合併秘密客後產生</div>
+    <div id="dlgLow" class="lowbox"></div>
+    <div class="row">
+      <button class="btn-ghost" id="dlgBack" type="button">返回修改</button>
+      <button class="btn-primary" id="dlgConfirm" type="button">確認送出</button>
+    </div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 設定 ============ */
+const CONFIG = {
+  // 督導巡店後端 Apps Script /exec 網址
+  SCRIPT_URL: "https://script.google.com/macros/s/AKfycbykLcQUeNNJj4gdDlyxFxOrgQmq1N64l7NDsVkTKQzXHiR041t-Av5Fg62TxxnB6dqCMw/exec",
+  // 與後端 FORM_TOKEN 相同，擋最初階濫用（前端公開，非真密碼）
+  FORM_TOKEN: "chudian-patrol-2026"
+};
+
+/* ===PATROL_CORE_START===  (純計分邏輯，可單獨測試，勿動標記) */
+const PATROL_CATEGORIES = [
+  { key:"service", name:"服務、帶位", weight:14, items:[
+    "是否介紹 Line 好友、注意事項、掃描點餐",
+    "上餐、加湯是否說「太鹹或太淡都可以調整」",
+    "海鮮蛤蜊、白蝦、魚卷是否有說明",
+    "是否有給手機支架、髮圈、置物籃",
+    "外場巡視是否積極（加湯、收空盤）"
+  ]},
+  { key:"soup", name:"出湯、出海鮮", weight:8, items:[
+    "出湯比例是否確實",
+    "是否有「正確」對應量杯",
+    "出海鮮數量、品質是否確實"
+  ]},
+  { key:"shift", name:"開收班", weight:6, items:[
+    "開班是否完整（有沒有來不及）",
+    "收班是否有遺漏（沒補火鍋料…）"
+  ]},
+  { key:"meat", name:"切肉", weight:12, items:[
+    "切肉擺盤是否好看",
+    "切肉刻度是否正確",
+    "切肉效率是否足夠",
+    "切肉報廢比例是否合理",
+    "是否會有效率地跳單切"
+  ]},
+  { key:"prep", name:"備料", weight:12, items:[
+    "備料數值是否有備正確（隨機抽考）",
+    "餐期備料數是否過多、過少",
+    "蛤蠣吐沙流程是否正確",
+    "切菜流程是否正確",
+    "是否先進先出",
+    "飲料日期是否登記",
+    "食材新鮮度、效期正常（無過期、無異物仍出餐）"
+  ]},
+  { key:"clean", name:"環境、整潔", weight:14, items:[
+    "自助吧環境整潔、是否有爛菜",
+    "週清是否有做",
+    "廁所是否髒亂",
+    "廚房內場是否整潔",
+    "冰箱是否有整理",
+    "掃拖是否確實",
+    "牆面、立牌環境是否整潔",
+    "公安：瓦斯、電線、滅火器、逃生動線正常無虞"
+  ]},
+  { key:"mentor", name:"帶人", weight:14, items:[
+    "新人是否遵照 SOP（考核過了還犯，是否登記到缺失登記表）",
+    "是否確實記錄缺失登記表",
+    "是否確實登記考核失誤",
+    "帶人方式是否正確",
+    "是否確實約談"
+  ]},
+  { key:"order", name:"叫貨", weight:8, items:[
+    "檢查庫存是否過多、過少",
+    "耗損是否過多",
+    "品項是否有漏叫"
+  ]},
+  { key:"duty", name:"值班", weight:8, items:[
+    "接電話訂位是否合格",
+    "座位安排是否確實",
+    "外場安排是否順暢（收桌、送餐、帶位、自助吧）"
+  ]},
+  { key:"schedule", name:"排班是否確實", weight:4, items:[
+    "班表安排是否無誤（不需提醒）",
+    "人力安排是否確實"
+  ]}
+];
+
+// state.scores: { "service:0":"ok"|"weak"|"bad"|"na", ... }
+function computeResult(state){
+  const scores = state.scores || {};
+  let rawSum = 0, applicableWeightTotal = 0, answered = 0, totalItems = 0, naCount = 0;
+  const cats = PATROL_CATEGORIES.map(function(cat){
+    let earned = 0, applicable = 0, catAnswered = 0;
+    const lowItems = [];
+    cat.items.forEach(function(it, idx){
+      totalItems++;
+      const v = scores[cat.key + ":" + idx];
+      if(v === undefined || v === null || v === "") return;
+      answered++; catAnswered++;
+      if(v === "na"){ naCount++; return; }
+      applicable++;
+      const val = (v === "ok" ? 1 : (v === "weak" ? 0.5 : 0));
+      earned += val;
+      if(v !== "ok") lowItems.push({ cat:cat.name, item:it, level:v });
+    });
+    const ratio = applicable > 0 ? earned / applicable : null;
+    const catScore = ratio === null ? null : ratio * cat.weight;
+    if(catScore !== null){ rawSum += catScore; applicableWeightTotal += cat.weight; }
+    return { key:cat.key, name:cat.name, weight:cat.weight, applicable:applicable,
+             answered:catAnswered, total:cat.items.length, ratio:ratio, catScore:catScore, lowItems:lowItems };
+  });
+  const total = applicableWeightTotal > 0 ? (rawSum / applicableWeightTotal) * 100 : 0;
+  let level;
+  if(total >= 90) level = "A"; else if(total >= 75) level = "B"; else level = "C";
+  const lowItems = [];
+  cats.forEach(function(c){ c.lowItems.forEach(function(x){ lowItems.push(x); }); });
+  return {
+    total: Math.round(total * 10) / 10,
+    level: level,
+    cats: cats,
+    lowItems: lowItems,
+    answered: answered,
+    totalItems: totalItems,
+    naCount: naCount,
+    applicableWeightTotal: applicableWeightTotal
+  };
+}
+const LEVEL_NAME = { A:"A級（卓越）", B:"B級（稱職）", C:"C級（待加強）" };
+/* ===PATROL_CORE_END=== */
+
+/* ============ 介面 ============ */
+const RATING_OPTS = [
+  { v:"ok",   cls:"ok",   label:"符合" },
+  { v:"weak", cls:"weak", label:"待加強" },
+  { v:"bad",  cls:"bad",  label:"不符合" },
+  { v:"na",   cls:"na",   label:"不適用" }
+];
+const state = { scores:{}, training:null };
+const PAGE_LOADED_AT = Date.now();
+
+function buildCats(){
+  const host = document.getElementById("cats");
+  host.innerHTML = PATROL_CATEGORIES.map(function(cat, ci){
+    const items = cat.items.map(function(it, idx){
+      const name = "sc-" + cat.key + "-" + idx;
+      const opts = RATING_OPTS.map(function(o){
+        return '<label class="' + o.cls + '" data-k="' + cat.key + ':' + idx + '" data-v="' + o.v + '">' +
+                 '<input type="radio" name="' + name + '" value="' + o.v + '"><span>' + o.label + '</span></label>';
+      }).join("");
+      return '<div class="item">' +
+               '<div class="q"><span class="qn">' + (idx+1) + '.</span>' + it + '</div>' +
+               '<div class="seg">' + opts + '</div>' +
+             '</div>';
+    }).join("");
+    return '<div class="card" data-cat="' + cat.key + '">' +
+             '<div class="card-head">' +
+               '<span class="cnum">' + (ci+1) + '</span>' +
+               '<h2>' + cat.name + '</h2>' +
+               '<span class="cw">' + cat.weight + ' 分</span>' +
+               '<span class="cscore" id="cscore-' + cat.key + '"></span>' +
+             '</div>' + items +
+           '</div>';
+  }).join("");
+
+  host.querySelectorAll(".seg label").forEach(function(lab){
+    lab.addEventListener("click", function(){
+      const k = lab.getAttribute("data-k");
+      const v = lab.getAttribute("data-v");
+      state.scores[k] = v;
+      const seg = lab.parentElement;
+      seg.querySelectorAll("label").forEach(function(x){ x.classList.remove("on"); });
+      lab.classList.add("on");
+      lab.querySelector("input").checked = true;
+      refresh();
+    });
+  });
+}
+
+function refresh(){
+  const r = computeResult(state);
+  document.getElementById("barScore").textContent = r.total;
+  document.getElementById("barProgText").textContent = "已填 " + r.answered + " / " + r.totalItems;
+  document.getElementById("barNa").textContent = r.naCount ? ("不適用 " + r.naCount) : "";
+  document.getElementById("barFill").style.width = Math.round(r.answered / r.totalItems * 100) + "%";
+  const lvl = document.getElementById("barLevel");
+  lvl.textContent = (r.answered === 0 ? "—" : r.level + "級");
+  lvl.className = "lvl " + (r.answered === 0 ? "C" : r.level);
+  // 各類別即時分數
+  r.cats.forEach(function(c){
+    const el = document.getElementById("cscore-" + c.key);
+    if(!el) return;
+    if(c.answered === 0){ el.textContent = ""; }
+    else if(c.catScore === null){ el.textContent = "不適用"; }
+    else { el.textContent = (Math.round(c.catScore * 10) / 10) + " / " + c.weight; }
+  });
+}
+
+function bindTraining(){
+  document.querySelectorAll('label[data-tr]').forEach(function(lab){
+    lab.addEventListener("click", function(){
+      state.training = lab.getAttribute("data-tr") === "yes";
+      const seg = lab.parentElement;
+      seg.querySelectorAll("label").forEach(function(x){ x.classList.remove("on"); });
+      lab.classList.add("on");
+      lab.querySelector("input").checked = true;
+      refresh();
+    });
+  });
+}
+
+function showToast(msg, isErr){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.className = "toast show" + (isErr ? " err" : "");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(function(){ t.className = "toast"; }, 2600);
+}
+
+function firstUnanswered(){
+  for(let ci=0; ci<PATROL_CATEGORIES.length; ci++){
+    const cat = PATROL_CATEGORIES[ci];
+    for(let idx=0; idx<cat.items.length; idx++){
+      if(state.scores[cat.key + ":" + idx] === undefined) return { cat:cat, idx:idx };
+    }
+  }
+  return null;
+}
+
+function openResult(){
+  const store = document.getElementById("metaStore").value;
+  const reviewer = document.getElementById("metaReviewer").value.trim();
+  if(!store){ showToast("請先選擇考核門店", true); document.getElementById("metaStore").focus(); return; }
+  if(!reviewer){ showToast("請填寫巡店審查人", true); document.getElementById("metaReviewer").focus(); return; }
+  const miss = firstUnanswered();
+  if(miss){
+    showToast("還有未作答：" + miss.cat.name + " 第 " + (miss.idx+1) + " 項", true);
+    const card = document.querySelector('[data-cat="' + miss.cat.key + '"]');
+    if(card) card.scrollIntoView({ behavior:"smooth", block:"center" });
+    return;
+  }
+  if(state.training === null){
+    showToast("請選擇人才培育（有／尚未培育出）", true);
+    document.getElementById("trainCard").scrollIntoView({ behavior:"smooth", block:"center" });
+    return;
+  }
+  const r = computeResult(state);
+  const storeName = document.querySelector('#metaStore option[value="' + store + '"]').textContent;
+  document.getElementById("dlgStore").textContent = storeName;
+  const grade = Math.round(((r.total*0.80 + (state.training?100:0)*0.15)/0.95)*10)/10;
+  const gLv = grade>=90?"A":(grade>=75?"B":"C");
+  document.getElementById("dlgTotal").textContent = grade;
+  const dl = document.getElementById("dlgLevel");
+  dl.textContent = "門店評分 " + gLv + " 級"; dl.className = "dlvl " + gLv;
+  document.getElementById("dlgTrain").innerHTML = '現場 <b>'+r.total+'</b> ＋ 培育 '
+    + (state.training?'<span style="color:var(--ok)">有</span>':'<span style="color:var(--bad)">尚未</span>')
+    + ' → 門店評分 <b>'+grade+'</b>';
+  const low = document.getElementById("dlgLow");
+  if(r.lowItems.length){
+    const lis = r.lowItems.map(function(x){
+      const tag = x.level === "bad" ? '<b class="bad">不符合</b>' : '<b>待加強</b>';
+      return '<div class="li">' + tag + '　' + x.cat + "：" + x.item + '</div>';
+    }).join("");
+    low.innerHTML = '<h3>需改善項目（' + r.lowItems.length + '）</h3><div class="scroll">' + lis + '</div>';
+  } else {
+    low.innerHTML = '<h3>✅ 所有項目皆符合，無待改善</h3>';
+  }
+  document.getElementById("resultDlg").showModal();
+}
+
+async function doSubmit(){
+  const r = computeResult(state);
+  const store = document.getElementById("metaStore").value;
+  const storeName = document.querySelector('#metaStore option[value="' + store + '"]').textContent;
+  const btn = document.getElementById("dlgConfirm");
+  btn.disabled = true; btn.textContent = "送出中…";
+
+  const catPayload = {};
+  r.cats.forEach(function(c){
+    catPayload[c.key] = { name:c.name, weight:c.weight, score:(c.catScore===null?"":Math.round(c.catScore*10)/10),
+                          ratio:(c.ratio===null?"":Math.round(c.ratio*100)/100), applicable:c.applicable };
+  });
+  const payload = {
+    token: CONFIG.FORM_TOKEN,
+    action: "submitReport",
+    store: store,
+    storeName: storeName,
+    reviewer: document.getElementById("metaReviewer").value.trim(),
+    date: document.getElementById("metaDate").value,
+    total: r.total,
+    level: r.level,
+    levelName: LEVEL_NAME[r.level],
+    training: state.training,
+    trainingLabel: state.training ? "有培育出" : "尚未培育出",
+    categories: catPayload,
+    items: state.scores,
+    lowItems: r.lowItems,
+    notes: document.getElementById("metaNotes").value.trim(),
+    submittedAtClient: new Date().toISOString(),
+    userAgent: navigator.userAgent
+  };
+
+  try{
+    if(!CONFIG.SCRIPT_URL){
+      // demo 模式：後端尚未設定
+      await new Promise(function(res){ setTimeout(res, 500); });
+      finishSubmit(true, "（demo 模式：後端尚未設定，未實際寫入）");
+      return;
+    }
+    await fetch(CONFIG.SCRIPT_URL, {
+      method:"POST",
+      headers:{ "Content-Type":"text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+    finishSubmit(true, "");
+  }catch(err){
+    btn.disabled = false; btn.textContent = "確認送出";
+    showToast("送出失敗：" + (err.message || err), true);
+  }
+}
+
+function finishSubmit(ok, extra){
+  document.getElementById("resultDlg").close();
+  showToast("✅ 已送出" + (extra || ""));
+  // 清空，回到空白表單
+  state.scores = {}; state.training = null;
+  document.querySelectorAll(".seg label.on").forEach(function(x){ x.classList.remove("on"); });
+  document.querySelectorAll(".seg input").forEach(function(x){ x.checked = false; });
+  document.getElementById("metaNotes").value = "";
+  const btn = document.getElementById("dlgConfirm"); btn.disabled = false; btn.textContent = "確認送出";
+  refresh();
+  window.scrollTo({ top:0, behavior:"smooth" });
+}
+
+function init(){
+  const d = new Date();
+  document.getElementById("metaDate").value =
+    d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+  buildCats();
+  bindTraining();
+  refresh();
+  document.getElementById("submitBtn").addEventListener("click", openResult);
+  document.getElementById("dlgBack").addEventListener("click", function(){ document.getElementById("resultDlg").close(); });
+  document.getElementById("dlgConfirm").addEventListener("click", doSubmit);
+}
+init();
+</script>
+</body>
+</html>
