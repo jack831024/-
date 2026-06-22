@@ -199,8 +199,7 @@ dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px)}
 <!-- 底部即時計分條 -->
 <div class="bar">
   <div class="bar-inner">
-    <div class="score-box"><span class="sv" id="barScore">0</span><span class="sl">現場分 /100</span></div>
-    <span class="lvl C" id="barLevel">—</span>
+    <div class="score-box"><span class="sv" id="barScore">0</span><span class="sl">門店評分 /100</span></div>
     <div class="prog">
       <div class="pt"><span id="barProgText">已填 0 / 43</span><span id="barNa"></span></div>
       <div class="track"><div class="fill" id="barFill" style="width:0%"></div></div>
@@ -212,11 +211,9 @@ dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px)}
 <!-- 結果對話框 -->
 <dialog id="resultDlg">
   <div class="dlg">
-    <span class="dlvl C" id="dlgLevel">門店評分 C級</span>
     <h2 id="dlgStore">—</h2>
     <div class="dtot"><span id="dlgTotal">0</span><small>/100 門店評分</small></div>
-    <div id="dlgTrain" style="margin:8px 0 4px;font-size:13.5px;font-weight:700"></div>
-    <div style="font-size:12px;color:var(--ink-3);line-height:1.5;margin-bottom:8px">最終店長評級＝門店評分（現場＋培育）95%＋秘密客 5%，於後台合併秘密客後產生</div>
+    <div style="font-size:12px;color:var(--ink-3);line-height:1.5;margin:10px 0 8px">送出後，最終店長評級會在後台合併秘密客後產生。</div>
     <div id="dlgLow" class="lowbox"></div>
     <div class="row">
       <button class="btn-ghost" id="dlgBack" type="button">返回修改</button>
@@ -396,13 +393,10 @@ function buildCats(){
 
 function refresh(){
   const r = computeResult(state);
-  document.getElementById("barScore").textContent = r.total;
+  document.getElementById("barScore").textContent = Math.min(100, Math.round((r.total*0.85 + (state.training===true?15:0))*10)/10);
   document.getElementById("barProgText").textContent = "已填 " + r.answered + " / " + r.totalItems;
   document.getElementById("barNa").textContent = r.naCount ? ("不適用 " + r.naCount) : "";
   document.getElementById("barFill").style.width = Math.round(r.answered / r.totalItems * 100) + "%";
-  const lvl = document.getElementById("barLevel");
-  lvl.textContent = (r.answered === 0 ? "—" : r.level + "級");
-  lvl.className = "lvl " + (r.answered === 0 ? "C" : r.level);
   // 各類別即時分數
   r.cats.forEach(function(c){
     const el = document.getElementById("cscore-" + c.key);
@@ -463,16 +457,9 @@ function openResult(){
   const r = computeResult(state);
   const storeName = document.querySelector('#metaStore option[value="' + store + '"]').textContent;
   document.getElementById("dlgStore").textContent = storeName;
-  // 門店評分（100分）＝ 現場巡店占85分 ＋ 人才培育占15分（有=+15、尚未=+0，等於尚未直接 −15）
-  const siteContrib = Math.round(r.total*0.85*10)/10;
+  // 門店評分（單一分數，0-100）＝ 現場巡店 ×0.85 ＋ 人才培育（有 +15／尚未 +0）
   const grade = Math.min(100, Math.round((r.total*0.85 + (state.training?15:0))*10)/10);
-  const gLv = grade>=90?"A":(grade>=75?"B":"C");
   document.getElementById("dlgTotal").textContent = grade;
-  const dl = document.getElementById("dlgLevel");
-  dl.textContent = "門店評分 " + gLv + " 級"; dl.className = "dlvl " + gLv;
-  document.getElementById("dlgTrain").innerHTML = '現場 <b>'+r.total+'</b> ×0.85 ＝ <b>'+siteContrib+'</b>　＋　培育 '
-    + (state.training?'<span style="color:var(--ok)"><b>+15</b></span>':'<span style="color:var(--bad)"><b>+0</b>（尚未培育 −15）</span>')
-    + '　→　門店評分 <b>'+grade+'</b>';
   const low = document.getElementById("dlgLow");
   if(r.lowItems.length){
     const lis = r.lowItems.map(function(x){
