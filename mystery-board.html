@@ -40,6 +40,7 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
 .top .badge{font-size:11px;font-weight:700;color:var(--brand-dark);background:var(--brand-soft);border-radius:999px;padding:5px 11px;letter-spacing:1px}
 .top button{font-family:inherit;font-size:12.5px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--ink-2);border-radius:10px;padding:7px 12px;cursor:pointer}
 .top button:active{transform:scale(.97)}
+#monthSel{font-family:inherit;font-size:12.5px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:7px 10px;cursor:pointer}
 .banner{background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:12.5px;font-weight:600;border-radius:12px;padding:9px 13px;margin-bottom:14px;line-height:1.5}
 
 .sec-title{font-size:13px;font-weight:800;color:var(--ink-2);letter-spacing:1px;margin:20px 2px 10px;display:flex;align-items:center;gap:8px}
@@ -143,6 +144,7 @@ dialog::backdrop{background:rgba(15,23,42,.5)}
   <div class="top">
     <h1>秘密客評分後台</h1>
     <span class="badge">三店比較</span>
+    <select id="monthSel" title="選擇月份"></select>
     <button id="reloadBtn" type="button">↻ 重新整理</button>
     <button id="logoutBtn" type="button">登出</button>
   </div>
@@ -189,6 +191,21 @@ const SOP_DEFS = [
 ];
 const SOP_KEYS = ["sop1","sop2","sop3","sop4","sop5","sop6","sop7","sop8","sop9","sop10","sop11","sop12"];
 let REPORTS = [];
+let currentMonth = "";   // 選定月份 "YYYY-MM"
+function monthOf(r){ return String((r&&(r.visitDate||r.date||r.submittedAt))||"").slice(0,7); }
+function thisMonth(){ var n=new Date(); return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0"); }
+function monthLabel(m){ var p=String(m).split("-"); return p[0]+"年"+Number(p[1])+"月"; }
+function allMonths(){
+  var set={}; REPORTS.forEach(function(r){var m=monthOf(r);if(m)set[m]=1;}); set[thisMonth()]=1;
+  return Object.keys(set).sort().reverse();
+}
+function populateMonths(){
+  var sel=document.getElementById("monthSel"); if(!sel) return;
+  var months=allMonths();
+  if(!currentMonth||months.indexOf(currentMonth)<0) currentMonth=thisMonth();
+  if(months.indexOf(currentMonth)<0) currentMonth=months[0];
+  sel.innerHTML=months.map(function(m){return '<option value="'+m+'"'+(m===currentMonth?' selected':'')+'>'+monthLabel(m)+(m===thisMonth()?'（本月）':'')+'</option>';}).join("");
+}
 
 function storeMeta(storeName){
   for(var i=0;i<MYS_STORES.length;i++){ if(String(storeName||"").indexOf(MYS_STORES[i].match)>=0) return MYS_STORES[i]; }
@@ -237,6 +254,7 @@ function enterDash(isDemo){
   document.getElementById("loginView").style.display="none";
   document.getElementById("dashView").style.display="block";
   document.getElementById("banner").innerHTML=isDemo?'<div class="banner">⚠️ 預覽模式：後端尚未設定，以下為示範資料。部署後填入網址即顯示真實秘密客評分。</div>':'';
+  populateMonths();
   render();
 }
 function logout(){
@@ -250,12 +268,13 @@ function reload(){
   if(!CONFIG.SCRIPT_URL||!pw){ render(); return; }
   fetch(CONFIG.SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
     body:JSON.stringify({action:"getAllReports",pw:pw})})
-    .then(function(r){return r.json();}).then(function(res){ if(res&&res.ok){REPORTS=res.reports||[];render();} });
+    .then(function(r){return r.json();}).then(function(res){ if(res&&res.ok){REPORTS=res.reports||[];populateMonths();render();} });
 }
 
 function latestByStore(){
   var map={};
   REPORTS.forEach(function(r){
+    if(currentMonth&&monthOf(r)!==currentMonth) return;
     var k=storeMeta(r.storeName).match||r.storeName;
     var cur=map[k];
     if(!cur || new Date(r.submittedAt||r.visitDate)>new Date(cur.submittedAt||cur.visitDate)) map[k]=r;
@@ -280,9 +299,9 @@ function render(){
 
   buildCmp(latest);
 
-  var sorted=REPORTS.slice().sort(function(a,b){return new Date(b.submittedAt||b.visitDate)-new Date(a.submittedAt||a.visitDate);});
+  var sorted=REPORTS.filter(function(r){return !currentMonth||monthOf(r)===currentMonth;}).sort(function(a,b){return new Date(b.submittedAt||b.visitDate)-new Date(a.submittedAt||a.visitDate);});
   var rl=document.getElementById("recList");
-  if(!sorted.length){ rl.innerHTML='<div class="empty">尚無秘密客評分紀錄</div>'; return; }
+  if(!sorted.length){ rl.innerHTML='<div class="empty">該月尚無秘密客評分紀錄</div>'; return; }
   rl.innerHTML=sorted.map(function(r,i){
     var sm=storeMeta(r.storeName), t=num(r.total);
     return '<div class="rec" data-i="'+i+'"><span class="rdot" style="background:var(--'+sm.cls+')"></span>'+
@@ -356,6 +375,7 @@ document.getElementById("loginBtn").addEventListener("click",tryLogin);
 document.getElementById("pw").addEventListener("keydown",function(e){ if(e.key==="Enter")tryLogin(); });
 document.getElementById("logoutBtn").addEventListener("click",logout);
 document.getElementById("reloadBtn").addEventListener("click",reload);
+document.getElementById("monthSel").addEventListener("change",function(){ currentMonth=this.value; render(); });
 (function(){ var pw=sessionStorage.getItem("cd_mystery_pw"); if(pw&&CONFIG.SCRIPT_URL){ document.getElementById("pw").value=pw; tryLogin(); } })();
 </script>
 </body>

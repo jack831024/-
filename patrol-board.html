@@ -42,6 +42,7 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
 .top .badge{font-size:11px;font-weight:700;color:var(--brand-dark);background:var(--brand-soft);border-radius:999px;padding:5px 11px;letter-spacing:1px}
 .top button{font-family:inherit;font-size:12.5px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--ink-2);border-radius:10px;padding:7px 12px;cursor:pointer}
 .top button:active{transform:scale(.97)}
+#monthSel{font-family:inherit;font-size:12.5px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:7px 10px;cursor:pointer}
 .banner{background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:12.5px;font-weight:600;border-radius:12px;padding:9px 13px;margin-bottom:14px;line-height:1.5}
 
 .sec-title{font-size:13px;font-weight:800;color:var(--ink-2);letter-spacing:1px;margin:20px 2px 10px;display:flex;align-items:center;gap:8px}
@@ -142,17 +143,18 @@ dialog::backdrop{background:rgba(15,23,42,.5)}
   <div class="top">
     <h1>督導巡店後台</h1>
     <span class="badge">三店比較</span>
+    <select id="monthSel" title="選擇月份"></select>
     <button id="reloadBtn" type="button">↻ 重新整理</button>
     <button id="logoutBtn" type="button">登出</button>
   </div>
   <div id="banner"></div>
 
-  <div class="sec-title">三店店長評分（店長總分＝門店評分〔現場＋培育〕95％＋秘密客 5％）</div>
+  <div class="sec-title">三店店長評分（店長總分＝門店評分×95％＋秘密客×5％）</div>
   <div class="stores" id="storeCards"></div>
 
   <div class="sec-title">評分組成</div>
   <div style="overflow:auto"><table class="cmp" id="cmpTable"></table></div>
-  <div style="font-size:11.5px;color:var(--ink-3);margin:6px 2px 0;line-height:1.5">※ 門店評分已含人才培育（現場＋培育合一）。當月無秘密客時，店長總分＝門店評分，那 5% 併回門店評分，店長不會被扣分。</div>
+  <div style="font-size:11.5px;color:var(--ink-3);margin:6px 2px 0;line-height:1.5">※ 門店評分（100分）＝ 現場巡店 ×0.85 ＋ 人才培育 15 分（有=+15、尚未=直接 −15）。當月無秘密客時，店長總分＝門店評分、不扣分。分數依所選月份計算、不跨月。</div>
 
   <div class="sec-title">督導巡店紀錄</div>
   <div class="recs" id="recList"></div>
@@ -186,6 +188,22 @@ const CAT_DEFS = [
 const LEVEL_NAME = { A:"A級", B:"B級", C:"C級" };
 let REPORTS = [];   // 督導巡店
 let MYSTERY = [];   // 秘密客
+let currentMonth = "";   // 選定月份 "YYYY-MM"
+function monthOf(r){ return String((r&&(r.date||r.visitDate||r.submittedAt))||"").slice(0,7); }
+function thisMonth(){ var n=new Date(); return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0"); }
+function monthLabel(m){ var p=String(m).split("-"); return p[0]+"年"+Number(p[1])+"月"; }
+function allMonths(){
+  var set={}; REPORTS.forEach(function(r){var m=monthOf(r);if(m)set[m]=1;});
+  MYSTERY.forEach(function(r){var m=monthOf(r);if(m)set[m]=1;}); set[thisMonth()]=1;
+  return Object.keys(set).sort().reverse();
+}
+function populateMonths(){
+  var sel=document.getElementById("monthSel"); if(!sel) return;
+  var months=allMonths();
+  if(!currentMonth||months.indexOf(currentMonth)<0) currentMonth=thisMonth();
+  if(months.indexOf(currentMonth)<0) currentMonth=months[0];
+  sel.innerHTML=months.map(function(m){return '<option value="'+m+'"'+(m===currentMonth?' selected':'')+'>'+monthLabel(m)+(m===thisMonth()?'（本月）':'')+'</option>';}).join("");
+}
 
 function levelOf(t){ return t>=90?"A":(t>=75?"B":"C"); }
 function num(v){ return (v===""||v===undefined||v===null||isNaN(Number(v)))?null:Number(v); }
@@ -242,6 +260,7 @@ function enterDash(isDemo){
   document.getElementById("dashView").style.display="block";
   document.getElementById("banner").innerHTML = isDemo
     ? '<div class="banner">⚠️ 預覽模式：後端尚未設定，以下為示範資料。</div>' : '';
+  populateMonths();
   render();
 }
 
@@ -257,35 +276,32 @@ function reload(){
   var pw = sessionStorage.getItem("cd_patrol_pw");
   if(!CONFIG.SCRIPT_URL || !pw){ render(); return; }
   Promise.all([fetchReports(CONFIG.SCRIPT_URL,pw), fetchReports(CONFIG.MYSTERY_URL,pw)]).then(function(res){
-    if(res[0]&&res[0].ok){ REPORTS=res[0].reports||[]; MYSTERY=(res[1]&&res[1].ok)?(res[1].reports||[]):[]; render(); }
+    if(res[0]&&res[0].ok){ REPORTS=res[0].reports||[]; MYSTERY=(res[1]&&res[1].ok)?(res[1].reports||[]):[]; populateMonths(); render(); }
   });
 }
 
 /* ---------- 計算門店總分 ---------- */
 function latestPatrol(key){
   var best=null;
-  REPORTS.forEach(function(r){ if(r.store!==key)return; if(!best||new Date(r.submittedAt||r.date)>new Date(best.submittedAt||best.date))best=r; });
+  REPORTS.forEach(function(r){ if(r.store!==key)return; if(currentMonth&&monthOf(r)!==currentMonth)return; if(!best||new Date(r.submittedAt||r.date)>new Date(best.submittedAt||best.date))best=r; });
   return best;
 }
 function latestMystery(match){
   var best=null;
-  MYSTERY.forEach(function(r){ if(String(r.storeName||"").indexOf(match)<0)return; if(!best||new Date(r.submittedAt||r.visitDate)>new Date(best.submittedAt||best.visitDate))best=r; });
+  MYSTERY.forEach(function(r){ if(String(r.storeName||"").indexOf(match)<0)return; if(currentMonth&&monthOf(r)!==currentMonth)return; if(!best||new Date(r.submittedAt||r.visitDate)>new Date(best.submittedAt||best.visitDate))best=r; });
   return best;
 }
-// 門店評分 = 現場＋培育「合一」（培育併進門店評分）；店長總分 = 門店評分×0.95 + 秘密客×0.05。
-// 缺培育→其權重歸現場；缺秘密客→其 5% 併回門店評分。無督導紀錄回 null。
+// 門店評分（100）＝ 現場×0.85 ＋ 人才培育（有=15／尚未=0，等於尚未直接 −15）。
+// 店長總分 ＝ 有秘密客? 門店評分×0.95 ＋ 秘密客×0.05 : 門店評分。當月無督導紀錄回 null。
 function storeScore(s){
   var dp=latestPatrol(s.key);
   if(!dp) return null;
   var site=num(dp.total); var siteVal=(site===null?0:site);
-  var hasTrain=(dp.training===true||dp.training===false);
-  var trainVal=(dp.training===true)?100:0;
+  var trained=(dp.training===true);
   var mm=latestMystery(s.match);
   var mys=mm?num(mm.total):null;
-  var blkSiteW=W.site + (hasTrain?0:W.train);              // 缺培育→權重歸現場
-  var block=siteVal*blkSiteW + (hasTrain?trainVal*W.train:0); // 現場+培育 區塊（0..95）
-  var grade=block/(W.site+W.train);                       // 門店評分 0-100
-  var fin=(mys!==null) ? (block + mys*W.mystery) : grade;  // 缺秘密客→5% 併回門店評分
+  var grade=Math.min(100, siteVal*0.85 + (trained?15:0));   // 門店評分 0-100
+  var fin=(mys!==null) ? (grade*0.95 + mys*0.05) : grade;    // 店長總分；缺秘密客→=門店評分
   return { final:Math.round(fin*10)/10, level:levelOf(fin), grade:Math.round(grade*10)/10, site:site, train:dp.training, mys:mys, dp:dp, mm:mm };
 }
 
@@ -307,9 +323,9 @@ function render(){
 
   buildComposition();
 
-  var sorted = REPORTS.slice().sort(function(a,b){ return new Date(b.submittedAt||b.date)-new Date(a.submittedAt||a.date); });
+  var sorted = REPORTS.filter(function(r){ return !currentMonth||monthOf(r)===currentMonth; }).sort(function(a,b){ return new Date(b.submittedAt||b.date)-new Date(a.submittedAt||a.date); });
   var rl=document.getElementById("recList");
-  if(!sorted.length){ rl.innerHTML='<div class="empty">尚無督導巡店紀錄</div>'; return; }
+  if(!sorted.length){ rl.innerHTML='<div class="empty">該月尚無督導巡店紀錄</div>'; return; }
   rl.innerHTML = sorted.map(function(r,i){
     var sm=storeMeta(r.store); var t=num(r.total); var lv=levelOf(t||0);
     return '<div class="rec" data-i="'+i+'"><span class="rdot" style="background:var(--'+sm.cls+')"></span>'+
@@ -332,13 +348,13 @@ function buildComposition(){
       return '<td'+((v===max&&max>0)?' class="best"':'')+'><span class="v">'+v+(suffix||'')+'</span></td>';
     }).join("")+'</tr>';
   }
-  var siteRow=numRow('　└ 現場操作（43題）', scs.map(function(s){return s?s.site:null;}), '');
+  var siteRow=numRow('　└ 現場巡店（43題·×0.85）', scs.map(function(s){return s?s.site:null;}), '');
   var trainRow='<tr><td>　└ 人才培育</td>'+scs.map(function(s){
     if(!s) return '<td><span class="muted">—</span></td>';
     return s.train===true?'<td><span style="color:var(--ok);font-weight:700">有</span></td>'
       :(s.train===false?'<td><span style="color:var(--bad);font-weight:700">尚未</span></td>':'<td><span class="muted">未填</span></td>');
   }).join("")+'</tr>';
-  var gradeRow=numRow('門店評分（95%，含培育）', scs.map(function(s){return s?s.grade:null;}), '');
+  var gradeRow=numRow('門店評分（現場85＋培育15）', scs.map(function(s){return s?s.grade:null;}), '');
   var mysRow=numRow('秘密客（5%）', scs.map(function(s){return s?s.mys:null;}), '');
   var foot='<tfoot><tr><td>店長總分</td>'+scs.map(function(s){return s?('<td><b>'+s.final+'</b> <span class="lv '+s.level+'" style="font-size:11px;padding:1px 7px">'+LEVEL_NAME[s.level]+'</span></td>'):'<td class="muted">—</td>';}).join("")+'</tr></tfoot>';
   document.getElementById("cmpTable").innerHTML=head+'<tbody>'+gradeRow+siteRow+trainRow+mysRow+'</tbody>'+foot;
@@ -346,9 +362,8 @@ function buildComposition(){
 
 function openDetail(r){
   var sm=storeMeta(r.store); var site=num(r.total);
-  var hasTrain=(r.training===true||r.training===false), trainVal=(r.training===true)?100:0;
-  var blkSiteW=W.site+(hasTrain?0:W.train);
-  var grade=Math.round((((site===null?0:site)*blkSiteW + (hasTrain?trainVal*W.train:0))/(W.site+W.train))*10)/10;
+  var trained=(r.training===true);
+  var grade=Math.round((Math.min(100,(site===null?0:site)*0.85 + (trained?15:0)))*10)/10;
   var glv=levelOf(grade);
   var cats=CAT_DEFS.map(function(d){
     var c=r.categories&&r.categories[d.key]; var sc=c&&c.score!==""&&c.score!==undefined&&c.score!==null?Number(c.score):null;
@@ -368,7 +383,7 @@ function openDetail(r){
     '<div class="mh"><div class="ttl"><h2>'+sm.name+' · 督導巡店</h2><div class="sub">'+(r.date||"-")+'　·　'+(r.reviewer||"-")+'　·　'+(r.reportId||"")+'</div></div>'+
     '<button class="x" onclick="document.getElementById(\'detailDlg\').close()">×</button></div>'+
     '<div class="mtot">'+grade+'<small>/100 門店評分</small><span class="mlv lv '+glv+'">門店'+glv+'</span></div>'+
-    '<div style="font-size:12px;color:var(--ink-3);margin:2px 0 8px">現場 '+(site===null?"-":site)+' ＋ 培育 '+(r.training===true?'有':(r.training===false?'尚未':'未填'))+' → 門店評分 '+grade+'</div>'+
+    '<div style="font-size:12px;color:var(--ink-3);margin:2px 0 8px">現場 '+(site===null?"-":site)+' ×0.85 ＋ 培育 '+(r.training===true?'+15':(r.training===false?'+0（尚未 −15）':'未填'))+' → 門店評分 '+grade+'</div>'+
     (trLine?('<div style="margin:6px 0 2px">'+trLine+'</div>'):'')+
     '<div class="catbar">'+cats+'</div>'+low+note;
   document.getElementById("detailDlg").showModal();
@@ -380,6 +395,7 @@ document.getElementById("loginBtn").addEventListener("click",tryLogin);
 document.getElementById("pw").addEventListener("keydown",function(e){ if(e.key==="Enter")tryLogin(); });
 document.getElementById("logoutBtn").addEventListener("click",logout);
 document.getElementById("reloadBtn").addEventListener("click",reload);
+document.getElementById("monthSel").addEventListener("change",function(){ currentMonth=this.value; render(); });
 // 已登入過（同分頁）自動進入
 (function(){
   var pw=sessionStorage.getItem("cd_patrol_pw");
