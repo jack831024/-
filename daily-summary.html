@@ -477,7 +477,7 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.05.05-02';
+var APP_VERSION = '2026.06.30-01';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -525,17 +525,23 @@ async function checkForUpdate(silent){
     if(!m) return;
     var latest = m[1];
     if(latest !== APP_VERSION){
+      // ⭐ 用 cache-buster 強制 bypass 瀏覽器 HTTP 快取
+      //   location.reload() 在手機 Safari / 某些瀏覽器仍可能吃 cache、拿到舊的 HTML →
+      //   提示了「有新版」但點下去還是舊版，使用者會誤以為沒更新
+      var forceReload = function(){
+        location.href = location.pathname + '?_v=' + encodeURIComponent(latest) + '&_t=' + Date.now();
+      };
       var badge = document.getElementById('app-version-badge');
       if(badge){
         badge.textContent = '🔄 有新版 ' + latest + '（點我更新）';
         badge.style.background = '#fff3cd';
         badge.style.color = '#856404';
         badge.style.cursor = 'pointer';
-        badge.onclick = function(){ location.reload(); };
+        badge.onclick = forceReload;
       }
       if(!silent){
         if(confirm('偵測到新版本 ' + latest + '（目前 ' + APP_VERSION + '），要重新載入套用嗎？')){
-          location.reload();
+          forceReload();
         }
       }
     }
