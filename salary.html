@@ -533,7 +533,8 @@ var STORE_CONFIG = {
     employees: [
       { id:'xz1', name:'蔡鈺豪', defaultRole:'head',    salesAlias:'蔡鈺豪' },
       { id:'xz2', name:'蘇奕誠', defaultRole:'deputy',  salesAlias:'蘇奕誠' },
-      { id:'xz3', name:'李嘉真', defaultRole:'regular', salesAlias:'李嘉真' }
+      // leaveYm: 從這個月開始（含）不再顯示；舊月份保留紀錄
+      { id:'xz3', name:'李嘉真', defaultRole:'regular', salesAlias:'李嘉真', leaveYm:'2026-06' }
     ],
     pt: [
       { id:'xz_pt1', name:'林詩縈' },
@@ -740,8 +741,11 @@ function seedCustomEmployeesFromLatestMonth(){
 // 從 STATE.customEmployees 重建 EMPLOYEES / PT_EMPLOYEES / ALL_EMPLOYEES
 // 預設的（從 STORE_CONFIG）永遠保留，custom 的後面附上
 function rebuildEmployeeLists(){
-  var defaultEmps = CFG.employees.slice();
-  var defaultPT   = (CFG.pt || []).map(function(e){ return Object.assign({ role:'pt' }, e); });
+  // 依當前選定的月份過濾「已離職」員工：leaveYm <= 當月 → 隱藏
+  var currentYm = getSelectedYM();
+  function notLeft(e){ return !e.leaveYm || currentYm < e.leaveYm; }
+  var defaultEmps = CFG.employees.filter(notLeft);
+  var defaultPT   = (CFG.pt || []).filter(notLeft).map(function(e){ return Object.assign({ role:'pt' }, e); });
   var custom = (STATE && STATE.customEmployees) || [];
   var customReg = custom.filter(function(e){ return !e.isPT; }).map(function(e){
     return { id:e.id, name:e.name, defaultRole:e.defaultRole || 'regular', salesAlias:e.name, custom:true };
