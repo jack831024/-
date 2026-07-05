@@ -1751,8 +1751,8 @@ function renderBatchItems(){
     }
     html += '<div class="batch-row">'+
       '<input type="text" value="'+escapeAttr(it.name)+'" placeholder="品項名稱" oninput="updBatchItem('+i+',\'name\',this.value)">'+
-      '<input type="text" inputmode="decimal" value="'+(it.price||'')+'" placeholder="0" oninput="updBatchItem('+i+',\'price\',this.value)" title="可填負數（例：-100 = 退貨退款）">'+
-      '<div class="qty-wrap"><input type="text" inputmode="decimal" value="'+(it.qty||'')+'" placeholder="0" oninput="updBatchItem('+i+',\'qty\',this.value)" title="可填負數（例：-3 = 退 3 個給廠商）">'+unitTag+'</div>'+
+      '<input type="text" value="'+(it.price||'')+'" placeholder="0" oninput="updBatchItem('+i+',\'price\',this.value)" title="可填負數（例：-100 = 退貨退款）">'+
+      '<div class="qty-wrap"><input type="text" value="'+(it.qty||'')+'" placeholder="0" oninput="updBatchItem('+i+',\'qty\',this.value)" title="可填負數（例：-3 = 退 3 個給廠商）">'+unitTag+'</div>'+
       '<button class="del-btn" onclick="delBatchItem('+i+')" title="刪除這一列">×</button>'+
       '</div>';
   });
@@ -1830,8 +1830,8 @@ function renderTable(){
     }
     tr.innerHTML =
       '<td><input type="text" value="'+escapeAttr(it.name)+'" onchange="upd('+idx+',\'name\',this.value)" placeholder="品項名稱"></td>'+
-      '<td class="col-price"><input type="text" inputmode="decimal" value="'+(it.price||'')+'" onchange="upd('+idx+',\'price\',this.value)" placeholder="0" title="可填負數"></td>'+
-      '<td class="col-qty"><div class="qty-cell"><input type="text" inputmode="decimal" value="'+(it.qty||'')+'" onchange="upd('+idx+',\'qty\',this.value)" placeholder="0" title="可填負數">'+unitBadge+'</div></td>'+
+      '<td class="col-price"><input type="text" value="'+(it.price||'')+'" onchange="upd('+idx+',\'price\',this.value)" placeholder="0" title="可填負數"></td>'+
+      '<td class="col-qty"><div class="qty-cell"><input type="text" value="'+(it.qty||'')+'" onchange="upd('+idx+',\'qty\',this.value)" placeholder="0" title="可填負數">'+unitBadge+'</div></td>'+
       '<td class="col-date"><input type="date" value="'+escapeAttr(it.date||'')+'" onchange="upd('+idx+',\'date\',this.value)"></td>'+
       '<td class="col-del"><button class="del" onclick="delRow('+idx+')" title="刪除">×</button></td>';
     tb.appendChild(tr);
@@ -2674,7 +2674,7 @@ function renderHistoryTable(box, stat, records){
       var wk = isWeekend(d) ? ' weekend' : '';
       // ⭐ 直接給原始數字（如 1250、-300），不要用 formatNum；用 truthy 判斷以包含負數（退貨）
       var val = (c && c.price) ? c.price : '';
-      html += '<td class="cell-edit'+wk+'"><input type="text" inputmode="decimal" class="cell-input" value="'+val+'" placeholder="—" onchange="editCell(\''+nEsc+'\','+d+',\'price\',this.value)" title="可填負數（退貨）"></td>';
+      html += '<td class="cell-edit'+wk+'"><input type="text" class="cell-input" value="'+val+'" placeholder="—" onchange="editCell(\''+nEsc+'\','+d+',\'price\',this.value)" title="可填負數（退貨）"></td>';
     }
     // 累計 amount
     for(var d=1; d<=daysInMonth; d++){
@@ -2698,7 +2698,7 @@ function renderHistoryTable(box, stat, records){
       // ⭐ 直接給原始數字（如 5、-3 退貨）；用 truthy 判斷以包含負數
       var val = (c && c.qty) ? c.qty : '';
       if(c && c.qty) itemTotalQty += c.qty;  // 負數會自然抵銷（退貨從累計量扣回）
-      html += '<td class="cell-edit'+wk+'"><input type="text" inputmode="decimal" class="cell-input" value="'+val+'" placeholder="—" onchange="editCell(\''+nEsc+'\','+d+',\'qty\',this.value)" title="可填負數（退貨）"></td>';
+      html += '<td class="cell-edit'+wk+'"><input type="text" class="cell-input" value="'+val+'" placeholder="—" onchange="editCell(\''+nEsc+'\','+d+',\'qty\',this.value)" title="可填負數（退貨）"></td>';
     }
     // 該品項月累計進貨量：負數 → 紅色（整月淨退貨）
     var itemQtyStyle = itemTotalQty < 0 ? ' style="color:#dc2626;font-weight:700"' : '';
