@@ -1232,7 +1232,13 @@ function renderS3(){
   });
   tb.innerHTML = rows.join('');
 }
-function onS3Change(id, v){ STATE.s3[id] = v|0; renderS3(); renderDetail(); }
+function onS3Change(id, v){
+  STATE.s3[id] = v|0;
+  // KPI 模式下 Google 負評的 input 是在 s2 表格內，需要同時刷新 s2 才會看到 KPI 金額更新
+  if(CFG.kpiMode) renderS2();
+  renderS3();
+  renderDetail();
+}
 
 // 4. 考核
 function renderS4(){
