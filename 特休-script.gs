@@ -291,6 +291,13 @@ function saveOTLeave(password, store, ym, byEmp) {
     });
     if (newRows.length > 0) {
       var startRow = sheet.getLastRow() + 1;
+      // 🛡️ 確保 grid 有足夠 rows（避免「那些列超出邊界」）
+      //   Google Sheets 預設 max rows 通常 1000，寫超過會直接 throw
+      var neededLastRow = startRow + newRows.length - 1;
+      var maxRows = sheet.getMaxRows();
+      if (neededLastRow > maxRows) {
+        sheet.insertRowsAfter(maxRows, neededLastRow - maxRows);
+      }
       // ⚠️ 先設文字格式再寫值，避免「2026-04-21」被 Sheets 自動轉成 Date 物件
       sheet.getRange(startRow, 3, newRows.length, 1).setNumberFormat('@');  // 月份
       sheet.getRange(startRow, 6, newRows.length, 1).setNumberFormat('@');  // 日期
