@@ -270,16 +270,25 @@ function saveOTLeave(password, store, ym, byEmp) {
 
     var sheet = getOTLeaveSheet();
     var data = sheet.getDataRange().getValues();
-    // 先刪除該 (store, ym) 的舊資料
-    var rowsToDelete = [];
-    for (var i = data.length - 1; i >= 1; i--) {
-      if (String(data[i][1]) === store && String(data[i][2]) === ym) {
-        rowsToDelete.push(i + 1);
-      }
-    }
-    rowsToDelete.forEach(function(r){ sheet.deleteRow(r); });
 
-    // 寫入新資料
+    // 1) 分成兩堆：要覆蓋的 (store, ym) 舊列（跳過）+ 其他要保留的列
+    var keepRows = [];
+    var replacedCount = 0;
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][1]) === store && String(data[i][2]) === ym) {
+        replacedCount++;
+        continue;
+      }
+      // 把每一 cell 轉成字串避免 Date 又被 sheet 亂轉
+      var row = data[i].slice();
+      var rawMonth = row[2];
+      if (rawMonth instanceof Date) row[2] = Utilities.formatDate(rawMonth, 'Asia/Taipei', 'yyyy-MM');
+      var cleanDate = _parseOTLeaveDate(row[5], 'Asia/Taipei');
+      if (cleanDate) row[5] = cleanDate;
+      keepRows.push(row);
+    }
+
+    // 2) 組出新資料列
     var now = new Date();
     var newRows = [];
     Object.keys(byEmp).forEach(function(name){
@@ -289,18 +298,21 @@ function saveOTLeave(password, store, ym, byEmp) {
       (rec.travelDates       || []).forEach(function(d){ newRows.push([now, store, ym, name, 'travel',     d]); });
       (rec.travelHalfDates   || []).forEach(function(d){ newRows.push([now, store, ym, name, 'travelHalf', d]); });
     });
-    if (newRows.length > 0) {
-      // 🛡️ 用 appendRow 逐筆寫，避免 setValues 撞到 grid maxRows 邊界
-      //   月份 (col 3) 和 日期 (col 6) 加 ' 前綴強制純文字，
-      //   避免「2026-04-21」被 Sheets 自動轉成 Date 物件（getValues 讀回時不會帶 ' 前綴）
-      newRows.forEach(function(row){
-        var safeRow = row.slice();
-        if (safeRow[2]) safeRow[2] = "'" + String(safeRow[2]);  // 月份
-        if (safeRow[5]) safeRow[5] = "'" + String(safeRow[5]);  // 日期
-        sheet.appendRow(safeRow);
-      });
+    // 3) 清空舊資料區、重寫「保留的舊列 + 新列」
+    //    用 appendRow 逐筆寫入，避免 setValues 撞到 grid maxRows 邊界
+    //    月份 (col 3) 和 日期 (col 6) 加 ' 前綴強制純文字，
+    //    避免「2026-04-21」被 Sheets 自動轉成 Date 物件（getValues 讀回時不會帶 ' 前綴）
+    if (data.length > 1) {
+      sheet.getRange(2, 1, data.length - 1, OT_LEAVE_HEADERS.length).clearContent();
     }
-    return { ok: true, written: newRows.length, deleted: rowsToDelete.length };
+    var allRows = keepRows.concat(newRows);
+    allRows.forEach(function(row){
+      var safeRow = row.slice();
+      if (safeRow[2]) safeRow[2] = "'" + String(safeRow[2]);  // 月份
+      if (safeRow[5]) safeRow[5] = "'" + String(safeRow[5]);  // 日期
+      sheet.appendRow(safeRow);
+    });
+    return { ok: true, written: newRows.length, kept: keepRows.length, replaced: replacedCount };
   } catch (err) {
     return { ok: false, error: String(err) };
   }
