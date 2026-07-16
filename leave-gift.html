@@ -210,6 +210,7 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
   </div>
   <span class="spacer"></span>
   <span id="sync-chip" class="sync-chip off" title="點擊重新同步" onclick="syncNow()">☁ 未設定</span>
+  <button class="btn btn-ghost btn-sm" onclick="pullOTLeaveFromCloud(false)" title="重抓加班費特休/旅遊假資料">🔄 同步加班費</button>
 </div>
 
 <div class="wrap">
@@ -1329,17 +1330,31 @@ function pullFromCloud(){
       maybeAutoCredit();
       if(seedAdded > 0) pushToCloud(false);
       render();
-      // 額外抓雲端加班費假別資料（跨裝置共用）
-      callGAS('loadOTLeave', [getStorePassword(), STORE])
-        .then(function(r){
-          if(r && r.ok){
-            OT_LEAVE_CLOUD = r.byEmp || {};
-            render();
-          }
-        })
-        .catch(function(){});
     })
     .catch(function(err){ setSyncChip('err', '☁ 離線', err.message||''); render(); });
+}
+
+// 獨立抓雲端「加班費假別」資料（不再綁在 pullFromCloud，失敗也會重試）
+// 每次成功都會 render 一次，讓當台裝置立刻同步顯示
+function pullOTLeaveFromCloud(silent){
+  var url = getSyncUrl();
+  if(!url) return Promise.resolve();
+  return callGAS('loadOTLeave', [getStorePassword(), STORE])
+    .then(function(r){
+      if(r && r.ok){
+        OT_LEAVE_CLOUD = r.byEmp || {};
+        console.log('[特休雲端] 已同步 OT 假別資料：', OT_LEAVE_CLOUD);
+        render();
+        if(!silent) toast('已同步加班費資料', 'ok');
+      } else {
+        console.warn('[特休雲端] loadOTLeave 回失敗：', r);
+        if(!silent) toast('讀取加班費資料失敗：'+((r&&r.error)||''), 'err');
+      }
+    })
+    .catch(function(err){
+      console.warn('[特休雲端] loadOTLeave 連線失敗：', err);
+      if(!silent) toast('連線失敗：'+(err.message||''), 'err');
+    });
 }
 
 function syncNow(){ pushToCloud(true); }
@@ -1365,7 +1380,16 @@ function goBack(){ window.location.href = 'home.html'; }
   ensureSlots();
   render();
   pullFromCloud();
+  // 獨立抓 OT 假別資料（即使 pullFromCloud 失敗也照樣跑）
+  pullOTLeaveFromCloud(true);
 })();
+
+// 頁面切回前景時（例：切到加班費系統跑完分析再切回來）自動重新抓 OT 資料
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'visible'){
+    pullOTLeaveFromCloud(true);
+  }
+});
 
 // ⚠️ 已移除自動同步：使用者上傳禮金後須手動按「💾 儲存變更」才會推到雲端
 // 仍保留每 30 秒寫入 localStorage 的本機備份（重新整理時不會丟失）

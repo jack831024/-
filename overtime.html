@@ -2084,8 +2084,18 @@ function pushOTLeaveToCloud(payload){
     headers:{'Content-Type':'text/plain;charset=utf-8'},
     body: JSON.stringify({ action:'saveOTLeave', args:[pwd, STORE, payload.ym, byEmp] })
   }).then(function(r){ return r.json(); })
-    .then(function(res){ if(res && res.ok) console.log('[特休雲端] 已上傳 '+payload.ym+'：', byEmp); })
-    .catch(function(){});
+    .then(function(res){
+      if(res && res.ok){
+        console.log('[特休雲端] ✓ 已上傳 '+payload.ym+' → '+STORE+'：', byEmp);
+      } else {
+        console.warn('[特休雲端] ✗ 上傳失敗 '+payload.ym+' → '+STORE+'：', res);
+        alert('⚠️ 特休/旅遊假 上傳雲端失敗：\n'+((res && res.error)||'未知錯誤')+'\n\n請重新按「分析」再試一次，或聯絡管理員。');
+      }
+    })
+    .catch(function(err){
+      console.warn('[特休雲端] ✗ 連線失敗：', err);
+      alert('⚠️ 特休/旅遊假 上傳雲端連線失敗：\n'+(err.message||'網路異常')+'\n\n請確認網路後重新按「分析」。');
+    });
 }
 
 // 診斷：檢查班表月份 vs 打卡月份 / 班表姓名 vs 打卡姓名 不一致之處
