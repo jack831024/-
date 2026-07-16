@@ -290,18 +290,15 @@ function saveOTLeave(password, store, ym, byEmp) {
       (rec.travelHalfDates   || []).forEach(function(d){ newRows.push([now, store, ym, name, 'travelHalf', d]); });
     });
     if (newRows.length > 0) {
-      var startRow = sheet.getLastRow() + 1;
-      // 🛡️ 確保 grid 有足夠 rows（避免「那些列超出邊界」）
-      //   Google Sheets 預設 max rows 通常 1000，寫超過會直接 throw
-      var neededLastRow = startRow + newRows.length - 1;
-      var maxRows = sheet.getMaxRows();
-      if (neededLastRow > maxRows) {
-        sheet.insertRowsAfter(maxRows, neededLastRow - maxRows);
-      }
-      // ⚠️ 先設文字格式再寫值，避免「2026-04-21」被 Sheets 自動轉成 Date 物件
-      sheet.getRange(startRow, 3, newRows.length, 1).setNumberFormat('@');  // 月份
-      sheet.getRange(startRow, 6, newRows.length, 1).setNumberFormat('@');  // 日期
-      sheet.getRange(startRow, 1, newRows.length, OT_LEAVE_HEADERS.length).setValues(newRows);
+      // 🛡️ 用 appendRow 逐筆寫，避免 setValues 撞到 grid maxRows 邊界
+      //   月份 (col 3) 和 日期 (col 6) 加 ' 前綴強制純文字，
+      //   避免「2026-04-21」被 Sheets 自動轉成 Date 物件（getValues 讀回時不會帶 ' 前綴）
+      newRows.forEach(function(row){
+        var safeRow = row.slice();
+        if (safeRow[2]) safeRow[2] = "'" + String(safeRow[2]);  // 月份
+        if (safeRow[5]) safeRow[5] = "'" + String(safeRow[5]);  // 日期
+        sheet.appendRow(safeRow);
+      });
     }
     return { ok: true, written: newRows.length, deleted: rowsToDelete.length };
   } catch (err) {
