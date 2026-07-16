@@ -542,9 +542,31 @@ function getOvertimeUsedAfter(empName, type){
 }
 
 // 員工各種衍生值
+// 勞基法 §38 特休累計公式
+//   6 個月-1 年: 3日  |  1-2 年: 7日  |  2-3 年: 10日  |  3-5 年: 每年 14日
+//   5-10 年: 每年 15日  |  10 年以上: 每年加 1 日，最高 30 日
+//   ↳ 累計 = 該員工「到今天為止」被授予的所有特休天數總和
+function computeAnnualAccrued(hireDate){
+  if(!hireDate) return 0;
+  var months = tenureMonths(hireDate);
+  if(months < 6) return 0;
+  var total = 3; // 滿半年授予 3
+  // 完成的整數年數
+  var years = Math.floor(months / 12);
+  for(var y = 1; y <= years; y++){
+    if(y === 1) total += 7;
+    else if(y === 2) total += 10;
+    else if(y >= 3 && y <= 4) total += 14;
+    else if(y >= 5 && y <= 9) total += 15;
+    else total += Math.min(15 + (y - 9), 30); // 10 年後每年 +1，最高 30
+  }
+  return total;
+}
+
 function calcAnnual(emp){
-  // initialAnnualUsed = EFFECTIVE_DATE 之前已用；之後自動從加班費系統抓
-  var accrued = emp.initialAnnualAccrued || 0;
+  // 累計：優先用公式（會隨到職日 anniversary 自動增加），若 initialAccrued 更大則採用 initial
+  var computed = computeAnnualAccrued(emp.hireDate);
+  var accrued = Math.max(emp.initialAnnualAccrued || 0, computed);
   var initialUsed = emp.initialAnnualUsed || 0;
   var ot = getOvertimeDatesAfter(emp.name, 'annual');
   var fromOT = ot.full.length + ot.half.length * 0.5;
