@@ -363,13 +363,24 @@ function prevDate(d){var t=new Date(d+'T00:00:00');t.setDate(t.getDate()-1);
 function monthDates(ym){ return ALL_DATES.filter(function(d){return d.slice(0,7)===ym;}); }
 
 // ===== 品項排行 =====
+// 主餐新舊菜單名合併顯示（初心經典=超值、殿藏/典藏盛宴=豪華；原始資料不變）
+function mergeMain(n){
+  var ppl = n.indexOf('三人')>-1?'三人':(n.indexOf('雙人')>-1?'雙人':null);
+  if(!ppl) return n.replace(/^【[^】]*】/,'');
+  if(/龍蝦/.test(n)) return '奢華龍蝦套餐';
+  if(/奢華/.test(n)) return '奢華'+ppl+'套餐';
+  if(/超值|初心/.test(n)) return '超值'+ppl+'套餐';
+  if(/豪華|殿藏|典藏/.test(n)) return '豪華'+ppl+'套餐';
+  return n.replace(/^【[^】]*】/,'');
+}
 function itemAgg(days,ss,type){
   var m={};
   days.forEach(function(d){ss.forEach(function(s){
     (ITEMS[d+'|'+s]||[]).forEach(function(it){
       if(it.t!==type) return;
-      if(!m[it.n]) m[it.n]={n:it.n,q:0,a:0};
-      m[it.n].q+=it.q; m[it.n].a+=it.a;
+      var name=(type==='主餐')?mergeMain(it.n):it.n;
+      if(!m[name]) m[name]={n:name,q:0,a:0};
+      m[name].q+=it.q; m[name].a+=it.a;
     });
   });});
   return Object.values(m).sort(function(a,b){return b.q-a.q;});
