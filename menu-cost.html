@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>菜單成本分析（試作版）</title>
+<title>菜單成本分析</title>
 <script>
 // 直連保護：全域密碼 或 三家店店長密碼 皆可
 (function(){
@@ -45,6 +45,13 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
 .badge-demo{margin-left:auto;background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;font-size:11px;font-weight:800;border-radius:999px;padding:6px 14px;letter-spacing:1.5px;box-shadow:0 4px 12px -4px rgba(217,119,6,.3)}
 .src-note{font-size:11.5px;color:var(--ink-3);display:flex;align-items:center;gap:6px;margin-bottom:1.2rem}
 .src-note .dot{width:7px;height:7px;border-radius:50%;background:#10b981}
+.badge-live{margin-left:auto;background:linear-gradient(135deg,#d1fae5,#a7f3d0);color:#065f46;font-size:11px;font-weight:800;border-radius:999px;padding:6px 14px;letter-spacing:1.5px;box-shadow:0 4px 12px -4px rgba(5,150,105,.3);display:flex;align-items:center;gap:6px}
+.badge-live .ld{width:7px;height:7px;border-radius:50%;background:#059669;animation:pulseld 2s infinite}
+@keyframes pulseld{50%{opacity:.35}}
+#loading{position:fixed;inset:0;background:rgba(248,250,252,.9);backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:50;font-size:14px;color:var(--ink-2)}
+#loading .spin{width:38px;height:38px;border-radius:50%;border:4px solid #fee2e2;border-top-color:#dc2626;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#loaderr{display:none;max-width:520px;text-align:center;line-height:1.8;font-size:13px;color:var(--bad)}
 
 /* KPI */
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:1.4rem}
@@ -124,6 +131,7 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
 </style>
 </head>
 <body>
+<div id="loading"><div class="spin"></div><div id="loadmsg">讀取成本表中…</div><div id="loaderr"></div></div>
 <div class="wrap">
   <div class="topbar">
     <button class="back" onclick="history.back()">←</button>
@@ -132,9 +140,9 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
       <h1>菜單成本分析</h1>
       <p>套餐成本組成 · 毛利率總覽</p>
     </div>
-    <span class="badge-demo">試作版</span>
+    <span class="badge-live"><span class="ld"></span>LIVE</span>
   </div>
-  <p class="src-note"><span class="dot"></span>資料來源：「食材成本與毛利表」2026-07 快照 · 正式版即時連動 Google Sheet，改單價自動重算</p>
+  <p class="src-note"><span class="dot"></span><span id="srcNote">即時連動「食材成本與毛利表」· 你改 Google Sheet 單價，這頁自動重算</span></p>
 
   <div class="kpis">
     <div class="kpi" style="--kc:linear-gradient(90deg,#0f172a,#475569);--kb:#f1f5f9">
@@ -178,43 +186,69 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
     <div class="ing-grid" id="ings"></div>
   </div>
 
-  <p class="footer">試作版 · 尚未連接後端 · © 2026 INTERNAL SYSTEM</p>
+  <p class="footer">資料來源：食材成本與毛利表（即時連動）· © 2026 INTERNAL SYSTEM</p>
 </div>
 
 <script>
-var INGS = [
-  ['自助吧成本',100,'元/人'],['台灣梅花豬',0.255,'元/g'],['台灣培根豬',0.26,'元/g'],
-  ['美國培根牛',0.26,'元/g'],['加拿大松阪豬',0.42,'元/g'],['澳洲M9和牛',0.55,'元/g'],
-  ['美國ch板腱',0.465,'元/g'],['美國ch翼板',0.7,'元/g'],['美國ch牛小排',0.93,'元/g'],
-  ['日本A5和牛',1.78,'元/g'],['雪花羊肉',0.3,'元/g'],['龍蝦',451,'元/隻'],
-  ['海鮮',25,'元/份'],['小卷',13.125,'元/盒'],['蛤蜊',3.6,'元/斤']
-];
+var API_URL = 'https://script.google.com/macros/s/AKfycbzdSb6_OcTCNqi6_SS955vPsK8Y2LHgoAKPEwN7lijOHPBh1rbJ8Th0S7jP5o9I1BxQRg/exec';
+var API_KEY = 'cd-report-2026';
 var CATN={set:'套餐',single:'個人鍋',week:'平日',season:'節慶'};
-var P = [
- ['超值雙人套餐','set',899,333.2,[['自助吧成本',2,100,200],['台灣培根豬',320,0.26,83.2],['海鮮',2,25,50]]],
- ['豪華雙人套餐','set',1099,409.4,[['自助吧成本',2,100,200],['加拿大松阪豬',160,0.42,67.2],['加拿大松阪豬',160,0.42,67.2],['海鮮',3,25,75]]],
- ['奢華雙人套餐','set',1499,473.8,[['自助吧成本',2,100,200],['美國ch板腱',320,0.465,148.8],['海鮮',5,25,125]]],
- ['奢華龍蝦套餐','set',2026,933.2,[['自助吧成本',2,100,200],['澳洲M9和牛',320,0.55,176],['龍蝦',1,451,451],['海鮮',3,25,75],['台灣培根豬',120,0.26,31.2]]],
- ['超值三人套餐','set',1349,483.6,[['自助吧成本',3,100,300],['台灣梅花豬',480,0.255,122.4],['台灣梅花豬',240,0.255,61.2]]],
- ['豪華三人套餐','set',1649,583.2,[['自助吧成本',3,100,300],['加拿大松阪豬',480,0.42,201.6],['台灣梅花豬',320,0.255,81.6]]],
- ['奢華三人套餐','set',2099,835.4,[['自助吧成本',3,100,300],['美國ch翼板',480,0.7,336],['美國ch板腱',160,0.465,74.4],['海鮮',5,25,125]]],
- ['平日套餐(小牛)','week',299,120.8,[['自助吧成本',1,100,100],['美國培根牛',80,0.26,20.8]]],
- ['平日套餐(大牛)','week',328,141.6,[['自助吧成本',1,100,100],['台灣培根豬',160,0.26,41.6]]],
- ['平日套餐(小豬)','week',299,120.4,[['自助吧成本',1,100,100],['台灣梅花豬',80,0.255,20.4]]],
- ['平日套餐(大豬)','week',328,140.8,[['自助吧成本',1,100,100],['台灣梅花豬',160,0.255,40.8]]],
- ['個人鍋(牛培)','single',399,141.6,[['自助吧成本',1,100,100],['美國培根牛',160,0.26,41.6]]],
- ['個人鍋(板腱)','single',449,174.4,[['自助吧成本',1,100,100],['美國ch板腱',160,0.465,74.4]]],
- ['個人鍋(澳和)','single',499,188,[['自助吧成本',1,100,100],['澳洲M9和牛',160,0.55,88]]],
- ['個人鍋(翼板)','single',549,212,[['自助吧成本',1,100,100],['美國ch翼板',160,0.7,112]]],
- ['個人鍋(牛小排)','single',599,248.8,[['自助吧成本',1,100,100],['美國ch牛小排',160,0.93,148.8]]],
- ['個人鍋(A5)','single',799,384.8,[['自助吧成本',1,100,100],['日本A5和牛',160,1.78,284.8]]],
- ['個人鍋(梅花)','single',399,140.8,[['自助吧成本',1,100,100],['台灣梅花豬',160,0.255,40.8]]],
- ['個人鍋(台培)','single',399,141.6,[['自助吧成本',1,100,100],['台灣培根豬',160,0.26,41.6]]],
- ['個人鍋(松阪)','single',449,167.2,[['自助吧成本',1,100,100],['加拿大松阪豬',160,0.42,67.2]]],
- ['個人鍋(海鮮船)','single',449,225,[['自助吧成本',1,100,100],['海鮮',5,25,125]]],
- ['個人鍋(羊肉)','single',449,148,[['自助吧成本',1,100,100],['雪花羊肉',160,0.3,48]]],
- ['過年套餐','season',2099,1254.8,[['自助吧成本',4,100,400],['美國ch板腱',640,0.465,297.6],['龍蝦',1,451,451],['海鮮',3,25,75],['台灣培根豬',120,0.26,31.2]]]
-];
+var INGS=[], P=[];
+
+function num(v){ v=parseFloat(String(v).replace(/[,%$\s]/g,'')); return isNaN(v)?0:v; }
+function catOf(n){
+  if(n.indexOf('個人鍋')>-1) return 'single';
+  if(n.indexOf('平日套餐')>-1) return 'week';
+  if(/過年|母親節|情人節|中秋|聖誕/.test(n)) return 'season';
+  return 'set';
+}
+function loadCost(){
+  fetch(API_URL+'?key='+encodeURIComponent(API_KEY)+'&action=cost')
+    .then(function(r){return r.json();})
+    .then(function(j){
+      if(j.error){ showErr('API 錯誤：'+j.error); return; }
+      var S=j.sheets||{};
+      // 原物料清單：分類/食材名稱/進貨單位/進貨單價/換算單位/單位成本
+      (S['原物料清單']||[]).forEach(function(r,i){
+        if(i===0) return;
+        var name=String(r[1]||'').trim();
+        if(!name) return;
+        INGS.push([name, num(r[5]), '元/'+String(r[4]||'').trim()]);
+      });
+      // 產品配方明細：套餐名/組成/使用量/食材單價/小計
+      var bom={};
+      (S['產品配方明細']||[]).forEach(function(r,i){
+        if(i===0) return;
+        var set=String(r[0]||'').trim(), ing=String(r[1]||'').trim();
+        if(!set||!ing) return;
+        if(!bom[set]) bom[set]=[];
+        bom[set].push([ing, num(r[2]), num(r[3]), num(r[4])]);
+      });
+      // 產品彙整清單：產品名稱/定價/總成本/毛利額/毛利率
+      (S['產品彙整清單']||[]).forEach(function(r,i){
+        if(i===0) return;
+        var name=String(r[0]||'').trim();
+        var price=num(r[1]), cost=num(r[2]);
+        if(!name||!price) return;
+        P.push([name, catOf(name), price, cost, bom[name]||[]]);
+      });
+      if(!P.length){ showErr('成本表沒有讀到品項（請確認「產品彙整清單」分頁）'); return; }
+      if(j.updated) document.getElementById('srcNote').textContent='即時連動「食材成本與毛利表」· 讀取時間 '+String(j.updated).slice(0,16).replace('T',' ')+'（改 Sheet 單價，重新整理即更新）';
+      document.getElementById('loading').style.display='none';
+      document.getElementById('ings').innerHTML = INGS.map(function(g){
+        return '<div class="ing"><span class="nm">'+g[0]+'</span><span class="val">'+g[1]+'<span class="u">'+g[2]+'</span></span></div>';
+      }).join('');
+      render();
+    })
+    .catch(function(e){ showErr('連線失敗：'+e); });
+}
+function showErr(msg){
+  document.querySelector('#loading .spin').style.display='none';
+  document.getElementById('loadmsg').style.display='none';
+  var el=document.getElementById('loaderr');
+  el.style.display='block';
+  el.innerHTML='⚠️ '+msg+'<br><button class="back" style="margin-top:12px" onclick="location.reload()">重試</button>';
+}
 
 var filter='all', sortMode='menu';
 function gpr(p){ return (p[2]-p[3])/p[2]*100; }
@@ -275,11 +309,7 @@ document.querySelectorAll('.chip[data-s]').forEach(function(b){
   };
 });
 
-document.getElementById('ings').innerHTML = INGS.map(function(g){
-  return '<div class="ing"><span class="nm">'+g[0]+'</span><span class="val">'+g[1]+'<span class="u">'+g[2]+'</span></span></div>';
-}).join('');
-
-render();
+loadCost();
 </script>
 </body>
 </html>
