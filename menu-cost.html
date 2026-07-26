@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>菜單成本分析（試作版）</title>
+<script>
+// 直連保護：全域密碼 或 三家店店長密碼 皆可
+(function(){
+  if(sessionStorage.getItem('cd_report_auth') === '1') return;
+  var PASS = ['yuanxin2022','a90369287','a94213054','a60749791'];
+  var pw = prompt('請輸入密碼（全域密碼 或 店長密碼）：');
+  if(pw === null || PASS.indexOf(String(pw).trim()) === -1){
+    alert('❌ 密碼錯誤');
+    location.replace('home.html');
+  }else{
+    sessionStorage.setItem('cd_report_auth','1');
+  }
+})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#3b82f6;--ink:#0f172a;--ink-2:#475569;--ink-3:#94a3b8;--line:#e2e8f0;
+  --good:#059669;--warn:#ca8a04;--bad:#dc2626;
+  --card:rgba(255,255,255,.82);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 12px 32px -12px rgba(15,23,42,.12);
+}
+body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;padding:1.5rem;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #fee2e2 0%, transparent 50%),
+    radial-gradient(900px 500px at 110% 10%, #fde4d3 0%, transparent 55%),
+    radial-gradient(800px 600px at 50% 120%, #e0e7ff 0%, transparent 60%),
+    linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+}
+.wrap{max-width:1020px;margin:0 auto}
+
+.topbar{display:flex;align-items:center;gap:14px;margin-bottom:1.4rem;flex-wrap:wrap}
+.back{border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 15px;font-size:13px;cursor:pointer;color:var(--ink-2);font-family:inherit;transition:.15s;box-shadow:0 1px 2px rgba(15,23,42,.05)}
+.back:hover{border-color:#cbd5e1;transform:translateY(-1px)}
+.title-ico{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#dc2626,#f87171);display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 10px 24px -8px rgba(220,38,38,.5)}
+.title-tx h1{font-size:21px;font-weight:900;letter-spacing:-.02em}
+.title-tx p{font-size:12px;color:var(--ink-3);margin-top:1px}
+.badge-demo{margin-left:auto;background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;font-size:11px;font-weight:800;border-radius:999px;padding:6px 14px;letter-spacing:1.5px;box-shadow:0 4px 12px -4px rgba(217,119,6,.3)}
+.src-note{font-size:11.5px;color:var(--ink-3);display:flex;align-items:center;gap:6px;margin-bottom:1.2rem}
+.src-note .dot{width:7px;height:7px;border-radius:50%;background:#10b981}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:1.4rem}
+.kpi{background:var(--card);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.9);border-radius:20px;padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--kc)}
+.kpi .top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.kpi .ico{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--kb)}
+.kpi .k{font-size:11.5px;color:var(--ink-3);letter-spacing:1.5px;font-weight:700}
+.kpi .v{font-size:25px;font-weight:900;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.15}
+.kpi .s{font-size:11px;color:var(--ink-2);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* 控制列 */
+.controls{display:flex;gap:8px;margin-bottom:1.1rem;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:rgba(255,255,255,.9);border-radius:999px;padding:8px 16px;font-size:13px;cursor:pointer;color:var(--ink-2);font-family:inherit;transition:.18s;font-weight:500;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.chip:hover{border-color:#cbd5e1;transform:translateY(-1px)}
+.chip.on{background:linear-gradient(135deg,#dc2626,#ef4444);border-color:transparent;color:#fff;font-weight:700;box-shadow:0 6px 14px -6px rgba(220,38,38,.5)}
+.chip.sort.on{background:linear-gradient(135deg,#0f172a,#334155);box-shadow:0 6px 14px -6px rgba(15,23,42,.5)}
+
+/* 面板 */
+.panel{background:var(--card);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.9);border-radius:22px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:14px}
+.panel h2{font-size:14px;font-weight:800;padding:15px 18px;border-bottom:1px solid #eef2f7;display:flex;align-items:center;gap:9px}
+.panel h2 .ic{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;background:#fef2f2}
+.panel h2 .sub{font-weight:400;font-size:11.5px;color:var(--ink-3);margin-left:auto}
+
+/* 品項列 */
+.rowhead,.prow{display:grid;grid-template-columns:1.7fr .6fr .6fr .6fr 1.5fr;gap:10px;align-items:center;padding:11px 18px}
+.rowhead{font-size:11px;color:var(--ink-3);letter-spacing:1.5px;font-weight:700;border-bottom:1px solid var(--line);background:#fafbfd}
+.prow{font-size:13.5px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .15s}
+.prow:hover{background:#f8fafc}
+.prow.low{background:linear-gradient(90deg,#fef2f2 0%,transparent 60%)}
+.prow.low:hover{background:#fef2f2}
+.prow .name{font-weight:700;display:flex;align-items:center;gap:8px;min-width:0}
+.prow .name .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cat-tag{font-size:10px;font-weight:800;border-radius:6px;padding:2.5px 7px;letter-spacing:.5px;flex:none}
+.cat-set{background:#dbeafe;color:#1d4ed8}
+.cat-single{background:#fed7aa;color:#c2410c}
+.cat-week{background:#d1fae5;color:#047857}
+.cat-season{background:#fce7f3;color:#be185d}
+.prow .num{font-variant-numeric:tabular-nums;text-align:right;color:var(--ink-2)}
+.prow .num.b{font-weight:800;color:var(--ink)}
+.gpbar{display:flex;align-items:center;gap:10px}
+.gpbar .track{flex:1;height:10px;border-radius:999px;background:#eef2f7;overflow:hidden}
+.gpbar .fill{height:100%;border-radius:999px;transition:width .4s}
+.gpbar .pct{font-size:12px;font-weight:900;width:62px;text-align:center;border-radius:999px;padding:3px 0;font-variant-numeric:tabular-nums;flex:none}
+.g .fill{background:linear-gradient(90deg,#10b981,#34d399)} .g .pct{background:#d1fae5;color:#047857}
+.y .fill{background:linear-gradient(90deg,#eab308,#facc15)} .y .pct{background:#fef9c3;color:#a16207}
+.r .fill{background:linear-gradient(90deg,#ef4444,#f87171)} .r .pct{background:#fee2e2;color:#b91c1c}
+.caret{color:var(--ink-3);font-size:10px;transition:transform .2s;margin-left:2px}
+.prow.openrow .caret{transform:rotate(90deg)}
+
+/* BOM */
+.bom{display:none;background:linear-gradient(180deg,#fafbfd,#f8fafc);border-bottom:1px solid #f1f5f9;padding:6px 18px 16px}
+.bom.open{display:block;animation:slide .18s ease}
+@keyframes slide{from{opacity:0;transform:translateY(-4px)}to{opacity:1}}
+.bom table{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,.06)}
+.bom th{text-align:left;color:var(--ink-3);font-weight:700;padding:8px 12px;border-bottom:1px solid var(--line);font-size:10.5px;letter-spacing:1px;background:#fafbfd}
+.bom th.n,.bom td.n{text-align:right}
+.bom td{padding:7px 12px;border-bottom:1px solid #f1f5f9;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.bom td .idot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#cbd5e1;margin-right:8px}
+.bom .total td{font-weight:900;color:var(--ink);background:#fafbfd}
+
+/* 食材 */
+.ing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 18px}
+.ing{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;font-size:13px;background:#fff;border:1px solid #f1f5f9;border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.ing .nm{font-weight:600}
+.ing .val{font-weight:900;font-variant-numeric:tabular-nums}
+.ing .u{color:var(--ink-3);font-size:10.5px;font-weight:500;margin-left:4px}
+.footer{text-align:center;font-size:11px;color:var(--ink-3);letter-spacing:1px;margin-top:1.4rem}
+@media(max-width:820px){
+  body{padding:1rem}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .rowhead,.prow{grid-template-columns:1.5fr .7fr 1.4fr}
+  .hide-m{display:none}
+  .ing-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:520px){.ing-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <button class="back" onclick="history.back()">←</button>
+    <div class="title-ico">🥩</div>
+    <div class="title-tx">
+      <h1>菜單成本分析</h1>
+      <p>套餐成本組成 · 毛利率總覽</p>
+    </div>
+    <span class="badge-demo">試作版</span>
+  </div>
+  <p class="src-note"><span class="dot"></span>資料來源：「食材成本與毛利表」2026-07 快照 · 正式版即時連動 Google Sheet，改單價自動重算</p>
+
+  <div class="kpis">
+    <div class="kpi" style="--kc:linear-gradient(90deg,#0f172a,#475569);--kb:#f1f5f9">
+      <div class="top"><span class="ico">🍽️</span><span class="k">品項數</span></div>
+      <div class="v" id="kCount">–</div><div class="s">常態菜單（不含節慶）</div>
+    </div>
+    <div class="kpi" style="--kc:linear-gradient(90deg,#4f46e5,#818cf8);--kb:#eef2ff">
+      <div class="top"><span class="ico">📐</span><span class="k">平均毛利率</span></div>
+      <div class="v" id="kAvg">–</div><div class="s">單純平均（未加權銷量）</div>
+    </div>
+    <div class="kpi" style="--kc:linear-gradient(90deg,#059669,#34d399);--kb:#ecfdf5">
+      <div class="top"><span class="ico">🏆</span><span class="k">最高毛利</span></div>
+      <div class="v" id="kMax">–</div><div class="s" id="kMaxN">–</div>
+    </div>
+    <div class="kpi" style="--kc:linear-gradient(90deg,#dc2626,#f87171);--kb:#fef2f2">
+      <div class="top"><span class="ico">⚠️</span><span class="k">最低毛利</span></div>
+      <div class="v" id="kMin">–</div><div class="s" id="kMinN">–</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="chip on" data-f="all">全部</button>
+    <button class="chip" data-f="set">多人套餐</button>
+    <button class="chip" data-f="single">個人鍋</button>
+    <button class="chip" data-f="week">平日套餐</button>
+    <button class="chip" data-f="season">節慶</button>
+    <button class="chip" data-f="low">⚠️ 毛利 &lt; 55%</button>
+    <span style="flex:1"></span>
+    <button class="chip sort" data-s="gpr">毛利率</button>
+    <button class="chip sort on" data-s="menu">菜單順序</button>
+  </div>
+
+  <div class="panel">
+    <h2><span class="ic">📋</span>品項毛利總覽 <span class="sub">點任一列展開成本組成（BOM）</span></h2>
+    <div class="rowhead"><span>品項</span><span style="text-align:right">定價</span><span style="text-align:right" class="hide-m">成本</span><span style="text-align:right" class="hide-m">毛利額</span><span style="text-align:center">毛利率</span></div>
+    <div id="plist"></div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="ic">🧾</span>食材單位成本 <span class="sub">來源：原物料清單分頁</span></h2>
+    <div class="ing-grid" id="ings"></div>
+  </div>
+
+  <p class="footer">試作版 · 尚未連接後端 · © 2026 INTERNAL SYSTEM</p>
+</div>
+
+<script>
+var INGS = [
+  ['自助吧成本',100,'元/人'],['台灣梅花豬',0.255,'元/g'],['台灣培根豬',0.26,'元/g'],
+  ['美國培根牛',0.26,'元/g'],['加拿大松阪豬',0.42,'元/g'],['澳洲M9和牛',0.55,'元/g'],
+  ['美國ch板腱',0.465,'元/g'],['美國ch翼板',0.7,'元/g'],['美國ch牛小排',0.93,'元/g'],
+  ['日本A5和牛',1.78,'元/g'],['雪花羊肉',0.3,'元/g'],['龍蝦',451,'元/隻'],
+  ['海鮮',25,'元/份'],['小卷',13.125,'元/盒'],['蛤蜊',3.6,'元/斤']
+];
+var CATN={set:'套餐',single:'個人鍋',week:'平日',season:'節慶'};
+var P = [
+ ['超值雙人套餐','set',899,333.2,[['自助吧成本',2,100,200],['台灣培根豬',320,0.26,83.2],['海鮮',2,25,50]]],
+ ['豪華雙人套餐','set',1099,409.4,[['自助吧成本',2,100,200],['加拿大松阪豬',160,0.42,67.2],['加拿大松阪豬',160,0.42,67.2],['海鮮',3,25,75]]],
+ ['奢華雙人套餐','set',1499,473.8,[['自助吧成本',2,100,200],['美國ch板腱',320,0.465,148.8],['海鮮',5,25,125]]],
+ ['奢華龍蝦套餐','set',2026,933.2,[['自助吧成本',2,100,200],['澳洲M9和牛',320,0.55,176],['龍蝦',1,451,451],['海鮮',3,25,75],['台灣培根豬',120,0.26,31.2]]],
+ ['超值三人套餐','set',1349,483.6,[['自助吧成本',3,100,300],['台灣梅花豬',480,0.255,122.4],['台灣梅花豬',240,0.255,61.2]]],
+ ['豪華三人套餐','set',1649,583.2,[['自助吧成本',3,100,300],['加拿大松阪豬',480,0.42,201.6],['台灣梅花豬',320,0.255,81.6]]],
+ ['奢華三人套餐','set',2099,835.4,[['自助吧成本',3,100,300],['美國ch翼板',480,0.7,336],['美國ch板腱',160,0.465,74.4],['海鮮',5,25,125]]],
+ ['平日套餐(小牛)','week',299,120.8,[['自助吧成本',1,100,100],['美國培根牛',80,0.26,20.8]]],
+ ['平日套餐(大牛)','week',328,141.6,[['自助吧成本',1,100,100],['台灣培根豬',160,0.26,41.6]]],
+ ['平日套餐(小豬)','week',299,120.4,[['自助吧成本',1,100,100],['台灣梅花豬',80,0.255,20.4]]],
+ ['平日套餐(大豬)','week',328,140.8,[['自助吧成本',1,100,100],['台灣梅花豬',160,0.255,40.8]]],
+ ['個人鍋(牛培)','single',399,141.6,[['自助吧成本',1,100,100],['美國培根牛',160,0.26,41.6]]],
+ ['個人鍋(板腱)','single',449,174.4,[['自助吧成本',1,100,100],['美國ch板腱',160,0.465,74.4]]],
+ ['個人鍋(澳和)','single',499,188,[['自助吧成本',1,100,100],['澳洲M9和牛',160,0.55,88]]],
+ ['個人鍋(翼板)','single',549,212,[['自助吧成本',1,100,100],['美國ch翼板',160,0.7,112]]],
+ ['個人鍋(牛小排)','single',599,248.8,[['自助吧成本',1,100,100],['美國ch牛小排',160,0.93,148.8]]],
+ ['個人鍋(A5)','single',799,384.8,[['自助吧成本',1,100,100],['日本A5和牛',160,1.78,284.8]]],
+ ['個人鍋(梅花)','single',399,140.8,[['自助吧成本',1,100,100],['台灣梅花豬',160,0.255,40.8]]],
+ ['個人鍋(台培)','single',399,141.6,[['自助吧成本',1,100,100],['台灣培根豬',160,0.26,41.6]]],
+ ['個人鍋(松阪)','single',449,167.2,[['自助吧成本',1,100,100],['加拿大松阪豬',160,0.42,67.2]]],
+ ['個人鍋(海鮮船)','single',449,225,[['自助吧成本',1,100,100],['海鮮',5,25,125]]],
+ ['個人鍋(羊肉)','single',449,148,[['自助吧成本',1,100,100],['雪花羊肉',160,0.3,48]]],
+ ['過年套餐','season',2099,1254.8,[['自助吧成本',4,100,400],['美國ch板腱',640,0.465,297.6],['龍蝦',1,451,451],['海鮮',3,25,75],['台灣培根豬',120,0.26,31.2]]]
+];
+
+var filter='all', sortMode='menu';
+function gpr(p){ return (p[2]-p[3])/p[2]*100; }
+function cls(g){ return g>=60?'g':(g>=55?'y':'r'); }
+function money(n){ return '$'+Math.round(n).toLocaleString(); }
+
+function render(){
+  var list = P.filter(function(p){
+    if(filter==='all') return p[1]!=='season';
+    if(filter==='low') return gpr(p)<55;
+    return p[1]===filter;
+  });
+  if(sortMode==='gpr') list=list.slice().sort(function(a,b){return gpr(b)-gpr(a);});
+  var html='';
+  list.forEach(function(p,i){
+    var g=gpr(p), c=cls(g);
+    html+='<div class="prow'+(g<55?' low':'')+'" id="pr'+i+'" onclick="toggleBom('+i+')">'
+      +'<span class="name"><span class="cat-tag cat-'+p[1]+'">'+CATN[p[1]]+'</span><span class="nm">'+p[0]+'</span><span class="caret">▶</span></span>'
+      +'<span class="num b">'+money(p[2])+'</span>'
+      +'<span class="num hide-m">'+money(p[3])+'</span>'
+      +'<span class="num hide-m">'+money(p[2]-p[3])+'</span>'
+      +'<span class="gpbar '+c+'"><span class="track"><span class="fill" style="width:'+Math.min(g,100)+'%"></span></span><span class="pct">'+g.toFixed(1)+'%</span></span>'
+      +'</div>';
+    html+='<div class="bom" id="bom'+i+'"><table><tr><th>組成</th><th class="n">用量</th><th class="n">單價</th><th class="n">小計</th></tr>';
+    p[4].forEach(function(b){
+      html+='<tr><td><span class="idot"></span>'+b[0]+'</td><td class="n">'+b[1]+'</td><td class="n">'+b[2]+'</td><td class="n">'+b[3].toFixed(1)+'</td></tr>';
+    });
+    html+='<tr class="total"><td>總成本</td><td></td><td></td><td class="n">'+p[3].toFixed(1)+'</td></tr></table></div>';
+  });
+  document.getElementById('plist').innerHTML=html;
+
+  var main=P.filter(function(p){return p[1]!=='season';});
+  var avg=main.reduce(function(s,p){return s+gpr(p);},0)/main.length;
+  var mx=main.reduce(function(a,b){return gpr(a)>gpr(b)?a:b;});
+  var mn=main.reduce(function(a,b){return gpr(a)<gpr(b)?a:b;});
+  document.getElementById('kCount').textContent=main.length;
+  document.getElementById('kAvg').textContent=avg.toFixed(1)+'%';
+  document.getElementById('kMax').textContent=gpr(mx).toFixed(1)+'%';
+  document.getElementById('kMaxN').textContent=mx[0];
+  document.getElementById('kMin').textContent=gpr(mn).toFixed(1)+'%';
+  document.getElementById('kMinN').textContent=mn[0];
+}
+function toggleBom(i){
+  document.getElementById('bom'+i).classList.toggle('open');
+  document.getElementById('pr'+i).classList.toggle('openrow');
+}
+
+document.querySelectorAll('.chip[data-f]').forEach(function(b){
+  b.onclick=function(){
+    document.querySelectorAll('.chip[data-f]').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); filter=b.dataset.f; render();
+  };
+});
+document.querySelectorAll('.chip[data-s]').forEach(function(b){
+  b.onclick=function(){
+    document.querySelectorAll('.chip[data-s]').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); sortMode=b.dataset.s; render();
+  };
+});
+
+document.getElementById('ings').innerHTML = INGS.map(function(g){
+  return '<div class="ing"><span class="nm">'+g[0]+'</span><span class="val">'+g[1]+'<span class="u">'+g[2]+'</span></span></div>';
+}).join('');
+
+render();
+</script>
+</body>
+</html>
