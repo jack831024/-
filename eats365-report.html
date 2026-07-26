@@ -97,6 +97,25 @@ select:focus,input[type=date]:focus{border-color:#a5b4fc}
 .soon{padding:26px 18px;text-align:center;color:var(--ink-3);font-size:12.5px;line-height:1.9}
 .soon .big{font-size:26px}
 
+/* 排行 */
+.rank{padding:6px 0 10px}
+.rrow{display:flex;align-items:center;gap:11px;padding:8px 18px;font-size:13px;transition:background .15s}
+.rrow:hover{background:#f8fafc}
+.rrow .no{width:26px;height:26px;border-radius:9px;background:#f1f5f9;color:var(--ink-3);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
+.rrow.r1 .no{background:linear-gradient(135deg,#fbbf24,#d97706);color:#fff;box-shadow:0 4px 10px -3px rgba(217,119,6,.55)}
+.rrow.r2 .no{background:linear-gradient(135deg,#cbd5e1,#94a3b8);color:#fff}
+.rrow.r3 .no{background:linear-gradient(135deg,#fb923c,#c2410c);color:#fff}
+.rrow .nm{width:150px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.rrow .bar{flex:1;height:9px;border-radius:999px;background:#eef2f7;overflow:hidden}
+.rrow .bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#4f46e5,#818cf8)}
+.rrow.soup .bar i{background:linear-gradient(90deg,#ea580c,#fb923c)}
+.rrow .ct{width:58px;text-align:right;font-variant-numeric:tabular-nums;font-weight:800;font-size:12.5px}
+.rrow .amt{width:72px;text-align:right;font-variant-numeric:tabular-nums;font-size:11.5px;color:var(--ink-3)}
+.tchips{display:flex;gap:6px;margin-left:10px}
+.tchip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 12px;font-size:11.5px;cursor:pointer;color:var(--ink-2);font-family:inherit;font-weight:600}
+.tchip.on{background:linear-gradient(135deg,#4f46e5,#6366f1);border-color:transparent;color:#fff}
+.rank-empty{padding:22px;text-align:center;color:var(--ink-3);font-size:12.5px}
+
 table.mt{width:100%;border-collapse:collapse;font-size:13.5px}
 table.mt th{text-align:right;font-size:11px;color:var(--ink-3);font-weight:700;letter-spacing:1px;padding:10px 16px;border-bottom:1px solid var(--line)}
 table.mt th:first-child,table.mt td:first-child{text-align:left}
@@ -181,12 +200,19 @@ table.mt tr.sum td{font-weight:900;border-top:2px solid var(--line);background:#
     </div>
     <div class="grid2">
       <div class="panel">
-        <h2><span class="ic" style="background:#fff7ed">🔥</span>熱門品項</h2>
-        <div class="soon"><div class="big">🚧</div>品項明細匯入尚未啟用<br>啟用後（Eats365_品項 分頁）此區自動顯示每日熱門品項排行</div>
+        <h2><span class="ic" style="background:#fff7ed">🔥</span>熱門品項
+          <span class="tchips" id="typeChips">
+            <button class="tchip on" data-t="主餐">主餐</button>
+            <button class="tchip" data-t="肉品">肉品</button>
+            <button class="tchip" data-t="加點">加點</button>
+          </span>
+          <span class="sub" id="hotSub"></span>
+        </h2>
+        <div class="rank" id="hotList"></div>
       </div>
       <div class="panel">
-        <h2><span class="ic" style="background:#fff7ed">🍲</span>湯頭排行</h2>
-        <div class="soon"><div class="big">🚧</div>品項明細匯入尚未啟用<br>啟用後此區自動顯示湯頭銷售排行</div>
+        <h2><span class="ic" style="background:#fff7ed">🍲</span>湯頭排行 <span class="sub" id="soupSub"></span></h2>
+        <div class="rank" id="soupList"></div>
       </div>
     </div>
   </div>
@@ -200,6 +226,22 @@ table.mt tr.sum td{font-weight:900;border-top:2px solid var(--line);background:#
       <h2><span class="ic">🏪</span>各店月累計</h2>
       <table class="mt" id="mTable"></table>
     </div>
+    <div class="grid2">
+      <div class="panel">
+        <h2><span class="ic" style="background:#fff7ed">🔥</span>本月熱門品項
+          <span class="tchips" id="typeChipsM">
+            <button class="tchip on" data-t="主餐">主餐</button>
+            <button class="tchip" data-t="肉品">肉品</button>
+            <button class="tchip" data-t="加點">加點</button>
+          </span>
+        </h2>
+        <div class="rank" id="mHotList"></div>
+      </div>
+      <div class="panel">
+        <h2><span class="ic" style="background:#fff7ed">🍲</span>本月湯頭排行</h2>
+        <div class="rank" id="mSoupList"></div>
+      </div>
+    </div>
   </div>
 
   <p class="footer">資料來源：Eats365 日報自動匯入（每日小結 · Eats365_主表）· © 2026 INTERNAL SYSTEM</p>
@@ -207,7 +249,7 @@ table.mt tr.sum td{font-weight:900;border-top:2px solid var(--line);background:#
 
 <script>
 // ================= 資料層：GAS Web App API =================
-var API_URL = 'https://script.google.com/macros/s/AKfycbycSiNBdCIDW0CtbmrZgyLOLRXuNeMCshHrUBOtuchOQcVId5yVxJLK63SC9GcAOtkFbg/exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycbzdSb6_OcTCNqi6_SS955vPsK8Y2LHgoAKPEwN7lijOHPBh1rbJ8Th0S7jP5o9I1BxQRg/exec';
 var API_KEY = 'cd-report-2026';
 var STORES=['中和','永春','新莊'];
 var SCOLOR={'中和':'#3b82f6','永春':'#10b981','新莊':'#8b5cf6'};
@@ -221,8 +263,10 @@ var CATS=[
   ['平日','平日單','平日金額','--c6']
 ];
 var DATA={};       // 'YYYY-MM-DD|店' -> rec
+var ITEMS={};      // 'YYYY-MM-DD|店' -> [{t,n,q,a},...]
 var ALL_DATES=[];  // 排序後的所有日期
 var view='day';
+var hotType='主餐';
 
 function num(v){ v=parseFloat(String(v).replace(/[,%$]/g,'')); return isNaN(v)?0:v; }
 function money(n){return '$'+Math.round(n).toLocaleString();}
@@ -235,6 +279,23 @@ function storeKey(name){ // 主表店別正規化（可能是「中和店」「�
 
 function loadData(){
   if(API_URL.indexOf('__')===0){ showErr('尚未設定 API 網址（API_URL）'); return; }
+  // 品項明細（失敗不擋主資料）
+  fetch(API_URL+'?key='+encodeURIComponent(API_KEY)+'&action=items')
+    .then(function(r){return r.json();})
+    .then(function(j){
+      if(j.error||!j.rows) return;
+      var H={}; j.headers.forEach(function(h,i){H[String(h).trim()]=i;});
+      j.rows.forEach(function(row){
+        var d=String(row[H['日期']]).slice(0,10);
+        var s=storeKey(row[H['店別']]);
+        if(!d||!s) return;
+        var k=d+'|'+s;
+        if(!ITEMS[k]) ITEMS[k]=[];
+        ITEMS[k].push({t:row[H['類型']],n:String(row[H['品項']]),q:num(row[H['數量']]),a:num(row[H['金額']])});
+      });
+      refresh();
+    })
+    .catch(function(){});
   fetch(API_URL+'?key='+encodeURIComponent(API_KEY))
     .then(function(r){return r.json();})
     .then(function(j){
@@ -301,6 +362,32 @@ function prevDate(d){var t=new Date(d+'T00:00:00');t.setDate(t.getDate()-1);
   return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');}
 function monthDates(ym){ return ALL_DATES.filter(function(d){return d.slice(0,7)===ym;}); }
 
+// ===== 品項排行 =====
+function itemAgg(days,ss,type){
+  var m={};
+  days.forEach(function(d){ss.forEach(function(s){
+    (ITEMS[d+'|'+s]||[]).forEach(function(it){
+      if(it.t!==type) return;
+      if(!m[it.n]) m[it.n]={n:it.n,q:0,a:0};
+      m[it.n].q+=it.q; m[it.n].a+=it.a;
+    });
+  });});
+  return Object.values(m).sort(function(a,b){return b.q-a.q;});
+}
+function renderRankList(id,list,isSoup,showAmt){
+  var el=document.getElementById(id);
+  if(!list.length){ el.innerHTML='<div class="rank-empty">這期間沒有品項資料</div>'; return; }
+  var top=list.slice(0,10);
+  var mx=Math.max.apply(null,top.map(function(x){return x.q;}).concat([1]));
+  var tot=list.reduce(function(a,b){return a+b.q;},0)||1;
+  el.innerHTML=top.map(function(x,i){
+    var cls=i===0?' r1':(i===1?' r2':(i===2?' r3':''));
+    var tail=isSoup?('<span class="amt">'+(x.q/tot*100).toFixed(0)+'%</span>')
+      :(showAmt&&x.a?('<span class="amt">'+money(x.a)+'</span>'):'<span class="amt"></span>');
+    return '<div class="rrow'+cls+(isSoup?' soup':'')+'" title="'+x.n.replace(/"/g,'&quot;')+'"><span class="no">'+(i+1)+'</span><span class="nm">'+x.n+'</span><span class="bar"><i style="width:'+(x.q/mx*100)+'%"></i></span><span class="ct">'+x.q.toLocaleString()+' 份</span>'+tail+'</div>';
+  }).join('');
+}
+
 // ================= 畫面 =================
 function setDelta(id,cur,prev,ok){
   var el=document.getElementById(id);
@@ -347,6 +434,10 @@ function renderDay(){
   var sb=document.getElementById('storeBlocks');
   sb.innerHTML=html;
   sb.style.gridTemplateColumns='repeat('+Math.min(ss.length,3)+',1fr)';
+  document.getElementById('hotSub').textContent=d;
+  document.getElementById('soupSub').textContent=d;
+  renderRankList('hotList',itemAgg([d],ss,hotType),false,hotType!=='肉品');
+  renderRankList('soupList',itemAgg([d],ss,'湯頭'),true,false);
 }
 
 function renderMonth(){
@@ -367,6 +458,8 @@ function renderMonth(){
   rows.forEach(function(r){t+='<tr><td><span class="sd" style="background:'+SCOLOR[r[0]]+'"></span>初殿'+r[0]+'</td><td>'+money(r[1])+'</td><td>'+r[2].toLocaleString()+'</td><td>'+(r[3]?money(r[3]):'–')+'</td><td class="gp">'+money(r[4])+'</td></tr>';});
   t+='<tr class="sum"><td>合計</td><td>'+money(rows.reduce(function(a,b){return a+b[1];},0))+'</td><td>'+rows.reduce(function(a,b){return a+b[2];},0).toLocaleString()+'</td><td>–</td><td class="gp">'+money(rows.reduce(function(a,b){return a+b[4];},0))+'</td></tr></tbody>';
   document.getElementById('mTable').innerHTML=t;
+  renderRankList('mHotList',itemAgg(days,ss,hotType),false,hotType!=='肉品');
+  renderRankList('mSoupList',itemAgg(days,ss,'湯頭'),true,false);
 }
 
 function drawTrend(days,series){
@@ -415,7 +508,15 @@ document.querySelectorAll('#viewSeg button').forEach(function(b){
 document.getElementById('datePick').onchange=refresh;
 document.getElementById('monthPick').onchange=refresh;
 document.getElementById('storePick').onchange=refresh;
-function refresh(){ view==='day'?renderDay():renderMonth(); }
+document.querySelectorAll('.tchip').forEach(function(b){
+  b.onclick=function(ev){
+    ev.stopPropagation();
+    hotType=b.dataset.t;
+    document.querySelectorAll('.tchip').forEach(function(x){x.classList.toggle('on',x.dataset.t===hotType);});
+    refresh();
+  };
+});
+function refresh(){ if(!ALL_DATES.length) return; view==='day'?renderDay():renderMonth(); }
 loadData();
 </script>
 </body>
