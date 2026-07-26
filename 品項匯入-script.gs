@@ -95,10 +95,13 @@ function parseItems_(ss) {
   return Object.keys(agg).map(function (k) { return [agg[k].t, agg[k].n, agg[k].q, agg[k].a]; });
 }
 
+function itemDateStr_(v) {
+  return (v instanceof Date) ? Utilities.formatDate(v, TZ, 'yyyy-MM-dd') : String(v);
+}
 function itemReplaceRows_(tab, dateStr, store, rows) {
   var vals = tab.getDataRange().getValues();
   for (var i = vals.length - 1; i >= 1; i--) {
-    if (String(vals[i][0]) === dateStr && String(vals[i][1]) === store) tab.deleteRow(i + 1);
+    if (itemDateStr_(vals[i][0]) === dateStr && String(vals[i][1]) === store) tab.deleteRow(i + 1);
   }
   if (rows && rows.length) {
     var data = rows.map(function (r) { return [dateStr, store, r[0], r[1], r[2], r[3]]; });
