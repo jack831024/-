@@ -2,7 +2,7 @@
  * ReportAPI.gs - Eats365 report JSON API for eats365-report.html
  * 放在 Line Bot GAS 專案，獨立 Web App 部署（LINE webhook 部署不受影響）。
  * 目前部署：ReportAPI v2 items（版本 41）
- *   exec: https://script.google.com/macros/s/AKfycbzdSb6_OcTCNqi6_SS955vPsK8Y2LHgoAKPEwN7lijOHPBh1rbJ8Th0S7jP5o9I1BxQRg/exec
+ *   exec: https://script.google.com/macros/s/AKfycbydQADODDjFm44XuBOo-bkMTKGolqlqofDQWCb72sK_lWkrtumqSq6Ke_KxADTWHcrW2w/exec
  * GET 參數: key=cd-report-2026
  *   （無 action）      -> Eats365_主表 全部列
  *   action=items       -> Eats365_品項 全部列
