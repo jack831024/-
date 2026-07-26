@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>營運日報／月報（試作版）</title>
+<title>營運日報／月報</title>
 <script>
 // 直連保護：全域密碼 或 三家店店長密碼 皆可
 (function(){
@@ -37,27 +37,24 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
 }
 .wrap{max-width:1020px;margin:0 auto}
 
-/* ── 頁首 ── */
 .topbar{display:flex;align-items:center;gap:14px;margin-bottom:1.4rem;flex-wrap:wrap}
 .back{border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 15px;font-size:13px;cursor:pointer;color:var(--ink-2);font-family:inherit;transition:.15s;box-shadow:0 1px 2px rgba(15,23,42,.05)}
 .back:hover{border-color:#cbd5e1;transform:translateY(-1px)}
 .title-ico{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#4f46e5,#818cf8);display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 10px 24px -8px rgba(79,70,229,.5)}
 .title-tx h1{font-size:21px;font-weight:900;letter-spacing:-.02em}
 .title-tx p{font-size:12px;color:var(--ink-3);margin-top:1px}
-.badge-demo{margin-left:auto;background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;font-size:11px;font-weight:800;border-radius:999px;padding:6px 14px;letter-spacing:1.5px;box-shadow:0 4px 12px -4px rgba(217,119,6,.3)}
+.badge-live{margin-left:auto;background:linear-gradient(135deg,#d1fae5,#a7f3d0);color:#065f46;font-size:11px;font-weight:800;border-radius:999px;padding:6px 14px;letter-spacing:1.5px;box-shadow:0 4px 12px -4px rgba(5,150,105,.3);display:flex;align-items:center;gap:6px}
+.badge-live .ld{width:7px;height:7px;border-radius:50%;background:#059669;animation:pulse 2s infinite}
+@keyframes pulse{50%{opacity:.35}}
 
-/* ── 控制列 ── */
 .controls{display:flex;gap:10px;margin-bottom:1.4rem;flex-wrap:wrap;align-items:center}
 .seg{display:flex;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:14px;padding:4px;gap:2px;box-shadow:0 1px 3px rgba(15,23,42,.05)}
 .seg button{border:0;background:none;padding:8px 22px;font-size:13.5px;cursor:pointer;font-family:inherit;color:var(--ink-2);border-radius:10px;font-weight:500;transition:.18s}
 .seg button.on{background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;font-weight:700;box-shadow:0 6px 14px -6px rgba(79,70,229,.55)}
 select,input[type=date]{border:1px solid var(--line);border-radius:14px;padding:10px 14px;font-size:13.5px;font-family:inherit;background:rgba(255,255,255,.9);color:var(--ink);box-shadow:0 1px 3px rgba(15,23,42,.05);outline:none}
 select:focus,input[type=date]:focus{border-color:#a5b4fc}
-.src-note{margin-left:auto;font-size:11.5px;color:var(--ink-3);display:flex;align-items:center;gap:6px}
-.src-note .dot{width:7px;height:7px;border-radius:50%;background:#f59e0b;animation:pulse 2s infinite}
-@keyframes pulse{50%{opacity:.4}}
+.src-note{margin-left:auto;font-size:11.5px;color:var(--ink-3)}
 
-/* ── KPI ── */
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:1.4rem}
 .kpi{background:var(--card);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.9);border-radius:20px;padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
 .kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--kc,linear-gradient(90deg,#4f46e5,#818cf8))}
@@ -71,7 +68,6 @@ select:focus,input[type=date]:focus{border-color:#a5b4fc}
 .delta.dn{background:#fee2e2;color:#b91c1c}
 .kpi .s{font-size:11px;color:var(--ink-3)}
 
-/* ── 面板 ── */
 .panel{background:var(--card);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.9);border-radius:22px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:14px}
 .panel h2{font-size:14px;font-weight:800;padding:15px 18px;border-bottom:1px solid #eef2f7;display:flex;align-items:center;gap:9px}
 .panel h2 .ic{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;background:#eef2ff}
@@ -79,41 +75,28 @@ select:focus,input[type=date]:focus{border-color:#a5b4fc}
 .pad{padding:16px 18px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
 
-/* ── 店家卡片 ── */
 .stores{display:grid;grid-template-columns:repeat(3,1fr);gap:0;padding:6px}
-.scard{padding:16px;border-radius:18px;margin:6px;background:linear-gradient(180deg,#fff, #fafbfd);border:1px solid #eef2f7;transition:.2s;position:relative;overflow:hidden}
+.scard{padding:16px;border-radius:18px;margin:6px;background:linear-gradient(180deg,#fff,#fafbfd);border:1px solid #eef2f7;transition:.2s;position:relative;overflow:hidden}
 .scard:hover{transform:translateY(-2px);box-shadow:0 16px 32px -16px rgba(15,23,42,.18)}
 .scard::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:var(--sc)}
 .scard .sname{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14.5px;margin-bottom:10px}
 .scard .sname .sdot{width:10px;height:10px;border-radius:50%;background:var(--sc)}
 .scard .srev{font-size:24px;font-weight:900;letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin-bottom:8px}
+.scard.miss{opacity:.6}
+.scard .missmsg{font-size:13px;color:var(--ink-3);padding:20px 0;text-align:center}
 .chiprow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 .mchip{font-size:11px;font-weight:700;border-radius:999px;padding:4px 10px;background:#f1f5f9;color:var(--ink-2);font-variant-numeric:tabular-nums}
 .mchip.gp{background:#d1fae5;color:#047857}
 .pbar{display:flex;height:12px;border-radius:999px;overflow:hidden;background:#eef2f7;margin-bottom:10px}
-.pbar span{transition:width .4s}
 .legend{display:grid;grid-template-columns:1fr;gap:5px;font-size:11.8px;color:var(--ink-2)}
 .legend .li{display:flex;align-items:center;gap:7px}
 .legend .sw{width:9px;height:9px;border-radius:3px;flex:none}
 .legend .ln{flex:1}
 .legend b{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink)}
 
-/* ── 排行 ── */
-.rank{padding:6px 0 10px}
-.rrow{display:flex;align-items:center;gap:11px;padding:8px 18px;font-size:13px;transition:background .15s}
-.rrow:hover{background:#f8fafc}
-.rrow .no{width:26px;height:26px;border-radius:9px;background:#f1f5f9;color:var(--ink-3);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
-.rrow.r1 .no{background:linear-gradient(135deg,#fbbf24,#d97706);color:#fff;box-shadow:0 4px 10px -3px rgba(217,119,6,.55)}
-.rrow.r2 .no{background:linear-gradient(135deg,#cbd5e1,#94a3b8);color:#fff}
-.rrow.r3 .no{background:linear-gradient(135deg,#fb923c,#c2410c);color:#fff}
-.rrow .nm{width:118px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
-.rrow .bar{flex:1;height:9px;border-radius:999px;background:#eef2f7;overflow:hidden}
-.rrow .bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#4f46e5,#818cf8)}
-.rrow.soup .bar i{background:linear-gradient(90deg,#ea580c,#fb923c)}
-.rrow .ct{width:58px;text-align:right;font-variant-numeric:tabular-nums;font-weight:800;font-size:12.5px}
-.rrow .amt{width:70px;text-align:right;font-variant-numeric:tabular-nums;font-size:11.5px;color:var(--ink-3)}
+.soon{padding:26px 18px;text-align:center;color:var(--ink-3);font-size:12.5px;line-height:1.9}
+.soon .big{font-size:26px}
 
-/* ── 月報表格 ── */
 table.mt{width:100%;border-collapse:collapse;font-size:13.5px}
 table.mt th{text-align:right;font-size:11px;color:var(--ink-3);font-weight:700;letter-spacing:1px;padding:10px 16px;border-bottom:1px solid var(--line)}
 table.mt th:first-child,table.mt td:first-child{text-align:left}
@@ -124,6 +107,11 @@ table.mt .sd{display:inline-block;width:9px;height:9px;border-radius:50%;margin-
 table.mt tr.sum td{font-weight:900;border-top:2px solid var(--line);background:#fafbfd}
 .gp{color:var(--good);font-weight:800}
 
+#loading{position:fixed;inset:0;background:rgba(248,250,252,.85);backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:50;font-size:14px;color:var(--ink-2)}
+#loading .spin{width:38px;height:38px;border-radius:50%;border:4px solid #e0e7ff;border-top-color:#4f46e5;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#loaderr{display:none;max-width:520px;text-align:center;line-height:1.8;font-size:13px;color:var(--bad)}
+
 .footer{text-align:center;font-size:11px;color:var(--ink-3);letter-spacing:1px;margin-top:1.4rem}
 @media(max-width:820px){
   body{padding:1rem}
@@ -131,21 +119,20 @@ table.mt tr.sum td{font-weight:900;border-top:2px solid var(--line);background:#
   .grid2{grid-template-columns:1fr}
   .stores{grid-template-columns:1fr}
   .src-note{display:none}
-  .rrow .nm{width:96px}
-  .rrow .amt{display:none}
 }
 </style>
 </head>
 <body>
+<div id="loading"><div class="spin"></div><div id="loadmsg">讀取 Eats365 資料中…</div><div id="loaderr"></div></div>
 <div class="wrap">
   <div class="topbar">
-    <button class="back" onclick="history.back()">←</button>
-    <div class="title-ico">📊</div>
+    <button class="back" onclick="location.href='home.html'">←</button>
+    <div class="title-ico">📈</div>
     <div class="title-tx">
       <h1>營運日報／月報</h1>
       <p>Eats365 自動匯入 · 三店營運總覽</p>
     </div>
-    <span class="badge-demo">試作版 · 範例資料</span>
+    <span class="badge-live"><span class="ld"></span>LIVE</span>
   </div>
 
   <div class="controls">
@@ -153,18 +140,15 @@ table.mt tr.sum td{font-weight:900;border-top:2px solid var(--line);background:#
       <button class="on" data-v="day">日報</button>
       <button data-v="month">月報</button>
     </div>
-    <input type="date" id="datePick" value="2026-07-25">
-    <select id="monthPick" style="display:none">
-      <option value="2026-07" selected>2026 年 7 月</option>
-      <option value="2026-06">2026 年 6 月</option>
-    </select>
+    <input type="date" id="datePick">
+    <select id="monthPick" style="display:none"></select>
     <select id="storePick">
       <option value="all" selected>三店合計</option>
       <option value="中和">初殿中和</option>
       <option value="永春">初殿永春</option>
       <option value="新莊">初殿新莊</option>
     </select>
-    <span class="src-note"><span class="dot"></span>試作版為模擬數據 · 正式版即時讀 Eats365_主表</span>
+    <span class="src-note" id="updNote">資料來源：每日小結 · Eats365_主表</span>
   </div>
 
   <div class="kpis">
@@ -197,12 +181,12 @@ table.mt tr.sum td{font-weight:900;border-top:2px solid var(--line);background:#
     </div>
     <div class="grid2">
       <div class="panel">
-        <h2><span class="ic" style="background:#fff7ed">🔥</span>熱門品項 TOP 10 <span class="sub" id="hotSub">–</span></h2>
-        <div class="rank" id="hotList"></div>
+        <h2><span class="ic" style="background:#fff7ed">🔥</span>熱門品項</h2>
+        <div class="soon"><div class="big">🚧</div>品項明細匯入尚未啟用<br>啟用後（Eats365_品項 分頁）此區自動顯示每日熱門品項排行</div>
       </div>
       <div class="panel">
-        <h2><span class="ic" style="background:#fff7ed">🍲</span>湯頭排行 <span class="sub" id="soupSub">–</span></h2>
-        <div class="rank" id="soupList"></div>
+        <h2><span class="ic" style="background:#fff7ed">🍲</span>湯頭排行</h2>
+        <div class="soon"><div class="big">🚧</div>品項明細匯入尚未啟用<br>啟用後此區自動顯示湯頭銷售排行</div>
       </div>
     </div>
   </div>
@@ -216,171 +200,179 @@ table.mt tr.sum td{font-weight:900;border-top:2px solid var(--line);background:#
       <h2><span class="ic">🏪</span>各店月累計</h2>
       <table class="mt" id="mTable"></table>
     </div>
-    <div class="grid2">
-      <div class="panel">
-        <h2><span class="ic" style="background:#fff7ed">🔥</span>本月熱門品項 TOP 10</h2>
-        <div class="rank" id="mHotList"></div>
-      </div>
-      <div class="panel">
-        <h2><span class="ic" style="background:#fff7ed">🍲</span>本月湯頭排行</h2>
-        <div class="rank" id="mSoupList"></div>
-      </div>
-    </div>
   </div>
 
-  <p class="footer">試作版 · 範例資料僅供版面確認 · © 2026 INTERNAL SYSTEM</p>
+  <p class="footer">資料來源：Eats365 日報自動匯入（每日小結 · Eats365_主表）· © 2026 INTERNAL SYSTEM</p>
 </div>
 
 <script>
-// ============ 模擬資料（正式版改讀 Eats365_主表 / Eats365_品項）============
+// ================= 資料層：GAS Web App API =================
+var API_URL = 'https://script.google.com/macros/s/AKfycbycSiNBdCIDW0CtbmrZgyLOLRXuNeMCshHrUBOtuchOQcVId5yVxJLK63SC9GcAOtkFbg/exec';
+var API_KEY = 'cd-report-2026';
 var STORES=['中和','永春','新莊'];
 var SCOLOR={'中和':'#3b82f6','永春':'#10b981','新莊':'#8b5cf6'};
-var CATS=[['雙人超值','--c1'],['雙人豪華','--c2'],['三人超值','--c3'],['三人豪華','--c4'],['個人','--c5'],['平日','--c6']];
-var ITEMS=[
- ['平日套餐(小豬)',299,14,1],['平日套餐(大豬)',328,10,1],['平日套餐(小牛)',299,9,1],['平日套餐(大牛)',328,7,1],
- ['超值雙人套餐',899,9,0],['豪華雙人套餐',1099,4,0],['個人鍋(梅花)',399,6,0],['個人鍋(牛培)',399,5,0],
- ['個人鍋(澳和)',499,3,0],['個人鍋(松阪)',449,3,0],['超值三人套餐',1349,2,0],['豪華三人套餐',1649,2,0],
- ['個人鍋(板腱)',449,2,0],['個人鍋(海鮮船)',449,2,0],['奢華雙人套餐',1499,1,0],['個人鍋(A5)',799,1,0]
+// 6 類：[顯示名, 單數欄, 金額欄, CSS色]
+var CATS=[
+  ['雙人超值','雙人超值單','雙人超值金額','--c1'],
+  ['雙人豪華','雙人豪華單','雙人豪華金額','--c2'],
+  ['三人超值','三人超值單','三人超值金額','--c3'],
+  ['三人豪華','三人豪華單','三人豪華金額','--c4'],
+  ['個人','個人單','個人金額','--c5'],
+  ['平日','平日單','平日金額','--c6']
 ];
-var SOUPS=[['經典昆布',10],['麻辣鍋',7],['番茄鍋',5],['牛奶鍋',4],['南瓜鍋',3]];
-function rnd(seed){var x=Math.sin(seed*9301+49297)*233280;return x-Math.floor(x);}
-function isWknd(d){var w=new Date(d).getDay();return w===0||w===6;}
-var DATA={};
-function genDay(dateStr,si){
-  var seed=Date.parse(dateStr)/864e5+si*97;
-  var wknd=isWknd(dateStr);
-  var base=[42000,44000,50000][si];
-  var rev=Math.round(base*(wknd?2.1:1)*(0.85+rnd(seed)*0.35));
-  var guests=Math.round(rev/(520+rnd(seed+1)*80));
-  var gpr=0.63+rnd(seed+2)*0.06;
-  var catAmt=[0.22,0.11,0.04,0.07,0.12,0.44]; if(wknd) catAmt=[0.33,0.17,0.07,0.11,0.15,0.17];
-  var setRev=Math.round(rev*0.9);
-  var cats=CATS.map(function(c,i){
-    var amt=Math.round(setRev*catAmt[i]*(0.8+rnd(seed+3+i)*0.4));
-    var per=[899,1099,1349,1649,430,310][i];
-    return {n:c[0],cv:c[1],amt:amt,cnt:Math.max(0,Math.round(amt/per))};
-  });
-  var items=ITEMS.map(function(it,i){
-    var w=it[2]*(it[3]&&wknd?0.15:1)*(!it[3]&&wknd?1.9:1);
-    var cnt=Math.round(w*[0.9,1.0,1.15][si]*(0.6+rnd(seed+10+i)*0.9));
-    return {n:it[0],cnt:cnt,amt:cnt*it[1]};
-  }).filter(function(x){return x.cnt>0;});
-  var soups=SOUPS.map(function(s,i){
-    return {n:s[0],cnt:Math.round(guests*s[1]/29*(0.75+rnd(seed+30+i)*0.5))};
-  });
-  return {rev:rev,guests:guests,gp:Math.round(setRev*gpr),gpr:gpr,setRev:setRev,cats:cats,items:items,soups:soups};
-}
-function getDay(dateStr,store){
-  var key=dateStr+store;
-  if(!DATA[key]) DATA[key]=genDay(dateStr,STORES.indexOf(store));
-  return DATA[key];
-}
-function monthDays(ym){
-  var out=[],last=(ym==='2026-07')?25:30;
-  for(var d=1;d<=last;d++) out.push(ym+'-'+String(d).padStart(2,'0'));
-  return out;
-}
+var DATA={};       // 'YYYY-MM-DD|店' -> rec
+var ALL_DATES=[];  // 排序後的所有日期
+var view='day';
+
+function num(v){ v=parseFloat(String(v).replace(/[,%$]/g,'')); return isNaN(v)?0:v; }
 function money(n){return '$'+Math.round(n).toLocaleString();}
+function isWknd(d){var w=new Date(d+'T00:00:00').getDay();return w===0||w===6;}
+function storeKey(name){ // 主表店別正規化（可能是「中和店」「初殿中和」等寫法）
+  name=String(name);
+  for(var i=0;i<STORES.length;i++) if(name.indexOf(STORES[i])>-1) return STORES[i];
+  return null;
+}
+
+function loadData(){
+  if(API_URL.indexOf('__')===0){ showErr('尚未設定 API 網址（API_URL）'); return; }
+  fetch(API_URL+'?key='+encodeURIComponent(API_KEY))
+    .then(function(r){return r.json();})
+    .then(function(j){
+      if(j.error){ showErr('API 錯誤：'+j.error); return; }
+      var H={}; j.headers.forEach(function(h,i){H[String(h).trim()]=i;});
+      function col(row,name){ return H[name]==null?0:num(row[H[name]]); }
+      var dates={};
+      j.rows.forEach(function(row){
+        var d=String(row[H['日期']]).slice(0,10);
+        var s=storeKey(row[H['店別']]);
+        if(!d||!s) return;
+        var cats=CATS.map(function(c){
+          return {n:c[0],cv:c[3],cnt:col(row,c[1]),amt:col(row,c[2])};
+        });
+        var setRev=col(row,'個人金額')+col(row,'平日金額')+col(row,'雙人金額')+col(row,'三人金額');
+        DATA[d+'|'+s]={
+          rev:col(row,'總銷售額'),
+          guests:col(row,'真實來客數'),
+          gp:col(row,'套餐毛利'),
+          setRev:setRev,
+          cats:cats
+        };
+        dates[d]=1;
+      });
+      ALL_DATES=Object.keys(dates).sort();
+      if(!ALL_DATES.length){ showErr('主表目前沒有資料'); return; }
+      initControls(j.updated);
+      document.getElementById('loading').style.display='none';
+      refresh();
+    })
+    .catch(function(e){ showErr('連線失敗：'+e); });
+}
+function showErr(msg){
+  document.querySelector('#loading .spin').style.display='none';
+  document.getElementById('loadmsg').style.display='none';
+  var el=document.getElementById('loaderr');
+  el.style.display='block';
+  el.innerHTML='⚠️ '+msg+'<br><button class="back" style="margin-top:12px" onclick="location.reload()">重試</button>';
+}
+function initControls(updated){
+  var last=ALL_DATES[ALL_DATES.length-1];
+  var dp=document.getElementById('datePick');
+  dp.value=last; dp.min=ALL_DATES[0]; dp.max=last;
+  var months={};
+  ALL_DATES.forEach(function(d){months[d.slice(0,7)]=1;});
+  var mp=document.getElementById('monthPick');
+  mp.innerHTML=Object.keys(months).sort().reverse().map(function(m){
+    return '<option value="'+m+'">'+m.slice(0,4)+' 年 '+parseInt(m.slice(5),10)+' 月</option>';
+  }).join('');
+  if(updated) document.getElementById('updNote').textContent='資料更新：'+String(updated).slice(0,16).replace('T',' ');
+}
+
+function getRec(d,s){ return DATA[d+'|'+s]||null; }
+function selStores(){var s=document.getElementById('storePick').value;return s==='all'?STORES:[s];}
 function sumOf(days,ss){
-  var o={rev:0,g:0,gp:0,sr:0};
-  days.forEach(function(d){ss.forEach(function(s){var x=getDay(d,s);o.rev+=x.rev;o.g+=x.guests;o.gp+=x.gp;o.sr+=x.setRev;});});
+  var o={rev:0,g:0,gp:0,sr:0,n:0};
+  days.forEach(function(d){ss.forEach(function(s){
+    var x=getRec(d,s); if(!x)return;
+    o.rev+=x.rev;o.g+=x.guests;o.gp+=x.gp;o.sr+=x.setRev;o.n++;
+  });});
   return o;
 }
-function prevDate(d){var t=new Date(d);t.setDate(t.getDate()-1);return t.toISOString().slice(0,10);}
+function prevDate(d){var t=new Date(d+'T00:00:00');t.setDate(t.getDate()-1);
+  return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');}
+function monthDates(ym){ return ALL_DATES.filter(function(d){return d.slice(0,7)===ym;}); }
 
-// ============ 畫面 ============
-var view='day';
-function selStores(){var s=document.getElementById('storePick').value;return s==='all'?STORES:[s];}
-function setDelta(id,cur,prev){
+// ================= 畫面 =================
+function setDelta(id,cur,prev,ok){
   var el=document.getElementById(id);
-  if(!prev){el.style.display='none';return;}
+  if(!ok||!prev){el.style.display='none';return;}
   var pct=(cur-prev)/prev*100;
   el.style.display='';
   el.className='delta '+(pct>=0?'up':'dn');
   el.textContent=(pct>=0?'▲':'▼')+' '+Math.abs(pct).toFixed(1)+'%';
 }
 function setKpis(cur,prev,sub,gps){
+  var ok=prev&&prev.n>0;
   document.getElementById('kRev').textContent=money(cur.rev);
   document.getElementById('kRevS').textContent=sub;
   document.getElementById('kGuest').textContent=cur.g.toLocaleString();
-  document.getElementById('kAvg').textContent=money(cur.rev/Math.max(cur.g,1));
+  document.getElementById('kAvg').textContent=cur.g?money(cur.rev/cur.g):'–';
   document.getElementById('kGP').textContent=money(cur.gp);
   document.getElementById('kGPS').textContent=gps;
-  setDelta('dRev',cur.rev,prev&&prev.rev);
-  setDelta('dGuest',cur.g,prev&&prev.g);
-  setDelta('dAvg',cur.rev/Math.max(cur.g,1),prev&&prev.rev/Math.max(prev.g,1));
-  setDelta('dGP',cur.gp,prev&&prev.gp);
+  setDelta('dRev',cur.rev,ok?prev.rev:0,ok);
+  setDelta('dGuest',cur.g,ok?prev.g:0,ok);
+  setDelta('dAvg',cur.g?cur.rev/cur.g:0,(ok&&prev.g)?prev.rev/prev.g:0,ok);
+  setDelta('dGP',cur.gp,ok?prev.gp:0,ok);
 }
 
 function renderDay(){
   var d=document.getElementById('datePick').value, ss=selStores();
   var cur=sumOf([d],ss), prev=sumOf([prevDate(d)],ss);
-  var w=['日','一','二','三','四','五','六'][new Date(d).getDay()];
-  setKpis(cur,prev,d+'（'+w+'）· 較前一日','毛利率 '+(cur.gp/Math.max(cur.sr,1)*100).toFixed(1)+'%');
+  var w=['日','一','二','三','四','五','六'][new Date(d+'T00:00:00').getDay()];
+  setKpis(cur,prev,d+'（'+w+'）· 較前一日','毛利率 '+(cur.sr?(cur.gp/cur.sr*100).toFixed(1):'–')+'%（未扣人事/租金）');
   var html='';
   ss.forEach(function(s){
-    var x=getDay(d,s), tot=x.cats.reduce(function(a,b){return a+b.amt;},0)||1;
+    var x=getRec(d,s);
+    if(!x){
+      html+='<div class="scard miss" style="--sc:'+SCOLOR[s]+'"><div class="sname"><span class="sdot"></span>初殿'+s+'</div><div class="missmsg">📭 這天沒有 Eats365 報表資料</div></div>';
+      return;
+    }
+    var tot=x.cats.reduce(function(a,b){return a+b.amt;},0)||1;
     html+='<div class="scard" style="--sc:'+SCOLOR[s]+'">'
       +'<div class="sname"><span class="sdot"></span>初殿'+s+'</div>'
       +'<div class="srev">'+money(x.rev)+'</div>'
-      +'<div class="chiprow"><span class="mchip">👥 '+x.guests+' 人</span><span class="mchip">客單 '+money(x.rev/x.guests)+'</span><span class="mchip gp">毛利 '+money(x.gp)+' · '+(x.gp/x.setRev*100).toFixed(1)+'%</span></div>'
+      +'<div class="chiprow"><span class="mchip">👥 '+x.guests+' 人</span><span class="mchip">客單 '+(x.guests?money(x.rev/x.guests):'–')+'</span><span class="mchip gp">毛利 '+money(x.gp)+(x.setRev?' · '+(x.gp/x.setRev*100).toFixed(1)+'%':'')+'</span></div>'
       +'<div class="pbar">'+x.cats.map(function(c){return '<span style="width:'+(c.amt/tot*100)+'%;background:var('+c.cv+')"></span>';}).join('')+'</div>'
       +'<div class="legend">'+x.cats.map(function(c){return '<span class="li"><span class="sw" style="background:var('+c.cv+')"></span><span class="ln">'+c.n+'</span><b>'+c.cnt+'套 · '+(c.amt/tot*100).toFixed(0)+'% · '+money(c.amt)+'</b></span>';}).join('')+'</div></div>';
   });
-  document.getElementById('storeBlocks').innerHTML=html;
-  document.getElementById('storeBlocks').style.gridTemplateColumns='repeat('+Math.min(ss.length,3)+',1fr)';
-  renderRank('hotList',aggItems(ss,[d]),false);
-  renderRank('soupList',aggSoups(ss,[d]),true);
-  document.getElementById('hotSub').textContent=d;
-  document.getElementById('soupSub').textContent=d;
+  var sb=document.getElementById('storeBlocks');
+  sb.innerHTML=html;
+  sb.style.gridTemplateColumns='repeat('+Math.min(ss.length,3)+',1fr)';
 }
 
 function renderMonth(){
-  var ym=document.getElementById('monthPick').value, ss=selStores(), days=monthDays(ym);
+  var ym=document.getElementById('monthPick').value, ss=selStores(), days=monthDates(ym);
   var cur=sumOf(days,ss);
-  var pm=(ym==='2026-07')?'2026-06':null;
-  var prev=pm?sumOf(monthDays(pm).slice(0,days.length),ss):null;
-  setKpis(cur,prev,ym+' 累計 '+days.length+' 天 · 較上月同期','毛利率 '+(cur.gp/Math.max(cur.sr,1)*100).toFixed(1)+'%');
-  var series=days.map(function(d){var t=0;ss.forEach(function(s){t+=getDay(d,s).rev;});return t;});
+  var pm=new Date(ym+'-01T00:00:00'); pm.setMonth(pm.getMonth()-1);
+  var pmStr=pm.getFullYear()+'-'+String(pm.getMonth()+1).padStart(2,'0');
+  var prev=sumOf(monthDates(pmStr).slice(0,days.length),ss);
+  setKpis(cur,prev,ym+' 累計 '+days.length+' 天 · 較上月同期','毛利率 '+(cur.sr?(cur.gp/cur.sr*100).toFixed(1):'–')+'%（未扣人事/租金）');
+  var series=days.map(function(d){var t=0;ss.forEach(function(s){var x=getRec(d,s);if(x)t+=x.rev;});return t;});
   drawTrend(days,series);
   var rows=STORES.map(function(s){
     var r=0,gg=0,gpp=0;
-    days.forEach(function(d){var x=getDay(d,s);r+=x.rev;gg+=x.guests;gpp+=x.gp;});
-    return [s,r,gg,r/gg,gpp];
+    days.forEach(function(d){var x=getRec(d,s);if(!x)return;r+=x.rev;gg+=x.guests;gpp+=x.gp;});
+    return [s,r,gg,gg?r/gg:0,gpp];
   });
   var t='<thead><tr><th>店別</th><th>營業額</th><th>來客</th><th>客單</th><th>套餐毛利</th></tr></thead><tbody>';
-  rows.forEach(function(r){t+='<tr><td><span class="sd" style="background:'+SCOLOR[r[0]]+'"></span>初殿'+r[0]+'</td><td>'+money(r[1])+'</td><td>'+r[2].toLocaleString()+'</td><td>'+money(r[3])+'</td><td class="gp">'+money(r[4])+'</td></tr>';});
+  rows.forEach(function(r){t+='<tr><td><span class="sd" style="background:'+SCOLOR[r[0]]+'"></span>初殿'+r[0]+'</td><td>'+money(r[1])+'</td><td>'+r[2].toLocaleString()+'</td><td>'+(r[3]?money(r[3]):'–')+'</td><td class="gp">'+money(r[4])+'</td></tr>';});
   t+='<tr class="sum"><td>合計</td><td>'+money(rows.reduce(function(a,b){return a+b[1];},0))+'</td><td>'+rows.reduce(function(a,b){return a+b[2];},0).toLocaleString()+'</td><td>–</td><td class="gp">'+money(rows.reduce(function(a,b){return a+b[4];},0))+'</td></tr></tbody>';
   document.getElementById('mTable').innerHTML=t;
-  renderRank('mHotList',aggItems(ss,days),false);
-  renderRank('mSoupList',aggSoups(ss,days),true);
-}
-
-function aggItems(ss,days){
-  var m={};
-  days.forEach(function(d){ss.forEach(function(s){getDay(d,s).items.forEach(function(it){
-    if(!m[it.n])m[it.n]={n:it.n,cnt:0,amt:0}; m[it.n].cnt+=it.cnt; m[it.n].amt+=it.amt;});});});
-  return Object.values(m).sort(function(a,b){return b.cnt-a.cnt;}).slice(0,10);
-}
-function aggSoups(ss,days){
-  var m={};
-  days.forEach(function(d){ss.forEach(function(s){getDay(d,s).soups.forEach(function(it){
-    if(!m[it.n])m[it.n]={n:it.n,cnt:0}; m[it.n].cnt+=it.cnt;});});});
-  return Object.values(m).sort(function(a,b){return b.cnt-a.cnt;});
-}
-function renderRank(id,list,isSoup){
-  var mx=Math.max.apply(null,list.map(function(x){return x.cnt;}).concat([1]));
-  var tot=list.reduce(function(a,b){return a+b.cnt;},0)||1;
-  document.getElementById(id).innerHTML=list.map(function(x,i){
-    var cls=i===0?' r1':(i===1?' r2':(i===2?' r3':''));
-    var tail=isSoup?('<span class="amt">'+(x.cnt/tot*100).toFixed(0)+'%</span>'):('<span class="amt">'+money(x.amt)+'</span>');
-    return '<div class="rrow'+cls+(isSoup?' soup':'')+'"><span class="no">'+(i+1)+'</span><span class="nm">'+x.n+'</span><span class="bar"><i style="width:'+(x.cnt/mx*100)+'%"></i></span><span class="ct">'+x.cnt.toLocaleString()+' 份</span>'+tail+'</div>';
-  }).join('');
 }
 
 function drawTrend(days,series){
+  if(!days.length){document.getElementById('trend').innerHTML='<p style="text-align:center;color:#94a3b8;font-size:13px;padding:20px">本月尚無資料</p>';return;}
   var W=940,H=240,P=36,B=34;
-  var mx=Math.max.apply(null,series)*1.12;
+  var mx=Math.max.apply(null,series)*1.12||1;
   var mxi=series.indexOf(Math.max.apply(null,series));
   var bw=(W-P*2)/days.length;
   function X(i){return P+i*bw+bw/2;}
@@ -399,11 +391,12 @@ function drawTrend(days,series){
   svg+='<path d="'+area+'" fill="url(#ag)"/>';
   var pts=series.map(function(v,i){return X(i)+','+Y(v);}).join(' ');
   svg+='<polyline points="'+pts+'" fill="none" stroke="#4f46e5" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>';
+  var step=Math.max(1,Math.round(days.length/14));
   series.forEach(function(v,i){
     svg+='<circle cx="'+X(i)+'" cy="'+Y(v)+'" r="3.2" fill="#fff" stroke="#4f46e5" stroke-width="2"/>';
-    if(i%2===0) svg+='<text x="'+X(i)+'" y="'+(H-12)+'" font-size="10" fill="#94a3b8" text-anchor="middle">'+days[i].slice(8)+'</text>';
+    if(i%step===0) svg+='<text x="'+X(i)+'" y="'+(H-12)+'" font-size="10" fill="#94a3b8" text-anchor="middle">'+days[i].slice(8)+'</text>';
   });
-  svg+='<text x="'+X(mxi)+'" y="'+(Y(series[mxi])-12)+'" font-size="11" font-weight="800" fill="#d97706" text-anchor="middle">★ '+money(series[mxi])+'</text>';
+  if(mxi>-1) svg+='<text x="'+X(mxi)+'" y="'+(Y(series[mxi])-12)+'" font-size="11" font-weight="800" fill="#d97706" text-anchor="middle">★ '+money(series[mxi])+'</text>';
   svg+='</svg>';
   document.getElementById('trend').innerHTML=svg;
 }
@@ -423,7 +416,7 @@ document.getElementById('datePick').onchange=refresh;
 document.getElementById('monthPick').onchange=refresh;
 document.getElementById('storePick').onchange=refresh;
 function refresh(){ view==='day'?renderDay():renderMonth(); }
-refresh();
+loadData();
 </script>
 </body>
 </html>
