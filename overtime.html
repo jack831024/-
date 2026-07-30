@@ -260,6 +260,10 @@ table.results{width:100%;border-collapse:separate;border-spacing:0;font-size:12.
       <span class="uz-label">點此上傳或拖放打卡記錄 Excel / PDF</span>
       <div class="uz-hint">支援 .xlsx / .xls / .csv / .pdf。欄位需包含：姓名、日期、時間（或分四欄打卡時間）<br>PDF 僅支援含文字的檔案（掃描圖片型 PDF 需先 OCR）</div>
     </div>
+    <div class="toolbar" style="margin-top:10px">
+      <button class="btn btn-primary" id="btn-load-punches" onclick="loadPunchesFromCloud()">☁️ 載入打卡（免上傳）</button>
+      <span style="font-size:11.5px;color:var(--ink-3)">直接從打卡系統抓選定月份的打卡；不想用雲端也可照舊上傳檔案</span>
+    </div>
     <div id="file-info"></div>
     <span class="status-chip" id="parse-status"></span>
     <div id="pdf-debug" style="display:none;margin-top:10px">
@@ -435,6 +439,21 @@ var BUILTIN_OT_URLS = {
   'chudian-yongchun':   'https://script.google.com/macros/s/AKfycbyeBOooaxsKRzJMHKJ6Wg3sXXzuxTVrDRdHon2sNpZ2FhFLtSz0rNu0qSOcNVtyuDUQ/exec',
   'chudian-xinzhuang':  'https://script.google.com/macros/s/AKfycbzJHJtGRvctit_PJei1lZyodzb4tPsg5_cghxARcUvHwFmhKEbDPf8AE_mjYs_OtWlX/exec',
   'shicheng-zhongxiao': 'https://script.google.com/macros/s/AKfycbw9u5NK_GXlvI1R8tDdXI7lLKhnFjXsTEmC6QjmcC35lNZzxgp6Yk3wOdYdqsAOoYk/exec'
+};
+
+// ============================================
+// ⭐ 打卡系統（門市定位打卡）聯動設定
+// PUNCH_API_URL：打卡系統 Web App 的 /exec 網址（部署後填入）
+// PUNCH_API_KEY：需與 GAS 端 PUNCH_EXPORT_KEY 一致
+// PUNCH_STORE_MAP：本頁店代碼 → 打卡系統的店名（店家設定的 store_name）
+// ============================================
+var PUNCH_API_URL = 'https://script.google.com/macros/s/AKfycbzGcQLml4LSMtGpCk14P7QT6Hn2eA4Mz0s-REha5O9IBXoUvgoxQIqnANsFOso7XRy6/exec';
+var PUNCH_API_KEY = 'cd-ot-2026';
+var PUNCH_STORE_MAP = {
+  'chudian-zhonghe':    '中和店',
+  'chudian-yongchun':   '永春店',
+  'chudian-xinzhuang':  '新莊店',
+  'shicheng-zhongxiao': '十城滷肉飯'
 };
 
 // 每次載入若該店有內建網址，自動寫入 localStorage（讓新裝置即用）
@@ -891,6 +910,63 @@ function handleFile(ev){
   } else {
     parseExcelFile(f);
   }
+}
+
+// ============================================
+// ☁️ 直接從打卡系統載入打卡（免上傳檔案）
+//   資料整理成與檔案解析完全相同的 PUNCHES 結構，
+//   後續對應/分析流程一律共用，不分資料來源。
+// ============================================
+function loadPunchesFromCloud(){
+  if(!PUNCH_API_URL){
+    setStatus('parse-status','err','⚠️ 尚未設定打卡系統 API 網址（PUNCH_API_URL）');
+    return;
+  }
+  var storeName = PUNCH_STORE_MAP[STORE];
+  if(!storeName){
+    setStatus('parse-status','err','⚠️ 此門市尚未設定打卡系統對照：'+STORE);
+    return;
+  }
+  var m = Number(document.getElementById('month-picker').value);
+  if(!m){ setStatus('parse-status','err','請先選月份'); return; }
+
+  var btn = document.getElementById('btn-load-punches');
+  btn.disabled = true;
+  setStatus('parse-status','info','☁️ 從打卡系統載入 '+m+'月打卡中…');
+
+  var q = PUNCH_API_URL + (PUNCH_API_URL.indexOf('?')>=0?'&':'?')
+        + 'action=punches'
+        + '&store=' + encodeURIComponent(storeName)
+        + '&month=' + m
+        + '&key='   + encodeURIComponent(PUNCH_API_KEY)
+        + '&_ts='   + Date.now();
+
+  fetch(q, { method:'GET' })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(!data.ok) throw new Error(data.error || 'unknown');
+      if(!data.rows || !data.rows.length){
+        PUNCHES = null;
+        setStatus('parse-status','warn','⚠️ '+data.ym+' '+(data.store||'')+' 沒有打卡資料');
+      } else {
+        var people = {};
+        data.rows.forEach(function(r){ people[r.name] = 1; });
+        PUNCHES = {
+          rows: data.rows,
+          filename: '☁️ 打卡系統 '+data.ym+'（'+(data.source==='archive'?'封存':'即時')+'）',
+          cols: {}
+        };
+        setStatus('parse-status','ok','✅ 雲端載入成功：'+data.rows.length+' 筆（'+Object.keys(people).length+' 位員工）｜'+data.ym+(data.source==='archive'?'（封存檔）':'（本月即時）'));
+      }
+      renderFileInfo(PUNCHES ? { name: PUNCHES.filename } : null);
+      maybeEnableAnalyze();
+    })
+    .catch(function(err){
+      PUNCHES = null;
+      setStatus('parse-status','err','❌ 雲端載入失敗：'+err.message);
+      maybeEnableAnalyze();
+    })
+    .finally(function(){ btn.disabled = false; });
 }
 
 function parseExcelFile(f){
