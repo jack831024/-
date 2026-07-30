@@ -1078,7 +1078,7 @@ function parseAttendancePdfItems(pagesItems){
   }
 
   // 找員工表頭（用 Y±3pt 視窗聚合同列文字）
-  var reHeader = /工號[\s:：]*(\S+?)[\s:：]+姓名[\s:：]*(\S+?)[\s:：]+部門/;
+  var reHeader = /工號[\s:：]*(\S+?)[\s:：]+姓名[\s:：]*(.+?)[\s:：]+部門/;   // 2026-07-30: 姓名允許中間有空格（pdf.js 會把中文名拆成多段，如「林梓」+「彥」）
   var Y_TOLERANCE = 3;
   var empHeaders = [];
   var seenHeaderY = {};
@@ -1094,7 +1094,7 @@ function parseAttendancePdfItems(pagesItems){
     var mm2 = combined.match(reHeader);
     if(mm2){
       seenHeaderY[yKey] = true;
-      empHeaders.push({ y: ghItem.y, workerId: mm2[1], name: mm2[2] });
+      empHeaders.push({ y: ghItem.y, workerId: mm2[1], name: mm2[2].replace(/[\s:：]/g,'') });   // 2026-07-30: 清掉拆字產生的空格
     }
   });
 
