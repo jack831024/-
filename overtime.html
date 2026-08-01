@@ -578,10 +578,25 @@ var MAPPED_PUNCH_KEYS  = {};       // PT 篩選用：{ store: { normPunchKey: tr
 })();
 
 // 給班表姓名 → 對應到打卡 key（normalize 後）；找不到就用 normalize 結果
+// 2026-08-01: 打卡資料改走雲端後姓名是中文，與班表同名即可直接配對；
+//   舊的 NAME_MAP（中文→英文）只在「打卡資料裡真的找得到那個英文名」時才套用，
+//   否則會把正職硬指到不存在的英文名 → 對應失敗 → 被誤判成 PT。
+function punchNamesInData(){
+  if(!PUNCHES || !PUNCHES.rows) return [];
+  var seen = {}, out = [];
+  PUNCHES.rows.forEach(function(r){
+    var k = normalizeName(r.name);
+    if(k && !seen[k]){ seen[k] = 1; out.push(k); }
+  });
+  return out;
+}
 function resolvePunchKeyByName(schedName){
   var nz = normalizeName(schedName);
+  var names = punchNamesInData();
+  if(names.indexOf(nz) >= 0) return nz;              // 打卡有同名 → 直接用
   var m = NAME_MAP_NORMALIZED[STORE];
-  if(m && m[nz]) return m[nz];
+  if(m && m[nz] && names.indexOf(m[nz]) >= 0) return m[nz];   // 舊英文名對照，且打卡真的有
+  if(m && m[nz] && !names.length) return m[nz];      // 尚未載入打卡時維持舊行為
   return nz;
 }
 
@@ -1701,20 +1716,23 @@ function buildMatchTable(){
 
     // 預設配對打卡名
     var defaultPunch;
-    if(prev && prev.punch){
+    var nzSched = normalizeName(schedName);
+    var sameNameHit = punchNames.find(function(pn){ return normalizeName(pn) === nzSched; });
+    // 舊的存檔對應若指向「這份打卡裡根本沒有的名字」（例：雲端改中文名後仍存著英文名），
+    // 就不沿用，重新推導，否則正職會對應失敗被當成 PT
+    var prevValid = prev && prev.punch &&
+      punchNames.some(function(pn){ return normalizeName(pn) === normalizeName(prev.punch); });
+    if(prevValid){
       defaultPunch = prev.punch;
+    } else if(sameNameHit){
+      defaultPunch = sameNameHit;                     // 打卡有同名 → 優先直接配
     } else {
-      // 先用內建 NAME_MAP
-      var mapped = (NAME_MAP_NORMALIZED[STORE] || {})[normalizeName(schedName)];
+      var mapped = (NAME_MAP_NORMALIZED[STORE] || {})[nzSched];
       if(mapped){
-        // 在 punchNames 裡找到 normalize 後等於 mapped 的
         var hit = punchNames.find(function(pn){ return normalizeName(pn) === mapped; });
-        defaultPunch = hit || mapped;
+        defaultPunch = hit || '';                     // 對照表指到不存在的名字 → 留空，不硬指
       } else {
-        // normalize 後相同的就配
-        var nz = normalizeName(schedName);
-        var hit2 = punchNames.find(function(pn){ return normalizeName(pn) === nz; });
-        defaultPunch = hit2 || '';
+        defaultPunch = '';
       }
     }
     if(defaultPunch) usedPunches[normalizeName(defaultPunch)] = true;
