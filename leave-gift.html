@@ -236,7 +236,7 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
 
   <!-- 旅遊假 -->
   <div class="section travel" id="section-travel">
-    <h3><span class="icon">✈️</span>旅遊假<span class="pill travel">加班費系統「旅/旅遊/旅半」自動扣</span><span class="hint">3月中~9月底 平日休 · 半年=1 / 1年=2 / 2年=3 / 3年+=4</span></h3>
+    <h3><span class="icon">✈️</span>旅遊假<span class="pill travel">加班費系統「旅/旅遊/旅半」自動扣</span><span class="hint">每年 3/15 重新發放 · 3月中~9月底 平日休 · 半年=1 / 1年=2 / 2年=3 / 3年+=4</span></h3>
     <table class="grid">
       <thead>
         <tr><th style="width:100px">員工</th><th>到職日</th><th class="c-num">本年可用</th><th class="c-num">已使用</th><th class="c-num">剩餘</th></tr>
@@ -298,7 +298,7 @@ var EMP_DATA = {
     { id:'zh1', name:'李文少', hireDate:'2024-03-16', birthday:'03-12', initialAnnualAccrued:20, initialAnnualUsed:7,  initialTravelRemaining:0, initialGiftBalance:2834 },
     { id:'zh2', name:'施偉祥', hireDate:'2023-12-01', birthday:'08-09', initialAnnualAccrued:20, initialAnnualUsed:13, initialTravelRemaining:0, initialGiftBalance:869  },
     { id:'zh3', name:'劉濡瑜', hireDate:'2024-07-01', birthday:'11-08', initialAnnualAccrued:10, initialAnnualUsed:6,  initialTravelRemaining:0, initialTravelUsed:2, initialGiftBalance:768  },
-    { id:'zh4', name:'褚心榆', hireDate:'2025-08-01', birthday:'03-14', initialAnnualAccrued:3,  initialAnnualUsed:0,  initialTravelRemaining:0, initialTravelUsed:1, initialGiftBalance:407  },
+    { id:'zh4', name:'褚心榆', hireDate:'2025-08-01', birthday:'03-14', initialAnnualAccrued:3,  initialAnnualUsed:0,  initialTravelRemaining:0, initialTravelUsed:0, initialGiftBalance:407  },
     // PT（沒有特休/旅遊假；節慶 +1000 而非 +2000）
     { id:'zh_pt1', name:'潘立軒', pt:true, hireDate:'2023-07-01', birthday:'12-13', initialGiftBalance:3384 },
     { id:'zh_pt2', name:'江竑緯', pt:true, hireDate:'2025-08-01', birthday:'09-30', initialGiftBalance:0 },
@@ -583,12 +583,46 @@ function calcAnnual(emp){
     remaining: Math.max(0, accrued - used)
   };
 }
+// 旅遊假年度週期：每年 3/15 重新發放
+//   3/15 (含) 之後 → 該年度 3/15 為起點
+//   3/15 之前 → 前一年 3/15 為起點（雖然 10/1 之後其實已用不到，但保留延續性）
+function currentTravelCycleStart(today){
+  today = today || TODAY;
+  var y = today.getFullYear();
+  var mar15 = new Date(y, 2, 15);
+  if(today < mar15) mar15 = new Date(y - 1, 2, 15);
+  return mar15;
+}
+function fmtDateISO(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+// 依「某個時間點」計算旅遊假額度（用於年度重置）
+function travelEntitlementAt(hireDate, atDate){
+  if(!hireDate) return 0;
+  var hire = parseDate(hireDate);
+  var months = (atDate.getFullYear() - hire.getFullYear()) * 12 + (atDate.getMonth() - hire.getMonth());
+  if(atDate.getDate() < hire.getDate()) months--;
+  if(months < 6) return 0;
+  var y = months / 12;
+  if(y < 1) return 1;
+  if(y < 2) return 2;
+  if(y < 3) return 3;
+  return 4;
+}
+
 function calcTravel(emp){
-  var entitlement = travelEntitlement(emp.hireDate);
+  // 週期起點（今年或去年 3/15）
+  var cycleStart = currentTravelCycleStart();
+  var cycleStartStr = fmtDateISO(cycleStart);
+  // 額度依「週期起點時」的年資決定
+  var entitlement = travelEntitlementAt(emp.hireDate, cycleStart);
+  // OT 只算本週期內的（cycleStart 之後）
   var ot = getOvertimeDatesAfter(emp.name, 'travel');
-  var fromOT = ot.full.length + ot.half.length * 0.5;
+  var cycleFull = ot.full.filter(function(d){ return d >= cycleStartStr; });
+  var cycleHalf = ot.half.filter(function(d){ return d >= cycleStartStr; });
+  var fromOT = cycleFull.length + cycleHalf.length * 0.5;
   var manual = STATE.travelUsedManual[emp.id] || 0;
-  // 4 月前已用：優先用 initialTravelUsed 直接指定；沒設就從 initialTravelRemaining 反推
+  // 「4 月前已用」= 本週期內、OT 追蹤起點前的已用（由 initialTravelUsed 直接指定）
   var initialUsed = (emp.initialTravelUsed != null)
     ? emp.initialTravelUsed
     : Math.max(0, entitlement - (emp.initialTravelRemaining || 0));
@@ -598,8 +632,8 @@ function calcTravel(emp){
     used: used,
     initialUsed: initialUsed,
     fromOT: fromOT,
-    fromOTDates: ot.full,
-    fromOTHalfDates: ot.half,
+    fromOTDates: cycleFull,
+    fromOTHalfDates: cycleHalf,
     remaining: Math.max(0, entitlement - used)
   };
 }
