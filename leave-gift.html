@@ -297,8 +297,8 @@ var EMP_DATA = {
     // FT
     { id:'zh1', name:'李文少', hireDate:'2024-03-16', birthday:'03-12', initialAnnualAccrued:20, initialAnnualUsed:7,  initialTravelRemaining:0, initialGiftBalance:2834 },
     { id:'zh2', name:'施偉祥', hireDate:'2023-12-01', birthday:'08-09', initialAnnualAccrued:20, initialAnnualUsed:13, initialTravelRemaining:0, initialGiftBalance:869  },
-    { id:'zh3', name:'劉濡瑜', hireDate:'2024-07-01', birthday:'11-08', initialAnnualAccrued:10, initialAnnualUsed:6,  initialTravelRemaining:0, initialGiftBalance:768  },
-    { id:'zh4', name:'褚心榆', hireDate:'2025-08-01', birthday:'03-14', initialAnnualAccrued:3,  initialAnnualUsed:0,  initialTravelRemaining:1, initialGiftBalance:407  },
+    { id:'zh3', name:'劉濡瑜', hireDate:'2024-07-01', birthday:'11-08', initialAnnualAccrued:10, initialAnnualUsed:6,  initialTravelRemaining:0, initialTravelUsed:2, initialGiftBalance:768  },
+    { id:'zh4', name:'褚心榆', hireDate:'2025-08-01', birthday:'03-14', initialAnnualAccrued:3,  initialAnnualUsed:0,  initialTravelRemaining:0, initialTravelUsed:1, initialGiftBalance:407  },
     // PT（沒有特休/旅遊假；節慶 +1000 而非 +2000）
     { id:'zh_pt1', name:'潘立軒', pt:true, hireDate:'2023-07-01', birthday:'12-13', initialGiftBalance:3384 },
     { id:'zh_pt2', name:'江竑緯', pt:true, hireDate:'2025-08-01', birthday:'09-30', initialGiftBalance:0 },
@@ -585,19 +585,22 @@ function calcAnnual(emp){
 }
 function calcTravel(emp){
   var entitlement = travelEntitlement(emp.hireDate);
-  var initialRemaining = emp.initialTravelRemaining || 0;
   var ot = getOvertimeDatesAfter(emp.name, 'travel');
   var fromOT = ot.full.length + ot.half.length * 0.5;
   var manual = STATE.travelUsedManual[emp.id] || 0;
-  var initialUsed = Math.max(0, entitlement - initialRemaining);
+  // 4 月前已用：優先用 initialTravelUsed 直接指定；沒設就從 initialTravelRemaining 反推
+  var initialUsed = (emp.initialTravelUsed != null)
+    ? emp.initialTravelUsed
+    : Math.max(0, entitlement - (emp.initialTravelRemaining || 0));
   var used = initialUsed + fromOT + manual;
   return {
     entitlement: entitlement,
     used: used,
+    initialUsed: initialUsed,
     fromOT: fromOT,
     fromOTDates: ot.full,
     fromOTHalfDates: ot.half,
-    remaining: Math.max(0, initialRemaining - fromOT - manual)
+    remaining: Math.max(0, entitlement - used)
   };
 }
 function calcGiftBalance(emp){
@@ -770,7 +773,7 @@ function renderTravel(){
     var months = tenureMonths(e.hireDate);
     var cls = c.remaining === 0 ? 'bal-zero' : 'bal-pos';
     var note = months < 6 ? '<div class="tag-line">未滿半年</div>' : '';
-    var preUsed = Math.max(0, c.entitlement - (e.initialTravelRemaining || 0));
+    var preUsed = c.initialUsed || 0;
     var preLine = preUsed > 0 ? '<div class="tag-line">'+EFFECTIVE_LABEL+' 以前已使用 '+fmtDays(preUsed)+' 天</div>' : '';
     var fullChips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini travel">'+fmtMD(d)+'</span>'; });
     var halfChips = c.fromOTHalfDates.map(function(d){ return '<span class="date-chip-mini travel" title="旅半 0.5 天">'+fmtMD(d)+'<span class="half-mark">½</span></span>'; });
