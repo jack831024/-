@@ -583,9 +583,10 @@ function calcAnnual(emp){
     remaining: Math.max(0, accrued - used)
   };
 }
-// 旅遊假年度週期：每年 3/15 重新發放
-//   3/15 (含) 之後 → 該年度 3/15 為起點
-//   3/15 之前 → 前一年 3/15 為起點（雖然 10/1 之後其實已用不到，但保留延續性）
+// 旅遊假年度週期：每年 3/15 發放
+//   3/15 之後 → 該年度 3/15 為週期起點（前一週期的已用計數歸零）
+//   3/15 之前 → 前一年 3/15 為週期起點
+// 額度：依「今天」的年資動態決定（滿一年立刻升級 2 天，滿兩年 3 天...）
 function currentTravelCycleStart(today){
   today = today || TODAY;
   var y = today.getFullYear();
@@ -596,26 +597,13 @@ function currentTravelCycleStart(today){
 function fmtDateISO(d){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
-// 依「某個時間點」計算旅遊假額度（用於年度重置）
-function travelEntitlementAt(hireDate, atDate){
-  if(!hireDate) return 0;
-  var hire = parseDate(hireDate);
-  var months = (atDate.getFullYear() - hire.getFullYear()) * 12 + (atDate.getMonth() - hire.getMonth());
-  if(atDate.getDate() < hire.getDate()) months--;
-  if(months < 6) return 0;
-  var y = months / 12;
-  if(y < 1) return 1;
-  if(y < 2) return 2;
-  if(y < 3) return 3;
-  return 4;
-}
 
 function calcTravel(emp){
-  // 週期起點（今年或去年 3/15）
+  // 週期起點（今年或去年 3/15）— 只用於裁掉舊週期的 OT 紀錄
   var cycleStart = currentTravelCycleStart();
   var cycleStartStr = fmtDateISO(cycleStart);
-  // 額度依「週期起點時」的年資決定
-  var entitlement = travelEntitlementAt(emp.hireDate, cycleStart);
+  // 額度：以「今天」年資為準（今天滿一年立刻變 2 天）
+  var entitlement = travelEntitlement(emp.hireDate);
   // OT 只算本週期內的（cycleStart 之後）
   var ot = getOvertimeDatesAfter(emp.name, 'travel');
   var cycleFull = ot.full.filter(function(d){ return d >= cycleStartStr; });
