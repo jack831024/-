@@ -477,7 +477,7 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.07.01-02';
+var APP_VERSION = '2026.08.03-01';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -2858,15 +2858,48 @@ function setSyncBadge(text){
   if(el) el.textContent = text;
 }
 
+// ⭐ 通用：fetch → parse JSON，遇 Apps Script 間歇性抽風（回 HTML / 網路瞬斷 / 逾時）自動重試
+//   為什麼需要：Apps Script 有時會回 Google 登入頁 / 錯誤頁（都是 HTML），
+//   前端 JSON.parse 直接爆掉 → 使用者看到「Unexpected token '<'」訊息、儲存鈕被鎖。
+//   實務上這種抽風幾秒後自己會好 → 前端多試 2 次通常就能救回，員工感覺不到。
+//   .gs 的 doPost/doGet 對同一個請求是 idempotent 的（upsertRow / setContent），重試安全。
+async function fetchJsonRetry(url, fetchOpts, label){
+  var attempts = [0, 500, 1500];  // 第一次立即；重試等 0.5s / 1.5s
+  var lastErr;
+  for(var i = 0; i < attempts.length; i++){
+    if(attempts[i] > 0){
+      await new Promise(function(r){ setTimeout(r, attempts[i]); });
+    }
+    try{
+      var resp = await fetch(url, fetchOpts || {});
+      var text = await resp.text();
+      var trimmed = (text || '').trim();
+      // 偵測「後端回 HTML 而不是 JSON」— Apps Script 部署失效 / Google 登入牆 / 錯誤頁
+      if(trimmed.charAt(0) === '<'){
+        var head = trimmed.substring(0, 180).replace(/\s+/g, ' ');
+        throw new Error('後端回 HTML 而非 JSON（Apps Script 抽風 / 需重新部署）：' + head);
+      }
+      try{
+        return JSON.parse(text);
+      }catch(parseErr){
+        throw new Error('後端回應無法解析為 JSON：' + trimmed.substring(0, 180));
+      }
+    }catch(e){
+      lastErr = e;
+      console.warn('[' + (label || 'fetchJsonRetry') + '] 第 ' + (i + 1) + '/' + attempts.length + ' 次失敗：' + (e.message || e));
+    }
+  }
+  throw lastErr || new Error('fetchJsonRetry 全部失敗');
+}
+
 async function cloudGetImages(fileId){
   var url = localStorage.getItem('cd_sync_url');
   if(!url || !fileId) return null;
-  var r = await fetch(url, {
+  var d = await fetchJsonRetry(url, {
     method: 'POST',
     headers: {'Content-Type': 'text/plain;charset=utf-8'},
     body: JSON.stringify({action:'getImages', fileId:fileId})
-  });
-  var d = await r.json();
+  }, 'cloudGetImages');
   if(d.error) throw new Error(d.error);
   return d.images || {};
 }
@@ -2875,8 +2908,7 @@ async function cloudLoad(){
   var url = localStorage.getItem('cd_sync_url');
   if(!url) throw new Error('未設定同步網址');
   var q = '?action=list&store=' + encodeURIComponent(STORE_ID) + '&ts=' + Date.now();
-  var r = await fetch(url + q);
-  var d = await r.json();
+  var d = await fetchJsonRetry(url + q, {}, 'cloudLoad');
   if(d.error) throw new Error(d.error);
   return d.records || {};
 }
@@ -2919,12 +2951,12 @@ async function cloudSave(date, rec, images, keepExistingImages){
   if(images) payload.images = images;
   // ⭐ 告訴後端「這次不傳圖片，但請保留現有的圖片，不要刪除」
   if(keepExistingImages) payload.keepImages = true;
-  var r = await fetch(url, {
+  // 使用重試版：後端 upsertRow / setContent 對同一筆日期是 idempotent，重試安全
+  var d = await fetchJsonRetry(url, {
     method: 'POST',
     headers: {'Content-Type': 'text/plain;charset=utf-8'},
     body: JSON.stringify(payload)
-  });
-  var d = await r.json();
+  }, 'cloudSave');
   if(d.error) throw new Error(d.error);
   return d;
 }
