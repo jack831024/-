@@ -501,33 +501,16 @@ function cleanEmpName(n){
 }
 
 // 從加班費系統匯入的請假紀錄中，找此員工 EFFECTIVE_DATE 之後的特/旅遊日期
-//   1) localStorage cd_ot_summary_<store>_<ym>（同瀏覽器當下分析的）
-//   2) 雲端 OT_LEAVE_CLOUD（其他裝置上分析後同步上來的）
-//   兩邊用正規化後的姓名比對，去重 + 過濾 > EFFECTIVE_DATE + 排序
+//   ⚠️ 只用雲端資料（OT_LEAVE_CLOUD）— 保證每台裝置看到的一致
+//   localStorage 曾經是 fallback，但會殘留過期資料造成裝置間不一致；已改成只信雲端
+//   若雲端還沒載入 → 回空陣列（sync chip 會顯示載入狀態）
 // 回傳 { full: [...排序日期], half: [...排序日期] }
 function getOvertimeDatesAfter(empName, type){
   var seenFull = {};
   var seenHalf = {};
   var target = cleanEmpName(empName);
   var effDate = getEffectiveDate();
-  var halfKey = type + 'Half'; // annualHalf / travelHalf
-  var prefix = 'cd_ot_summary_' + STORE + '_';
-  for(var i = 0; i < localStorage.length; i++){
-    var key = localStorage.key(i);
-    if(!key || key.indexOf(prefix) !== 0) continue;
-    try {
-      var p = JSON.parse(localStorage.getItem(key) || '{}');
-      var emps = p.employees || {};
-      Object.keys(emps).forEach(function(n){
-        if(cleanEmpName(n) !== target) return;
-        var rec = emps[n] || {};
-        var fullDates = type === 'annual' ? (rec.annualDates || []) : (rec.travelDates || []);
-        var halfDates = type === 'annual' ? (rec.annualHalfDates || []) : (rec.travelHalfDates || []);
-        fullDates.forEach(function(d){ if(d > effDate) seenFull[d] = 1; });
-        halfDates.forEach(function(d){ if(d > effDate) seenHalf[d] = 1; });
-      });
-    } catch(e){}
-  }
+  var halfKey = type + 'Half';
   if(OT_LEAVE_CLOUD){
     Object.keys(OT_LEAVE_CLOUD).forEach(function(n){
       if(cleanEmpName(n) !== target) return;
@@ -538,6 +521,19 @@ function getOvertimeDatesAfter(empName, type){
   }
   return { full: Object.keys(seenFull).sort(), half: Object.keys(seenHalf).sort() };
 }
+
+// 每次進頁面順便清掉舊 localStorage 快取，避免將來又有殘留衝突
+(function purgeStaleOTLocal(){
+  try {
+    var prefix = 'cd_ot_summary_' + STORE + '_';
+    var toDel = [];
+    for(var i = 0; i < localStorage.length; i++){
+      var k = localStorage.key(i);
+      if(k && k.indexOf(prefix) === 0) toDel.push(k);
+    }
+    toDel.forEach(function(k){ localStorage.removeItem(k); });
+  } catch(e){}
+})();
 function getOvertimeUsedAfter(empName, type){
   return getOvertimeDatesAfter(empName, type).length;
 }
