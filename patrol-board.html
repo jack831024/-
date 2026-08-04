@@ -154,7 +154,7 @@ dialog::backdrop{background:rgba(15,23,42,.5)}
 
   <div class="sec-title">評分組成</div>
   <div style="overflow:auto"><table class="cmp" id="cmpTable"></table></div>
-  <div style="font-size:11.5px;color:var(--ink-3);margin:6px 2px 0;line-height:1.5">※ 門店評分（100分）＝ 現場巡店 ×0.85 ＋ 人才培育 15 分（有=+15、尚未=直接 −15）。當月無秘密客時，店長總分＝門店評分、不扣分。分數依所選月份計算、不跨月。</div>
+  <div style="font-size:11.5px;color:var(--ink-3);margin:6px 2px 0;line-height:1.5">※ 門店評分（100分）＝ 現場巡店 44 題（評分項目 100% 佔比）。當月無秘密客時，店長總分＝門店評分、不扣分。分數依所選月份計算、不跨月。</div>
 
   <div class="sec-title">督導巡店紀錄</div>
   <div class="recs" id="recList"></div>
@@ -166,7 +166,7 @@ dialog::backdrop{background:rgba(15,23,42,.5)}
 
 <script>
 const CONFIG = {
-  // 督導巡店後端（現場分＋培育）
+  // 督導巡店後端（現場分＝門店評分）
   SCRIPT_URL: "https://script.google.com/macros/s/AKfycbykLcQUeNNJj4gdDlyxFxOrgQmq1N64l7NDsVkTKQzXHiR041t-Av5Fg62TxxnB6dqCMw/exec",
   // 秘密客後端（自動抓最新秘密客分數，占 10%）
   MYSTERY_URL: "https://script.google.com/macros/s/AKfycbw9wU54LVTN6KLUmtSpEFr6EggLwHPbV1J6OiyqahGs3JSvwKVT2M4-tVQ1mCFEqnUZIw/exec"
@@ -291,18 +291,17 @@ function latestMystery(match){
   MYSTERY.forEach(function(r){ if(String(r.storeName||"").indexOf(match)<0)return; if(currentMonth&&monthOf(r)!==currentMonth)return; if(!best||new Date(r.submittedAt||r.visitDate)>new Date(best.submittedAt||best.visitDate))best=r; });
   return best;
 }
-// 門店評分（100）＝ 現場×0.85 ＋ 人才培育（有=15／尚未=0，等於尚未直接 −15）。
+// 門店評分 ＝ 現場巡店 44 題（滿分 100，評分項目 100% 佔比）。
 // 店長總分 ＝ 有秘密客? 門店評分×0.95 ＋ 秘密客×0.05 : 門店評分。當月無督導紀錄回 null。
 function storeScore(s){
   var dp=latestPatrol(s.key);
   if(!dp) return null;
   var site=num(dp.total); var siteVal=(site===null?0:site);
-  var trained=(dp.training===true);
   var mm=latestMystery(s.match);
   var mys=mm?num(mm.total):null;
-  var grade=Math.min(100, siteVal*0.85 + (trained?15:0));   // 門店評分 0-100
+  var grade=siteVal;                                        // 門店評分 = 現場 100%
   var fin=(mys!==null) ? (grade*0.95 + mys*0.05) : grade;    // 店長總分；缺秘密客→=門店評分
-  return { final:Math.round(fin*10)/10, level:levelOf(fin), grade:Math.round(grade*10)/10, site:site, train:dp.training, mys:mys, dp:dp, mm:mm };
+  return { final:Math.round(fin*10)/10, level:levelOf(fin), grade:Math.round(grade*10)/10, site:site, mys:mys, dp:dp, mm:mm };
 }
 
 /* ---------- 渲染 ---------- */
@@ -314,11 +313,10 @@ function render(){
         '<div style="flex:1"><div class="big">—</div><span class="lv none">無紀錄</span>'+
         '<div class="meta">尚無督導巡店資料</div></div></div>';
     }
-    var trTxt = sc.train===true?'<span style="color:var(--ok)">有</span>':(sc.train===false?'<span style="color:var(--bad)">尚未</span>':'—');
     return '<div class="scard '+s.cls+'"><div class="nm"><span class="dot"></span>'+s.name+'</div>'+
       '<div style="flex:1"><div class="big">'+sc.final+'<small>/100</small></div>'+
       '<span class="lv '+sc.level+'">店長 '+LEVEL_NAME[sc.level]+'</span>'+
-      '<div class="meta">門店評分 <b>'+sc.grade+'</b>（培育 '+trTxt+'）　秘密客 <b>'+(sc.mys===null?"—":sc.mys)+'</b><br>最近巡店：<b>'+((sc.dp&&sc.dp.date)||"-")+'</b></div></div></div>';
+      '<div class="meta">門店評分 <b>'+sc.grade+'</b>　秘密客 <b>'+(sc.mys===null?"—":sc.mys)+'</b><br>最近巡店：<b>'+((sc.dp&&sc.dp.date)||"-")+'</b></div></div></div>';
   }).join("");
 
   buildComposition();
@@ -348,22 +346,15 @@ function buildComposition(){
       return '<td'+((v===max&&max>0)?' class="best"':'')+'><span class="v">'+v+(suffix||'')+'</span></td>';
     }).join("")+'</tr>';
   }
-  var siteRow=numRow('　└ 現場巡店（43題·×0.85）', scs.map(function(s){return s?s.site:null;}), '');
-  var trainRow='<tr><td>　└ 人才培育</td>'+scs.map(function(s){
-    if(!s) return '<td><span class="muted">—</span></td>';
-    return s.train===true?'<td><span style="color:var(--ok);font-weight:700">有</span></td>'
-      :(s.train===false?'<td><span style="color:var(--bad);font-weight:700">尚未</span></td>':'<td><span class="muted">未填</span></td>');
-  }).join("")+'</tr>';
-  var gradeRow=numRow('門店評分（現場85＋培育15）', scs.map(function(s){return s?s.grade:null;}), '');
+  var gradeRow=numRow('門店評分（現場 44 題）', scs.map(function(s){return s?s.grade:null;}), '');
   var mysRow=numRow('秘密客（5%）', scs.map(function(s){return s?s.mys:null;}), '');
   var foot='<tfoot><tr><td>店長總分</td>'+scs.map(function(s){return s?('<td><b>'+s.final+'</b> <span class="lv '+s.level+'" style="font-size:11px;padding:1px 7px">'+LEVEL_NAME[s.level]+'</span></td>'):'<td class="muted">—</td>';}).join("")+'</tr></tfoot>';
-  document.getElementById("cmpTable").innerHTML=head+'<tbody>'+gradeRow+siteRow+trainRow+mysRow+'</tbody>'+foot;
+  document.getElementById("cmpTable").innerHTML=head+'<tbody>'+gradeRow+mysRow+'</tbody>'+foot;
 }
 
 function openDetail(r){
   var sm=storeMeta(r.store); var site=num(r.total);
-  var trained=(r.training===true);
-  var grade=Math.round((Math.min(100,(site===null?0:site)*0.85 + (trained?15:0)))*10)/10;
+  var grade=Math.round((site===null?0:site)*10)/10;
   var glv=levelOf(grade);
   var cats=CAT_DEFS.map(function(d){
     var c=r.categories&&r.categories[d.key]; var sc=c&&c.score!==""&&c.score!==undefined&&c.score!==null?Number(c.score):null;
@@ -371,8 +362,6 @@ function openDetail(r){
     return '<div class="catrow"><span class="cn">'+d.name+'</span><span class="tk"><i style="width:'+pct+'%"></i></span>'+
       '<span class="cv">'+(sc===null?"不適用":(Math.round(sc*10)/10)+"/"+d.weight)+'</span></div>';
   }).join("");
-  var trLine=(r.training===true)?'<div class="li"><b style="color:var(--ok)">人才培育：有培育出（已計入門店評分）</b></div>'
-    :(r.training===false?'<div class="li"><b style="color:var(--bad)">人才培育：尚未培育出</b></div>':'');
   var low=(r.lowItems&&r.lowItems.length)
     ? '<h3>需改善項目（'+r.lowItems.length+'）</h3>'+r.lowItems.map(function(x){
         var tg=x.level==="bad"?'<b class="bad">不符合</b>':'<b>待加強</b>';
@@ -383,8 +372,6 @@ function openDetail(r){
     '<div class="mh"><div class="ttl"><h2>'+sm.name+' · 督導巡店</h2><div class="sub">'+(r.date||"-")+'　·　'+(r.reviewer||"-")+'　·　'+(r.reportId||"")+'</div></div>'+
     '<button class="x" onclick="document.getElementById(\'detailDlg\').close()">×</button></div>'+
     '<div class="mtot">'+grade+'<small>/100 門店評分</small><span class="mlv lv '+glv+'">門店'+glv+'</span></div>'+
-    '<div style="font-size:12px;color:var(--ink-3);margin:2px 0 8px">現場 '+(site===null?"-":site)+' ×0.85 ＋ 培育 '+(r.training===true?'+15':(r.training===false?'+0（尚未 −15）':'未填'))+' → 門店評分 '+grade+'</div>'+
-    (trLine?('<div style="margin:6px 0 2px">'+trLine+'</div>'):'')+
     '<div class="catbar">'+cats+'</div>'+low+note;
   document.getElementById("detailDlg").showModal();
 }

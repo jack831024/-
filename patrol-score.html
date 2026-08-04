@@ -173,16 +173,6 @@ dialog::backdrop{background:rgba(15,23,42,.5);backdrop-filter:blur(3px)}
   <!-- 評分區（JS 動態產生） -->
   <div id="cats"></div>
 
-  <!-- 人才培育（總部評定，占店長總分 15%） -->
-  <div class="card" id="trainCard">
-    <div class="card-head"><span class="cnum" style="background:#f59e0b">★</span><h2>人才培育</h2><span class="cw">15 分</span></div>
-    <p style="font-size:12.5px;color:var(--ink-2);line-height:1.5;margin:-2px 0 11px">總部評定 · 占門店評分 100 分裡的 15 分（有 = +15／尚未 = 直接 −15）。是否已培育出下一任店長／副店？</p>
-    <div class="seg" style="grid-template-columns:repeat(2,1fr)">
-      <label class="ok" data-tr="yes"><input type="radio" name="training"><span>有培育出</span></label>
-      <label class="bad" data-tr="no"><input type="radio" name="training"><span>尚未培育出</span></label>
-    </div>
-  </div>
-
   <!-- 備註 -->
   <div class="card">
     <div class="card-head"><span class="cnum">✎</span><h2>總評備註</h2></div>
@@ -394,7 +384,7 @@ function buildCats(){
 
 function refresh(){
   const r = computeResult(state);
-  document.getElementById("barScore").textContent = Math.min(100, Math.round((r.total*0.85 + (state.training===true?15:0))*10)/10);
+  document.getElementById("barScore").textContent = r.total;
   document.getElementById("barProgText").textContent = "已填 " + r.answered + " / " + r.totalItems;
   document.getElementById("barNa").textContent = r.naCount ? ("不適用 " + r.naCount) : "";
   document.getElementById("barFill").style.width = Math.round(r.answered / r.totalItems * 100) + "%";
@@ -450,17 +440,11 @@ function openResult(){
     if(card) card.scrollIntoView({ behavior:"smooth", block:"center" });
     return;
   }
-  if(state.training === null){
-    showToast("請選擇人才培育（有／尚未培育出）", true);
-    document.getElementById("trainCard").scrollIntoView({ behavior:"smooth", block:"center" });
-    return;
-  }
   const r = computeResult(state);
   const storeName = document.querySelector('#metaStore option[value="' + store + '"]').textContent;
   document.getElementById("dlgStore").textContent = storeName;
-  // 門店評分（單一分數，0-100）＝ 現場巡店 ×0.85 ＋ 人才培育（有 +15／尚未 +0）
-  const grade = Math.min(100, Math.round((r.total*0.85 + (state.training?15:0))*10)/10);
-  document.getElementById("dlgTotal").textContent = grade;
+  // 門店評分 ＝ 現場巡店 44 題（滿分 100），評分項目 100% 佔比
+  document.getElementById("dlgTotal").textContent = r.total;
   const low = document.getElementById("dlgLow");
   if(r.lowItems.length){
     const lis = r.lowItems.map(function(x){
@@ -496,8 +480,6 @@ async function doSubmit(){
     total: r.total,
     level: r.level,
     levelName: LEVEL_NAME[r.level],
-    training: state.training,
-    trainingLabel: state.training ? "有培育出" : "尚未培育出",
     categories: catPayload,
     items: state.scores,
     lowItems: r.lowItems,
