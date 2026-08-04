@@ -315,7 +315,7 @@ function render(){
     }
     return '<div class="scard '+s.cls+'"><div class="nm"><span class="dot"></span>'+s.name+'</div>'+
       '<div style="flex:1"><div class="big">'+sc.final+'<small>/100</small></div>'+
-      '<span class="lv '+sc.level+'">店長 '+LEVEL_NAME[sc.level]+'</span>'+
+      '<span class="lv '+levelOf(sc.grade)+'">門店 '+LEVEL_NAME[levelOf(sc.grade)]+'</span>'+
       '<div class="meta">門店評分 <b>'+sc.grade+'</b>　秘密客 <b>'+(sc.mys===null?"—":sc.mys)+'</b><br>最近巡店：<b>'+((sc.dp&&sc.dp.date)||"-")+'</b></div></div></div>';
   }).join("");
 
