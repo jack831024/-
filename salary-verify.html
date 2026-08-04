@@ -716,7 +716,12 @@ function rebuildEmployeeLists(){
   function notLeft(e){ return !e.leaveYm || currentYm < e.leaveYm; }
   var defaultEmps = CFG.employees.filter(notLeft);
   var defaultPT   = (CFG.pt || []).filter(notLeft).map(function(e){ return Object.assign({ role:'pt' }, e); });
-  var custom = (STATE && STATE.customEmployees) || [];
+  // 用 STORE_CONFIG「所有」員工的名字（含已離職）建 dedup 名單
+  // → 避免 custom 那份與 STORE_CONFIG 撞名（例：曾經完全移除→自動加成 custom→後來加回 CONFIG + leaveYm）
+  var configNames = {};
+  (CFG.employees || []).forEach(function(e){ configNames[e.name] = true; });
+  (CFG.pt || []).forEach(function(e){ configNames[e.name] = true; });
+  var custom = ((STATE && STATE.customEmployees) || []).filter(function(e){ return !configNames[e.name]; });
   var customReg = custom.filter(function(e){ return !e.isPT; }).map(function(e){
     return { id:e.id, name:e.name, defaultRole:e.defaultRole || 'regular', salesAlias:e.name, custom:true };
   });
