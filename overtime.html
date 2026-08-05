@@ -728,11 +728,35 @@ function readShiftsFromDom(){
   });
   return out;
 }
+// 2026-08-01: 班表若打成全形英數（例：「Ａ」而非「A」），班別代碼會比對不到 →
+//   當天被當成沒排班 → 有打卡就誤報「休假日出勤」。載入班表時統一轉半形。
+function toHalfWidth(s){
+  return String(s == null ? '' : s)
+    .replace(/[！-～]/g, function(ch){ return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0); })
+    .replace(/\u3000/g, ' ')
+    .trim();
+}
+function normalizeScheduleCodes(data){
+  if(!data || !Array.isArray(data.rows)) return data;
+  var fixed = 0;
+  data.rows.forEach(function(r){
+    var d = r && r.days;
+    if(!d) return;
+    Object.keys(d).forEach(function(k){
+      var v = toHalfWidth(d[k]);
+      if(v !== d[k]){ d[k] = v; fixed++; }
+    });
+  });
+  if(fixed) console.log('[Schedule] 已把 ' + fixed + ' 個全形班別代碼轉為半形');
+  return data;
+}
+
 function findShift(code){
   if(!code) return null;
+  var c = toHalfWidth(code);
   var all = readShiftsFromDom();
   for(var i=0;i<all.length;i++){
-    if(all[i].code === code) return all[i];
+    if(all[i].code === c || toHalfWidth(all[i].code) === c) return all[i];
   }
   return null;
 }
@@ -785,7 +809,7 @@ function loadSchedule(){
     .then(function(r){ return r.json(); })
     .then(function(data){
       if(data.error) throw new Error(data.error);
-      SCHEDULE = data;
+      SCHEDULE = normalizeScheduleCodes(data);
       renderSchedulePreview();
       setStatus('sched-status','ok','✅ 已載入 '+(data.rows||[]).length+' 位員工');
 
@@ -3233,7 +3257,7 @@ renderPtList();
       }
       // 連帶把班表也存起來給後續分析用（如果有回）
       if(data && Array.isArray(data.rows)){
-        SCHEDULE = data;
+        SCHEDULE = normalizeScheduleCodes(data);
         renderSchedulePreview();
         setStatus('sched-status','ok','✅ 已自動載入 '+data.rows.length+' 位員工的 '+ym+' 班表');
         cleanupPtListBySchedule();
