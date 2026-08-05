@@ -2841,16 +2841,17 @@ function _saveAllVendorTotalsCache(cache){
 function getAllVendorTotals(yearMonth){
   var cache = _loadAllVendorTotalsCache();
   var cached = cache[yearMonth];
+  var hasContent = cached && cached.totals && Object.keys(cached.totals).length > 0;
   var hasFresh = cached && (Date.now() - cached.fetchedAt) < ALL_VENDOR_TOTALS_TTL;
-  if(!hasFresh){
-    // 背景刷新（不阻塞當下 render）
+  // 沒有內容的 cache 不算 fresh → 一定要重拉（例如上次 fetch 撞到 rate limit 存了 {}）
+  if(!hasContent || !hasFresh){
     fetchAllVendorTotalsFromCloud(yearMonth);
   }
-  // ⭐ 只要有 cache（就算過期），也優先用它 — 避免掉回本機造成畫面閃爍
-  if(cached && cached.totals){
+  // ⭐ 有內容才優先用 cache（就算過期也用，避免閃爍）；空 cache 不用
+  if(hasContent){
     return cached.totals;
   }
-  // 完全沒 cache → 才用本機掃描（第一次進頁面的短暫過渡）
+  // 空 cache 或完全沒 cache → 才用本機掃描（過渡期）
   var prefix = 'cd_inv_'+STORE_ID+'_';
   var totals = {}; // vendor → amount
   for(var i=0;i<localStorage.length;i++){
@@ -3271,7 +3272,13 @@ function renderBusinessSummary(){
   // 細項列表（排序：金額由大到小）
   var breakdownHtml = '';
   if(vendorNames.length === 0){
-    breakdownHtml = '<div class="biz-nodata">本月尚未儲存任何廠商資料</div>';
+    // 區分：正在同步 vs 真的沒資料 — 拉雲端還在進行中就顯示同步中
+    var isSyncing = !!(typeof _allVendorTotalsPending !== 'undefined' && _allVendorTotalsPending[yearMonth]);
+    if(isSyncing){
+      breakdownHtml = '<div class="biz-nodata">☁ 正在從雲端載入廠商資料…</div>';
+    }else{
+      breakdownHtml = '<div class="biz-nodata">本月尚未儲存任何廠商資料<br><span style="font-size:11px;color:var(--ink-3)">（若確定雲端有資料但這裡沒顯示，請下拉重新整理頁面）</span></div>';
+    }
   }else{
     vendorNames.sort(function(a, b){ return vendorTotals[b] - vendorTotals[a]; });
     vendorNames.forEach(function(v){
