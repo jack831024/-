@@ -2817,22 +2817,40 @@ function getMonthlyRevenue(yearMonth){
   return total;
 }
 
-// 雲端「所有廠商當月金額」cache（避免一個月份 1 分鐘內被重複打 API）
-var _allVendorTotalsCloudCache = {};   // { 'YYYY-MM': { totals: {}, fetchedAt: ms } }
+// 雲端「所有廠商當月金額」cache
+// ⭐ 三個關鍵設計避免「數字跳來跳去」：
+//   1. 持久化到 localStorage → 重開頁面不用重拉、雲端瞬斷也仍有數字可顯示
+//   2. 只要「曾經拿到過雲端」永遠優先用雲端 snapshot，即使過期也不掉回本機
+//      （避免本機只有使用者點過的少數廠商，畫面顯示不完整而閃）
+//   3. TTL 從 60s → 10 分鐘，背景 refresh 頻率降低，畫面穩定
 var _allVendorTotalsPending = {};      // { 'YYYY-MM': true } 防併發
-var ALL_VENDOR_TOTALS_TTL = 60000;     // 60 秒
+var ALL_VENDOR_TOTALS_TTL = 10 * 60 * 1000;     // 10 分鐘
+
+function _allVendorTotalsCacheKey(){ return 'cd_all_vendor_totals_' + STORE_ID; }
+function _loadAllVendorTotalsCache(){
+  try{
+    var raw = localStorage.getItem(_allVendorTotalsCacheKey());
+    var obj = raw ? JSON.parse(raw) : {};
+    return (obj && typeof obj === 'object') ? obj : {};
+  }catch(e){ return {}; }
+}
+function _saveAllVendorTotalsCache(cache){
+  try{ localStorage.setItem(_allVendorTotalsCacheKey(), JSON.stringify(cache)); }catch(e){}
+}
 
 function getAllVendorTotals(yearMonth){
-  // ⭐ 優先用雲端快取：雲端有資料且 60 秒內抓過 → 直接用雲端數字（每家廠商都有）
-  //    沒抓過或過期 → 回傳本機掃描值 + 背景觸發雲端拉，回來後 re-render
-  var cached = _allVendorTotalsCloudCache[yearMonth];
-  if(cached && (Date.now() - cached.fetchedAt) < ALL_VENDOR_TOTALS_TTL){
+  var cache = _loadAllVendorTotalsCache();
+  var cached = cache[yearMonth];
+  var hasFresh = cached && (Date.now() - cached.fetchedAt) < ALL_VENDOR_TOTALS_TTL;
+  if(!hasFresh){
+    // 背景刷新（不阻塞當下 render）
+    fetchAllVendorTotalsFromCloud(yearMonth);
+  }
+  // ⭐ 只要有 cache（就算過期），也優先用它 — 避免掉回本機造成畫面閃爍
+  if(cached && cached.totals){
     return cached.totals;
   }
-  // 背景拉雲端（不阻塞當下 render）
-  fetchAllVendorTotalsFromCloud(yearMonth);
-
-  // Fallback：本機掃描（使用者點過的廠商才有資料）
+  // 完全沒 cache → 才用本機掃描（第一次進頁面的短暫過渡）
   var prefix = 'cd_inv_'+STORE_ID+'_';
   var totals = {}; // vendor → amount
   for(var i=0;i<localStorage.length;i++){
@@ -2841,7 +2859,6 @@ function getAllVendorTotals(yearMonth){
     try{
       var data = JSON.parse(localStorage.getItem(k));
       if(!data || !Array.isArray(data.items)) continue;
-      // 從 key 解析 vendor：cd_inv_<store>_<vendor>_<date>
       var suffix = k.substring(prefix.length);
       var lastUnderscore = suffix.lastIndexOf('_');
       if(lastUnderscore < 0) continue;
@@ -2857,11 +2874,9 @@ function getAllVendorTotals(yearMonth){
   return totals;
 }
 
-// ⭐ 從雲端一次抓全店紀錄，算出每家廠商當月金額
-// 完成後存到 cache + 觸發 renderBusinessSummary 重畫
-// 用 dedupe 過的雲端為準（排除占位紀錄），不依賴使用者是否點過該廠商
+// ⭐ 從雲端一次抓全店紀錄，算出每家廠商當月金額，存進持久化 cache
 function fetchAllVendorTotalsFromCloud(yearMonth){
-  if(_allVendorTotalsPending[yearMonth]) return;     // 防併發
+  if(_allVendorTotalsPending[yearMonth]) return;
   var url = localStorage.getItem('cd_inv_sync_url');
   if(!url || !yearMonth) return;
   _allVendorTotalsPending[yearMonth] = true;
@@ -2869,7 +2884,10 @@ function fetchAllVendorTotalsFromCloud(yearMonth){
     method:'POST',
     headers:{'Content-Type':'text/plain;charset=utf-8'},
     body: JSON.stringify({ action:'getInventoryHistory', store: STORE_ID, vendor:'' })
-  }).then(function(r){ return r.json(); }).then(function(j){
+  }).then(function(r){ return r.text(); }).then(function(text){
+    // 有時 Apps Script 會回 HTML（rate limit / 錯誤頁）→ 略過，保留現有 cache
+    if(!text || text.charAt(0) !== '{') return;
+    var j; try{ j = JSON.parse(text); }catch(e){ return; }
     if(!j || !Array.isArray(j.records)) return;
     var totals = {};
     j.records.forEach(function(rec){
@@ -2881,12 +2899,14 @@ function fetchAllVendorTotalsFromCloud(yearMonth){
       var amt = (Number(rec.price)||0) * (Number(rec.qty)||0);
       totals[v] = (totals[v] || 0) + amt;
     });
-    _allVendorTotalsCloudCache[yearMonth] = { totals: totals, fetchedAt: Date.now() };
+    var cache = _loadAllVendorTotalsCache();
+    cache[yearMonth] = { totals: totals, fetchedAt: Date.now() };
+    _saveAllVendorTotalsCache(cache);
     // 觸發 UI 重畫
     if(typeof renderBusinessSummary === 'function'){
       try{ renderBusinessSummary(); }catch(e){}
     }
-  }).catch(function(){ /* 離線容忍：保留本機 fallback */ })
+  }).catch(function(){ /* 離線容忍：保留現有 cache */ })
     .finally(function(){ delete _allVendorTotalsPending[yearMonth]; });
 }
 
