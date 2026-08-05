@@ -2875,38 +2875,59 @@ function getAllVendorTotals(yearMonth){
   return totals;
 }
 
-// ⭐ 從雲端一次抓全店紀錄，算出每家廠商當月金額，存進持久化 cache
+// ⭐ 用輕量後端 API 抓當月每廠商合計（payload 僅 ~300B，過去用 getInventoryHistory
+//    要拉整店幾百 KB → 手機弱網常失敗 → 是「數字跳來跳去」的根源）
+//    若撞到 rate limit 回 HTML，會退回舊版 getInventoryHistory 全量拉當備援
 function fetchAllVendorTotalsFromCloud(yearMonth){
   if(_allVendorTotalsPending[yearMonth]) return;
   var url = localStorage.getItem('cd_inv_sync_url');
   if(!url || !yearMonth) return;
   _allVendorTotalsPending[yearMonth] = true;
-  fetch(url, {
-    method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body: JSON.stringify({ action:'getInventoryHistory', store: STORE_ID, vendor:'' })
-  }).then(function(r){ return r.text(); }).then(function(text){
-    // 有時 Apps Script 會回 HTML（rate limit / 錯誤頁）→ 略過，保留現有 cache
-    if(!text || text.charAt(0) !== '{') return;
-    var j; try{ j = JSON.parse(text); }catch(e){ return; }
-    if(!j || !Array.isArray(j.records)) return;
-    var totals = {};
-    j.records.forEach(function(rec){
-      if(!rec || isVendorMarkerRecord(rec)) return;
-      var d = normalizeDate(rec.date);
-      if(!d || d.substring(0, 7) !== yearMonth) return;
-      var v = String(rec.vendor || '').trim();
-      if(!v) return;
-      var amt = (Number(rec.price)||0) * (Number(rec.qty)||0);
-      totals[v] = (totals[v] || 0) + amt;
-    });
+
+  function saveTotals(totals){
     var cache = _loadAllVendorTotalsCache();
     cache[yearMonth] = { totals: totals, fetchedAt: Date.now() };
     _saveAllVendorTotalsCache(cache);
-    // 觸發 UI 重畫
     if(typeof renderBusinessSummary === 'function'){
       try{ renderBusinessSummary(); }catch(e){}
     }
+  }
+
+  // 主路徑：呼叫輕量 API
+  fetch(url, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ action:'getMonthlyVendorTotals', store: STORE_ID, yearMonth: yearMonth })
+  }).then(function(r){ return r.text(); }).then(function(text){
+    if(text && text.charAt(0) === '{'){
+      var j; try{ j = JSON.parse(text); }catch(e){}
+      if(j && j.ok && j.totals && typeof j.totals === 'object'){
+        saveTotals(j.totals);
+        delete _allVendorTotalsPending[yearMonth];
+        return;
+      }
+    }
+    // 新 API 失敗（rate limit / HTML 錯誤頁 / 舊後端沒此 action）→ fallback 舊版全量拉
+    return fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action:'getInventoryHistory', store: STORE_ID, vendor:'' })
+    }).then(function(r){ return r.text(); }).then(function(t2){
+      if(!t2 || t2.charAt(0) !== '{') return;
+      var j2; try{ j2 = JSON.parse(t2); }catch(e){ return; }
+      if(!j2 || !Array.isArray(j2.records)) return;
+      var totals = {};
+      j2.records.forEach(function(rec){
+        if(!rec || isVendorMarkerRecord(rec)) return;
+        var d = normalizeDate(rec.date);
+        if(!d || d.substring(0, 7) !== yearMonth) return;
+        var v = String(rec.vendor || '').trim();
+        if(!v) return;
+        var amt = (Number(rec.price)||0) * (Number(rec.qty)||0);
+        totals[v] = (totals[v] || 0) + amt;
+      });
+      saveTotals(totals);
+    });
   }).catch(function(){ /* 離線容忍：保留現有 cache */ })
     .finally(function(){ delete _allVendorTotalsPending[yearMonth]; });
 }

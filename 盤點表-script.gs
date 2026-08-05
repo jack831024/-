@@ -111,6 +111,32 @@ function doPost(e) {
       return json({ ok: true, store: gStore, vendor: gVendor, records: out });
     }
 
+    // ⭐ 只回「單月每廠商合計」— 為盤點表月度分析的「所有廠商成本」設計
+    // 相比 getInventoryHistory 動輒 300KB+ 的全量回應，這個只回一個 {vendor: amount} map
+    // 手機弱網也能穩定拉到，避免「數字跳來跳去 / 只顯示點過的廠商」問題
+    // body: { action:'getMonthlyVendorTotals', store, yearMonth:'YYYY-MM' }
+    if (body.action === 'getMonthlyVendorTotals') {
+      var mvtStore = body.store || 'default';
+      var mvtYm = String(body.yearMonth || '').trim();
+      if (!/^\d{4}-\d{2}$/.test(mvtYm)) return json({ error: 'yearMonth 格式錯誤，需 YYYY-MM' });
+      var mvtSheet = getInventorySheet(mvtStore);
+      var mvtData = mvtSheet.getDataRange().getValues();
+      var totals = {};   // vendor → amount
+      for (var mi = 1; mi < mvtData.length; mi++) {
+        var mrow = mvtData[mi];
+        if (!mrow[0]) continue;
+        var mdate = normalizeDate(mrow[0]);
+        if (!mdate || mdate.substring(0, 7) !== mvtYm) continue;
+        var mname = String(mrow[2] || '').trim();
+        if (mname === '__vendor_marker__') continue;  // 過濾廠商占位紀錄
+        var mvendor = String(mrow[1] || '').trim();
+        if (!mvendor) continue;
+        var mamt = Number(mrow[5]) || ((Number(mrow[3]) || 0) * (Number(mrow[4]) || 0));
+        totals[mvendor] = (totals[mvendor] || 0) + mamt;
+      }
+      return json({ ok: true, store: mvtStore, yearMonth: mvtYm, totals: totals });
+    }
+
     // ⭐ 一鍵清除「同店同日同廠商同品項」的重複歷史紀錄
     // 規則：同 (date, vendor, name) 只留 savedAt 最新的一筆，其餘刪除
     // body: { action:'dedupeInventory', store, vendor? (可選，省略=全部廠商), date? (可選，省略=全部日期) }
