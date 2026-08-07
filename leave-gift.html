@@ -911,20 +911,28 @@ function renderAnnual(){
     tb.innerHTML = '<tr><td colspan="5"><div class="empty-row">'+SELECTED_YM+' 沒有在職員工</div></td></tr>';
     return;
   }
+  var isLegacy = isLegacyMonth(SELECTED_YM);
   var rows = ft.map(function(e){
     var c = calcAnnual(e);
     var cls = c.remaining === 0 ? 'bal-zero' : (c.remaining < 3 ? 'bal-warn' : 'bal-pos');
-    var preLine = c.initialUsed > 0 ? '<div class="tag-line">'+EFFECTIVE_LABEL+' 以前已使用 '+fmtDays(c.initialUsed)+' 天</div>' : '';
-    var fullChips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini">'+fmtMD(d)+'</span>'; });
-    var halfChips = c.fromOTHalfDates.map(function(d){ return '<span class="date-chip-mini" title="特半 0.5 天">'+fmtMD(d)+'<span class="half-mark">½</span></span>'; });
-    var chips = fullChips.concat(halfChips).join('');
-    var chipBlock = chips ? '<div class="date-chips">'+chips+'</div>' : '';
-    var mainLine = '<div>已使用 '+fmtDays(c.fromOT)+' 天</div>';
+    var cellHtml;
+    if(isLegacy){
+      // 舊月份：所有「以前使用」合併顯示於此
+      cellHtml = '<div>以前已使用 <b>'+fmtDays(c.initialUsed)+'</b> 天</div>';
+    } else {
+      // 一般月份：只顯示該月 OT chip，不重複顯示「4/1 以前已用」
+      var fullChips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini">'+fmtMD(d)+'</span>'; });
+      var halfChips = c.fromOTHalfDates.map(function(d){ return '<span class="date-chip-mini" title="特半 0.5 天">'+fmtMD(d)+'<span class="half-mark">½</span></span>'; });
+      var chips = fullChips.concat(halfChips).join('');
+      var chipBlock = chips ? '<div class="date-chips">'+chips+'</div>' : '';
+      var monthFromOT = c.fromOTDates.length + c.fromOTHalfDates.length * 0.5;
+      cellHtml = '<div>已使用 '+fmtDays(monthFromOT)+' 天</div>' + chipBlock;
+    }
     return '<tr>'
       + '<td class="c-name">'+e.name+'</td>'
       + '<td>'+e.hireDate+'<div class="tag-line">年資 '+tenureYears(e.hireDate).toFixed(1)+' 年</div></td>'
       + '<td class="c-num">'+c.accrued+' 天</td>'
-      + '<td>'+preLine+mainLine+chipBlock+'</td>'
+      + '<td>'+cellHtml+'</td>'
       + '<td class="c-num big '+cls+'">'+fmtDays(c.remaining)+' 天</td>'
       + '</tr>';
   });
@@ -952,23 +960,28 @@ function renderTravel(){
     tb.innerHTML = '<tr><td colspan="5"><div class="empty-row">'+SELECTED_YM+' 沒有在職員工</div></td></tr>';
     return;
   }
+  var isLegacy = isLegacyMonth(SELECTED_YM);
   var rows = ft.map(function(e){
     var c = calcTravel(e);
     var months = tenureMonths(e.hireDate);
     var cls = c.remaining === 0 ? 'bal-zero' : 'bal-pos';
     var note = months < 6 ? '<div class="tag-line">未滿半年</div>' : '';
-    var preUsed = c.initialUsed || 0;
-    var preLine = preUsed > 0 ? '<div class="tag-line">'+EFFECTIVE_LABEL+' 以前已使用 '+fmtDays(preUsed)+' 天</div>' : '';
-    var fullChips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini travel">'+fmtMD(d)+'</span>'; });
-    var halfChips = c.fromOTHalfDates.map(function(d){ return '<span class="date-chip-mini travel" title="旅半 0.5 天">'+fmtMD(d)+'<span class="half-mark">½</span></span>'; });
-    var chips = fullChips.concat(halfChips).join('');
-    var chipBlock = chips ? '<div class="date-chips">'+chips+'</div>' : '';
-    var mainLine = '<div>已使用 '+fmtDays(c.fromOT)+' 天</div>';
+    var cellHtml;
+    if(isLegacy){
+      cellHtml = '<div>以前已使用 <b>'+fmtDays(c.initialUsed || 0)+'</b> 天</div>';
+    } else {
+      var fullChips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini travel">'+fmtMD(d)+'</span>'; });
+      var halfChips = c.fromOTHalfDates.map(function(d){ return '<span class="date-chip-mini travel" title="旅半 0.5 天">'+fmtMD(d)+'<span class="half-mark">½</span></span>'; });
+      var chips = fullChips.concat(halfChips).join('');
+      var chipBlock = chips ? '<div class="date-chips">'+chips+'</div>' : '';
+      var monthFromOT = c.fromOTDates.length + c.fromOTHalfDates.length * 0.5;
+      cellHtml = '<div>已使用 '+fmtDays(monthFromOT)+' 天</div>' + chipBlock;
+    }
     return '<tr>'
       + '<td class="c-name">'+e.name+'</td>'
       + '<td>'+e.hireDate+note+'</td>'
       + '<td class="c-num">'+c.entitlement+' 天</td>'
-      + '<td>'+preLine+mainLine+chipBlock+'</td>'
+      + '<td>'+cellHtml+'</td>'
       + '<td class="c-num big '+cls+'">'+fmtDays(c.remaining)+' 天</td>'
       + '</tr>';
   });
