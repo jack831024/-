@@ -434,8 +434,7 @@ var HOLIDAYS = {
 //    使用 '2026-03-31' 為界，>= 2026-04-01 的 OT 日期才會被計入
 var EFFECTIVE_DATE = '2026-03-31';
 function getEffectiveDate(){ return EFFECTIVE_DATE; }
-// 顯示用的「分界月份」標籤（2026/4 以前 vs 之後）
-var EFFECTIVE_LABEL = '2026/4';
+// EFFECTIVE_LABEL 已改成月份選擇器動態顯示，不再用固定「2026/4 以前」字樣
 
 // 十城沒有旅遊假
 var STORES_WITHOUT_TRAVEL = { 'shicheng-zhongxiao': true };
