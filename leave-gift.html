@@ -1263,7 +1263,34 @@ function renderEmpMgmt(){
 }
 
 var EMP_MODAL_EDITING = null; // 若非 null 表示編輯中，值為 empId
-function openAddEmpModal(){
+
+// ============================================
+// 員工管理密碼閘：yuanxin2022（一個 session 內解鎖一次即可）
+// ============================================
+var EMP_MGMT_PASSWORD = 'yuanxin2022';
+var EMP_MGMT_UNLOCKED = (sessionStorage.getItem('cd_emp_mgmt_unlocked') === '1');
+async function ensureEmpMgmtUnlocked(action){
+  if(EMP_MGMT_UNLOCKED) return true;
+  var pw = await askInput(
+    '員工管理需要密碼',
+    (action||'進行員工管理') + '需輸入管理密碼',
+    { type:'password', placeholder:'請輸入密碼' }
+  );
+  if(pw === null) return false;
+  if(String(pw).trim() !== EMP_MGMT_PASSWORD){
+    showNotice('❌ 密碼錯誤', '請重新輸入');
+    return false;
+  }
+  EMP_MGMT_UNLOCKED = true;
+  sessionStorage.setItem('cd_emp_mgmt_unlocked', '1');
+  return true;
+}
+
+async function openAddEmpModal(){
+  if(!(await ensureEmpMgmtUnlocked('新增員工'))) return;
+  _openAddEmpModal();
+}
+function _openAddEmpModal(){
   EMP_MODAL_EDITING = null;
   document.getElementById('emp-modal-title').textContent = '新增員工';
   document.getElementById('emp-modal-icon').textContent = '👤';
@@ -1273,7 +1300,8 @@ function openAddEmpModal(){
   document.getElementById('emp-modal').classList.add('open');
   setTimeout(function(){ document.getElementById('emp-f-name').focus(); }, 100);
 }
-function openEditEmpModal(empId){
+async function openEditEmpModal(empId){
+  if(!(await ensureEmpMgmtUnlocked('編輯員工'))) return;
   var emp = EMPLOYEES.find(function(e){ return e.id === empId; });
   if(!emp){ toast('找不到員工', 'err'); return; }
   EMP_MODAL_EDITING = empId;
@@ -1330,6 +1358,7 @@ function saveEmpFromModal(){
   EMP_MODAL_EDITING = null;
 }
 async function markEmpLeft(empId){
+  if(!(await ensureEmpMgmtUnlocked('標記離職'))) return;
   var emp = EMPLOYEES.find(function(e){ return e.id === empId; });
   if(!emp){ return; }
   var ans = await askInput('標記離職', '確定要把「'+emp.name+'」標記為離職嗎？\n輸入離職日 (YYYY-MM-DD)，留空 = 今天。歷史紀錄會保留。', { type:'date' });
