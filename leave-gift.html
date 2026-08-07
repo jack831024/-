@@ -1140,6 +1140,7 @@ function renderHistory(){
 // 刪除一筆禮金紀錄（需密碼，跟薪資計算同一組）
 // ============================================
 async function onDeleteEntry(entryId){
+  if(!INIT_LOADED){ showNotice('⏳ 頁面尚未載入完成', '請等 sync chip 顯示「☁ 已同步」再刪除。'); return; }
   var emp = EMPLOYEES.find(function(e){ return e.id === STATE.selectedEmpId; });
   if(!emp){ toast('未選員工', 'err'); return; }
   var hist = STATE.giftHistory[emp.id] || [];
@@ -1299,6 +1300,7 @@ async function ensureEmpMgmtUnlocked(action){
 }
 
 async function openAddEmpModal(){
+  if(!INIT_LOADED){ showNotice('⏳ 頁面尚未載入完成', '請等 sync chip 顯示「☁ 已同步」再新增員工。'); return; }
   if(!(await ensureEmpMgmtUnlocked('新增員工'))) return;
   _openAddEmpModal();
 }
@@ -1313,6 +1315,7 @@ function _openAddEmpModal(){
   setTimeout(function(){ document.getElementById('emp-f-name').focus(); }, 100);
 }
 async function openEditEmpModal(empId){
+  if(!INIT_LOADED){ showNotice('⏳ 頁面尚未載入完成', '請等 sync chip 顯示「☁ 已同步」再編輯。'); return; }
   if(!(await ensureEmpMgmtUnlocked('編輯員工'))) return;
   var emp = EMPLOYEES.find(function(e){ return e.id === empId; });
   if(!emp){ toast('找不到員工', 'err'); return; }
@@ -1370,6 +1373,7 @@ function saveEmpFromModal(){
   EMP_MODAL_EDITING = null;
 }
 async function unmarkEmpLeft(empId){
+  if(!INIT_LOADED){ showNotice('⏳ 頁面尚未載入完成', '請等 sync chip 顯示「☁ 已同步」再操作。'); return; }
   if(!(await ensureEmpMgmtUnlocked('取消離職'))) return;
   var emp = EMPLOYEES.find(function(e){ return e.id === empId; });
   if(!emp || !emp.leftDate) return;
@@ -1388,6 +1392,7 @@ async function unmarkEmpLeft(empId){
 }
 
 async function markEmpLeft(empId){
+  if(!INIT_LOADED){ showNotice('⏳ 頁面尚未載入完成', '請等 sync chip 顯示「☁ 已同步」再操作。'); return; }
   if(!(await ensureEmpMgmtUnlocked('標記離職'))) return;
   var emp = EMPLOYEES.find(function(e){ return e.id === empId; });
   if(!emp){ return; }
@@ -1430,6 +1435,11 @@ function addPreviewThumb(blobUrl){
 
 async function onGiftFile(files){
   if(!files || !files.length) return;
+  if(!INIT_LOADED){
+    showNotice('⏳ 頁面尚未載入完成', '請等 sync chip 顯示「☁ 已同步」再上傳，避免覆蓋雲端資料。');
+    document.getElementById('gift-file').value = '';
+    return;
+  }
   var emp = EMPLOYEES.find(function(e){ return e.id === STATE.selectedEmpId; });
   if(!emp){ toast('請先選擇員工', 'err'); return; }
   var file = files[0];
@@ -1696,6 +1706,11 @@ function pushToCloud(showToastWhenOk){
   if(!url){ setSyncChip('off', '☁ 未設定', ''); return; }
   if(_pushTimer) clearTimeout(_pushTimer);
   _pushTimer = setTimeout(function(){
+    // ⚠️ 加載完成前禁止推雲端，避免空 STATE 覆蓋
+    if(!INIT_LOADED){
+      console.warn('[pushToCloud] 略過：雲端資料尚未載入完成');
+      return;
+    }
     setSyncChip('busy', '☁ 同步中…', '');
     callGAS('saveStore', [getStorePassword(), STORE, JSON.parse(JSON.stringify(STATE))])
       .then(function(res){
@@ -1718,7 +1733,17 @@ function pushToCloud(showToastWhenOk){
 
 // 同步版：不 debounce、直接回 Promise，caller 可以 await 確認成功
 // 上傳禮金時用這個，避免使用者關頁面時推送還沒送出
+// ⚠️ 加載完成前禁止寫入雲端，避免空 STATE 覆蓋掉真實資料
+var INIT_LOADED = false;
+function assertInitLoaded(){
+  if(!INIT_LOADED){
+    showNotice('⏳ 頁面尚未載入完成', '正在從雲端讀取資料，請等 sync chip 顯示「☁ 已同步」再操作。\n\n（避免空資料覆蓋掉雲端上的紀錄）');
+    throw new Error('雲端資料尚未載入');
+  }
+}
+
 function pushToCloudNow(){
+  assertInitLoaded();
   if(!STATE) return Promise.reject(new Error('no state'));
   var url = getSyncUrl();
   if(!url) return Promise.reject(new Error('尚未設定雲端網址'));
@@ -1740,12 +1765,13 @@ function pushToCloudNow(){
 
 function pullFromCloud(){
   var url = getSyncUrl();
-  if(!url){ setSyncChip('off', '☁ 未設定', ''); return; }
+  if(!url){ setSyncChip('off', '☁ 未設定', ''); INIT_LOADED = true; return; }
   setSyncChip('busy', '☁ 讀取中…', '');
   callGAS('loadStore', [getStorePassword(), STORE])
     .then(function(res){
       if(!res || !res.ok){
         setSyncChip('err', '☁ 讀取失敗', (res && res.error) || '');
+        // 讀取失敗時仍讓 UI 可用，但保持 INIT_LOADED = false 阻止寫入避免覆蓋
         return;
       }
       if(res.found){
@@ -1757,12 +1783,17 @@ function pullFromCloud(){
         ensureSlots();
         setSyncChip('ok', '☁ 已連線（雲端無資料）', '');
       }
+      INIT_LOADED = true; // ✅ 只有在雲端成功讀取或確認「無資料」後才允許寫入
       var seedAdded = ensureInitialSeed();
       maybeAutoCredit();
       if(seedAdded > 0) pushToCloud(false);
       render();
     })
-    .catch(function(err){ setSyncChip('err', '☁ 離線', err.message||''); render(); });
+    .catch(function(err){
+      setSyncChip('err', '☁ 離線', err.message||'');
+      // 離線時保持 INIT_LOADED = false，避免離線寫入覆蓋雲端
+      render();
+    });
 }
 
 // 獨立抓雲端「加班費假別」資料（不再綁在 pullFromCloud，失敗也會重試）
