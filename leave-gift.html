@@ -281,6 +281,20 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
   </div>
 </div>
 
+<!-- 輸入 modal（取代 prompt()，因為某些手機瀏覽器不支援 prompt）-->
+<div class="notice-modal" id="input-modal">
+  <div class="box" onclick="event.stopPropagation()" style="max-width:360px">
+    <div class="icon-circle" id="input-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">✏️</div>
+    <h3 id="input-title">請輸入</h3>
+    <p id="input-msg" style="text-align:left;font-size:12.5px;color:var(--ink-2);margin-bottom:12px"></p>
+    <input type="text" id="input-field" autocomplete="off" style="width:100%;padding:12px 14px;border:2px solid var(--line);border-radius:10px;font-family:inherit;font-size:15px;color:var(--ink);outline:none;margin-bottom:14px;box-sizing:border-box">
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button id="input-cancel" style="padding:9px 18px;background:rgba(148,163,184,.15);color:var(--ink-2);border:none;border-radius:10px;font-family:inherit;font-weight:600;font-size:14px;cursor:pointer">取消</button>
+      <button id="input-ok" style="padding:9px 20px;background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);color:#fff;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer">確定</button>
+    </div>
+  </div>
+</div>
+
 <!-- 浮動儲存鈕（有未儲存禮金紀錄時才出現） -->
 <button class="save-fab" id="save-fab" onclick="saveDirty()">
   💾 儲存變更 <span class="badge" id="save-fab-count">1</span>
@@ -954,7 +968,7 @@ function renderHistory(){
 // ============================================
 // 刪除一筆禮金紀錄（需密碼，跟薪資計算同一組）
 // ============================================
-function onDeleteEntry(entryId){
+async function onDeleteEntry(entryId){
   var emp = EMPLOYEES.find(function(e){ return e.id === STATE.selectedEmpId; });
   if(!emp){ toast('未選員工', 'err'); return; }
   var hist = STATE.giftHistory[emp.id] || [];
@@ -962,7 +976,11 @@ function onDeleteEntry(entryId){
   if(!entry){ toast('找不到紀錄', 'err'); return; }
   if(String(entryId).indexOf('seed_') === 0){ toast('初始餘額不可刪', 'err'); return; }
 
-  var pw = prompt('刪除「'+(entry.reason||'禮金')+' $'+fmt(Math.abs(entry.amount||0))+'」需要密碼');
+  var pw = await askInput(
+    '刪除禮金紀錄',
+    '刪除「'+(entry.reason||'禮金')+' $'+fmt(Math.abs(entry.amount||0))+'」需要密碼',
+    { type:'password', placeholder:'請輸入密碼' }
+  );
   if(pw === null) return;
   if(String(pw).trim() !== getStorePassword()){
     alert('❌ 密碼錯誤');
@@ -1017,6 +1035,36 @@ function closeNoticeModal(e){
   document.getElementById('notice-modal').classList.remove('open');
 }
 
+// 自製 input modal（取代 window.prompt，因為 LINE/某些手機 in-app browser 沒有）
+// 回傳 Promise<string|null>：確定 → 字串；取消 → null
+function askInput(title, msg, opts){
+  opts = opts || {};
+  return new Promise(function(resolve){
+    var modal = document.getElementById('input-modal');
+    var field = document.getElementById('input-field');
+    document.getElementById('input-title').textContent = title || '請輸入';
+    document.getElementById('input-msg').textContent = msg || '';
+    field.type = opts.type || 'text';
+    field.value = opts.defaultValue || '';
+    field.placeholder = opts.placeholder || '';
+    if(opts.inputMode) field.setAttribute('inputmode', opts.inputMode); else field.removeAttribute('inputmode');
+    modal.classList.add('open');
+    setTimeout(function(){ try { field.focus(); field.select(); } catch(e){} }, 100);
+    var okBtn = document.getElementById('input-ok');
+    var cancelBtn = document.getElementById('input-cancel');
+    function cleanup(){
+      okBtn.onclick = null; cancelBtn.onclick = null; field.onkeydown = null;
+      modal.classList.remove('open');
+    }
+    okBtn.onclick = function(){ var v = field.value; cleanup(); resolve(v); };
+    cancelBtn.onclick = function(){ cleanup(); resolve(null); };
+    field.onkeydown = function(e){
+      if(e.key === 'Enter'){ e.preventDefault(); okBtn.click(); }
+      else if(e.key === 'Escape'){ e.preventDefault(); cancelBtn.click(); }
+    };
+  });
+}
+
 function render(){
   renderAnnual();
   renderTravel();
@@ -1066,7 +1114,8 @@ async function onGiftFile(files){
 
     // 2. AI 識別金額
     if(pv) pv.tag.textContent = 'AI 識別中…';
-    var prompt = '從這張圖片抽取金額（可能是收據、發票、轉帳畫面、紅包、訊息截圖、Line/銀行 App、便利商店條碼等）。\n'
+    // ⚠️ 不要用變數名 `prompt` — 會 shadow 掉全域 window.prompt
+    var aiPromptText = '從這張圖片抽取金額（可能是收據、發票、轉帳畫面、紅包、訊息截圖、Line/銀行 App、便利商店條碼等）。\n'
       + '只回 JSON：\n'
       + '{ "amount": 整數金額（總額、應付金額、轉出金額、紅包面額…擇一最關鍵的）, "occasion": "簡短事由（如：餐費/紅包/禮品/車資/其他）", "recipient": "收/付對象（看不到就空字串）", "note": "備註，如店名、品項、日期等" }\n'
       + '規則：\n'
@@ -1074,19 +1123,21 @@ async function onGiftFile(files){
       + '2) 圖中有多個金額時取「最終總額／應付金額」\n'
       + '3) 真的看不到任何數字才填 0\n'
       + '4) 只回 JSON，不要附加任何說明文字';
-    var raw = await geminiCall([resized.blob], prompt);
+    var raw = await geminiCall([resized.blob], aiPromptText);
     var data;
     try { data = parseJson(raw); }
     catch(jerr){ data = { amount:0, occasion:'', recipient:'', note:'' }; }
     var amount = Math.abs(Math.round(Number(data.amount) || 0));
 
-    // AI 失敗救援：跳框讓使用者手動輸入金額
+    // AI 失敗救援：跳自製 modal 讓使用者手動輸入金額（相容 LINE/手機 in-app browser）
     if(!amount){
       if(pv) pv.tag.textContent = '手動輸入中';
-      var hint = 'AI 沒抓到金額，請手動輸入要扣的金額（NT$）\n\nAI 看到的內容：' + (data.note || data.occasion || '無');
-      var manualStr = prompt(hint, '');
+      var manualStr = await askInput(
+        'AI 沒抓到金額',
+        '請手動輸入要扣的金額（NT$）\nAI 看到的內容：' + (data.note || data.occasion || '無'),
+        { type:'number', inputMode:'numeric', placeholder:'例：199' }
+      );
       if(manualStr === null){
-        // 使用者按取消 → 完全放棄這次上傳（連 Drive 都不傳）
         if(pv){ pv.el.classList.remove('busy'); pv.el.classList.add('err'); pv.tag.textContent = '取消'; }
         busy.innerHTML = '<span style="color:var(--ink-3);font-size:12px">已取消</span>';
         toast('已取消上傳', 'err');
@@ -1099,7 +1150,6 @@ async function onGiftFile(files){
         toast('金額無效', 'err');
         return;
       }
-      // 標記為手動輸入
       data.note = (data.note ? data.note + ' · ' : '') + '手動輸入金額';
     }
 
@@ -1141,15 +1191,15 @@ async function onGiftFile(files){
       pv.el.classList.add('ok');
       pv.tag.textContent = '−$'+fmt(amount);
     }
-    busy.innerHTML = '<span style="color:var(--ok);font-size:12px">✓ 已扣款 $'+fmt(amount)+'，請按右下「💾 儲存變更」同步</span>';
+    busy.innerHTML = '<span style="color:var(--ok);font-size:12px">✓ 已扣款 $'+fmt(amount)+'，同步中…</span>';
 
-    // ⚠️ 手動儲存模式：不再自動 pushToCloud；改用浮動儲存鈕
-    setPending(PENDING_GIFT_COUNT + 1);
-    // 本機暫存（避免重新整理就消失，但雲端要等使用者按儲存）
+    // ⚡ 上傳成功後立刻自動推雲端，避免使用者忘記按儲存導致圖片「消失」
+    //   (圖片本身已在 Drive；如果 STATE 沒推上雲，其他裝置就看不到這筆歷史紀錄)
     try { localStorage.setItem(stateKey(STATE.ym || ''), JSON.stringify(STATE)); } catch(e){}
     render();
     document.getElementById('gift-file').value = '';
-    showNotice('圖片已上傳 Drive', '已扣款 $'+fmt(amount)+'。雲端尚未同步，請按右下「💾 儲存變更」確認。');
+    pushToCloud(false);
+    showNotice('已上傳雲端', '已從 '+emp.name+' 的禮金扣款 $'+fmt(amount)+'，圖片已存到 Drive');
   } catch(e){
     if(pv){ pv.el.classList.remove('busy'); pv.el.classList.add('err'); pv.tag.textContent = '失敗'; }
     busy.innerHTML = '<span style="color:var(--danger);font-size:12px">❌ '+ (e.message||'失敗') +'</span>';
