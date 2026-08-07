@@ -176,7 +176,7 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
 .notice-modal .icon-circle{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 12px;box-shadow:0 12px 24px -8px rgba(16,185,129,.5)}
 .notice-modal h3{font-size:18px;font-weight:700;color:var(--ink);margin-bottom:8px;margin-left:0}
 .notice-modal h3{justify-content:center}
-.notice-modal p{font-size:13px;color:var(--ink-2);line-height:1.6;margin-bottom:16px}
+.notice-modal p{font-size:13px;color:var(--ink-2);line-height:1.6;margin-bottom:16px;white-space:pre-line}
 .notice-modal button{padding:9px 28px;background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);color:#fff;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 6px 14px -4px rgba(202,138,4,.4);transition:transform .12s}
 .notice-modal button:hover{transform:translateY(-1px)}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -1191,19 +1191,24 @@ async function onGiftFile(files){
       pv.el.classList.add('ok');
       pv.tag.textContent = '−$'+fmt(amount);
     }
-    busy.innerHTML = '<span style="color:var(--ok);font-size:12px">✓ 已扣款 $'+fmt(amount)+'，同步中…</span>';
-
-    // ⚡ 上傳成功後立刻自動推雲端，避免使用者忘記按儲存導致圖片「消失」
-    //   (圖片本身已在 Drive；如果 STATE 沒推上雲，其他裝置就看不到這筆歷史紀錄)
+    // 本機暫存以防同步失敗還能撿回
     try { localStorage.setItem(stateKey(STATE.ym || ''), JSON.stringify(STATE)); } catch(e){}
     render();
     document.getElementById('gift-file').value = '';
-    pushToCloud(false);
+
+    // ⚡ 同步等待推雲端成功 → 才顯示「已上傳」通知
+    //   若失敗會 throw 進 catch，跳出明確錯誤 modal 讓使用者知道要重試
+    busy.innerHTML = '<span style="color:var(--info);font-size:12px">☁ 同步雲端中…</span>';
+    await pushToCloudNow();
+    busy.innerHTML = '<span style="color:var(--ok);font-size:12px">✓ 已扣款 $'+fmt(amount)+'，雲端已同步</span>';
     showNotice('已上傳雲端', '已從 '+emp.name+' 的禮金扣款 $'+fmt(amount)+'，圖片已存到 Drive');
   } catch(e){
     if(pv){ pv.el.classList.remove('busy'); pv.el.classList.add('err'); pv.tag.textContent = '失敗'; }
-    busy.innerHTML = '<span style="color:var(--danger);font-size:12px">❌ '+ (e.message||'失敗') +'</span>';
-    toast('失敗：'+(e.message||''), 'err');
+    var msg = e && e.message ? e.message : String(e || '失敗');
+    console.error('[禮金上傳] 失敗：', e);
+    busy.innerHTML = '<span style="color:var(--danger);font-size:12px">❌ '+ msg +'</span>';
+    // 用 modal 而不是 toast，讓使用者一定看得到
+    showNotice('❌ 上傳失敗', msg + '\n\n請重新上傳，或截圖給管理員。');
   }
 }
 
@@ -1376,6 +1381,28 @@ function pushToCloud(showToastWhenOk){
       })
       .catch(function(err){ setSyncChip('err', '☁ 離線', err.message||''); });
   }, 600);
+}
+
+// 同步版：不 debounce、直接回 Promise，caller 可以 await 確認成功
+// 上傳禮金時用這個，避免使用者關頁面時推送還沒送出
+function pushToCloudNow(){
+  if(!STATE) return Promise.reject(new Error('no state'));
+  var url = getSyncUrl();
+  if(!url) return Promise.reject(new Error('尚未設定雲端網址'));
+  setSyncChip('busy', '☁ 同步中…', '');
+  return callGAS('saveStore', [getStorePassword(), STORE, JSON.parse(JSON.stringify(STATE))])
+    .then(function(res){
+      if(res && res.ok){
+        setSyncChip('ok', '☁ 已同步', '最後同步：'+(res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : ''));
+        PENDING_GIFT_COUNT = 0;
+        var fab = document.getElementById('save-fab');
+        if(fab) fab.classList.remove('show');
+        return res;
+      }
+      var err = new Error((res && res.error) || '雲端回覆失敗');
+      setSyncChip('err', '☁ 失敗', err.message);
+      throw err;
+    });
 }
 
 function pullFromCloud(){
