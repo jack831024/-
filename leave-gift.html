@@ -1082,16 +1082,12 @@ function renderHistory(){
   if(!EMPLOYEES.length){ area.innerHTML=''; return; }
   var emp = EMPLOYEES.find(function(e){ return e.id === STATE.selectedEmpId; });
   if(!emp){ area.innerHTML = '<div class="empty-row">未選擇員工</div>'; return; }
-  var allHist = (STATE.giftHistory[emp.id] || []).slice();
-  // 按選擇月份篩選（seed 一律顯示；其他項按 ts 落在選擇月份內）
-  var monthStart = ymFirstDay(SELECTED_YM), monthEnd = ymLastDay(SELECTED_YM) + 'T23:59:59';
-  var hist = allHist.filter(function(h){
-    if(h && h.reason === '初始餘額') return true; // 起始一定顯示
-    var t = String(h.ts||'').substring(0, 19); // ISO
-    return t >= monthStart && t <= monthEnd;
-  }).sort(function(a,b){ return (b.ts||'').localeCompare(a.ts||''); });
+  // 禮金歷史顯示全部（不按月份過濾）— 這是員工累積帳本
+  var hist = (STATE.giftHistory[emp.id] || []).slice().sort(function(a,b){
+    return (b.ts||'').localeCompare(a.ts||'');
+  });
   if(hist.length === 0){
-    area.innerHTML = '<div class="empty-row">' + SELECTED_YM + ' 沒有禮金紀錄<br><span style="font-size:11px">切換月份可查看其他月份，或直接上傳圖片</span></div>';
+    area.innerHTML = '<div class="empty-row">尚無紀錄<br><span style="font-size:11px">上傳禮金圖片即可從餘額扣款</span></div>';
     return;
   }
   var rows = hist.map(function(h){
@@ -1264,12 +1260,16 @@ function renderEmpMgmt(){
     var left = !!e.leftDate;
     var ptTag = e.pt ? '<span class="pt-tag">PT</span>' : '';
     var leftTag = left ? '<span style="font-size:9.5px;color:var(--danger);font-weight:600">(已離職 '+e.leftDate+')</span>' : '';
+    // 已離職的員工：改顯示「復職」按鈕，不再是 ✕（避免重複標記）
+    var actionBtn = left
+      ? '<button class="btn-edit" title="取消離職（復職）" style="background:rgba(16,185,129,.12);color:#059669" onclick="unmarkEmpLeft(\''+e.id+'\')">↻</button>'
+      : '<button class="btn-del" title="標記離職" onclick="markEmpLeft(\''+e.id+'\')">✕</button>';
     return '<span class="emp-mgmt-item'+(left?' left':'')+'">'
       + '<span class="n">'+e.name+'</span>'
       + ptTag + leftTag
       + '<span class="m">'+(e.hireDate||'—')+'</span>'
       + '<button class="btn-edit" title="編輯" onclick="openEditEmpModal(\''+e.id+'\')">✏️</button>'
-      + '<button class="btn-del" title="標記離職" onclick="markEmpLeft(\''+e.id+'\')">✕</button>'
+      + actionBtn
       + '</span>';
   }).join('');
 }
@@ -1369,6 +1369,24 @@ function saveEmpFromModal(){
     .catch(function(err){ showNotice('❌ 儲存失敗', err.message||''); });
   EMP_MODAL_EDITING = null;
 }
+async function unmarkEmpLeft(empId){
+  if(!(await ensureEmpMgmtUnlocked('取消離職'))) return;
+  var emp = EMPLOYEES.find(function(e){ return e.id === empId; });
+  if(!emp || !emp.leftDate) return;
+  if(!STATE.employees || !STATE.employees.length){
+    STATE.employees = EMPLOYEES.map(function(e){ return Object.assign({}, e); });
+  }
+  var target = STATE.employees.find(function(e){ return e.id === empId; });
+  if(target){
+    delete target.leftDate;
+  }
+  refreshEmployeesFromState();
+  render();
+  pushToCloudNow()
+    .then(function(){ showNotice('已上傳雲端', emp.name + ' 已復職，重新顯示於員工清單'); })
+    .catch(function(err){ showNotice('❌ 儲存失敗', err.message||''); });
+}
+
 async function markEmpLeft(empId){
   if(!(await ensureEmpMgmtUnlocked('標記離職'))) return;
   var emp = EMPLOYEES.find(function(e){ return e.id === empId; });
