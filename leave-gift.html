@@ -41,6 +41,39 @@ body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans
 .store-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--brand),#facc15);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px}
 .spacer{flex:1}
 
+.month-picker{padding:6px 12px;font-size:13px;font-weight:600;background:rgba(255,255,255,.9);border:1.5px solid var(--line);border-radius:10px;color:var(--ink);font-family:inherit;cursor:pointer;outline:none;transition:all .15s}
+.month-picker:hover{border-color:var(--brand)}
+.month-picker:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(202,138,4,.15)}
+
+.section-emp{background:rgba(255,255,255,.85);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.9);border-radius:18px;padding:1rem 1.25rem;margin-bottom:14px;box-shadow:0 1px 2px rgba(15,23,42,.03),0 6px 18px -10px rgba(15,23,42,.08)}
+.section-emp .head-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.section-emp .title{font-size:14px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px}
+.section-emp .add-btn{margin-left:auto;padding:6px 12px;font-size:12px;font-weight:600;background:linear-gradient(135deg,#3b82f6,#60a5fa);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px -4px rgba(59,130,246,.4)}
+.section-emp .add-btn:hover{transform:translateY(-1px)}
+.section-emp .emp-mgmt-list{display:flex;flex-wrap:wrap;gap:8px}
+.emp-mgmt-item{display:inline-flex;align-items:center;gap:8px;padding:6px 10px 6px 12px;background:rgba(248,250,252,.9);border:1px solid var(--line);border-radius:999px;font-size:12.5px}
+.emp-mgmt-item .n{font-weight:700;color:var(--ink)}
+.emp-mgmt-item .m{font-size:10.5px;color:var(--ink-3);font-family:ui-monospace,Menlo,monospace}
+.emp-mgmt-item .pt-tag{font-size:9px;font-weight:700;padding:1px 6px;border-radius:999px;background:rgba(245,158,11,.15);color:#a16207}
+.emp-mgmt-item .btn-edit,.emp-mgmt-item .btn-del{width:22px;height:22px;border:none;border-radius:50%;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;padding:0;transition:all .12s}
+.emp-mgmt-item .btn-edit{background:rgba(59,130,246,.1);color:var(--brand)}
+.emp-mgmt-item .btn-edit:hover{background:var(--brand);color:#fff}
+.emp-mgmt-item .btn-del{background:rgba(220,38,38,.1);color:var(--danger)}
+.emp-mgmt-item .btn-del:hover{background:var(--danger);color:#fff}
+.emp-mgmt-item.left{opacity:.5}
+
+/* Emp edit modal fields */
+.emp-modal-fields{display:flex;flex-direction:column;gap:10px;text-align:left;margin-bottom:14px}
+.emp-modal-fields label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--ink-2)}
+.emp-modal-fields input[type=text],.emp-modal-fields input[type=date],.emp-modal-fields input[type=number]{padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;font-family:inherit;font-size:14px;color:var(--ink);outline:none}
+.emp-modal-fields input:focus{border-color:var(--brand)}
+.emp-modal-fields .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.emp-modal-fields .check-row{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer}
+.emp-modal-fields .check-row input{width:18px;height:18px}
+
+.legacy-note{padding:12px 14px;background:rgba(148,163,184,.08);border-left:3px solid var(--ink-3);border-radius:0 8px 8px 0;color:var(--ink-2);font-size:12px;line-height:1.6;margin-bottom:10px}
+.legacy-note b{color:var(--ink)}
+
 .sync-chip{padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;user-select:none}
 .sync-chip.ok{background:rgba(16,185,129,.12);color:#059669}
 .sync-chip.ok:hover{background:rgba(16,185,129,.2)}
@@ -209,6 +242,7 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
     <span id="store-name">（未選店）</span>
   </div>
   <span class="spacer"></span>
+  <select id="ym-picker" class="month-picker" onchange="onYmChange()" title="選擇年月份"></select>
   <span id="sync-chip" class="sync-chip off" title="點擊重新同步" onclick="syncNow()">☁ 未設定</span>
   <button class="btn btn-ghost btn-sm" onclick="pullOTLeaveFromCloud(false)" title="重抓加班費特休/旅遊假資料">🔄 同步加班費</button>
 </div>
@@ -221,6 +255,21 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
       <h1 id="hero-title">特休／旅遊假／禮金</h1>
       <p id="hero-subtitle">特休依到職日累計、旅遊假依年資；禮金生日/中秋/端午自動 +2000，僅 AI 識別可扣款</p>
     </div>
+  </div>
+
+  <!-- 舊資料月份提示 -->
+  <div class="legacy-note" id="legacy-note" style="display:none">
+    <b>📁 舊資料月份</b> — 這個月份的每日紀錄已封存，僅顯示「以前使用天數」加總，不逐日列出。
+  </div>
+
+  <!-- 員工管理 -->
+  <div class="section-emp">
+    <div class="head-row">
+      <span class="title">👥 員工管理</span>
+      <span style="font-size:11.5px;color:var(--ink-3)">✏️ 編輯資料 · ✕ 標記離職（不會刪除歷史）</span>
+      <button class="add-btn" onclick="openAddEmpModal()">＋ 新增員工</button>
+    </div>
+    <div class="emp-mgmt-list" id="emp-mgmt-list"></div>
   </div>
 
   <!-- 特休 -->
@@ -263,6 +312,35 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
     <div id="history-list" class="history-list"></div>
   </div>
 
+</div>
+
+<!-- 員工新增／編輯 modal -->
+<div class="notice-modal" id="emp-modal">
+  <div class="box" onclick="event.stopPropagation()" style="max-width:420px">
+    <div class="icon-circle" id="emp-modal-icon" style="background:linear-gradient(135deg,#3b82f6,#60a5fa)">👤</div>
+    <h3 id="emp-modal-title">新增員工</h3>
+    <div class="emp-modal-fields">
+      <label>姓名 <input type="text" id="emp-f-name" placeholder="例：陳小明" required></label>
+      <div class="row2">
+        <label>入職日 <input type="date" id="emp-f-hire"></label>
+        <label>生日（月-日）<input type="text" id="emp-f-birthday" placeholder="例：03-14" maxlength="5"></label>
+      </div>
+      <label class="check-row"><input type="checkbox" id="emp-f-pt"> PT（節慶 +$1,000，其他 FT +$2,000）</label>
+      <label style="font-size:11px;color:var(--ink-3);margin-top:4px">💡 進階（可先跳過，之後再改）</label>
+      <div class="row2">
+        <label style="font-size:11px">4/1 前特休累計 <input type="number" id="emp-f-accrued" min="0" value="0"></label>
+        <label style="font-size:11px">4/1 前特休已用 <input type="number" id="emp-f-annual-used" min="0" value="0"></label>
+      </div>
+      <div class="row2">
+        <label style="font-size:11px">4/1 前旅遊假已用 <input type="number" id="emp-f-travel-used" min="0" value="0"></label>
+        <label style="font-size:11px">4/1 禮金初始餘額 <input type="number" id="emp-f-gift" min="0" value="0"></label>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeEmpModal()" style="padding:9px 18px;background:rgba(148,163,184,.15);color:var(--ink-2);border:none;border-radius:10px;font-family:inherit;font-weight:600;font-size:14px;cursor:pointer">取消</button>
+      <button onclick="saveEmpFromModal()" style="padding:9px 20px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer">儲存</button>
+    </div>
+  </div>
 </div>
 
 <!-- 圖片放大 modal -->
@@ -368,7 +446,64 @@ var STORE = sessionStorage.getItem('cd_store') || '';
 var STORE_NAME = sessionStorage.getItem('cd_store_name') || '（未選店）';
 document.getElementById('store-name').textContent = STORE_NAME;
 
+// 員工清單：優先讀 STATE.employees（可雲端同步 CRUD），fallback 到寫死的 EMP_DATA
 var EMPLOYEES = (EMP_DATA[STORE] || []).slice();
+function refreshEmployeesFromState(){
+  if(STATE && Array.isArray(STATE.employees) && STATE.employees.length){
+    EMPLOYEES = STATE.employees.slice();
+  } else {
+    EMPLOYEES = (EMP_DATA[STORE] || []).slice();
+  }
+}
+
+// 目前選擇的年月份（YYYY-MM），預設今天
+var SELECTED_YM = (function(){
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+})();
+// EFFECTIVE_YM = OT 追蹤起點的月份（<= 這個月 都算 legacy 舊資料）
+var EFFECTIVE_YM = '2026-04';
+function isLegacyMonth(ym){ return ym < EFFECTIVE_YM; }
+function ymFirstDay(ym){ return ym + '-01'; }
+function ymLastDay(ym){
+  var p = ym.split('-');
+  var y = Number(p[0]), m = Number(p[1]);
+  var last = new Date(y, m, 0).getDate();
+  return ym + '-' + String(last).padStart(2,'0');
+}
+function activeInMonth(emp, ym){
+  if(!emp) return false;
+  var monthEnd = ymLastDay(ym), monthStart = ymFirstDay(ym);
+  if(emp.hireDate && emp.hireDate > monthEnd) return false;
+  if(emp.leftDate && emp.leftDate < monthStart) return false;
+  return true;
+}
+
+// 初始化年月選單（EFFECTIVE_YM 起 ~ 12 個月後）
+(function initYmPicker(){
+  var sel = document.getElementById('ym-picker');
+  if(!sel) return;
+  var start = new Date(2026, 2, 1); // 2026-03
+  var end = new Date();
+  end.setMonth(end.getMonth() + 6);  // +6 個月給未來
+  var opts = [];
+  var cursor = new Date(start);
+  while(cursor <= end){
+    var y = cursor.getFullYear(), m = cursor.getMonth()+1;
+    var v = y + '-' + String(m).padStart(2,'0');
+    opts.push('<option value="'+v+'">'+y+'年 '+m+'月</option>');
+    cursor.setMonth(cursor.getMonth()+1);
+  }
+  sel.innerHTML = opts.join('');
+  sel.value = SELECTED_YM;
+})();
+
+function onYmChange(){
+  SELECTED_YM = document.getElementById('ym-picker').value;
+  // 更新 legacy note 顯示
+  document.getElementById('legacy-note').style.display = isLegacyMonth(SELECTED_YM) ? 'block' : 'none';
+  render();
+}
 
 // 隱藏旅遊假區塊（十城）
 if(STORES_WITHOUT_TRAVEL[STORE]){
@@ -489,6 +624,10 @@ function tenureMonths(hireDate){
 function tenureYears(hireDate){ return tenureMonths(hireDate) / 12; }
 // FT 員工（用於特休/旅遊假表）
 function ftOnly(){ return EMPLOYEES.filter(function(e){ return !e.pt; }); }
+// 依選擇月份篩掉尚未入職／已離職的員工
+function activeInSelected(list){
+  return (list || []).filter(function(e){ return activeInMonth(e, SELECTED_YM); });
+}
 
 // 旅遊假（依目前年資）
 //   半年~1年: 1天 / 1~2年: 2天 / 2~3年: 3天 / 3年+: 4天
@@ -516,21 +655,30 @@ function cleanEmpName(n){
 
 // 從加班費系統匯入的請假紀錄中，找此員工 EFFECTIVE_DATE 之後的特/旅遊日期
 //   ⚠️ 只用雲端資料（OT_LEAVE_CLOUD）— 保證每台裝置看到的一致
-//   localStorage 曾經是 fallback，但會殘留過期資料造成裝置間不一致；已改成只信雲端
-//   若雲端還沒載入 → 回空陣列（sync chip 會顯示載入狀態）
+//   opts.ym：如果傳入，只返回該月份的日期（用於按月瀏覽 chip）
+//   opts.uptoYm：如果傳入，返回 EFFECTIVE_DATE ~ 該月末 的所有日期（用於算截至該月的累計）
 // 回傳 { full: [...排序日期], half: [...排序日期] }
-function getOvertimeDatesAfter(empName, type){
+function getOvertimeDatesAfter(empName, type, opts){
+  opts = opts || {};
   var seenFull = {};
   var seenHalf = {};
   var target = cleanEmpName(empName);
   var effDate = getEffectiveDate();
   var halfKey = type + 'Half';
+  var minDate = effDate, maxDate = '9999-99-99';
+  if(opts.ym){
+    minDate = ymFirstDay(opts.ym);
+    if(minDate <= effDate) minDate = effDate; // 舊月份的下限還是 EFFECTIVE_DATE
+    maxDate = ymLastDay(opts.ym);
+  } else if(opts.uptoYm){
+    maxDate = ymLastDay(opts.uptoYm);
+  }
   if(OT_LEAVE_CLOUD){
     Object.keys(OT_LEAVE_CLOUD).forEach(function(n){
       if(cleanEmpName(n) !== target) return;
       var rec = OT_LEAVE_CLOUD[n] || {};
-      (rec[type] || []).forEach(function(d){ if(d > effDate) seenFull[d] = 1; });
-      (rec[halfKey] || []).forEach(function(d){ if(d > effDate) seenHalf[d] = 1; });
+      (rec[type] || []).forEach(function(d){ if(d > effDate && d >= minDate && d <= maxDate) seenFull[d] = 1; });
+      (rec[halfKey] || []).forEach(function(d){ if(d > effDate && d >= minDate && d <= maxDate) seenHalf[d] = 1; });
     });
   }
   return { full: Object.keys(seenFull).sort(), half: Object.keys(seenHalf).sort() };
@@ -579,8 +727,11 @@ function calcAnnual(emp){
   var computed = computeAnnualAccrued(emp.hireDate);
   var accrued = Math.max(emp.initialAnnualAccrued || 0, computed);
   var initialUsed = emp.initialAnnualUsed || 0;
-  var ot = getOvertimeDatesAfter(emp.name, 'annual');
-  var fromOT = ot.full.length + ot.half.length * 0.5;
+  // 累計已用 = 起始 + 所有 OT（截至選擇月份的月底）
+  var otAll = getOvertimeDatesAfter(emp.name, 'annual', { uptoYm: SELECTED_YM });
+  var fromOT = otAll.full.length + otAll.half.length * 0.5;
+  // 該月份的 chip：只顯示選擇月份內的 OT 日期（舊月份不顯示 chip）
+  var otMonth = isLegacyMonth(SELECTED_YM) ? { full:[], half:[] } : getOvertimeDatesAfter(emp.name, 'annual', { ym: SELECTED_YM });
   var manual = STATE.annualUsedManual[emp.id] || 0;
   var used = initialUsed + fromOT + manual;
   return {
@@ -588,8 +739,8 @@ function calcAnnual(emp){
     used: used,
     initialUsed: initialUsed,
     fromOT: fromOT,
-    fromOTDates: ot.full,
-    fromOTHalfDates: ot.half,
+    fromOTDates: otMonth.full,
+    fromOTHalfDates: otMonth.half,
     remaining: Math.max(0, accrued - used)
   };
 }
@@ -609,18 +760,19 @@ function fmtDateISO(d){
 }
 
 function calcTravel(emp){
-  // 週期起點（今年或去年 3/15）— 只用於裁掉舊週期的 OT 紀錄
   var cycleStart = currentTravelCycleStart();
   var cycleStartStr = fmtDateISO(cycleStart);
-  // 額度：以「今天」年資為準（今天滿一年立刻變 2 天）
   var entitlement = travelEntitlement(emp.hireDate);
-  // OT 只算本週期內的（cycleStart 之後）
-  var ot = getOvertimeDatesAfter(emp.name, 'travel');
-  var cycleFull = ot.full.filter(function(d){ return d >= cycleStartStr; });
-  var cycleHalf = ot.half.filter(function(d){ return d >= cycleStartStr; });
+  // 已用（截至選擇月底）：只算本週期內的
+  var otAll = getOvertimeDatesAfter(emp.name, 'travel', { uptoYm: SELECTED_YM });
+  var cycleFull = otAll.full.filter(function(d){ return d >= cycleStartStr; });
+  var cycleHalf = otAll.half.filter(function(d){ return d >= cycleStartStr; });
   var fromOT = cycleFull.length + cycleHalf.length * 0.5;
+  // 該月份的 chip：只顯示選擇月份內的 OT
+  var otMonth = isLegacyMonth(SELECTED_YM) ? { full:[], half:[] } : getOvertimeDatesAfter(emp.name, 'travel', { ym: SELECTED_YM });
+  var monthFull = otMonth.full.filter(function(d){ return d >= cycleStartStr; });
+  var monthHalf = otMonth.half.filter(function(d){ return d >= cycleStartStr; });
   var manual = STATE.travelUsedManual[emp.id] || 0;
-  // 「4 月前已用」= 本週期內、OT 追蹤起點前的已用（由 initialTravelUsed 直接指定）
   var initialUsed = (emp.initialTravelUsed != null)
     ? emp.initialTravelUsed
     : Math.max(0, entitlement - (emp.initialTravelRemaining || 0));
@@ -630,8 +782,8 @@ function calcTravel(emp){
     used: used,
     initialUsed: initialUsed,
     fromOT: fromOT,
-    fromOTDates: cycleFull,
-    fromOTHalfDates: cycleHalf,
+    fromOTDates: monthFull,
+    fromOTHalfDates: monthHalf,
     remaining: Math.max(0, entitlement - used)
   };
 }
@@ -754,9 +906,9 @@ function fmt(n){ return Math.round(Number(n)||0).toLocaleString(); }
 
 function renderAnnual(){
   var tb = document.getElementById('tbody-annual');
-  var ft = ftOnly();
+  var ft = activeInSelected(ftOnly());
   if(!ft.length){
-    tb.innerHTML = '<tr><td colspan="5"><div class="empty-row">本店尚未設定員工資料</div></td></tr>';
+    tb.innerHTML = '<tr><td colspan="5"><div class="empty-row">'+SELECTED_YM+' 沒有在職員工</div></td></tr>';
     return;
   }
   var rows = ft.map(function(e){
@@ -795,9 +947,9 @@ function fmtMD(d){
 function renderTravel(){
   if(STORES_WITHOUT_TRAVEL[STORE]) return;
   var tb = document.getElementById('tbody-travel');
-  var ft = ftOnly();
+  var ft = activeInSelected(ftOnly());
   if(!ft.length){
-    tb.innerHTML = '<tr><td colspan="5"><div class="empty-row">本店尚未設定員工資料</div></td></tr>';
+    tb.innerHTML = '<tr><td colspan="5"><div class="empty-row">'+SELECTED_YM+' 沒有在職員工</div></td></tr>';
     return;
   }
   var rows = ft.map(function(e){
@@ -825,12 +977,18 @@ function renderTravel(){
 
 function renderEmpTabs(){
   var area = document.getElementById('emp-tabs');
-  if(!EMPLOYEES.length){
-    area.innerHTML = '<div class="empty-row" style="flex:1">本店尚未設定員工資料</div>';
+  var list = activeInSelected(EMPLOYEES);
+  if(!list.length){
+    area.innerHTML = '<div class="empty-row" style="flex:1">'+SELECTED_YM+' 沒有在職員工</div>';
     return;
   }
   var sel = STATE.selectedEmpId;
-  area.innerHTML = EMPLOYEES.map(function(e){
+  // 若目前選中的員工在該月不在職 → 自動改選第一位
+  if(!list.find(function(e){ return e.id === sel; })){
+    STATE.selectedEmpId = list[0].id;
+    sel = list[0].id;
+  }
+  area.innerHTML = list.map(function(e){
     var bal = calcGiftBalance(e);
     var ptBadge = e.pt ? '<span class="bal" style="background:rgba(245,158,11,.15);color:#a16207">PT</span>' : '';
     return '<button class="emp-tab '+(sel===e.id?'active':'')+'" onclick="selectEmp(\''+e.id+'\')">'
@@ -912,11 +1070,16 @@ function renderHistory(){
   if(!EMPLOYEES.length){ area.innerHTML=''; return; }
   var emp = EMPLOYEES.find(function(e){ return e.id === STATE.selectedEmpId; });
   if(!emp){ area.innerHTML = '<div class="empty-row">未選擇員工</div>'; return; }
-  var hist = (STATE.giftHistory[emp.id] || []).slice().sort(function(a,b){
-    return (b.ts||'').localeCompare(a.ts||'');
-  });
+  var allHist = (STATE.giftHistory[emp.id] || []).slice();
+  // 按選擇月份篩選（seed 一律顯示；其他項按 ts 落在選擇月份內）
+  var monthStart = ymFirstDay(SELECTED_YM), monthEnd = ymLastDay(SELECTED_YM) + 'T23:59:59';
+  var hist = allHist.filter(function(h){
+    if(h && h.reason === '初始餘額') return true; // 起始一定顯示
+    var t = String(h.ts||'').substring(0, 19); // ISO
+    return t >= monthStart && t <= monthEnd;
+  }).sort(function(a,b){ return (b.ts||'').localeCompare(a.ts||''); });
   if(hist.length === 0){
-    area.innerHTML = '<div class="empty-row">尚無紀錄<br><span style="font-size:11px">上傳禮金圖片即可從餘額扣款</span></div>';
+    area.innerHTML = '<div class="empty-row">' + SELECTED_YM + ' 沒有禮金紀錄<br><span style="font-size:11px">切換月份可查看其他月份，或直接上傳圖片</span></div>';
     return;
   }
   var rows = hist.map(function(h){
@@ -1066,11 +1229,122 @@ function askInput(title, msg, opts){
 }
 
 function render(){
+  refreshEmployeesFromState();
+  renderEmpMgmt();
   renderAnnual();
   renderTravel();
   renderEmpTabs();
   renderEmpCardAndUpload();
   renderHistory();
+}
+
+// ============================================
+// 員工管理 CRUD
+// ============================================
+function renderEmpMgmt(){
+  var area = document.getElementById('emp-mgmt-list');
+  if(!area) return;
+  if(!EMPLOYEES.length){
+    area.innerHTML = '<span style="font-size:12px;color:var(--ink-3)">尚無員工，按上方「+ 新增員工」開始</span>';
+    return;
+  }
+  area.innerHTML = EMPLOYEES.map(function(e){
+    var left = !!e.leftDate;
+    var ptTag = e.pt ? '<span class="pt-tag">PT</span>' : '';
+    var leftTag = left ? '<span style="font-size:9.5px;color:var(--danger);font-weight:600">(已離職 '+e.leftDate+')</span>' : '';
+    return '<span class="emp-mgmt-item'+(left?' left':'')+'">'
+      + '<span class="n">'+e.name+'</span>'
+      + ptTag + leftTag
+      + '<span class="m">'+(e.hireDate||'—')+'</span>'
+      + '<button class="btn-edit" title="編輯" onclick="openEditEmpModal(\''+e.id+'\')">✏️</button>'
+      + '<button class="btn-del" title="標記離職" onclick="markEmpLeft(\''+e.id+'\')">✕</button>'
+      + '</span>';
+  }).join('');
+}
+
+var EMP_MODAL_EDITING = null; // 若非 null 表示編輯中，值為 empId
+function openAddEmpModal(){
+  EMP_MODAL_EDITING = null;
+  document.getElementById('emp-modal-title').textContent = '新增員工';
+  document.getElementById('emp-modal-icon').textContent = '👤';
+  ['emp-f-name','emp-f-hire','emp-f-birthday'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('emp-f-pt').checked = false;
+  ['emp-f-accrued','emp-f-annual-used','emp-f-travel-used','emp-f-gift'].forEach(function(id){ document.getElementById(id).value='0'; });
+  document.getElementById('emp-modal').classList.add('open');
+  setTimeout(function(){ document.getElementById('emp-f-name').focus(); }, 100);
+}
+function openEditEmpModal(empId){
+  var emp = EMPLOYEES.find(function(e){ return e.id === empId; });
+  if(!emp){ toast('找不到員工', 'err'); return; }
+  EMP_MODAL_EDITING = empId;
+  document.getElementById('emp-modal-title').textContent = '編輯 ' + emp.name;
+  document.getElementById('emp-modal-icon').textContent = '✏️';
+  document.getElementById('emp-f-name').value = emp.name || '';
+  document.getElementById('emp-f-hire').value = emp.hireDate || '';
+  document.getElementById('emp-f-birthday').value = emp.birthday || '';
+  document.getElementById('emp-f-pt').checked = !!emp.pt;
+  document.getElementById('emp-f-accrued').value = emp.initialAnnualAccrued || 0;
+  document.getElementById('emp-f-annual-used').value = emp.initialAnnualUsed || 0;
+  document.getElementById('emp-f-travel-used').value = emp.initialTravelUsed != null ? emp.initialTravelUsed : 0;
+  document.getElementById('emp-f-gift').value = emp.initialGiftBalance || 0;
+  document.getElementById('emp-modal').classList.add('open');
+  setTimeout(function(){ document.getElementById('emp-f-name').focus(); }, 100);
+}
+function closeEmpModal(){ document.getElementById('emp-modal').classList.remove('open'); }
+function saveEmpFromModal(){
+  var name = document.getElementById('emp-f-name').value.trim();
+  var hireDate = document.getElementById('emp-f-hire').value;
+  var birthday = document.getElementById('emp-f-birthday').value.trim();
+  var pt = document.getElementById('emp-f-pt').checked;
+  var accrued = Number(document.getElementById('emp-f-accrued').value) || 0;
+  var annualUsed = Number(document.getElementById('emp-f-annual-used').value) || 0;
+  var travelUsed = Number(document.getElementById('emp-f-travel-used').value) || 0;
+  var giftBal = Number(document.getElementById('emp-f-gift').value) || 0;
+  if(!name){ toast('請輸入姓名', 'err'); return; }
+  // 生日格式檢查：MM-DD
+  if(birthday && !/^\d{2}-\d{2}$/.test(birthday)){ toast('生日格式應為 MM-DD (例: 03-14)', 'err'); return; }
+  // 確保 STATE.employees 是目前的員工陣列（可能從 EMP_DATA fallback）
+  if(!STATE.employees || !STATE.employees.length){
+    STATE.employees = EMPLOYEES.map(function(e){ return Object.assign({}, e); });
+  }
+  var idx = -1;
+  if(EMP_MODAL_EDITING){
+    idx = STATE.employees.findIndex(function(e){ return e.id === EMP_MODAL_EDITING; });
+  }
+  var payload = { name:name, hireDate:hireDate, birthday:birthday, pt:pt,
+    initialAnnualAccrued:accrued, initialAnnualUsed:annualUsed,
+    initialTravelUsed:travelUsed, initialGiftBalance:giftBal };
+  if(idx >= 0){
+    STATE.employees[idx] = Object.assign({}, STATE.employees[idx], payload);
+  } else {
+    payload.id = 'emp_' + Date.now() + '_' + Math.random().toString(36).slice(2,5);
+    STATE.employees.push(payload);
+  }
+  closeEmpModal();
+  refreshEmployeesFromState();
+  render();
+  // 立刻推雲端
+  pushToCloudNow()
+    .then(function(){ showNotice('已上傳雲端', (EMP_MODAL_EDITING ? '員工資料已更新' : '員工「'+name+'」已新增')); })
+    .catch(function(err){ showNotice('❌ 儲存失敗', err.message||''); });
+  EMP_MODAL_EDITING = null;
+}
+async function markEmpLeft(empId){
+  var emp = EMPLOYEES.find(function(e){ return e.id === empId; });
+  if(!emp){ return; }
+  var ans = await askInput('標記離職', '確定要把「'+emp.name+'」標記為離職嗎？\n輸入離職日 (YYYY-MM-DD)，留空 = 今天。歷史紀錄會保留。', { type:'date' });
+  if(ans === null) return;
+  var leftDate = ans || fmtDateISO(new Date());
+  if(!STATE.employees || !STATE.employees.length){
+    STATE.employees = EMPLOYEES.map(function(e){ return Object.assign({}, e); });
+  }
+  var target = STATE.employees.find(function(e){ return e.id === empId; });
+  if(target){ target.leftDate = leftDate; }
+  refreshEmployeesFromState();
+  render();
+  pushToCloudNow()
+    .then(function(){ showNotice('已上傳雲端', emp.name + ' 已標記為離職 ('+leftDate+')'); })
+    .catch(function(err){ showNotice('❌ 儲存失敗', err.message||''); });
 }
 
 // ============================================
