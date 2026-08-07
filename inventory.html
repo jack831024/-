@@ -94,9 +94,6 @@ body.vendor-manage-mode .vendor-btn:hover{transform:none;box-shadow:none;backgro
 .manage-vendors-btn:hover{background:#fff;border-color:#94a3b8;color:#475569}
 body.vendor-manage-mode .manage-vendors-btn{background:linear-gradient(135deg,#dc2626 0%,#ef4444 100%);color:#fff;border-color:#dc2626;box-shadow:0 4px 12px -4px rgba(220,38,38,.5)}
 /* 廠商月份選擇器（每月可有不同的自訂/隱藏設定） */
-.vendor-month-picker{margin-left:auto;padding:5px 11px;border:1px solid #cbd5e1;background:rgba(255,255,255,.85);color:#334155;font-size:12px;font-weight:700;border-radius:999px;font-family:inherit;cursor:pointer;letter-spacing:.5px;transition:all .15s}
-.vendor-month-picker:hover{border-color:#94a3b8;background:#fff}
-.vendor-month-picker:focus{outline:none;border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(249,115,22,.1)}
 /* 還原已隱藏廠商 按鈕（自訂分組標題旁邊、接在 gcount 後面） */
 .restore-vendors-btn{margin-left:6px;background:none;border:1px solid #cbd5e1;color:#64748b;font-size:11px;cursor:pointer;font-family:inherit;padding:2px 9px;border-radius:999px;transition:all .15s;font-weight:600;letter-spacing:0.5px}
 .restore-vendors-btn:hover{background:rgba(8,145,178,.08);color:#0891b2;border-color:#0891b2}
@@ -444,7 +441,6 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
   <div class="section" id="vendor-section">
     <h3>
       <span class="step-num">1</span>選擇廠商
-      <input type="month" id="vendor-month-picker" class="vendor-month-picker" onchange="onVendorMonthChange()" title="切換月份（顯示該月時的廠商清單；刪除某廠商會自當月起隱藏，過往月份仍可見）">
       <button class="manage-vendors-btn" id="sync-vendors-btn" onclick="manualSyncVendors()" title="從雲端把所有有資料的廠商抓到這台裝置（每台手機看到一致）">🔄 同步</button>
       <button class="manage-vendors-btn" id="manage-vendors-btn" onclick="toggleVendorManageMode()">🗑 管理</button>
     </h3>
@@ -497,7 +493,7 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
   <div class="section" id="history-section" style="display:none">
     <h3><span class="icon">📊</span>月度盤點表（此廠商）</h3>
     <div class="history-toolbar">
-      <input type="month" id="month-picker" class="month-picker" onchange="loadHistory()">
+      <input type="month" id="month-picker" class="month-picker" onchange="onMonthPickerChange()">
       <button class="refresh-btn" onclick="loadHistory()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-3-6.7L21 8M21 3v5h-5"/></svg>
         重新整理
@@ -672,13 +668,8 @@ var STORE_NAME = sessionStorage.getItem('cd_store_name');
   }
   // ⭐ 一次性把舊版（不分月）的廠商清單搬到當月
   if(typeof migrateOldVendorKeys === 'function') migrateOldVendorKeys();
-  // ⭐ 廠商月份選擇器預設當月
-  // 注意：currentVendorMonth 變數宣告在後面（line ~631），這裡 IIFE 跑時還是 undefined，
-  // 所以直接呼叫 todayMonth()（function 宣告會完整 hoist）拿當月字串
+  // ⭐ 月度盤點表月份選擇器預設當月（廠商清單也以這個 picker 為準，只有一顆月份選擇）
   var thisMonth = todayMonth();
-  var vmp = document.getElementById('vendor-month-picker');
-  if(vmp) vmp.value = thisMonth;
-  // ⭐ 月度盤點表月份選擇器預設當月（不然每次進來都要手動選）
   var mp = document.getElementById('month-picker');
   if(mp) mp.value = thisMonth;
   renderVendorGrid(brand);
@@ -718,14 +709,22 @@ function customVendorsKey(){ return 'cd_custom_vendors_' + STORE_ID; }
 // 廠商刪除標記：{廠商名: 'YYYY-MM'}，表示「從該月起隱藏」（< 該月仍可見）
 function vendorDeletionsKey(){ return 'cd_vendor_deleted_' + STORE_ID; }
 
-// 切月份 → 重畫廠商網格（依「刪除月份」過濾）
-function onVendorMonthChange(){
-  var picker = document.getElementById('vendor-month-picker');
-  if(!picker) return;
-  currentVendorMonth = picker.value || todayMonth();
-  var brand = STORE_ID.indexOf('shicheng') >= 0 ? 'shicheng' : 'chudian';
-  renderVendorGrid(brand);
+// ⭐ 月度盤點表 picker 切月份 → 同時：
+//   1. 更新 currentVendorMonth，讓廠商清單依「刪除月份」過濾重畫
+//   2. 呼叫 loadHistory 拉該月盤點資料
+// （以前有獨立的 vendor-month-picker，已刪除，改用這顆一顆控制兩者）
+function onMonthPickerChange(){
+  var picker = document.getElementById('month-picker');
+  var newYm = (picker && picker.value) || todayMonth();
+  if(currentVendorMonth !== newYm){
+    currentVendorMonth = newYm;
+    var brand = STORE_ID.indexOf('shicheng') >= 0 ? 'shicheng' : 'chudian';
+    try{ renderVendorGrid(brand); }catch(e){}
+  }
+  if(typeof loadHistory === 'function') loadHistory();
 }
+// 保留舊 API 名稱，避免有其他地方呼叫（現在就導到新函式）
+function onVendorMonthChange(){ onMonthPickerChange(); }
 
 // 一次性遷移：把舊版的廠商清單合併到新格式
 //   v1（極舊）：cd_custom_vendors_{STORE_ID}                         ← 全域陣列
@@ -1385,6 +1384,12 @@ function syncMonthPickerToDate(dateStr){
   var picker = document.getElementById('month-picker');
   if(picker && picker.value !== ym){
     picker.value = ym;
+    // 月份變 → 同步 currentVendorMonth 並重畫廠商網格（跟 onMonthPickerChange 同語意）
+    if(currentVendorMonth !== ym){
+      currentVendorMonth = ym;
+      var brand = STORE_ID.indexOf('shicheng') >= 0 ? 'shicheng' : 'chudian';
+      try{ renderVendorGrid(brand); }catch(e){}
+    }
     // 若歷史區塊已開啟，重新拉資料
     if(currentVendor && document.getElementById('history-section').style.display !== 'none'){
       loadHistory();
