@@ -104,6 +104,7 @@ function doPost(e) {
       case 'deleteGiftEntry': res = deleteGiftEntry(args[0], args[1], args[2], args[3]); break;
       case 'saveOTLeave':     res = saveOTLeave(args[0], args[1], args[2], args[3]); break;
       case 'loadOTLeave':     res = loadOTLeave(args[0], args[1]); break;
+      case 'restoreGiftHistoryFromLog': res = restoreGiftHistoryFromLog(args[0], args[1]); break;
       // 舊介面（保留向後相容）
       case 'saveLeave':  res = saveLeave(args[0], args[1], args[2], args[3]); break;
       case 'loadLeave':  res = loadLeave(args[0], args[1], args[2]);          break;
@@ -352,6 +353,85 @@ function loadOTLeave(password, store) {
     });
     return { ok: true, byEmp: byEmp };
   } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
+
+// ============================================
+// 🛠️ restoreGiftHistoryFromLog — 從 audit log 補回 STATE.giftHistory
+//   當 STATE 被空 push 覆蓋掉但 log 還在時，可從 log 重建歷史
+//   邏輯：找出 log 有、但 giftHistory 沒有的紀錄，回補（依 empId、金額、時間、type 判斷去重）
+//   args: password, store
+// ============================================
+function restoreGiftHistoryFromLog(password, store){
+  try {
+    if (VALID_STORES.indexOf(store) === -1) return { ok: false, error: '無效的店家' };
+    if (!_verifyFor(password, store))       return { ok: false, error: 'unauthorized' };
+    // 讀 log
+    var logSheet = getGiftLogSheet();
+    var logData = logSheet.getDataRange().getValues();
+    // 讀 state
+    var stateSheet = getStateSheet();
+    var stateData = stateSheet.getDataRange().getValues();
+    var stateRowIdx = -1, state = null;
+    for (var i = 1; i < stateData.length; i++){
+      if (String(stateData[i][1]) === store){
+        stateRowIdx = i;
+        try { state = JSON.parse(stateData[i][2] || '{}'); } catch(e){ state = {}; }
+        break;
+      }
+    }
+    if (!state) return { ok: false, error: '此店尚無 STATE 可回補' };
+    if (!state.giftHistory) state.giftHistory = {};
+
+    // 建立 empId => existing entry keys 供去重比對（用「fileId」或「type|amount|reason|ts 前 16 字元」）
+    var existingKeys = {};
+    Object.keys(state.giftHistory).forEach(function(empId){
+      existingKeys[empId] = {};
+      (state.giftHistory[empId] || []).forEach(function(h){
+        var k = h.fileId || (h.type + '|' + Math.abs(Number(h.amount)||0) + '|' + (h.reason||'') + '|' + String(h.ts||'').substring(0,16));
+        existingKeys[empId][k] = 1;
+      });
+    });
+
+    // 逐筆檢查 log
+    var restored = 0;
+    var restoredByEmp = {};
+    for (var r = 1; r < logData.length; r++){
+      var row = logData[r];
+      // 欄位：時間 | 店家 | empId | 員工 | 類型 | 金額 | 事由 | 圖片FileId | 備註
+      if (String(row[1]) !== store) continue;
+      var empId  = String(row[2] || '').trim();
+      var name   = String(row[3] || '').trim();
+      var type   = String(row[4] || '').trim();
+      var amount = Math.abs(Number(row[5]) || 0);
+      var reason = String(row[6] || '').trim();
+      var fileId = String(row[7] || '').trim();
+      var note   = String(row[8] || '').trim();
+      var ts     = row[0] instanceof Date ? row[0].toISOString() : String(row[0]);
+      if (!empId || !type || !amount) continue;
+      var key = fileId || (type + '|' + amount + '|' + reason + '|' + ts.substring(0,16));
+      if (existingKeys[empId] && existingKeys[empId][key]) continue; // 已存在，跳過
+      // 補回
+      if (!state.giftHistory[empId]) state.giftHistory[empId] = [];
+      state.giftHistory[empId].push({
+        id: 'restored_' + Date.now() + '_' + Math.random().toString(36).slice(2,5),
+        ts: ts, type: type, amount: amount, reason: reason,
+        fileId: fileId, note: note ? note + '（從 log 回補）' : '從 log 回補'
+      });
+      existingKeys[empId] = existingKeys[empId] || {};
+      existingKeys[empId][key] = 1;
+      restored++;
+      restoredByEmp[empId] = (restoredByEmp[empId] || 0) + 1;
+    }
+
+    // 寫回 STATE
+    if (stateRowIdx >= 0){
+      stateSheet.getRange(stateRowIdx + 1, 1, 1, STATE_HEADERS.length).setValues([[new Date(), store, JSON.stringify(state)]]);
+    }
+    return { ok: true, restored: restored, byEmp: restoredByEmp };
+  } catch (err){
     return { ok: false, error: String(err) };
   }
 }
