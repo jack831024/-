@@ -105,6 +105,7 @@ function doPost(e) {
       case 'saveOTLeave':     res = saveOTLeave(args[0], args[1], args[2], args[3]); break;
       case 'loadOTLeave':     res = loadOTLeave(args[0], args[1]); break;
       case 'restoreGiftHistoryFromLog': res = restoreGiftHistoryFromLog(args[0], args[1]); break;
+      case 'undoRestoreGiftHistory':    res = undoRestoreGiftHistory(args[0], args[1]);    break;
       // 舊介面（保留向後相容）
       case 'saveLeave':  res = saveLeave(args[0], args[1], args[2], args[3]); break;
       case 'loadLeave':  res = loadLeave(args[0], args[1], args[2]);          break;
@@ -431,6 +432,53 @@ function restoreGiftHistoryFromLog(password, store){
       stateSheet.getRange(stateRowIdx + 1, 1, 1, STATE_HEADERS.length).setValues([[new Date(), store, JSON.stringify(state)]]);
     }
     return { ok: true, restored: restored, byEmp: restoredByEmp };
+  } catch (err){
+    return { ok: false, error: String(err) };
+  }
+}
+
+// ============================================
+// 🛠️ undoRestoreGiftHistory — 撤銷 restoreGiftHistoryFromLog
+//   刪除 STATE.giftHistory 中所有 id 以 'restored_' 開頭的紀錄
+//   （即由 restoreGiftHistoryFromLog 自動補回的項目），回到還原前狀態
+//   args: password, store
+// ============================================
+function undoRestoreGiftHistory(password, store){
+  try {
+    if (VALID_STORES.indexOf(store) === -1) return { ok: false, error: '無效的店家' };
+    if (!_verifyFor(password, store))       return { ok: false, error: 'unauthorized' };
+    var stateSheet = getStateSheet();
+    var stateData = stateSheet.getDataRange().getValues();
+    var stateRowIdx = -1, state = null;
+    for (var i = 1; i < stateData.length; i++){
+      if (String(stateData[i][1]) === store){
+        stateRowIdx = i;
+        try { state = JSON.parse(stateData[i][2] || '{}'); } catch(e){ state = {}; }
+        break;
+      }
+    }
+    if (!state) return { ok: false, error: '此店尚無 STATE' };
+    if (!state.giftHistory) return { ok: true, removed: 0, byEmp: {} };
+    var removed = 0;
+    var removedByEmp = {};
+    Object.keys(state.giftHistory).forEach(function(empId){
+      var arr = state.giftHistory[empId] || [];
+      var kept = [];
+      for (var j = 0; j < arr.length; j++){
+        var h = arr[j];
+        if (h && typeof h.id === 'string' && h.id.indexOf('restored_') === 0){
+          removed++;
+          removedByEmp[empId] = (removedByEmp[empId] || 0) + 1;
+        } else {
+          kept.push(h);
+        }
+      }
+      state.giftHistory[empId] = kept;
+    });
+    if (stateRowIdx >= 0){
+      stateSheet.getRange(stateRowIdx + 1, 1, 1, STATE_HEADERS.length).setValues([[new Date(), store, JSON.stringify(state)]]);
+    }
+    return { ok: true, removed: removed, byEmp: removedByEmp };
   } catch (err){
     return { ok: false, error: String(err) };
   }
