@@ -154,7 +154,7 @@ dialog::backdrop{background:rgba(15,23,42,.5)}
 
   <div class="sec-title">評分組成</div>
   <div style="overflow:auto"><table class="cmp" id="cmpTable"></table></div>
-  <div style="font-size:11.5px;color:var(--ink-3);margin:6px 2px 0;line-height:1.5">※ 門店評分（100分）＝ 現場巡店 44 題（評分項目 100% 佔比）。當月無秘密客時，店長總分＝門店評分、不扣分。分數依所選月份計算、不跨月。</div>
+  <div style="font-size:11.5px;color:var(--ink-3);margin:6px 2px 0;line-height:1.5">※ 整月扣分制：門店評分 ＝ 100 − 當月每次巡店扣分加總（每項 −1、下限 0）。沒被巡到＝100。店長總分＝門店評分×95%＋秘密客×5%（當月無秘密客則＝門店評分）。分數依所選月份、不跨月。</div>
 
   <div class="sec-title">督導巡店紀錄</div>
   <div class="recs" id="recList"></div>
@@ -280,56 +280,58 @@ function reload(){
   });
 }
 
-/* ---------- 計算門店總分 ---------- */
-function latestPatrol(key){
-  var best=null;
-  REPORTS.forEach(function(r){ if(r.store!==key)return; if(currentMonth&&monthOf(r)!==currentMonth)return; if(!best||new Date(r.submittedAt||r.date)>new Date(best.submittedAt||best.date))best=r; });
-  return best;
+/* ---------- 計算門店評分（整月扣分制）---------- */
+function monthReports(key){
+  return REPORTS.filter(function(r){ return r.store===key && (!currentMonth||monthOf(r)===currentMonth); });
+}
+// 每份報告的扣分：新制用 deductCount；舊 % 報告以「需改善項數」換算成扣分接續。
+function reportDeduct(r){
+  return (r.deductCount!==undefined) ? (num(r.deductCount)||0) : ((r.deductItems||r.lowItems||[]).length);
 }
 function latestMystery(match){
   var best=null;
   MYSTERY.forEach(function(r){ if(String(r.storeName||"").indexOf(match)<0)return; if(currentMonth&&monthOf(r)!==currentMonth)return; if(!best||new Date(r.submittedAt||r.visitDate)>new Date(best.submittedAt||best.visitDate))best=r; });
   return best;
 }
-// 門店評分 ＝ 現場巡店 44 題（滿分 100，評分項目 100% 佔比）。
-// 店長總分 ＝ 有秘密客? 門店評分×0.95 ＋ 秘密客×0.05 : 門店評分。當月無督導紀錄回 null。
+// 整月扣分制：門店評分 ＝ 100 − 當月所有扣分加總（巡店＋Google 差評；舊%報告以需改善項數換算）。下限 0，沒巡到＝100。
+// 店長總分 ＝ 有秘密客? 門店評分×0.95 ＋ 秘密客×0.05 : 門店評分。
 function storeScore(s){
-  var dp=latestPatrol(s.key);
-  if(!dp) return null;
-  var site=num(dp.total); var siteVal=(site===null?0:site);
+  var reps=monthReports(s.key);
+  var totalDeduct=reps.reduce(function(sum,r){ return sum + reportDeduct(r); }, 0);
+  var googleTotal=reps.reduce(function(sum,r){ return sum + (num(r.googleDeduct)||0); }, 0);
+  var grade=Math.max(0, 100 - totalDeduct);
   var mm=latestMystery(s.match);
   var mys=mm?num(mm.total):null;
-  var grade=siteVal;                                        // 門店評分 = 現場 100%
-  var fin=(mys!==null) ? (grade*0.95 + mys*0.05) : grade;    // 店長總分；缺秘密客→=門店評分
-  return { final:Math.round(fin*10)/10, level:levelOf(fin), grade:Math.round(grade*10)/10, site:site, mys:mys, dp:dp, mm:mm };
+  var fin=(mys!==null) ? (grade*0.95 + mys*0.05) : grade;
+  var deducts=[];
+  reps.forEach(function(r){ (r.deductItems||r.lowItems||[]).forEach(function(x){ deducts.push({cat:x.cat,item:x.item,date:r.date}); }); });
+  var latest=reps.slice().sort(function(a,b){return new Date(b.submittedAt||b.date)-new Date(a.submittedAt||a.date);})[0]||null;
+  return { final:Math.round(fin*10)/10, level:levelOf(fin), grade:Math.round(grade*10)/10, deduct:totalDeduct, google:googleTotal, visits:reps.length, mys:mys, deducts:deducts, dp:latest };
 }
 
 /* ---------- 渲染 ---------- */
 function render(){
   document.getElementById("storeCards").innerHTML = STORES.map(function(s){
     var sc=storeScore(s);
-    if(!sc){
-      return '<div class="scard '+s.cls+'"><div class="nm"><span class="dot"></span>'+s.name+'</div>'+
-        '<div style="flex:1"><div class="big">—</div><span class="lv none">無紀錄</span>'+
-        '<div class="meta">尚無督導巡店資料</div></div></div>';
-    }
+    var mysTxt=(sc.mys===null?"—":sc.mys);
+    var lastTxt=(sc.visits ? ('本月 '+sc.visits+' 次巡店'+(sc.dp&&sc.dp.date?('・最近 '+sc.dp.date):'')) : '本月尚未巡店');
     return '<div class="scard '+s.cls+'"><div class="nm"><span class="dot"></span>'+s.name+'</div>'+
       '<div style="flex:1"><div class="big">'+sc.final+'<small>/100</small></div>'+
       '<span class="lv '+levelOf(sc.grade)+'">門店 '+LEVEL_NAME[levelOf(sc.grade)]+'</span>'+
-      '<div class="meta">門店評分 <b>'+sc.grade+'</b>　秘密客 <b>'+(sc.mys===null?"—":sc.mys)+'</b><br>最近巡店：<b>'+((sc.dp&&sc.dp.date)||"-")+'</b></div></div></div>';
+      '<div class="meta">門店評分 <b>'+sc.grade+'</b>（本月扣 '+sc.deduct+' 分'+(sc.google?('・含 Google '+sc.google):'')+'）　秘密客 <b>'+mysTxt+'</b><br>'+lastTxt+'</div></div></div>';
   }).join("");
 
   buildComposition();
 
-  var sorted = REPORTS.filter(function(r){ return !currentMonth||monthOf(r)===currentMonth; }).sort(function(a,b){ return new Date(b.submittedAt||b.date)-new Date(a.submittedAt||a.date); });
+  var sorted = REPORTS.filter(function(r){ return (!currentMonth||monthOf(r)===currentMonth); }).sort(function(a,b){ return new Date(b.submittedAt||b.date)-new Date(a.submittedAt||a.date); });
   var rl=document.getElementById("recList");
-  if(!sorted.length){ rl.innerHTML='<div class="empty">該月尚無督導巡店紀錄</div>'; return; }
+  if(!sorted.length){ rl.innerHTML='<div class="empty">該月尚無巡店紀錄</div>'; return; }
   rl.innerHTML = sorted.map(function(r,i){
-    var sm=storeMeta(r.store); var t=num(r.total); var lv=levelOf(t||0);
+    var sm=storeMeta(r.store); var dc=reportDeduct(r);
     return '<div class="rec" data-i="'+i+'"><span class="rdot" style="background:var(--'+sm.cls+')"></span>'+
-      '<div class="rmain"><div class="l1">'+sm.name+' <span class="rlv lv '+lv+'">門店'+lv+'</span></div>'+
-      '<div class="l2">'+(r.date||"-")+'　·　'+(r.reviewer||"-")+(r.lowItems&&r.lowItems.length?('　·　需改善 '+r.lowItems.length+' 項'):'')+'</div></div>'+
-      '<div class="rtot">'+(t===null?"—":r.total)+'</div></div>';
+      '<div class="rmain"><div class="l1">'+sm.name+'</div>'+
+      '<div class="l2">'+(r.date||"-")+'　·　'+(r.reviewer||"-")+'　·　'+(dc?('扣 '+dc+' 分'):'無扣分')+'</div></div>'+
+      '<div class="rtot">'+(dc?('−'+dc):'0')+'</div></div>';
   }).join("");
   Array.prototype.forEach.call(rl.querySelectorAll(".rec"),function(el){
     el.addEventListener("click",function(){ openDetail(sorted[Number(el.getAttribute("data-i"))]); });
@@ -346,33 +348,30 @@ function buildComposition(){
       return '<td'+((v===max&&max>0)?' class="best"':'')+'><span class="v">'+v+(suffix||'')+'</span></td>';
     }).join("")+'</tr>';
   }
-  var gradeRow=numRow('門店評分（現場 44 題）', scs.map(function(s){return s?s.grade:null;}), '');
-  var mysRow=numRow('秘密客（5%）', scs.map(function(s){return s?s.mys:null;}), '');
-  var foot='<tfoot><tr><td>店長總分</td>'+scs.map(function(s){return s?('<td><b>'+s.final+'</b> <span class="lv '+s.level+'" style="font-size:11px;padding:1px 7px">'+LEVEL_NAME[s.level]+'</span></td>'):'<td class="muted">—</td>';}).join("")+'</tr></tfoot>';
-  document.getElementById("cmpTable").innerHTML=head+'<tbody>'+gradeRow+mysRow+'</tbody>'+foot;
+  function plainRow(label,vals,suffix){
+    return '<tr><td>'+label+'</td>'+vals.map(function(v){ return (v===null?'<td><span class="muted">—</span></td>':'<td><span class="v">'+v+(suffix||'')+'</span></td>'); }).join("")+'</tr>';
+  }
+  var gradeRow=numRow('門店評分（100−扣分）', scs.map(function(s){return s.grade;}), '');
+  var deductRow=plainRow('　└ 本月扣分', scs.map(function(s){return s.deduct;}), ' 分');
+  var visitRow=plainRow('　└ 巡店次數', scs.map(function(s){return s.visits;}), ' 次');
+  var mysRow=numRow('秘密客（5%）', scs.map(function(s){return s.mys;}), '');
+  var foot='<tfoot><tr><td>店長總分</td>'+scs.map(function(s){return '<td><b>'+s.final+'</b> <span class="lv '+s.level+'" style="font-size:11px;padding:1px 7px">'+LEVEL_NAME[s.level]+'</span></td>';}).join("")+'</tr></tfoot>';
+  document.getElementById("cmpTable").innerHTML=head+'<tbody>'+gradeRow+deductRow+visitRow+mysRow+'</tbody>'+foot;
 }
 
 function openDetail(r){
-  var sm=storeMeta(r.store); var site=num(r.total);
-  var grade=Math.round((site===null?0:site)*10)/10;
-  var glv=levelOf(grade);
-  var cats=CAT_DEFS.map(function(d){
-    var c=r.categories&&r.categories[d.key]; var sc=c&&c.score!==""&&c.score!==undefined&&c.score!==null?Number(c.score):null;
-    var pct=sc===null?0:Math.round(sc/d.weight*100);
-    return '<div class="catrow"><span class="cn">'+d.name+'</span><span class="tk"><i style="width:'+pct+'%"></i></span>'+
-      '<span class="cv">'+(sc===null?"不適用":(Math.round(sc*10)/10)+"/"+d.weight)+'</span></div>';
-  }).join("");
-  var low=(r.lowItems&&r.lowItems.length)
-    ? '<h3>需改善項目（'+r.lowItems.length+'）</h3>'+r.lowItems.map(function(x){
-        var tg=x.level==="bad"?'<b class="bad">不符合</b>':'<b>待加強</b>';
-        return '<div class="li">'+tg+'　'+x.cat+'：'+x.item+'</div>';}).join("")
-    : '<h3>✅ 所有項目皆符合</h3>';
-  var note=r.notes?('<h3>總評備註</h3><div class="note">'+escapeHtml(r.notes)+'</div>'):"";
+  var sm=storeMeta(r.store);
+  var dc=reportDeduct(r);
+  var items=(r.deductItems||r.lowItems||[]);
+  var low=items.length
+    ? '<h3>本次扣分項目（'+items.length+'）</h3>'+items.map(function(x){ return '<div class="li"><b class="bad">−1</b>　'+x.cat+'：'+x.item+'</div>'; }).join("")
+    : '<h3>✅ 本次巡店沒有扣分</h3>';
+  var note=r.notes?('<h3>備註</h3><div class="note">'+escapeHtml(r.notes)+'</div>'):"";
   document.getElementById("detailBody").innerHTML=
-    '<div class="mh"><div class="ttl"><h2>'+sm.name+' · 督導巡店</h2><div class="sub">'+(r.date||"-")+'　·　'+(r.reviewer||"-")+'　·　'+(r.reportId||"")+'</div></div>'+
+    '<div class="mh"><div class="ttl"><h2>'+sm.name+' · 巡店</h2><div class="sub">'+(r.date||"-")+'　·　'+(r.reviewer||"-")+'</div></div>'+
     '<button class="x" onclick="document.getElementById(\'detailDlg\').close()">×</button></div>'+
-    '<div class="mtot">'+grade+'<small>/100 門店評分</small><span class="mlv lv '+glv+'">門店'+glv+'</span></div>'+
-    '<div class="catbar">'+cats+'</div>'+low+note;
+    '<div class="mtot">−'+dc+'<small> 分・本次扣分</small></div>'+
+    low+note;
   document.getElementById("detailDlg").showModal();
 }
 function escapeHtml(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
