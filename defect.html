@@ -397,6 +397,7 @@ function render(){
   if(EDIT_LEVEL !== 'global') document.getElementById('itemPanel').classList.remove('show');
   renderItemPanel();
 
+  mergeMasterIntoStore();   // 補進員工主檔當月在職者（新進員工自動出現）
   var list = document.getElementById('empList');
   list.innerHTML = '';
   var emps = storeData().employees.filter(function(e){ return e.active !== false; });
@@ -591,11 +592,43 @@ function esc(s){
 // ============================================
 // 操作
 // ============================================
+// ===== 員工資料主檔：當月在職名單（相加疊加；缺失只讀名單，不會寫回共享雲端）=====
+var EMP_MASTER_URL = 'https://script.google.com/macros/s/AKfycbyLDnvILhiL0iIWjnoN14iwZZg5p9DobG1Ik3Fq-LiR6gcj3-_AKGTdnywDnmNrZLp6/exec';
+var EMP_MASTER_PW  = { 'chudian-yongchun':'a94213054', 'chudian-xinzhuang':'a60749791', 'chudian-zhonghe':'a90369287' };
+var MASTER_EMPS_BY_STORE = {};
+function pullMasterRoster(store, attempt){
+  var pw = EMP_MASTER_PW[store];
+  if(!pw) return;   // 忠孝(十城)等主檔沒有 → 不動
+  attempt = attempt || 1;
+  fetch(EMP_MASTER_URL, { method:'POST', body: JSON.stringify({ action:'getActiveRoster', args:[pw, store, ''] }) })
+    .then(function(x){ return x.text(); })
+    .then(function(txt){
+      var r = null; try{ r = JSON.parse(txt); }catch(e){}
+      if(r && r.ok && Array.isArray(r.roster)){ MASTER_EMPS_BY_STORE[store] = r.roster; render(); return; }
+      if(attempt < 4) setTimeout(function(){ pullMasterRoster(store, attempt+1); }, 900);
+    })
+    .catch(function(){ if(attempt < 4) setTimeout(function(){ pullMasterRoster(store, attempt+1); }, 900); });
+}
+function mergeMasterIntoStore(){
+  var list = MASTER_EMPS_BY_STORE[curStore];
+  if(!list || !list.length) return;
+  var d = storeData();
+  if(!d.employees) d.employees = [];
+  var have = {};
+  d.employees.forEach(function(e){ if(e && e.name) have[e.name] = true; });
+  list.forEach(function(m){
+    if(!m || !m.name || have[m.name]) return;
+    d.employees.push({ id:'master_'+(m.empId||m.name), name:m.name, level:'1', active:true, fromMaster:true });
+    have[m.name] = true;
+  });
+}
+
 function switchStore(key){
   if(DIRTY && EDITING && !confirm('有未儲存的變更，切換門市將不會上傳，確定？')) return;
   curStore = key;
   loadLocal();
   render();                                   // 先用本機快取立刻顯示
+  pullMasterRoster(curStore);                 // 抓員工主檔當月在職者（補進名單）
   SYNCING = true; refreshSyncBtn();
   pullFromCloud(true).finally(function(){ SYNCING = false; render(); });
 }
