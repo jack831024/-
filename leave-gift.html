@@ -485,6 +485,7 @@ function mergeMasterEmployees(){
       hireDate: m.hireDate || '',
       birthday: m.birthday || '',
       leftDate: m.leaveDate || '',
+      pt: (m.empType === 'PT'),   // PT → 特休不給特休/旅遊假
       fromMaster: true,   // 標記：不可被序列化進 STATE
       initialAnnualAccrued: 0, initialAnnualUsed: 0,
       initialTravelRemaining: 0, initialGiftBalance: 0

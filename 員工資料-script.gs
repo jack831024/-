@@ -23,7 +23,7 @@
 // 之後 ID 會記在 PropertiesService，每次都用同一份。
 var EMP_SHEET_ID_OVERRIDE = '';
 var EMP_SHEET_NAME        = '員工主檔';
-var EMP_HEADERS = ['更新時間', '店家', 'empId', '姓名', '身分證字號', '地址', '電話', '台新帳號', '入職日期', '離職日期', '備註', '生日'];
+var EMP_HEADERS = ['更新時間', '店家', 'empId', '姓名', '身分證字號', '地址', '電話', '台新帳號', '入職日期', '離職日期', '備註', '生日', '職別'];
 var EMP_PROP_KEY = 'EMP_MASTER_SHEET_ID';   // PropertiesService 存自動建立的試算表 ID
 
 // ============================================
@@ -115,6 +115,7 @@ function listEmployees(password, store) {
         leaveDate: leaveDate,
         note:     String(data[i][10] || ''),
         birthday: String(data[i][11] || ''),
+        empType:  String(data[i][12] || '') || '正職',
         active:   _activeInMonth(hireDate, leaveDate, thisYm)
       });
     }
@@ -156,7 +157,7 @@ function getActiveRoster(password, store, ym) {
       var hireDate  = _dateStr(data[i][8], tz);
       var leaveDate = _dateStr(data[i][9], tz);
       if (!_activeInMonth(hireDate, leaveDate, ym)) continue;
-      roster.push({ empId: String(data[i][2] || ''), name: name, hireDate: hireDate, leaveDate: leaveDate, birthday: String(data[i][11] || '') });
+      roster.push({ empId: String(data[i][2] || ''), name: name, hireDate: hireDate, leaveDate: leaveDate, birthday: String(data[i][11] || ''), empType: String(data[i][12] || '') || '正職' });
     }
     roster.sort(function(a, b){ return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0); });
     return { ok: true, store: store, ym: ym, roster: roster };
@@ -197,7 +198,8 @@ function saveEmployee(password, store, emp) {
       String(emp.bankAcct || '').trim(),
       hireDate, leaveDate,
       String(emp.note || '').trim(),
-      String(emp.birthday || '').trim()   // 生日：自由文字（MM-DD），不做日期正規化
+      String(emp.birthday || '').trim(),   // 生日：自由文字（MM-DD），不做日期正規化
+      (String(emp.empType || '').trim() === 'PT') ? 'PT' : '正職'   // 職別
     ];
 
     // 找既有列（同店 + 同 empId）
@@ -310,7 +312,7 @@ function getEmpSheet() {
     sh.getRange(1, 1, 2000, EMP_HEADERS.length).setNumberFormat('@');
     sh.getRange(1, 1, 1, EMP_HEADERS.length).setValues([EMP_HEADERS]);
     sh.setFrozenRows(1);
-    var widths = [160, 150, 130, 100, 130, 240, 120, 140, 110, 110, 200, 90];
+    var widths = [160, 150, 130, 100, 130, 240, 120, 140, 110, 110, 200, 90, 70];
     for (var c = 0; c < widths.length; c++) sh.setColumnWidth(c + 1, widths[c]);
     sh.getRange(1, 1, 1, EMP_HEADERS.length)
       .setBackground('#dcfce7').setFontWeight('bold').setHorizontalAlignment('center');

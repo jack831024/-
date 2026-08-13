@@ -44,6 +44,7 @@
   .b-active{background:#dcfce7;color:#15803d}
   .b-left{background:#f1f5f9;color:#64748b}
   .b-future{background:#fef3c7;color:#b45309}
+  .b-pt{background:#ede9fe;color:#6d28d9}
   .emp-actions{margin-left:auto;display:flex;gap:6px}
   .icon-btn{border:none;background:#f1f5f9;border-radius:9px;padding:7px 11px;font-size:13px;cursor:pointer;color:#334155;font-weight:600}
   .icon-btn.del{background:#fef2f2;color:var(--danger)}
@@ -140,6 +141,13 @@
     <div class="field">
       <label>姓名 <span class="req">*</span></label>
       <input type="text" id="f-name" placeholder="員工姓名" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>職別(PT 沒有特休／旅遊假)</label>
+      <select id="f-empType">
+        <option value="正職">正職</option>
+        <option value="PT">兼職 PT</option>
+      </select>
     </div>
     <div class="row2">
       <div class="field">
@@ -313,6 +321,7 @@ function card(e){
   if(isDeparted(e))                              badge = '<span class="badge b-left">已離職</span>';
   else if((e.hireDate||'').slice(0,7) > THIS_YM) badge = '<span class="badge b-future">未到職</span>';
   else                                           badge = '<span class="badge b-active">在職</span>';
+  if(e.empType === 'PT') badge += '<span class="badge b-pt">PT</span>';
   function esc(s){ return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   var meta = ''
     + row('身分證', e.idNo) + row('電話', e.phone)
@@ -346,6 +355,7 @@ function openForm(){
     document.getElementById('f-'+k).value='';
   });
   document.getElementById('f-store').value = STORE;   // 預設目前這家店
+  document.getElementById('f-empType').value = '正職';
   document.getElementById('formMask').classList.add('on');
   setTimeout(function(){ document.getElementById('f-name').focus(); },80);
 }
@@ -363,6 +373,7 @@ function editEmp(empId){
   document.getElementById('f-hire').value  = e.hireDate||'';
   document.getElementById('f-leave').value = e.leaveDate||'';
   document.getElementById('f-birthday').value = e.birthday||'';
+  document.getElementById('f-empType').value = e.empType || '正職';
   document.getElementById('f-store').value = STORE;   // 預設他目前所在的店（改成別店＝調店）
   document.getElementById('formMask').classList.add('on');
 }
@@ -381,6 +392,7 @@ async function saveEmp(){
     hireDate: document.getElementById('f-hire').value.trim(),
     leaveDate:document.getElementById('f-leave').value.trim(),
     birthday: document.getElementById('f-birthday').value.trim(),
+    empType:  document.getElementById('f-empType').value,
     note:     document.getElementById('f-note').value.trim()
   };
   var targetStore = document.getElementById('f-store').value || STORE;
