@@ -266,8 +266,7 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
   <div class="section-emp">
     <div class="head-row">
       <span class="title">👥 員工管理</span>
-      <span style="font-size:11.5px;color:var(--ink-3)">✏️ 編輯資料 · ✕ 標記離職（不會刪除歷史）</span>
-      <button class="add-btn" onclick="openAddEmpModal()">＋ 新增員工</button>
+      <span style="font-size:11.5px;color:var(--ink-3)">✏️ 編輯資料 · ✕ 標記離職（不會刪除歷史）· 新增員工請到「員工資料」</span>
     </div>
     <div class="emp-mgmt-list" id="emp-mgmt-list"></div>
   </div>
@@ -1293,7 +1292,7 @@ function renderEmpMgmt(){
   var area = document.getElementById('emp-mgmt-list');
   if(!area) return;
   if(!EMPLOYEES.length){
-    area.innerHTML = '<span style="font-size:12px;color:var(--ink-3)">尚無員工，按上方「+ 新增員工」開始</span>';
+    area.innerHTML = '<span style="font-size:12px;color:var(--ink-3)">尚無員工，請到主頁「員工資料」新增</span>';
     return;
   }
   area.innerHTML = EMPLOYEES.map(function(e){
