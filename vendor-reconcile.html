@@ -251,10 +251,10 @@ table.recon tfoot .ft-sum{text-align:right;font-family:ui-monospace,"SF Mono",Me
         <thead>
           <tr>
             <th class="col-vendor">廠商</th>
-            <th><span class="store-tag">CHUDIAN</span><span class="store-name">中和店</span></th>
-            <th><span class="store-tag">CHUDIAN</span><span class="store-name">永春店</span></th>
-            <th><span class="store-tag">CHUDIAN</span><span class="store-name">新莊店</span></th>
-            <th><span class="store-tag">SHICHENG</span><span class="store-name">忠孝店</span></th>
+            <th data-store="zhonghe"><span class="store-tag">CHUDIAN</span><span class="store-name">中和店</span></th>
+            <th data-store="yongchun"><span class="store-tag">CHUDIAN</span><span class="store-name">永春店</span></th>
+            <th data-store="xinzhuang"><span class="store-tag">CHUDIAN</span><span class="store-name">新莊店</span></th>
+            <th data-store="zhongxiao"><span class="store-tag">SHICHENG</span><span class="store-name">忠孝店</span></th>
             <th class="col-skip"><span class="store-tag">SKIP</span><span class="store-name">不計總</span></th>
             <th class="col-rowsum"><span class="store-tag">SUBTOTAL</span><span class="store-name">小計</span></th>
             <th></th>
@@ -264,10 +264,10 @@ table.recon tfoot .ft-sum{text-align:right;font-family:ui-monospace,"SF Mono",Me
         <tfoot>
           <tr>
             <td class="ft-label">合計</td>
-            <td class="ft-sum" id="sum-zhonghe">0</td>
-            <td class="ft-sum" id="sum-yongchun">0</td>
-            <td class="ft-sum" id="sum-xinzhuang">0</td>
-            <td class="ft-sum" id="sum-zhongxiao">0</td>
+            <td class="ft-sum" id="sum-zhonghe" data-store="zhonghe">0</td>
+            <td class="ft-sum" id="sum-yongchun" data-store="yongchun">0</td>
+            <td class="ft-sum" id="sum-xinzhuang" data-store="xinzhuang">0</td>
+            <td class="ft-sum" id="sum-zhongxiao" data-store="zhongxiao">0</td>
             <td></td>
             <td class="ft-sum ft-grand" id="sum-grand">0</td>
             <td></td>
@@ -291,20 +291,20 @@ table.recon tfoot .ft-sum{text-align:right;font-family:ui-monospace,"SF Mono",Me
     <div class="section-head">
       <h3><span class="icon">📊</span>每家店總金額</h3>
     </div>
-    <div class="summary-grid">
-      <div class="stat zhonghe">
+    <div class="summary-grid" id="summary-grid">
+      <div class="stat zhonghe" data-store="zhonghe">
         <span class="lbl">中和店</span>
         <span class="val" id="card-zhonghe">$0</span>
       </div>
-      <div class="stat yongchun">
+      <div class="stat yongchun" data-store="yongchun">
         <span class="lbl">永春店</span>
         <span class="val" id="card-yongchun">$0</span>
       </div>
-      <div class="stat xinzhuang">
+      <div class="stat xinzhuang" data-store="xinzhuang">
         <span class="lbl">新莊店</span>
         <span class="val" id="card-xinzhuang">$0</span>
       </div>
-      <div class="stat zhongxiao">
+      <div class="stat zhongxiao" data-store="zhongxiao">
         <span class="lbl">忠孝店</span>
         <span class="val" id="card-zhongxiao">$0</span>
       </div>
@@ -359,6 +359,21 @@ var STORES = [
   {key:'xinzhuang', name:'新莊店'},
   {key:'zhongxiao', name:'忠孝店'}
 ];
+
+// ⭐ 某家店從指定月份起隱藏（>= 該月份不顯示欄位、不計入合計、CSV 也不匯出）
+//   小於該月份的舊資料仍會顯示，且雲端不會被刪除
+var STORE_HIDDEN_FROM = {
+  zhongxiao: '2026-08'   // 忠孝店 2026-08 起隱藏
+};
+function isStoreHidden(storeKey, month){
+  var from = STORE_HIDDEN_FROM[storeKey];
+  if(!from) return false;
+  return String(month || '') >= from;
+}
+function visibleStores(month){
+  var m = month || currentMonth;
+  return STORES.filter(function(st){ return !isStoreHidden(st.key, m); });
+}
 
 // localStorage keys
 var KEY_VENDORS = 'cd_reconcile_vendors';                // 全域廠商清單（不分月）：[{name, hidden}]
@@ -448,10 +463,15 @@ function render(){
   var tbody = document.getElementById('recon-tbody');
   tbody.innerHTML = '';
 
+  applyStoreVisibility();  // ⭐ 依當月決定 忠孝店（等）該不該顯示
+
+  var vs = visibleStores();
+  var totalCols = 1 + vs.length + 1 + 1 + 1;   // 廠商 + 各店 + 不計總 + 小計 + 刪除
+
   var visible = vendors.filter(function(v){ return !v.hidden; });
   if(visible.length === 0){
     var tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="8" style="text-align:center;color:#94a3b8;padding:24px 0;font-size:13px">目前沒有顯示中的廠商，請從下方新增或還原預設清單</td>';
+    tr.innerHTML = '<td colspan="'+totalCols+'" style="text-align:center;color:#94a3b8;padding:24px 0;font-size:13px">目前沒有顯示中的廠商，請從下方新增或還原預設清單</td>';
     tbody.appendChild(tr);
   } else {
     visible.forEach(function(v, idx){
@@ -463,7 +483,8 @@ function render(){
                'onchange="renameVendor(\''+escapeJsAttr(v.name)+'\', this.value)" title="點此修改廠商名稱"></td>';
       STORES.forEach(function(st){
         var val = getAmt(v.name, st.key);
-        cells += '<td class="c-amt"><input class="amt-input" type="number" inputmode="decimal" step="1" '+
+        var hidden = isStoreHidden(st.key, currentMonth);
+        cells += '<td class="c-amt" data-store="'+st.key+'"'+(hidden?' style="display:none"':'')+'><input class="amt-input" type="number" inputmode="decimal" step="1" '+
                  'value="'+(val ? val : '')+'" placeholder="0" '+
                  'oninput="onAmtInput(\''+escapeJsAttr(v.name)+'\', \''+st.key+'\', this.value)"></td>';
       });
@@ -484,6 +505,22 @@ function render(){
   renderNote();
 }
 
+// 依當月的 STORE_HIDDEN_FROM 規則，隱藏/顯示 thead、tfoot、summary card
+function applyStoreVisibility(){
+  STORES.forEach(function(st){
+    var hidden = isStoreHidden(st.key, currentMonth);
+    document.querySelectorAll('[data-store="'+st.key+'"]').forEach(function(el){
+      el.style.display = hidden ? 'none' : '';
+    });
+  });
+  // summary-grid：可見店數 3 家時改成 3 欄，避免出現空格
+  var vc = visibleStores().length;
+  var grid = document.getElementById('summary-grid');
+  if(grid){
+    grid.style.gridTemplateColumns = 'repeat(' + Math.min(vc, 4) + ',1fr)';
+  }
+}
+
 function renderHiddenList(){
   var box = document.getElementById('hidden-list');
   var hidden = vendors.filter(function(v){ return v.hidden; });
@@ -500,25 +537,29 @@ function renderHiddenList(){
 
 function rowSum(vendorName){
   var sum = 0;
-  STORES.forEach(function(st){ sum += getAmt(vendorName, st.key); });
+  visibleStores().forEach(function(st){ sum += getAmt(vendorName, st.key); });
   return sum;
 }
 
 function renderTotals(){
   var totals = { zhonghe:0, yongchun:0, xinzhuang:0, zhongxiao:0 };
   var grand = 0;
+  var vs = visibleStores();
   vendors.forEach(function(v){
     if(v.hidden) return;
     if(v.excludeFromTotal) return;  // ⭐ 勾「不計總」的廠商：金額不加入總和
-    STORES.forEach(function(st){
+    vs.forEach(function(st){
       var n = getAmt(v.name, st.key);
       totals[st.key] += n;
       grand += n;
     });
   });
+  // 所有店（含隱藏的）都要更新 DOM 內數字（隱藏的 cell 只是 display:none，數值可保留 0）
   STORES.forEach(function(st){
-    document.getElementById('sum-' + st.key).textContent = formatNum(totals[st.key]);
-    document.getElementById('card-' + st.key).textContent = '$' + formatNum(totals[st.key]);
+    var sumEl = document.getElementById('sum-' + st.key);
+    if(sumEl) sumEl.textContent = formatNum(totals[st.key]);
+    var cardEl = document.getElementById('card-' + st.key);
+    if(cardEl) cardEl.textContent = '$' + formatNum(totals[st.key]);
   });
   var grandCell = document.getElementById('sum-grand');
   if(grandCell) grandCell.textContent = formatNum(grand);
@@ -892,14 +933,16 @@ function clearMonth(){
 }
 
 function exportCSV(){
-  var headers = ['廠商'].concat(STORES.map(function(s){ return s.name; })).concat(['小計','不計總']);
+  var vs = visibleStores();  // ⭐ 只匯出當月可見的店（例如 2026-08 起排除忠孝店）
+  var headers = ['廠商'].concat(vs.map(function(s){ return s.name; })).concat(['小計','不計總']);
   var rows = [headers];
-  var totals = {zhonghe:0, yongchun:0, xinzhuang:0, zhongxiao:0};
+  var totals = {};
+  vs.forEach(function(st){ totals[st.key] = 0; });
   vendors.forEach(function(v){
     if(v.hidden) return;
     var rowSum = 0;
     var line = [v.name];
-    STORES.forEach(function(st){
+    vs.forEach(function(st){
       var n = getAmt(v.name, st.key);
       if(!v.excludeFromTotal) totals[st.key] += n;
       rowSum += n;
@@ -911,7 +954,7 @@ function exportCSV(){
   });
   var totalLine = ['合計（已扣除「不計總」廠商）'];
   var grand = 0;
-  STORES.forEach(function(st){
+  vs.forEach(function(st){
     totalLine.push(totals[st.key]);
     grand += totals[st.key];
   });
