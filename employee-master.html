@@ -244,18 +244,23 @@ async function callGAS(action){
   return await res.json();
 }
 
-async function load(fromPrompt){
+async function load(){
   if(!apiUrl()){ document.getElementById('urlBanner').style.display='block'; return; }
-  try{
-    var r = await callGAS('listEmployees', PW, STORE);
-    if(!r || !r.ok){
-      toast('讀取失敗:' + ((r&&r.error)||'未知錯誤')); return;
-    }
-    ALL = r.employees || [];
-    if(r.thisYm) THIS_YM = r.thisYm;   // 以後端月份為準（時區一致）
-    document.getElementById('urlBanner').style.display='none';
-    render();
-  }catch(e){ toast('連線失敗，請確認 ⚙️ 網址正確'); }
+  // Apps Script 首次呼叫偶爾抽風 → 自動重試最多 3 次
+  var r = null, lastErr = '';
+  for(var attempt = 1; attempt <= 3; attempt++){
+    try{
+      r = await callGAS('listEmployees', PW, STORE);
+      if(r && r.ok) break;
+      lastErr = (r && r.error) || '未知錯誤';
+    }catch(e){ lastErr = '連線失敗'; r = null; }
+    if(attempt < 3){ toast('讀取中…'); await new Promise(function(res){ setTimeout(res, 700); }); }
+  }
+  if(!r || !r.ok){ toast('讀取失敗:' + lastErr + '（可按返回再進一次）'); return; }
+  ALL = r.employees || [];
+  if(r.thisYm) THIS_YM = r.thisYm;   // 以後端月份為準（時區一致）
+  document.getElementById('urlBanner').style.display='none';
+  render();
 }
 
 // ============================================
