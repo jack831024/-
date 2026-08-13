@@ -513,12 +513,11 @@ function getCategories(storeId){
   var s = getStore(storeId);
   return (s && s.brand === 'chudian') ? CHUDIAN_CATEGORIES : SHICHENG_CATEGORIES;
 }
-// 🏪 4 家店設定（id 必須跟後端 VALID_STORES 對應）
+// 🏪 店家設定（十城忠孝店已隱藏；後端仍保留其密碼與資料）
 var STORES = [
   { id:'chudian-zhonghe',    name:'初殿中和店', brand:'chudian',  brandLabel:'CHUDIAN · 初殿',  emoji:'🍲' },
   { id:'chudian-yongchun',   name:'初殿永春店', brand:'chudian',  brandLabel:'CHUDIAN · 初殿',  emoji:'🍲' },
-  { id:'chudian-xinzhuang',  name:'初殿新莊店', brand:'chudian',  brandLabel:'CHUDIAN · 初殿',  emoji:'🍲' },
-  { id:'shicheng-zhongxiao', name:'十城忠孝店', brand:'shicheng', brandLabel:'SHICHENG · 十城', emoji:'🍜' }
+  { id:'chudian-xinzhuang',  name:'初殿新莊店', brand:'chudian',  brandLabel:'CHUDIAN · 初殿',  emoji:'🍲' }
 ];
 
 // 各店預設員工職位（後端是同一份；若主管改過，loadPositions 會用後端覆蓋）
