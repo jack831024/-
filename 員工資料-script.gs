@@ -156,7 +156,7 @@ function getActiveRoster(password, store, ym) {
       var hireDate  = _dateStr(data[i][8], tz);
       var leaveDate = _dateStr(data[i][9], tz);
       if (!_activeInMonth(hireDate, leaveDate, ym)) continue;
-      roster.push({ empId: String(data[i][2] || ''), name: name, hireDate: hireDate, leaveDate: leaveDate });
+      roster.push({ empId: String(data[i][2] || ''), name: name, hireDate: hireDate, leaveDate: leaveDate, birthday: String(data[i][11] || '') });
     }
     roster.sort(function(a, b){ return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0); });
     return { ok: true, store: store, ym: ym, roster: roster };

@@ -453,6 +453,42 @@ function refreshEmployeesFromState(){
   } else {
     EMPLOYEES = (EMP_DATA[STORE] || []).slice();
   }
+  mergeMasterEmployees();   // 補進「員工資料主檔」有、但特休還沒有的人（新進員工自動出現）
+}
+
+// ===== 員工資料主檔：當月在職名單（覆蓋層；只補進特休沒有的人，不寫進 STATE，非破壞性）=====
+var EMP_MASTER_URL = 'https://script.google.com/macros/s/AKfycbyLDnvILhiL0iIWjnoN14iwZZg5p9DobG1Ik3Fq-LiR6gcj3-_AKGTdnywDnmNrZLp6/exec';
+var EMP_MASTER_PW  = { 'chudian-yongchun':'a94213054', 'chudian-xinzhuang':'a60749791', 'chudian-zhonghe':'a90369287' };
+var MASTER_EMPS = [];   // 主檔當月在職名單快取
+function pullMasterRoster(){
+  var pw = EMP_MASTER_PW[STORE];
+  if(!pw) return;   // 十城等主檔沒有的店 → 不動
+  fetch(EMP_MASTER_URL, { method:'POST', body: JSON.stringify({ action:'getActiveRoster', args:[pw, STORE, ''] }) })
+    .then(function(x){ return x.json(); })
+    .then(function(r){
+      if(r && r.ok && Array.isArray(r.roster)){ MASTER_EMPS = r.roster; render(); }
+    })
+    .catch(function(){});
+}
+// 依姓名比對：主檔有、特休名單沒有 → 補一個「覆蓋層」員工（餘額 0，特休依到職日自動累計）
+function mergeMasterEmployees(){
+  if(!MASTER_EMPS || !MASTER_EMPS.length) return;
+  var have = {};
+  EMPLOYEES.forEach(function(e){ if(e && e.name) have[e.name] = true; });
+  MASTER_EMPS.forEach(function(m){
+    if(!m || !m.name || have[m.name]) return;
+    EMPLOYEES.push({
+      id: 'master_' + (m.empId || m.name),
+      name: m.name,
+      hireDate: m.hireDate || '',
+      birthday: m.birthday || '',
+      leftDate: m.leaveDate || '',
+      fromMaster: true,   // 標記：不可被序列化進 STATE
+      initialAnnualAccrued: 0, initialAnnualUsed: 0,
+      initialTravelRemaining: 0, initialGiftBalance: 0
+    });
+    have[m.name] = true;
+  });
 }
 
 // 目前選擇的年月份（YYYY-MM），預設今天
@@ -1348,7 +1384,8 @@ function saveEmpFromModal(){
   if(birthday && !/^\d{2}-\d{2}$/.test(birthday)){ toast('生日格式應為 MM-DD (例: 03-14)', 'err'); return; }
   // 確保 STATE.employees 是目前的員工陣列（可能從 EMP_DATA fallback）
   if(!STATE.employees || !STATE.employees.length){
-    STATE.employees = EMPLOYEES.map(function(e){ return Object.assign({}, e); });
+    // 只序列化特休自己的員工；主檔覆蓋層（fromMaster）不寫進 STATE
+    STATE.employees = EMPLOYEES.filter(function(e){ return !e.fromMaster; }).map(function(e){ return Object.assign({}, e); });
   }
   var idx = -1;
   if(EMP_MODAL_EDITING){
@@ -1378,7 +1415,8 @@ async function unmarkEmpLeft(empId){
   var emp = EMPLOYEES.find(function(e){ return e.id === empId; });
   if(!emp || !emp.leftDate) return;
   if(!STATE.employees || !STATE.employees.length){
-    STATE.employees = EMPLOYEES.map(function(e){ return Object.assign({}, e); });
+    // 只序列化特休自己的員工；主檔覆蓋層（fromMaster）不寫進 STATE
+    STATE.employees = EMPLOYEES.filter(function(e){ return !e.fromMaster; }).map(function(e){ return Object.assign({}, e); });
   }
   var target = STATE.employees.find(function(e){ return e.id === empId; });
   if(target){
@@ -1400,7 +1438,8 @@ async function markEmpLeft(empId){
   if(ans === null) return;
   var leftDate = ans || fmtDateISO(new Date());
   if(!STATE.employees || !STATE.employees.length){
-    STATE.employees = EMPLOYEES.map(function(e){ return Object.assign({}, e); });
+    // 只序列化特休自己的員工；主檔覆蓋層（fromMaster）不寫進 STATE
+    STATE.employees = EMPLOYEES.filter(function(e){ return !e.fromMaster; }).map(function(e){ return Object.assign({}, e); });
   }
   var target = STATE.employees.find(function(e){ return e.id === empId; });
   if(target){ target.leftDate = leftDate; }
@@ -1844,6 +1883,8 @@ function goBack(){ window.location.href = 'home.html'; }
   pullFromCloud();
   // 獨立抓 OT 假別資料（即使 pullFromCloud 失敗也照樣跑）
   pullOTLeaveFromCloud(true);
+  // 抓員工資料主檔當月在職名單，補進特休（新進員工自動出現）
+  pullMasterRoster();
 })();
 
 // 頁面切回前景時（例：切到加班費系統跑完分析再切回來）自動重新抓 OT 資料
