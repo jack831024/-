@@ -629,6 +629,7 @@ var CURRENT_STAFF_LIST = STAFF_LISTS[STORE_ID] || [];
 // ===== 員工主檔：當月在職名單（採「相加」：主檔的人加進來，保留原本清單的跨店支援名字）=====
 var EMP_MASTER_URL = 'https://script.google.com/macros/s/AKfycbyLDnvILhiL0iIWjnoN14iwZZg5p9DobG1Ik3Fq-LiR6gcj3-_AKGTdnywDnmNrZLp6/exec';
 var EMP_MASTER_PW  = { 'chudian-yongchun':'a94213054', 'chudian-xinzhuang':'a60749791', 'chudian-zhonghe':'a90369287' };
+var MASTER_PT_NAMES = {};   // 主檔 PT 名單（正規化姓名）→ 小結不顯示 PT
 async function fetchMasterRoster(store, ym){
   var pw = EMP_MASTER_PW[store];
   if(!pw) return null;   // 十城等主檔沒有的店 → 維持原本清單
@@ -636,12 +637,17 @@ async function fetchMasterRoster(store, ym){
     try{
       var txt = await fetch(EMP_MASTER_URL, { method:'POST', body: JSON.stringify({ action:'getActiveRoster', args:[pw, store, ym||''] }) }).then(function(x){ return x.text(); });
       var r = JSON.parse(txt);
-      if(r && r.ok && Array.isArray(r.roster)) return r.roster.map(function(e){ return e.name; });
+      if(r && r.ok && Array.isArray(r.roster)){
+        MASTER_PT_NAMES = {};
+        r.roster.forEach(function(e){ if(e.empType === 'PT') MASTER_PT_NAMES[canonicalStaffName(e.name)] = true; });
+        return r.roster.filter(function(e){ return e.empType !== 'PT'; }).map(function(e){ return e.name; });   // 小結不顯示 PT
+      }
     }catch(e){}
     await new Promise(function(res){ setTimeout(res, 900); });
   }
   return null;
 }
+function isMasterPT(name){ return !!MASTER_PT_NAMES[canonicalStaffName(name)]; }
 // 以主檔為準：用主檔當月在職名單取代 CURRENT_STAFF_LIST，並重建 A 班下拉（保留目前已選）
 // 排班表的人之後仍會由 loadSchedule 另外併入（那是實際出勤，不受影響）
 function mergeMasterIntoStaff(){
@@ -1714,7 +1720,7 @@ async function loadSchedule(){
     SCHEDULE_LOADED  = true;
     // 排班表表頭有任何員工不在 STAFF_LISTS 裡，自動合併進去（已正規化）
     SCHEDULE_HEADERS.forEach(function(n){
-      if(n && CURRENT_STAFF_LIST.indexOf(n) < 0) CURRENT_STAFF_LIST.push(n);
+      if(n && CURRENT_STAFF_LIST.indexOf(n) < 0 && !isMasterPT(n)) CURRENT_STAFF_LIST.push(n);   // 不併入 PT
     });
     if(statusEl) statusEl.textContent = '✓ 排班表載入完成（' + Object.keys(SCHEDULE_CACHE).length + ' 天）';
     return true;
