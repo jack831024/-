@@ -629,13 +629,18 @@ var CURRENT_STAFF_LIST = STAFF_LISTS[STORE_ID] || [];
 // ===== 員工主檔：當月在職名單（採「相加」：主檔的人加進來，保留原本清單的跨店支援名字）=====
 var EMP_MASTER_URL = 'https://script.google.com/macros/s/AKfycbyLDnvILhiL0iIWjnoN14iwZZg5p9DobG1Ik3Fq-LiR6gcj3-_AKGTdnywDnmNrZLp6/exec';
 var EMP_MASTER_PW  = { 'chudian-yongchun':'a94213054', 'chudian-xinzhuang':'a60749791', 'chudian-zhonghe':'a90369287' };
-function fetchMasterRoster(store, ym){
+async function fetchMasterRoster(store, ym){
   var pw = EMP_MASTER_PW[store];
-  if(!pw) return Promise.resolve(null);   // 十城等主檔沒有的店 → 維持原本清單
-  return fetch(EMP_MASTER_URL, { method:'POST', body: JSON.stringify({ action:'getActiveRoster', args:[pw, store, ym||''] }) })
-    .then(function(x){ return x.json(); })
-    .then(function(r){ return (r && r.ok && Array.isArray(r.roster)) ? r.roster.map(function(e){ return e.name; }) : null; })
-    .catch(function(){ return null; });
+  if(!pw) return null;   // 十城等主檔沒有的店 → 維持原本清單
+  for(var i=0;i<4;i++){   // Apps Script 偶爾抽風回 HTML → 重試
+    try{
+      var txt = await fetch(EMP_MASTER_URL, { method:'POST', body: JSON.stringify({ action:'getActiveRoster', args:[pw, store, ym||''] }) }).then(function(x){ return x.text(); });
+      var r = JSON.parse(txt);
+      if(r && r.ok && Array.isArray(r.roster)) return r.roster.map(function(e){ return e.name; });
+    }catch(e){}
+    await new Promise(function(res){ setTimeout(res, 900); });
+  }
+  return null;
 }
 // 把主檔名單併入 CURRENT_STAFF_LIST（去重），並重建 A 班下拉（保留目前已選）
 function mergeMasterIntoStaff(){

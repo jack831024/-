@@ -460,15 +460,18 @@ function refreshEmployeesFromState(){
 var EMP_MASTER_URL = 'https://script.google.com/macros/s/AKfycbyLDnvILhiL0iIWjnoN14iwZZg5p9DobG1Ik3Fq-LiR6gcj3-_AKGTdnywDnmNrZLp6/exec';
 var EMP_MASTER_PW  = { 'chudian-yongchun':'a94213054', 'chudian-xinzhuang':'a60749791', 'chudian-zhonghe':'a90369287' };
 var MASTER_EMPS = [];   // 主檔當月在職名單快取
-function pullMasterRoster(){
+function pullMasterRoster(attempt){
   var pw = EMP_MASTER_PW[STORE];
   if(!pw) return;   // 十城等主檔沒有的店 → 不動
+  attempt = attempt || 1;
   fetch(EMP_MASTER_URL, { method:'POST', body: JSON.stringify({ action:'getActiveRoster', args:[pw, STORE, ''] }) })
-    .then(function(x){ return x.json(); })
-    .then(function(r){
-      if(r && r.ok && Array.isArray(r.roster)){ MASTER_EMPS = r.roster; render(); }
+    .then(function(x){ return x.text(); })
+    .then(function(txt){
+      var r = null; try{ r = JSON.parse(txt); }catch(e){}   // 抽風時會回 HTML → 視為失敗重試
+      if(r && r.ok && Array.isArray(r.roster)){ MASTER_EMPS = r.roster; render(); return; }
+      if(attempt < 4) setTimeout(function(){ pullMasterRoster(attempt+1); }, 900);
     })
-    .catch(function(){});
+    .catch(function(){ if(attempt < 4) setTimeout(function(){ pullMasterRoster(attempt+1); }, 900); });
 }
 // 依姓名比對：主檔有、特休名單沒有 → 補一個「覆蓋層」員工（餘額 0，特休依到職日自動累計）
 function mergeMasterEmployees(){
