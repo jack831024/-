@@ -266,7 +266,7 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
   <div class="section-emp">
     <div class="head-row">
       <span class="title">👥 員工管理</span>
-      <span style="font-size:11.5px;color:var(--ink-3)">✏️ 編輯資料 · ✕ 標記離職（不會刪除歷史）· 新增員工請到「員工資料」</span>
+      <span style="font-size:11.5px;color:var(--ink-3)">新增／編輯／離職 請到主頁「員工資料」操作</span>
     </div>
     <div class="emp-mgmt-list" id="emp-mgmt-list"></div>
   </div>
@@ -1299,16 +1299,11 @@ function renderEmpMgmt(){
     var left = !!e.leftDate;
     var ptTag = e.pt ? '<span class="pt-tag">PT</span>' : '';
     var leftTag = left ? '<span style="font-size:9.5px;color:var(--danger);font-weight:600">(已離職 '+e.leftDate+')</span>' : '';
-    // 已離職的員工：改顯示「復職」按鈕，不再是 ✕（避免重複標記）
-    var actionBtn = left
-      ? '<button class="btn-edit" title="取消離職（復職）" style="background:rgba(16,185,129,.12);color:#059669" onclick="unmarkEmpLeft(\''+e.id+'\')">↻</button>'
-      : '<button class="btn-del" title="標記離職" onclick="markEmpLeft(\''+e.id+'\')">✕</button>';
+    // 編輯／離職／復職 都改到「員工資料」主檔操作，這裡只顯示
     return '<span class="emp-mgmt-item'+(left?' left':'')+'">'
       + '<span class="n">'+e.name+'</span>'
       + ptTag + leftTag
       + '<span class="m">'+(e.hireDate||'—')+'</span>'
-      + '<button class="btn-edit" title="編輯" onclick="openEditEmpModal(\''+e.id+'\')">✏️</button>'
-      + actionBtn
       + '</span>';
   }).join('');
 }
