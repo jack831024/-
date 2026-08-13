@@ -97,6 +97,7 @@ h1{font-size:24px;font-weight:700;letter-spacing:-0.02em}
 .lv-chip{font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:1px}
 .lv-chip.staff{background:rgba(59,130,246,.1);color:#2563eb}
 .lv-chip.cadre{background:rgba(217,119,6,.12);color:var(--warn)}
+.lv-chip.pt{background:rgba(109,40,217,.12);color:#6d28d9}
 .cum-chip{font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(15,23,42,.05);color:var(--ink-2)}
 .cum-chip.raise{background:rgba(5,150,105,.12);color:var(--ok)}
 
@@ -595,9 +596,11 @@ function render(){
 function renderEmp(emp){
   var r = rec(emp.id);
   var st = statusOf(r);
-  var passed = passedStations(emp);
+  var pt = isPTEmp(emp);                                   // PT 沒有幹部站（值品訂訓）
+  var stationsForEmp = pt ? STATIONS.staff : ALL_STATIONS;
+  var passed = passedStations(emp).filter(function(s){ return stationsForEmp.indexOf(s) !== -1; });
   var cum = passed.length;
-  var total = ALL_STATIONS.length;
+  var total = stationsForEmp.length;
 
   var card = document.createElement('div');
   card.className = 'emp-card';
@@ -607,7 +610,7 @@ function renderEmp(emp){
   head.className = 'emp-head';
   head.innerHTML =
     '<span class="emp-name">' + esc(emp.name) + '</span>' +
-    '<span class="lv-chip ' + emp.level + '">' + (emp.level === 'cadre' ? '幹部' : '正職') + '</span>' +
+    '<span class="lv-chip ' + (pt ? 'pt' : emp.level) + '">' + (pt ? 'PT' : (emp.level === 'cadre' ? '幹部' : '正職')) + '</span>' +
     '<span class="cum-chip">已通過 ' + cum + ' / ' + total + ' 站' + (cum === total ? '｜🏆 全站完成' : '') + '</span>' +
     '<span class="status-chip ' + st.code + '">' + st.label + '</span>';
   card.appendChild(head);
@@ -615,7 +618,7 @@ function renderEmp(emp){
   // ---- 迷你徽章：10 站一排，綠＝已過、灰＝未過（編輯模式點徽章補登/取消） ----
   var ps = document.createElement('div');
   ps.className = 'ps-row';
-  ALL_STATIONS.forEach(function(s, i){
+  stationsForEmp.forEach(function(s, i){
     if(i === STATIONS.staff.length){
       var div = document.createElement('span');
       div.className = 'ps-divider';
@@ -671,7 +674,7 @@ function renderEmp(emp){
   }
   sel.innerHTML = '<option value="">— 未選 —</option>' +
     '<optgroup label="正職站">' + STATIONS.staff.map(optHtml).join('') + '</optgroup>' +
-    '<optgroup label="幹部站">' + STATIONS.cadre.map(optHtml).join('') + '</optgroup>';
+    (pt ? '' : '<optgroup label="幹部站">' + STATIONS.cadre.map(optHtml).join('') + '</optgroup>');
   sel.onchange = function(){
     if(r.station !== sel.value) r.checks = [];   // 換站別清空檢查勾選
     r.station = sel.value;
@@ -995,7 +998,7 @@ function mergeMasterIntoStore(){
   d.employees.forEach(function(e){ if(e && e.name) have[e.name] = true; });
   list.forEach(function(m){
     if(!m || !m.name || have[m.name]) return;
-    d.employees.push({ id:'master_'+(m.empId||m.name), name:m.name, level:'1', active:true, fromMaster:true });
+    d.employees.push({ id:'master_'+(m.empId||m.name), name:m.name, level:'1', active:true, fromMaster:true, empType:m.empType });
     have[m.name] = true;
   });
 }
@@ -1006,6 +1009,13 @@ function cleanStoreData(){
   copy.employees = (d.employees||[]).filter(function(e){ return !e.fromMaster; });
   return copy;
 }
+// 依主檔判定是否 PT（PT 沒有幹部站「值品訂訓」）
+function masterEmpType(name){
+  var list = MASTER_EMPS_BY_STORE[curStore] || [];
+  for(var i=0;i<list.length;i++){ if(list[i] && list[i].name === name) return list[i].empType || '正職'; }
+  return null;   // 不在主檔（或主檔尚未載到）
+}
+function isPTEmp(emp){ return (emp && emp.empType === 'PT') || masterEmpType(emp && emp.name) === 'PT'; }
 
 function onSyncClick(){
   if(!syncUrl()){ openSettings(); return; }
