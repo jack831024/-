@@ -23,7 +23,7 @@
 // 之後 ID 會記在 PropertiesService，每次都用同一份。
 var EMP_SHEET_ID_OVERRIDE = '';
 var EMP_SHEET_NAME        = '員工主檔';
-var EMP_HEADERS = ['更新時間', '店家', 'empId', '姓名', '身分證字號', '地址', '電話', '台新帳號', '入職日期', '離職日期', '備註', '生日', '職別'];
+var EMP_HEADERS = ['更新時間', '店家', 'empId', '姓名', '身分證字號', '地址', '電話', '台新帳號', '入職日期', '離職日期', '備註', '生日', '職別', '留職停薪日', '復職日'];
 var EMP_PROP_KEY = 'EMP_MASTER_SHEET_ID';   // PropertiesService 存自動建立的試算表 ID
 
 // ============================================
@@ -104,6 +104,8 @@ function listEmployees(password, store) {
       if (String(data[i][1]) !== store) continue;
       var hireDate  = _dateStr(data[i][8], tz);
       var leaveDate = _dateStr(data[i][9], tz);
+      var suspendStart = _dateStr(data[i][13], tz);
+      var suspendEnd   = _dateStr(data[i][14], tz);
       out.push({
         empId:    String(data[i][2] || ''),
         name:     String(data[i][3] || ''),
@@ -116,7 +118,11 @@ function listEmployees(password, store) {
         note:     String(data[i][10] || ''),
         birthday: String(data[i][11] || ''),
         empType:  String(data[i][12] || '') || '正職',
-        active:   _activeInMonth(hireDate, leaveDate, thisYm)
+        suspendStart: suspendStart,
+        suspendEnd:   suspendEnd,
+        seniorityDate: _seniorityDate(hireDate, suspendStart, suspendEnd, tz),
+        suspended: !!suspendStart && !suspendEnd,   // 有留停日、還沒復職 → 留停中
+        active:   _activeInMonth(hireDate, leaveDate, thisYm, suspendStart, suspendEnd)
       });
     }
     // 在職排前面，其次依姓名
@@ -156,8 +162,10 @@ function getActiveRoster(password, store, ym) {
       if (!name) continue;
       var hireDate  = _dateStr(data[i][8], tz);
       var leaveDate = _dateStr(data[i][9], tz);
-      if (!_activeInMonth(hireDate, leaveDate, ym)) continue;
-      roster.push({ empId: String(data[i][2] || ''), name: name, hireDate: hireDate, leaveDate: leaveDate, birthday: String(data[i][11] || ''), empType: String(data[i][12] || '') || '正職' });
+      var suspendStart = _dateStr(data[i][13], tz);
+      var suspendEnd   = _dateStr(data[i][14], tz);
+      if (!_activeInMonth(hireDate, leaveDate, ym, suspendStart, suspendEnd)) continue;
+      roster.push({ empId: String(data[i][2] || ''), name: name, hireDate: hireDate, leaveDate: leaveDate, birthday: String(data[i][11] || ''), empType: String(data[i][12] || '') || '正職', seniorityDate: _seniorityDate(hireDate, suspendStart, suspendEnd, tz) });
     }
     roster.sort(function(a, b){ return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0); });
     return { ok: true, store: store, ym: ym, roster: roster };
@@ -199,7 +207,9 @@ function saveEmployee(password, store, emp) {
       hireDate, leaveDate,
       String(emp.note || '').trim(),
       String(emp.birthday || '').trim(),   // 生日：自由文字（MM-DD），不做日期正規化
-      (String(emp.empType || '').trim() === 'PT') ? 'PT' : '正職'   // 職別
+      (String(emp.empType || '').trim() === 'PT') ? 'PT' : '正職',   // 職別
+      _normDate(emp.suspendStart),   // 留職停薪日
+      _normDate(emp.suspendEnd)      // 復職日
     ];
 
     // 找既有列（同店 + 同 empId）
@@ -255,12 +265,31 @@ function deleteEmployee(password, store, empId) {
 //   - 沒填離職日 → 目前仍在職
 //   - 有離職日 → 離職當月仍在（該月要算薪水），下個月起消失
 // ============================================
-function _activeInMonth(hireDate, leaveDate, ym) {
+function _activeInMonth(hireDate, leaveDate, ym, suspendStart, suspendEnd) {
   var hm = String(hireDate || '').slice(0, 7);
   var lm = String(leaveDate || '').slice(0, 7);
   if (hm && ym < hm) return false;   // 還沒到職
   if (lm && ym > lm) return false;   // 離職月之後
+  // 留職停薪：suspendStart 當月起隱藏，直到復職(suspendEnd)當月才回來
+  var ss = String(suspendStart || '').slice(0, 7);
+  var se = String(suspendEnd || '').slice(0, 7);
+  if (ss && ym >= ss && (!se || ym < se)) return false;   // 留停中
   return true;
+}
+
+// ============================================
+// 🧮 年資基準日 seniorityDate = 入職日 + 留停天數（留停期間年資不增加 → 把入職日往後推）
+//   只在「已復職」（suspendStart 與 suspendEnd 都有）時調整；留停中本來就隱藏，不需調整
+// ============================================
+function _seniorityDate(hireDate, suspendStart, suspendEnd, tz) {
+  if (!hireDate) return hireDate;
+  if (!suspendStart || !suspendEnd) return hireDate;
+  if (suspendEnd < suspendStart) return hireDate;
+  var days = Math.round((new Date(suspendEnd + 'T00:00:00Z') - new Date(suspendStart + 'T00:00:00Z')) / 86400000);
+  if (!days) return hireDate;
+  var d = new Date(hireDate + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + days);
+  return Utilities.formatDate(d, tz || 'Asia/Taipei', 'yyyy-MM-dd');
 }
 
 
@@ -312,7 +341,7 @@ function getEmpSheet() {
     sh.getRange(1, 1, 2000, EMP_HEADERS.length).setNumberFormat('@');
     sh.getRange(1, 1, 1, EMP_HEADERS.length).setValues([EMP_HEADERS]);
     sh.setFrozenRows(1);
-    var widths = [160, 150, 130, 100, 130, 240, 120, 140, 110, 110, 200, 90, 70];
+    var widths = [160, 150, 130, 100, 130, 240, 120, 140, 110, 110, 200, 90, 70, 110, 110];
     for (var c = 0; c < widths.length; c++) sh.setColumnWidth(c + 1, widths[c]);
     sh.getRange(1, 1, 1, EMP_HEADERS.length)
       .setBackground('#dcfce7').setFontWeight('bold').setHorizontalAlignment('center');
