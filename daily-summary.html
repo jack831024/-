@@ -642,13 +642,14 @@ async function fetchMasterRoster(store, ym){
   }
   return null;
 }
-// 把主檔名單併入 CURRENT_STAFF_LIST（去重），並重建 A 班下拉（保留目前已選）
+// 以主檔為準：用主檔當月在職名單取代 CURRENT_STAFF_LIST，並重建 A 班下拉（保留目前已選）
+// 排班表的人之後仍會由 loadSchedule 另外併入（那是實際出勤，不受影響）
 function mergeMasterIntoStaff(){
   return fetchMasterRoster(STORE_ID).then(function(names){
-    if(!names || !names.length) return;
-    names.forEach(function(n){
-      var nm = canonicalStaffName(n);
-      if(nm && CURRENT_STAFF_LIST.indexOf(nm) < 0) CURRENT_STAFF_LIST.push(nm);
+    if(!names || !names.length) return;   // 主檔連不上 → 維持原本清單（保底）
+    var seen = {};
+    CURRENT_STAFF_LIST = names.map(canonicalStaffName).filter(function(n){
+      if(!n || seen[n]) return false; seen[n] = true; return true;
     });
     var sel = document.getElementById('i-shift-a');
     if(!sel) return;

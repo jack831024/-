@@ -453,6 +453,12 @@ function refreshEmployeesFromState(){
     EMPLOYEES = (EMP_DATA[STORE] || []).slice();
   }
   mergeMasterEmployees();   // 補進「員工資料主檔」有、但特休還沒有的人（新進員工自動出現）
+  // 以主檔為準：主檔抓得到名單時，只留主檔當月在職者（依姓名）——被調走/離開的自動隱藏
+  if(MASTER_EMPS && MASTER_EMPS.length){
+    var allow = {};
+    MASTER_EMPS.forEach(function(m){ if(m && m.name) allow[m.name] = true; });
+    EMPLOYEES = EMPLOYEES.filter(function(e){ return e.fromMaster || allow[e.name]; });
+  }
 }
 
 // ===== 員工資料主檔：當月在職名單（覆蓋層；只補進特休沒有的人，不寫進 STATE，非破壞性）=====

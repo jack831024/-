@@ -573,6 +573,13 @@ function render(){
   var list = document.getElementById('empList');
   list.innerHTML = '';
   var emps = storeData().employees.filter(function(e){ return e.active !== false; });
+  // 以主檔為準：主檔抓得到名單時，只顯示主檔當月在職者（依姓名）——僅顯示層，不改雲端
+  var mlist = MASTER_EMPS_BY_STORE[curStore];
+  if(mlist && mlist.length){
+    var allow = {};
+    mlist.forEach(function(m){ if(m && m.name) allow[m.name] = true; });
+    emps = emps.filter(function(e){ return e.fromMaster || allow[e.name]; });
+  }
   if(emps.length === 0){
     var div = document.createElement('div');
     div.className = 'empty-state';
