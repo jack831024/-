@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>員工資料主檔</title>
+<style>
+  :root{
+    --green:#16a34a; --green-d:#15803d; --bg:#f1f5f9; --card:#ffffff;
+    --line:#e2e8f0; --ink:#0f172a; --muted:#64748b; --danger:#dc2626;
+    --amber:#d97706; --slate:#94a3b8;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--ink);padding-bottom:60px}
+  .wrap{max-width:860px;margin:0 auto;padding:16px}
+  header{position:sticky;top:0;z-index:20;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;padding:14px 16px;border-radius:0 0 18px 18px;box-shadow:0 6px 18px rgba(21,128,61,.25)}
+  .htop{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .htop h1{font-size:18px;margin:0;display:flex;align-items:center;gap:8px}
+  .store-name{font-size:13px;opacity:.92;margin-top:4px}
+  .gear{background:rgba(255,255,255,.18);border:none;color:#fff;font-size:18px;width:38px;height:38px;border-radius:10px;cursor:pointer}
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0}
+  .toolbar .month-box{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+  .toolbar label{font-size:12px;color:var(--muted)}
+  input[type=month],input[type=date],input[type=text]{font:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 10px;color:var(--ink);background:#fff;width:100%}
+  input[type=month]{padding:6px 8px;border:none;font-size:14px}
+  .btn{border:none;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer}
+  .btn-primary{background:var(--green);color:#fff}
+  .btn-primary:active{background:var(--green-d)}
+  .btn-ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}
+  .btn-danger{background:#fee2e2;color:var(--danger)}
+  .spacer{flex:1}
+  .count{font-size:13px;color:var(--muted);margin:2px 2px 12px}
+  .count b{color:var(--green-d);font-size:15px}
+
+  .emp{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+  .emp-head{display:flex;align-items:center;gap:10px}
+  .emp-name{font-size:16px;font-weight:700}
+  .badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+  .b-active{background:#dcfce7;color:#15803d}
+  .b-left{background:#f1f5f9;color:#64748b}
+  .b-future{background:#fef3c7;color:#b45309}
+  .emp-actions{margin-left:auto;display:flex;gap:6px}
+  .icon-btn{border:none;background:#f1f5f9;border-radius:9px;padding:7px 11px;font-size:13px;cursor:pointer;color:#334155;font-weight:600}
+  .icon-btn.del{background:#fef2f2;color:var(--danger)}
+  .emp-meta{margin-top:10px;font-size:13px;color:var(--muted);display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}
+  .emp-meta .k{color:var(--slate);font-size:11px}
+  .emp-meta .v{color:var(--ink)}
+  .mono{font-variant-numeric:tabular-nums;letter-spacing:.3px}
+
+  .empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px}
+  .banner{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:12px;padding:14px;font-size:13px;line-height:1.6;margin-bottom:14px}
+  .hint{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:12px;padding:12px 14px;font-size:12.5px;line-height:1.7;margin-bottom:14px}
+
+  /* modal */
+  .mask{position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;align-items:flex-end;justify-content:center;z-index:50}
+  .mask.on{display:flex}
+  .sheet{background:#fff;width:100%;max-width:560px;border-radius:18px 18px 0 0;max-height:92vh;overflow:auto;padding:18px 18px 26px}
+  @media(min-width:600px){.mask{align-items:center}.sheet{border-radius:18px}}
+  .sheet h2{margin:2px 0 14px;font-size:17px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;font-weight:600}
+  .field .req{color:var(--danger)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .sheet-actions{display:flex;gap:10px;margin-top:18px}
+  .sheet-actions .btn{flex:1;padding:13px}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#0f172a;color:#fff;padding:11px 18px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .25s;z-index:99;pointer-events:none}
+  .toast.on{opacity:.95}
+  .closed{text-align:center;padding:70px 24px;color:var(--muted)}
+  .closed .big{font-size:40px;margin-bottom:10px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap" style="padding:0">
+    <div class="htop">
+      <div>
+        <h1>👥 員工資料主檔</h1>
+        <div class="store-name" id="storeName">—</div>
+      </div>
+      <button class="gear" onclick="openSettings()" title="設定 API 網址">⚙️</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap" id="app" style="display:none">
+
+  <div class="hint">
+    這裡是<b>員工唯一資料來源</b>。加班費、匿名表、薪資、特休、小結報表都會來這裡拿名單。<br>
+    離職只要填<b>「離職日期」</b>即可 — 該員工離職當月仍在(那個月還要算薪水)，<b>下個月起</b>其他系統就自動不再出現。新進員工填「入職日期」後，<b>當月</b>就會出現。
+  </div>
+
+  <div id="urlBanner" class="banner" style="display:none">
+    尚未設定後端網址。請先部署 <b>員工資料-script.gs</b>，再點右上 ⚙️ 把 /exec 網址貼進去。
+  </div>
+
+  <div class="toolbar">
+    <div class="month-box">
+      <label>檢視月份</label>
+      <input type="month" id="ymPick">
+    </div>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" onclick="openForm()">＋ 新增員工</button>
+  </div>
+
+  <div class="count" id="count"></div>
+  <div id="list"></div>
+</div>
+
+<div class="wrap closed" id="closedBox" style="display:none">
+  <div class="big">🏮</div>
+  <div><b>十城已結束營業</b><br>不建立員工資料。</div>
+  <div style="margin-top:18px"><button class="btn btn-ghost" onclick="location.href='home.html'">← 回主選單</button></div>
+</div>
+
+<!-- 新增/編輯 表單 -->
+<div class="mask" id="formMask">
+  <div class="sheet">
+    <h2 id="formTitle">新增員工</h2>
+    <input type="hidden" id="f-empId">
+    <div class="field">
+      <label>姓名 <span class="req">*</span></label>
+      <input type="text" id="f-name" placeholder="員工姓名" autocomplete="off">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>入職日期</label>
+        <input type="date" id="f-hire">
+      </div>
+      <div class="field">
+        <label>離職日期(離職才填)</label>
+        <input type="date" id="f-leave">
+      </div>
+    </div>
+    <div class="field">
+      <label>身分證字號</label>
+      <input type="text" id="f-idNo" placeholder="A123456789" autocomplete="off" inputmode="text">
+    </div>
+    <div class="field">
+      <label>電話</label>
+      <input type="text" id="f-phone" placeholder="09xx-xxx-xxx" autocomplete="off" inputmode="tel">
+    </div>
+    <div class="field">
+      <label>地址</label>
+      <input type="text" id="f-address" placeholder="通訊地址" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>台新帳號</label>
+      <input type="text" id="f-bank" placeholder="台新銀行帳號" autocomplete="off" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label>備註</label>
+      <input type="text" id="f-note" placeholder="選填" autocomplete="off">
+    </div>
+    <div class="sheet-actions">
+      <button class="btn btn-ghost" onclick="closeForm()">取消</button>
+      <button class="btn btn-primary" id="saveBtn" onclick="saveEmp()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================
+// 📌 後端 API 網址（部署 員工資料-script.gs 後，用 ⚙️ 貼 /exec 網址）
+// ============================================
+var BUILTIN_EMP_SYNC_URL = 'https://script.google.com/macros/s/AKfycbyLDnvILhiL0iIWjnoN14iwZZg5p9DobG1Ik3Fq-LiR6gcj3-_AKGTdnywDnmNrZLp6/exec';   // 已部署（初殿員工資料）
+
+(function initUrl(){
+  if(BUILTIN_EMP_SYNC_URL) localStorage.setItem('cd_emp_sync_url', BUILTIN_EMP_SYNC_URL);
+})();
+function apiUrl(){ return localStorage.getItem('cd_emp_sync_url') || ''; }
+
+// 店別
+var STORE = sessionStorage.getItem('cd_store') || '';
+var STORE_NAME = sessionStorage.getItem('cd_store_name') || STORE;
+var VALID_STORES = ['chudian-yongchun','chudian-xinzhuang','chudian-zhonghe'];
+
+var PW = '';               // 店家密碼（本次工作階段）
+var ALL = [];              // 完整員工清單（含個資）
+var CUR_YM = '';           // 目前檢視月份
+
+// ============================================
+// 啟動
+// ============================================
+(function boot(){
+  document.getElementById('storeName').textContent = STORE_NAME || '(未選店)';
+  // 十城 / 無效店別 → 不建立
+  if(STORE === 'shicheng-zhongxiao'){ showClosed(); return; }
+  if(VALID_STORES.indexOf(STORE) === -1){
+    document.getElementById('closedBox').style.display='block';
+    document.getElementById('closedBox').innerHTML =
+      '<div class="big">🏪</div><div>請先從主選單<b>選擇門市</b>再進入。</div>'+
+      '<div style="margin-top:18px"><button class="btn btn-ghost" onclick="location.href=\'home.html\'">← 回主選單</button></div>';
+    document.getElementById('closedBox').style.display='block';
+    return;
+  }
+  var now = new Date();
+  CUR_YM = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  document.getElementById('ymPick').value = CUR_YM;
+  document.getElementById('ymPick').addEventListener('change', function(){
+    CUR_YM = this.value || CUR_YM; render();
+  });
+  document.getElementById('app').style.display='block';
+  if(!apiUrl()){ document.getElementById('urlBanner').style.display='block'; }
+  gate();
+})();
+
+function showClosed(){ document.getElementById('closedBox').style.display='block'; }
+
+// 密碼驗證：用 listEmployees 試打，成功即通過
+async function gate(){
+  if(!apiUrl()){ return; }
+  var saved = sessionStorage.getItem('cd_emp_pw_'+STORE) || '';
+  if(saved){ PW = saved; return load(); }
+  askPw();
+}
+function askPw(){
+  var pw = prompt('請輸入【'+STORE_NAME+'】的管理密碼:');
+  if(pw === null){ location.href='home.html'; return; }
+  PW = String(pw).trim();
+  load(true);
+}
+
+// ============================================
+// API
+// ============================================
+async function callGAS(action){
+  var args = Array.prototype.slice.call(arguments,1);
+  var res = await fetch(apiUrl(), { method:'POST', body: JSON.stringify({action:action, args:args}) });
+  return await res.json();
+}
+
+async function load(fromPrompt){
+  if(!apiUrl()){ document.getElementById('urlBanner').style.display='block'; return; }
+  try{
+    var r = await callGAS('listEmployees', PW, STORE);
+    if(!r || !r.ok){
+      if(r && r.error === 'unauthorized'){
+        sessionStorage.removeItem('cd_emp_pw_'+STORE);
+        alert('❌ 密碼錯誤'); askPw(); return;
+      }
+      toast('讀取失敗:' + ((r&&r.error)||'未知錯誤')); return;
+    }
+    sessionStorage.setItem('cd_emp_pw_'+STORE, PW);
+    ALL = r.employees || [];
+    document.getElementById('urlBanner').style.display='none';
+    render();
+  }catch(e){ toast('連線失敗，請確認 ⚙️ 網址正確'); }
+}
+
+// ============================================
+// 在職判定(前端，與後端同規則) — ym 為 YYYY-MM
+// ============================================
+function statusFor(emp, ym){
+  var hm = (emp.hireDate||'').slice(0,7);
+  var lm = (emp.leaveDate||'').slice(0,7);
+  if(hm && ym < hm) return 'future';   // 未到職
+  if(lm && ym > lm) return 'left';      // 已離職
+  return 'active';
+}
+
+function render(){
+  var ym = CUR_YM;
+  var list = document.getElementById('list');
+  var active = ALL.filter(function(e){ return statusFor(e,ym)==='active'; });
+  document.getElementById('count').innerHTML =
+    (ym) + ' 在職 <b>'+active.length+'</b> 人 · 全部 '+ALL.length+' 人';
+  if(ALL.length === 0){
+    list.innerHTML = '<div class="empty">本店尚未建立員工。點「＋ 新增員工」開始。</div>';
+    return;
+  }
+  // 排序:在職優先，其次姓名
+  var sorted = ALL.slice().sort(function(a,b){
+    var sa = statusFor(a,ym)==='active'?0:1, sb = statusFor(b,ym)==='active'?0:1;
+    if(sa!==sb) return sa-sb;
+    return (a.name||'') < (b.name||'') ? -1 : 1;
+  });
+  list.innerHTML = sorted.map(function(e){ return card(e,ym); }).join('');
+}
+
+function card(e, ym){
+  var st = statusFor(e, ym);
+  var badge = st==='active' ? '<span class="badge b-active">本月在職</span>'
+            : st==='left'   ? '<span class="badge b-left">已離職</span>'
+            :                 '<span class="badge b-future">未到職</span>';
+  function esc(s){ return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  var meta = ''
+    + row('身分證', e.idNo) + row('電話', e.phone)
+    + row('台新帳號', e.bankAcct) + row('地址', e.address)
+    + row('入職', e.hireDate) + row('離職', e.leaveDate || '—');
+  if(e.note) meta += row('備註', e.note);
+  function row(k,v){ return '<div><div class="k">'+k+'</div><div class="v mono">'+esc(v||'—')+'</div></div>'; }
+  return ''
+   + '<div class="emp">'
+   +   '<div class="emp-head">'
+   +     '<span class="emp-name">'+esc(e.name)+'</span>'+badge
+   +     '<span class="emp-actions">'
+   +       '<button class="icon-btn" onclick="editEmp(\''+e.empId+'\')">編輯</button>'
+   +       '<button class="icon-btn del" onclick="delEmp(\''+e.empId+'\')">刪除</button>'
+   +     '</span>'
+   +   '</div>'
+   +   '<div class="emp-meta">'+meta+'</div>'
+   + '</div>';
+}
+
+// ============================================
+// 表單
+// ============================================
+function openForm(){
+  document.getElementById('formTitle').textContent='新增員工';
+  ['empId','name','idNo','phone','address','bank','note','hire','leave'].forEach(function(k){
+    document.getElementById('f-'+k).value='';
+  });
+  document.getElementById('formMask').classList.add('on');
+  setTimeout(function(){ document.getElementById('f-name').focus(); },80);
+}
+function editEmp(empId){
+  var e = ALL.filter(function(x){return x.empId===empId;})[0];
+  if(!e) return;
+  document.getElementById('formTitle').textContent='編輯員工';
+  document.getElementById('f-empId').value = e.empId;
+  document.getElementById('f-name').value  = e.name||'';
+  document.getElementById('f-idNo').value  = e.idNo||'';
+  document.getElementById('f-phone').value = e.phone||'';
+  document.getElementById('f-address').value = e.address||'';
+  document.getElementById('f-bank').value  = e.bankAcct||'';
+  document.getElementById('f-note').value  = e.note||'';
+  document.getElementById('f-hire').value  = e.hireDate||'';
+  document.getElementById('f-leave').value = e.leaveDate||'';
+  document.getElementById('formMask').classList.add('on');
+}
+function closeForm(){ document.getElementById('formMask').classList.remove('on'); }
+
+async function saveEmp(){
+  var name = document.getElementById('f-name').value.trim();
+  if(!name){ toast('請填姓名'); return; }
+  var emp = {
+    empId:    document.getElementById('f-empId').value.trim(),
+    name:     name,
+    idNo:     document.getElementById('f-idNo').value.trim(),
+    phone:    document.getElementById('f-phone').value.trim(),
+    address:  document.getElementById('f-address').value.trim(),
+    bankAcct: document.getElementById('f-bank').value.trim(),
+    hireDate: document.getElementById('f-hire').value.trim(),
+    leaveDate:document.getElementById('f-leave').value.trim(),
+    note:     document.getElementById('f-note').value.trim()
+  };
+  var btn = document.getElementById('saveBtn'); btn.disabled=true; btn.textContent='儲存中…';
+  try{
+    var r = await callGAS('saveEmployee', PW, STORE, emp);
+    if(!r || !r.ok){ toast('儲存失敗:'+((r&&r.error)||'')); return; }
+    closeForm(); toast('已儲存'); await load();
+  }catch(e){ toast('連線失敗'); }
+  finally{ btn.disabled=false; btn.textContent='儲存'; }
+}
+
+async function delEmp(empId){
+  var e = ALL.filter(function(x){return x.empId===empId;})[0];
+  if(!e) return;
+  if(!confirm('確定刪除「'+e.name+'」的所有資料?\n\n提示:若只是離職，建議改填「離職日期」即可，系統會自動下月起隱藏，並保留歷史資料。')) return;
+  try{
+    var r = await callGAS('deleteEmployee', PW, STORE, empId);
+    if(!r || !r.ok){ toast('刪除失敗:'+((r&&r.error)||'')); return; }
+    toast('已刪除'); await load();
+  }catch(e2){ toast('連線失敗'); }
+}
+
+// ============================================
+// 設定 / 提示
+// ============================================
+function openSettings(){
+  var cur = apiUrl();
+  var v = prompt('貼上 員工資料-script.gs 部署後的 /exec 網址:', cur);
+  if(v === null) return;
+  v = String(v).trim();
+  localStorage.setItem('cd_emp_sync_url', v);
+  toast('已更新網址');
+  if(v){ document.getElementById('urlBanner').style.display='none'; PW=''; sessionStorage.removeItem('cd_emp_pw_'+STORE); gate(); }
+}
+
+var _t;
+function toast(msg){
+  var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on');
+  clearTimeout(_t); _t=setTimeout(function(){t.classList.remove('on');},2200);
+}
+</script>
+</body>
+</html>

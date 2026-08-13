@@ -167,6 +167,11 @@ a.menu-card{text-decoration:none}
 .menu-card.menucost:hover .icon-wrap{background:linear-gradient(135deg,#dc2626 0%,#f87171 100%);color:#fff;transform:scale(1.05)}
 .menu-card.menucost .mgo{color:#dc2626}
 
+.menu-card.employee .icon-wrap{background:linear-gradient(135deg,#dcfce7 0%,#bbf7d0 100%);color:#15803d}
+.menu-card.employee::after{background:linear-gradient(90deg,#16a34a,#4ade80)}
+.menu-card.employee:hover .icon-wrap{background:linear-gradient(135deg,#16a34a 0%,#4ade80 100%);color:#fff;transform:scale(1.05)}
+.menu-card.employee .mgo{color:#15803d}
+
 .newtag{position:absolute;top:16px;left:16px;background:linear-gradient(135deg,#ef4444,#f97316);color:#fff;font-size:10px;font-weight:800;letter-spacing:1px;border-radius:999px;padding:3px 9px;box-shadow:0 4px 10px -2px rgba(239,68,68,.5)}
 
 .footer{text-align:center;font-size:11px;color:var(--ink-3);letter-spacing:1px;margin-top:1rem}
@@ -340,6 +345,13 @@ a.menu-card{text-decoration:none}
         <span class="mdesc">每道套餐的成本組成與毛利率，<br>連動「食材成本與毛利表」</span>
         <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
       </button>
+      <button class="menu-card employee" onclick="goFlow('employeeMaster')">
+        <span class="num">17</span>
+        <span class="icon-wrap">👥</span>
+        <span class="mtitle">員工資料</span>
+        <span class="mdesc">各店員工主檔(三店)，含個資與到職／<br>離職日，其他系統名單的唯一來源</span>
+        <span class="mgo">進入 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+      </button>
     </div>
   </div>
 
@@ -354,7 +366,7 @@ var GLOBAL_PASSWORD = 'yuanxin2022';
 function goFlow(flow){
   // 加班費 + 薪水計算 共用全域密碼 yuanxin2022
   // 薪資對帳走自己的店家 a-prefix 密碼，於 index.html 內驗證
-  if((flow === 'overtime' || flow === 'salary')
+  if((flow === 'overtime' || flow === 'salary' || flow === 'employeeMaster')
      && sessionStorage.getItem('cd_global_auth') !== '1'){
     var pw = prompt('請輸入登入密碼：');
     if(pw === null) return;
