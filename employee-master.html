@@ -18,6 +18,10 @@
   .htop h1{font-size:18px;margin:0;display:flex;align-items:center;gap:8px}
   .store-name{font-size:13px;opacity:.92;margin-top:4px}
   .gear{background:rgba(255,255,255,.18);border:none;color:#fff;font-size:18px;width:38px;height:38px;border-radius:10px;cursor:pointer}
+  .hleft{display:flex;align-items:center;gap:10px;min-width:0}
+  .hbtn{background:rgba(255,255,255,.18);border:none;color:#fff;width:38px;height:38px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .hbtn svg{width:20px;height:20px}
+  .hbtn:active,.gear:active{background:rgba(255,255,255,.3)}
   .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0}
   .toolbar .month-box{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
   .toolbar label{font-size:12px;color:var(--muted)}
@@ -79,9 +83,14 @@
 <header>
   <div class="wrap" style="padding:0">
     <div class="htop">
-      <div>
-        <h1>👥 員工資料主檔</h1>
-        <div class="store-name" id="storeName">—</div>
+      <div class="hleft">
+        <button class="hbtn" onclick="goBack()" title="返回">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </button>
+        <div>
+          <h1>👥 員工資料主檔</h1>
+          <div class="store-name" id="storeName">—</div>
+        </div>
       </div>
       <button class="gear" onclick="openSettings()" title="設定 API 網址">⚙️</button>
     </div>
@@ -215,6 +224,9 @@ var THIS_YM = '';          // 目前月份（判定在職/離職用；以後端�
 })();
 
 function showClosed(){ document.getElementById('closedBox').style.display='block'; }
+
+// 返回：回選店畫面（可再換店；選店頁自身也有返回主選單鍵）
+function goBack(){ location.href = 'index.html?t=' + Date.now(); }
 
 // 進店免再輸入密碼：直接帶入該店內建密碼（後端仍以此驗證）
 async function gate(){
