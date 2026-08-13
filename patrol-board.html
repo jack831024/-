@@ -234,9 +234,25 @@ function demoMystery(){
 }
 
 /* ---------- 抓資料 + 登入 ---------- */
+// 單次讀取：加逾時（避免卡死）＋自己 parse（GAS 抽風回 HTML 也不會爆）
+function fetchOnce(url,pw,timeoutMs){
+  return new Promise(function(resolve){
+    var done=false;
+    var timer=setTimeout(function(){ if(!done){ done=true; resolve({ok:false,error:"timeout"}); } }, timeoutMs||12000);
+    fetch(url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"getAllReports",pw:pw})})
+      .then(function(r){return r.text();})
+      .then(function(t){ if(done)return; done=true; clearTimeout(timer);
+        try{ resolve(JSON.parse(t)); }catch(e){ resolve({ok:false,error:"badresponse"}); } })
+      .catch(function(e){ if(done)return; done=true; clearTimeout(timer); resolve({ok:false,error:String(e)}); });
+  });
+}
+// 逾時／抽風／壞回應 → 自動再試一次（密碼錯不重試）；重試是接續的，不會同時兩個請求互蓋。
 function fetchReports(url,pw){
-  return fetch(url,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"getAllReports",pw:pw})})
-    .then(function(r){return r.json();}).catch(function(e){return {ok:false,error:String(e)};});
+  return fetchOnce(url,pw,12000).then(function(res){
+    if(res && res.ok) return res;
+    if(res && res.error==="unauthorized") return res;
+    return fetchOnce(url,pw,12000);
+  });
 }
 
 function tryLogin(){
@@ -245,14 +261,24 @@ function tryLogin(){
   if(!pw){ err.textContent="請輸入密碼"; return; }
   err.textContent = "驗證中…";
   if(!CONFIG.SCRIPT_URL){ REPORTS=demoReports(); MYSTERY=demoMystery(); enterDash(true); return; }
-  Promise.all([fetchReports(CONFIG.SCRIPT_URL,pw), fetchReports(CONFIG.MYSTERY_URL,pw)]).then(function(res){
-    var p=res[0], m=res[1];
-    if(!p || !p.ok){ err.textContent=(p&&p.error==="unauthorized")?"密碼錯誤":("讀取失敗："+((p&&p.error)||"未知")); return; }
+  // 先撈督導（驗證密碼＋主要資料）：回來就先進後台；秘密客背景載入、到了再補上
+  fetchReports(CONFIG.SCRIPT_URL,pw).then(function(p){
+    if(!p || !p.ok){ err.textContent=(p&&p.error==="unauthorized")?"密碼錯誤":"讀取失敗，請再按一次「進入」"; return; }
     sessionStorage.setItem("cd_patrol_pw", pw);
     REPORTS = p.reports || [];
-    MYSTERY = (m && m.ok) ? (m.reports||[]) : [];
+    MYSTERY = [];
     enterDash(false);
-  }).catch(function(e){ err.textContent = "連線失敗：" + e.message; });
+    loadMystery(pw);
+  });
+}
+function loadMystery(pw){
+  if(!CONFIG.MYSTERY_URL) return;
+  fetchReports(CONFIG.MYSTERY_URL,pw).then(function(m){
+    if(m && m.ok && document.getElementById("dashView").style.display!=="none"){
+      MYSTERY = m.reports||[];
+      render();
+    }
+  });
 }
 
 function enterDash(isDemo){
@@ -275,8 +301,8 @@ function logout(){
 function reload(){
   var pw = sessionStorage.getItem("cd_patrol_pw");
   if(!CONFIG.SCRIPT_URL || !pw){ render(); return; }
-  Promise.all([fetchReports(CONFIG.SCRIPT_URL,pw), fetchReports(CONFIG.MYSTERY_URL,pw)]).then(function(res){
-    if(res[0]&&res[0].ok){ REPORTS=res[0].reports||[]; MYSTERY=(res[1]&&res[1].ok)?(res[1].reports||[]):[]; populateMonths(); render(); }
+  fetchReports(CONFIG.SCRIPT_URL,pw).then(function(p){
+    if(p&&p.ok){ REPORTS=p.reports||[]; populateMonths(); render(); loadMystery(pw); }
   });
 }
 
