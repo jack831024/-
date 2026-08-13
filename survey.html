@@ -461,6 +461,18 @@ var BUILTIN_SURVEY_SYNC_URL = 'https://script.google.com/macros/s/AKfycbylKtlhC7
 
 function syncUrl(){ return localStorage.getItem('cd_survey_sync_url') || ''; }
 
+// ===== 員工主檔：當月在職名單（唯一來源；失敗或十城→回 null，由呼叫端用原本清單保底）=====
+var EMP_MASTER_URL = 'https://script.google.com/macros/s/AKfycbyLDnvILhiL0iIWjnoN14iwZZg5p9DobG1Ik3Fq-LiR6gcj3-_AKGTdnywDnmNrZLp6/exec';
+var EMP_MASTER_PW  = { 'chudian-yongchun':'a94213054', 'chudian-xinzhuang':'a60749791', 'chudian-zhonghe':'a90369287' };
+function fetchMasterRoster(store, ym){
+  var pw = EMP_MASTER_PW[store];
+  if(!pw) return Promise.resolve(null);   // 十城等主檔沒有的店 → 用原本清單
+  return fetch(EMP_MASTER_URL, { method:'POST', body: JSON.stringify({ action:'getActiveRoster', args:[pw, store, ym||''] }) })
+    .then(function(x){ return x.json(); })
+    .then(function(r){ return (r && r.ok && Array.isArray(r.roster)) ? r.roster.map(function(e){ return e.name; }) : null; })
+    .catch(function(){ return null; });
+}
+
 // ============================================
 // 📋 題目定義（依店的 brand 選擇）
 // ============================================
@@ -619,11 +631,25 @@ function selectStore(storeId){
   $('view-form').style.display = 'block';
   document.body.classList.add('view-form-active'); // 隱藏底部主管區
 
-  // 先抓最新員工列表（主管可能手動加減過），再渲染評分區
-  callGAS('getPositions', storeId).then(function(res){
-    if(res && typeof res === 'object' && !res.error){
-      POSITIONS_BY_STORE[storeId] = res;
+  // 名單來源：員工主檔（當月在職）為準；職位沿用主管設定/預設，主檔沒有的店退回原本
+  Promise.all([
+    callGAS('getPositions', storeId).catch(function(){ return null; }),
+    fetchMasterRoster(storeId)
+  ]).then(function(arr){
+    var savedPos    = (arr[0] && typeof arr[0] === 'object' && !arr[0].error) ? arr[0] : null;
+    var masterNames = arr[1];
+    var defPos      = STORE_DEFAULT_POSITIONS[storeId] || {};
+    if(masterNames && masterNames.length){
+      // 以主檔名單為準；職位優先用主管設定，其次預設，再其次「正職」
+      var merged = {};
+      masterNames.forEach(function(n){
+        merged[n] = (savedPos && savedPos[n]) || defPos[n] || '正職';
+      });
+      POSITIONS_BY_STORE[storeId] = merged;
+    } else if(savedPos){
+      POSITIONS_BY_STORE[storeId] = savedPos;   // 主檔連不上 → 用主管設定
     }
+    // 都沒有 → 不設，getEmployees 會退回 STORE_DEFAULT_POSITIONS
   }).catch(function(){ /* 退回預設 */ }).finally(function(){
     renderCategories();
   });

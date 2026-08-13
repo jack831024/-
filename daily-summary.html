@@ -626,6 +626,40 @@ function canonicalStaffName(name){
 }
 var CURRENT_STAFF_LIST = STAFF_LISTS[STORE_ID] || [];
 
+// ===== 員工主檔：當月在職名單（採「相加」：主檔的人加進來，保留原本清單的跨店支援名字）=====
+var EMP_MASTER_URL = 'https://script.google.com/macros/s/AKfycbyLDnvILhiL0iIWjnoN14iwZZg5p9DobG1Ik3Fq-LiR6gcj3-_AKGTdnywDnmNrZLp6/exec';
+var EMP_MASTER_PW  = { 'chudian-yongchun':'a94213054', 'chudian-xinzhuang':'a60749791', 'chudian-zhonghe':'a90369287' };
+function fetchMasterRoster(store, ym){
+  var pw = EMP_MASTER_PW[store];
+  if(!pw) return Promise.resolve(null);   // 十城等主檔沒有的店 → 維持原本清單
+  return fetch(EMP_MASTER_URL, { method:'POST', body: JSON.stringify({ action:'getActiveRoster', args:[pw, store, ym||''] }) })
+    .then(function(x){ return x.json(); })
+    .then(function(r){ return (r && r.ok && Array.isArray(r.roster)) ? r.roster.map(function(e){ return e.name; }) : null; })
+    .catch(function(){ return null; });
+}
+// 把主檔名單併入 CURRENT_STAFF_LIST（去重），並重建 A 班下拉（保留目前已選）
+function mergeMasterIntoStaff(){
+  return fetchMasterRoster(STORE_ID).then(function(names){
+    if(!names || !names.length) return;
+    names.forEach(function(n){
+      var nm = canonicalStaffName(n);
+      if(nm && CURRENT_STAFF_LIST.indexOf(nm) < 0) CURRENT_STAFF_LIST.push(nm);
+    });
+    var sel = document.getElementById('i-shift-a');
+    if(!sel) return;
+    var cur = sel.value;
+    // 保留第一個空白/預設 option（若有），其餘用最新名單重建
+    var firstVal = (sel.options.length && sel.options[0].value === '') ? sel.options[0].outerHTML : '';
+    sel.innerHTML = firstVal;
+    CURRENT_STAFF_LIST.forEach(function(name){
+      var opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    if(cur) sel.value = cur;
+  });
+}
+
 // 🗓️ 排班表快取（進頁面時抓一次就全放這）
 // 結構：{ "2026-04-19": { "77":"A", "林韋翔":"休", ... }, ... }
 var SCHEDULE_CACHE = {};
@@ -666,6 +700,8 @@ function findAShiftFromCache(dateStr){
       sel.appendChild(opt);
     });
   }
+  // 併入員工主檔當月在職名單（新進員工會自動出現；失敗/十城則維持原本清單）
+  mergeMasterIntoStaff();
   // 初始化「🔄 重新同步」按鈕為綠色「已同步」+ 存款狀態檢查 + 獎金鎖
   setTimeout(function(){
     if(typeof setAutoSaveStatus === 'function') setAutoSaveStatus('idle');
