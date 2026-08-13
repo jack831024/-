@@ -134,6 +134,10 @@
       </div>
     </div>
     <div class="field">
+      <label>生日(月-日，例：03-14)</label>
+      <input type="text" id="f-birthday" placeholder="03-14" autocomplete="off" maxlength="5" inputmode="numeric">
+    </div>
+    <div class="field">
       <label>身分證字號</label>
       <input type="text" id="f-idNo" placeholder="A123456789" autocomplete="off" inputmode="text">
     </div>
@@ -178,7 +182,13 @@ var STORE = sessionStorage.getItem('cd_store') || '';
 var STORE_NAME = sessionStorage.getItem('cd_store_name') || STORE;
 var VALID_STORES = ['chudian-yongchun','chudian-xinzhuang','chudian-zhonghe'];
 
-var PW = '';               // 店家密碼（本次工作階段）
+// 各店密碼（內建，進店免再輸入；後端仍以此驗證）
+var STORE_PW = {
+  'chudian-yongchun':  'a94213054',
+  'chudian-xinzhuang': 'a60749791',
+  'chudian-zhonghe':   'a90369287'
+};
+var PW = '';               // 帶入的店家密碼
 var ALL = [];              // 完整員工清單（含個資）
 var THIS_YM = '';          // 目前月份（判定在職/離職用；以後端回傳為準）
 
@@ -206,18 +216,11 @@ var THIS_YM = '';          // 目前月份（判定在職/離職用；以後端�
 
 function showClosed(){ document.getElementById('closedBox').style.display='block'; }
 
-// 密碼驗證：用 listEmployees 試打，成功即通過
+// 進店免再輸入密碼：直接帶入該店內建密碼（後端仍以此驗證）
 async function gate(){
   if(!apiUrl()){ return; }
-  var saved = sessionStorage.getItem('cd_emp_pw_'+STORE) || '';
-  if(saved){ PW = saved; return load(); }
-  askPw();
-}
-function askPw(){
-  var pw = prompt('請輸入【'+STORE_NAME+'】的管理密碼:');
-  if(pw === null){ location.href='home.html'; return; }
-  PW = String(pw).trim();
-  load(true);
+  PW = STORE_PW[STORE] || '';
+  load();
 }
 
 // ============================================
@@ -234,13 +237,8 @@ async function load(fromPrompt){
   try{
     var r = await callGAS('listEmployees', PW, STORE);
     if(!r || !r.ok){
-      if(r && r.error === 'unauthorized'){
-        sessionStorage.removeItem('cd_emp_pw_'+STORE);
-        alert('❌ 密碼錯誤'); askPw(); return;
-      }
       toast('讀取失敗:' + ((r&&r.error)||'未知錯誤')); return;
     }
-    sessionStorage.setItem('cd_emp_pw_'+STORE, PW);
     ALL = r.employees || [];
     if(r.thisYm) THIS_YM = r.thisYm;   // 以後端月份為準（時區一致）
     document.getElementById('urlBanner').style.display='none';
@@ -292,8 +290,9 @@ function card(e){
   function esc(s){ return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   var meta = ''
     + row('身分證', e.idNo) + row('電話', e.phone)
-    + row('台新帳號', e.bankAcct) + row('地址', e.address)
-    + row('入職', e.hireDate) + row('離職', e.leaveDate || '—');
+    + row('台新帳號', e.bankAcct) + row('生日', e.birthday)
+    + row('入職', e.hireDate) + row('離職', e.leaveDate || '—')
+    + row('地址', e.address);
   if(e.note) meta += row('備註', e.note);
   function row(k,v){ return '<div><div class="k">'+k+'</div><div class="v mono">'+esc(v||'—')+'</div></div>'; }
   return ''
@@ -314,7 +313,7 @@ function card(e){
 // ============================================
 function openForm(){
   document.getElementById('formTitle').textContent='新增員工';
-  ['empId','name','idNo','phone','address','bank','note','hire','leave'].forEach(function(k){
+  ['empId','name','idNo','phone','address','bank','note','hire','leave','birthday'].forEach(function(k){
     document.getElementById('f-'+k).value='';
   });
   document.getElementById('formMask').classList.add('on');
@@ -333,6 +332,7 @@ function editEmp(empId){
   document.getElementById('f-note').value  = e.note||'';
   document.getElementById('f-hire').value  = e.hireDate||'';
   document.getElementById('f-leave').value = e.leaveDate||'';
+  document.getElementById('f-birthday').value = e.birthday||'';
   document.getElementById('formMask').classList.add('on');
 }
 function closeForm(){ document.getElementById('formMask').classList.remove('on'); }
@@ -349,6 +349,7 @@ async function saveEmp(){
     bankAcct: document.getElementById('f-bank').value.trim(),
     hireDate: document.getElementById('f-hire').value.trim(),
     leaveDate:document.getElementById('f-leave').value.trim(),
+    birthday: document.getElementById('f-birthday').value.trim(),
     note:     document.getElementById('f-note').value.trim()
   };
   var btn = document.getElementById('saveBtn'); btn.disabled=true; btn.textContent='儲存中…';

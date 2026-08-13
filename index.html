@@ -128,6 +128,11 @@ h1{font-size:24px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
     window.location.href = 'home.html';
     return;
   }
+  // 員工資料：十城已結束營業，選店時不顯示忠孝店
+  if(flow === 'employeeMaster'){
+    var sc = document.querySelector('.store-btn.shicheng');
+    if(sc) sc.style.display = 'none';
+  }
   var el = document.getElementById('flow-indicator');
   if(!flow){ return; }
   var map = {

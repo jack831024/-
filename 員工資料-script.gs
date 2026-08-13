@@ -23,7 +23,7 @@
 // 之後 ID 會記在 PropertiesService，每次都用同一份。
 var EMP_SHEET_ID_OVERRIDE = '';
 var EMP_SHEET_NAME        = '員工主檔';
-var EMP_HEADERS = ['更新時間', '店家', 'empId', '姓名', '身分證字號', '地址', '電話', '台新帳號', '入職日期', '離職日期', '備註'];
+var EMP_HEADERS = ['更新時間', '店家', 'empId', '姓名', '身分證字號', '地址', '電話', '台新帳號', '入職日期', '離職日期', '備註', '生日'];
 var EMP_PROP_KEY = 'EMP_MASTER_SHEET_ID';   // PropertiesService 存自動建立的試算表 ID
 
 // ============================================
@@ -114,6 +114,7 @@ function listEmployees(password, store) {
         hireDate: hireDate,
         leaveDate: leaveDate,
         note:     String(data[i][10] || ''),
+        birthday: String(data[i][11] || ''),
         active:   _activeInMonth(hireDate, leaveDate, thisYm)
       });
     }
@@ -195,7 +196,8 @@ function saveEmployee(password, store, emp) {
       String(emp.phone || '').trim(),
       String(emp.bankAcct || '').trim(),
       hireDate, leaveDate,
-      String(emp.note || '').trim()
+      String(emp.note || '').trim(),
+      String(emp.birthday || '').trim()   // 生日：自由文字（MM-DD），不做日期正規化
     ];
 
     // 找既有列（同店 + 同 empId）
@@ -298,13 +300,17 @@ function _newEmpId(store) {
 function getEmpSheet() {
   var ss = _openEmpSpreadsheet();
   var sh = ss.getSheetByName(EMP_SHEET_NAME);
-  if (!sh) {
-    sh = ss.insertSheet(EMP_SHEET_NAME);
-    sh.appendRow(EMP_HEADERS);
-    sh.setFrozenRows(1);
+  var fresh = false;
+  if (!sh) { sh = ss.insertSheet(EMP_SHEET_NAME); fresh = true; }
+
+  // 表頭補正：欄數/內容不符 → 重寫（支援日後新增欄位，如「生日」）
+  var hdr = sh.getRange(1, 1, 1, EMP_HEADERS.length).getValues()[0];
+  if (fresh || hdr.join('|') !== EMP_HEADERS.join('|')) {
     // 整區設為純文字，避免自動轉型（身分證前導0、帳號科學記號、日期物件…）
     sh.getRange(1, 1, 2000, EMP_HEADERS.length).setNumberFormat('@');
-    var widths = [160, 150, 130, 100, 130, 240, 120, 140, 110, 110, 200];
+    sh.getRange(1, 1, 1, EMP_HEADERS.length).setValues([EMP_HEADERS]);
+    sh.setFrozenRows(1);
+    var widths = [160, 150, 130, 100, 130, 240, 120, 140, 110, 110, 200, 90];
     for (var c = 0; c < widths.length; c++) sh.setColumnWidth(c + 1, widths[c]);
     sh.getRange(1, 1, 1, EMP_HEADERS.length)
       .setBackground('#dcfce7').setFontWeight('bold').setHorizontalAlignment('center');
