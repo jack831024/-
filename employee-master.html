@@ -25,7 +25,8 @@
   .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0}
   .toolbar .month-box{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 10px}
   .toolbar label{font-size:12px;color:var(--muted)}
-  input[type=month],input[type=date],input[type=text]{font:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 10px;color:var(--ink);background:#fff;width:100%}
+  input[type=month],input[type=date],input[type=text],.field select{font:inherit;border:1px solid var(--line);border-radius:9px;padding:9px 10px;color:var(--ink);background:#fff;width:100%}
+  .field select{appearance:auto}
   input[type=month]{padding:6px 8px;border:none;font-size:14px}
   .btn{border:none;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer}
   .btn-primary{background:var(--green);color:#fff}
@@ -128,6 +129,14 @@
   <div class="sheet">
     <h2 id="formTitle">新增員工</h2>
     <input type="hidden" id="f-empId">
+    <div class="field">
+      <label>門市(調店時改這裡)</label>
+      <select id="f-store">
+        <option value="chudian-yongchun">永春店</option>
+        <option value="chudian-xinzhuang">新莊店</option>
+        <option value="chudian-zhonghe">中和店</option>
+      </select>
+    </div>
     <div class="field">
       <label>姓名 <span class="req">*</span></label>
       <input type="text" id="f-name" placeholder="員工姓名" autocomplete="off">
@@ -328,11 +337,15 @@ function card(e){
 // ============================================
 // 表單
 // ============================================
+var STORE_LABEL = { 'chudian-yongchun':'永春店', 'chudian-xinzhuang':'新莊店', 'chudian-zhonghe':'中和店' };
+function storeLabel(s){ return STORE_LABEL[s] || s; }
+
 function openForm(){
   document.getElementById('formTitle').textContent='新增員工';
   ['empId','name','idNo','phone','address','bank','note','hire','leave','birthday'].forEach(function(k){
     document.getElementById('f-'+k).value='';
   });
+  document.getElementById('f-store').value = STORE;   // 預設目前這家店
   document.getElementById('formMask').classList.add('on');
   setTimeout(function(){ document.getElementById('f-name').focus(); },80);
 }
@@ -350,6 +363,7 @@ function editEmp(empId){
   document.getElementById('f-hire').value  = e.hireDate||'';
   document.getElementById('f-leave').value = e.leaveDate||'';
   document.getElementById('f-birthday').value = e.birthday||'';
+  document.getElementById('f-store').value = STORE;   // 預設他目前所在的店（改成別店＝調店）
   document.getElementById('formMask').classList.add('on');
 }
 function closeForm(){ document.getElementById('formMask').classList.remove('on'); }
@@ -369,11 +383,27 @@ async function saveEmp(){
     birthday: document.getElementById('f-birthday').value.trim(),
     note:     document.getElementById('f-note').value.trim()
   };
+  var targetStore = document.getElementById('f-store').value || STORE;
   var btn = document.getElementById('saveBtn'); btn.disabled=true; btn.textContent='儲存中…';
   try{
-    var r = await callGAS('saveEmployee', PW, STORE, emp);
-    if(!r || !r.ok){ toast('儲存失敗:'+((r&&r.error)||'')); return; }
-    closeForm(); toast('已儲存'); await load();
+    if(emp.empId && targetStore !== STORE){
+      // 調店：先新增到目標店（新記錄），成功後再從原店移除
+      var moved = Object.assign({}, emp); moved.empId = '';
+      var r1 = await callGAS('saveEmployee', STORE_PW[targetStore], targetStore, moved);
+      if(!r1 || !r1.ok){ toast('調店失敗（加到'+storeLabel(targetStore)+'）:'+((r1&&r1.error)||'')); return; }
+      var r2 = await callGAS('deleteEmployee', PW, STORE, emp.empId);
+      closeForm();
+      if(!r2 || !r2.ok){ toast('已加到'+storeLabel(targetStore)+'，但原店未刪，請手動刪除'); }
+      else { toast(emp.name+' 已調到'+storeLabel(targetStore)); }
+      await load();
+    } else {
+      // 一般新增/編輯（targetStore 若非本店＝直接新增到別店）
+      var r = await callGAS('saveEmployee', (STORE_PW[targetStore]||PW), targetStore, emp);
+      if(!r || !r.ok){ toast('儲存失敗:'+((r&&r.error)||'')); return; }
+      closeForm();
+      toast(targetStore !== STORE ? ('已新增到'+storeLabel(targetStore)) : '已儲存');
+      await load();
+    }
   }catch(e){ toast('連線失敗'); }
   finally{ btn.disabled=false; btn.textContent='儲存'; }
 }
