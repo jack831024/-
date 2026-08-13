@@ -257,8 +257,15 @@ async function gate(){
 // ============================================
 async function callGAS(action){
   var args = Array.prototype.slice.call(arguments,1);
-  var res = await fetch(apiUrl(), { method:'POST', body: JSON.stringify({action:action, args:args}) });
-  return await res.json();
+  // Apps Script 偶爾抽風會回 HTML 或逾時 → 自動重試最多 4 次（避免存檔/調店默默失敗）
+  for(var i=0;i<4;i++){
+    try{
+      var txt = await fetch(apiUrl(), { method:'POST', body: JSON.stringify({action:action, args:args}) }).then(function(r){ return r.text(); });
+      return JSON.parse(txt);
+    }catch(e){}
+    await new Promise(function(res){ setTimeout(res, 800); });
+  }
+  return { ok:false, error:'連線逾時，請再試一次' };
 }
 
 async function load(){
