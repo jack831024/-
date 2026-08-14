@@ -597,11 +597,13 @@ function getBonusRate(storeId, ym){
 }
 
 // 各門市 A 班候選員工名單
+// 員工名單改由「員工資料」主檔提供（隱私：不再把員工姓名寫死在此公開檔）
+// 保留各店 key + 空陣列作結構；主檔連不上時，仍會由排班表表頭補上當月出勤者
 var STAFF_LISTS = {
-  'chudian-zhonghe':    ['李文少','褚心榆','劉濡瑜','施偉祥'],                        // 中和店
-  'chudian-yongchun':   ['謝其淇','林韋翔','洪文祥','呂直宸','吳孟澤','邱昊勳','林梓彥'], // 永春店（林梓彥為十城支援）
-  'chudian-xinzhuang':  ['蔡鈺豪','洪仕賢','蘇奕誠','陳致賢','楊承諺','簡訢丞'],       // 新莊店
-  'shicheng-zhongxiao': ['林哲民','林梓彥','王謖','陳柏維']                           // 十城忠孝店
+  'chudian-zhonghe':    [],
+  'chudian-yongchun':   [],
+  'chudian-xinzhuang':  [],
+  'shicheng-zhongxiao': []
 };
 
 // 舊暱稱 → 新全名（讓歷史紀錄自動對應到新姓名，獎金才不會被歸到「未指定」）

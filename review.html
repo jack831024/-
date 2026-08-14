@@ -369,24 +369,8 @@ function checklistItems(station){
 // 內建預設名單與歷史通過進度（雲端名單為空時自動帶入；之後以雲端為準）
 var ALL_STATIONS = STATIONS.staff.concat(STATIONS.cadre);   // 全部10站
 var NO_DINGHUO = ALL_STATIONS.filter(function(s){ return s !== '訂貨'; }); // 剩訂貨沒過
-var DEFAULT_EMPLOYEES = {
-  'chudian-zhonghe': [
-    { n:'李文少', p: ALL_STATIONS }, { n:'施偉祥', p: ALL_STATIONS },
-    { n:'褚心榆', p: ALL_STATIONS }, { n:'劉濡瑜', p: ALL_STATIONS }
-  ],
-  'chudian-yongchun': [
-    { n:'謝其淇', p: ALL_STATIONS }, { n:'林韋翔', p: ALL_STATIONS },
-    { n:'洪文祥', p: ALL_STATIONS }, { n:'呂直宸', p: ALL_STATIONS },
-    { n:'吳孟澤', p: ALL_STATIONS },
-    { n:'邱皓勳', p: ['服務/帶位'] }   // 本月考核：出湯/海鮮（見 DEFAULT_RECORDS）
-  ],
-  'chudian-xinzhuang': [
-    { n:'蔡鈺豪', p: ALL_STATIONS },
-    { n:'蘇奕誠', p: NO_DINGHUO },  // 剩訂貨
-    { n:'李嘉真', p: NO_DINGHUO },  // 剩訂貨
-    { n:'簡訢丞', p: [] }, { n:'陳致賢', p: [] }
-  ]
-};
+// 員工名單改由「員工資料」主檔 + 本系統雲端提供（隱私：不再把姓名寫死在此公開檔）
+var DEFAULT_EMPLOYEES = {};
 
 // 站別縮寫（迷你徽章用）
 var SHORT_NAMES = {
@@ -400,11 +384,7 @@ var RAISE_RULES = {
   staffStation: { every: 3, amount: 1500 },
   cadreStation: { every: 2, amount: 1000 }
 };
-var DEFAULT_RECORDS = {
-  'chudian-yongchun': {
-    '2026-06': { 'n-邱皓勳': { station:'出湯/海鮮', late:false, pass:'', mistakes:[], checks:[] } }
-  }
-};
+var DEFAULT_RECORDS = {};
 function ensureSeed(){
   var d = storeData();
   if(d.employees.length > 0) return;
