@@ -171,22 +171,6 @@
       <input type="text" id="f-birthday" placeholder="03-14" autocomplete="off" maxlength="5" inputmode="numeric">
     </div>
     <div class="field">
-      <label>身分證字號</label>
-      <input type="text" id="f-idNo" placeholder="A123456789" autocomplete="off" inputmode="text">
-    </div>
-    <div class="field">
-      <label>電話</label>
-      <input type="text" id="f-phone" placeholder="09xx-xxx-xxx" autocomplete="off" inputmode="tel">
-    </div>
-    <div class="field">
-      <label>地址</label>
-      <input type="text" id="f-address" placeholder="通訊地址" autocomplete="off">
-    </div>
-    <div class="field">
-      <label>台新帳號</label>
-      <input type="text" id="f-bank" placeholder="台新銀行帳號" autocomplete="off" inputmode="numeric">
-    </div>
-    <div class="field">
       <label>備註</label>
       <input type="text" id="f-note" placeholder="選填" autocomplete="off">
     </div>
@@ -344,12 +328,10 @@ function card(e){
   if(e.empType === 'PT') badge += '<span class="badge b-pt">PT</span>';
   function esc(s){ return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   var meta = ''
-    + row('身分證', e.idNo) + row('電話', e.phone)
-    + row('台新帳號', e.bankAcct) + row('生日', e.birthday)
+    + row('生日', e.birthday)
     + row('入職', e.hireDate) + row('離職', e.leaveDate || '—');
   if(e.suspendStart) meta += row('留職停薪', e.suspendStart + (e.suspendEnd ? (' ~ 復職 '+e.suspendEnd) : ' ~ 迄今'));
   if(e.seniorityDate && e.seniorityDate !== e.hireDate) meta += row('年資基準', e.seniorityDate);
-  meta += row('地址', e.address);
   if(e.note) meta += row('備註', e.note);
   function row(k,v){ return '<div><div class="k">'+k+'</div><div class="v mono">'+esc(v||'—')+'</div></div>'; }
   // 留停/復職 快速鈕：留停中→顯示「復職」；在職(未離職)→顯示「留職停薪」
@@ -418,7 +400,7 @@ function storeLabel(s){ return STORE_LABEL[s] || s; }
 
 function openForm(){
   document.getElementById('formTitle').textContent='新增員工';
-  ['empId','name','idNo','phone','address','bank','note','hire','leave','birthday','suspendStart','suspendEnd'].forEach(function(k){
+  ['empId','name','note','hire','leave','birthday','suspendStart','suspendEnd'].forEach(function(k){
     document.getElementById('f-'+k).value='';
   });
   document.getElementById('f-store').value = STORE;   // 預設目前這家店
@@ -432,10 +414,6 @@ function editEmp(empId){
   document.getElementById('formTitle').textContent='編輯員工';
   document.getElementById('f-empId').value = e.empId;
   document.getElementById('f-name').value  = e.name||'';
-  document.getElementById('f-idNo').value  = e.idNo||'';
-  document.getElementById('f-phone').value = e.phone||'';
-  document.getElementById('f-address').value = e.address||'';
-  document.getElementById('f-bank').value  = e.bankAcct||'';
   document.getElementById('f-note').value  = e.note||'';
   document.getElementById('f-hire').value  = e.hireDate||'';
   document.getElementById('f-leave').value = e.leaveDate||'';
@@ -451,13 +429,15 @@ function closeForm(){ document.getElementById('formMask').classList.remove('on')
 async function saveEmp(){
   var name = document.getElementById('f-name').value.trim();
   if(!name){ toast('請填姓名'); return; }
+  var empIdVal = document.getElementById('f-empId').value.trim();
+  var prev = ALL.filter(function(x){return x.empId===empIdVal;})[0] || {};
   var emp = {
-    empId:    document.getElementById('f-empId').value.trim(),
+    empId:    empIdVal,
     name:     name,
-    idNo:     document.getElementById('f-idNo').value.trim(),
-    phone:    document.getElementById('f-phone').value.trim(),
-    address:  document.getElementById('f-address').value.trim(),
-    bankAcct: document.getElementById('f-bank').value.trim(),
+    idNo:     prev.idNo || '',        // 已從介面移除，保留舊值不誤刪
+    phone:    prev.phone || '',
+    address:  prev.address || '',
+    bankAcct: prev.bankAcct || '',
     hireDate: document.getElementById('f-hire').value.trim(),
     leaveDate:document.getElementById('f-leave').value.trim(),
     birthday: document.getElementById('f-birthday').value.trim(),
