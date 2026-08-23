@@ -477,7 +477,7 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.08.13-01';
+var APP_VERSION = '2026.08.23-01';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -2139,7 +2139,25 @@ function applyData(data){
   _loadingRecord = true;  // 載入中：抑制 autoSave
   INPUT_IDS.forEach(function(id){
     var el = document.getElementById(id);
-    if(el) el.value = (data.inputs && data.inputs[id] != null) ? data.inputs[id] : '';
+    if(!el) return;
+    var val = (data.inputs && data.inputs[id] != null) ? data.inputs[id] : '';
+    // ⭐ <select> 特殊處理：要設的值不在 options 裡的話，動態補一個 option 進去
+    //   問題背景：sel.value = X 若 X 不是任何 <option> 的 value，會靜默失敗 → 下拉變空
+    //   觸發情境：STAFF_LISTS 改動後（員工離職、名字改）舊紀錄的 A 班值找不到對應 option
+    //   修法：載入時先確保 option 存在（若不存在就補上，標註「（已離職／不在名單）」讓使用者知情）
+    if(el.tagName === 'SELECT' && val){
+      var hasOption = false;
+      for(var oi = 0; oi < el.options.length; oi++){
+        if(el.options[oi].value === val){ hasOption = true; break; }
+      }
+      if(!hasOption){
+        var opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = val + '（已離職／不在名單）';
+        el.appendChild(opt);
+      }
+    }
+    el.value = val;
   });
   store.w = (data.store && data.store.w) ? data.store.w.slice() : [];
   store.d = (data.store && data.store.d) ? data.store.d.slice() : [];
