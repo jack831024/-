@@ -242,7 +242,7 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
     <span id="store-name">（未選店）</span>
   </div>
   <span class="spacer"></span>
-  <select id="ym-picker" class="month-picker" onchange="onYmChange()" title="選擇年月份"></select>
+  <select id="ym-picker" class="month-picker" onchange="onYmChange()" title="選擇年份"></select>
   <span id="sync-chip" class="sync-chip off" title="點擊重新同步" onclick="syncNow()">☁ 未設定</span>
   <button class="btn btn-ghost btn-sm" onclick="pullOTLeaveFromCloud(false)" title="重抓加班費特休/旅遊假資料">🔄 同步加班費</button>
 </div>
@@ -504,43 +504,30 @@ function mergeMasterEmployees(){
   });
 }
 
-// 目前選擇的年月份（YYYY-MM），預設今天
-var SELECTED_YM = (function(){
-  var d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-})();
-// EFFECTIVE_YM = OT 追蹤起點的月份（<= 這個月 都算 legacy 舊資料）
-var EFFECTIVE_YM = '2026-04';
-function isLegacyMonth(ym){ return ym < EFFECTIVE_YM; }
-function ymFirstDay(ym){ return ym + '-01'; }
-function ymLastDay(ym){
-  var p = ym.split('-');
-  var y = Number(p[0]), m = Number(p[1]);
-  var last = new Date(y, m, 0).getDate();
-  return ym + '-' + String(last).padStart(2,'0');
-}
+// 目前選擇的年份（YYYY），預設今年
+var SELECTED_YM = String(new Date().getFullYear());
+// EFFECTIVE_YM 已改為「年」語意；歷史 legacy 邏輯保留但改判為當年之前
+var EFFECTIVE_YM = '2026';
+function isLegacyMonth(ym){ return false; } // 改用年份後不再有 legacy 概念
+function ymFirstDay(ym){ return ym + '-01-01'; }
+function ymLastDay(ym){ return ym + '-12-31'; }
 function activeInMonth(emp, ym){
   if(!emp) return false;
-  var monthEnd = ymLastDay(ym), monthStart = ymFirstDay(ym);
-  if(emp.hireDate && emp.hireDate > monthEnd) return false;
-  if(emp.leftDate && emp.leftDate < monthStart) return false;
+  var yEnd = ymLastDay(ym), yStart = ymFirstDay(ym);
+  if(emp.hireDate && emp.hireDate > yEnd) return false;
+  if(emp.leftDate && emp.leftDate < yStart) return false;
   return true;
 }
 
-// 初始化年月選單（EFFECTIVE_YM 起 ~ 12 個月後）
+// 初始化年份選單（2026 起 ~ 明年）
 (function initYmPicker(){
   var sel = document.getElementById('ym-picker');
   if(!sel) return;
-  var start = new Date(2026, 2, 1); // 2026-03
-  var end = new Date();
-  end.setMonth(end.getMonth() + 6);  // +6 個月給未來
+  var startYear = 2026;
+  var endYear = new Date().getFullYear() + 1;
   var opts = [];
-  var cursor = new Date(start);
-  while(cursor <= end){
-    var y = cursor.getFullYear(), m = cursor.getMonth()+1;
-    var v = y + '-' + String(m).padStart(2,'0');
-    opts.push('<option value="'+v+'">'+y+'年 '+m+'月</option>');
-    cursor.setMonth(cursor.getMonth()+1);
+  for(var y = startYear; y <= endYear; y++){
+    opts.push('<option value="'+y+'">'+y+' 年</option>');
   }
   sel.innerHTML = opts.join('');
   sel.value = SELECTED_YM;
@@ -548,8 +535,9 @@ function activeInMonth(emp, ym){
 
 function onYmChange(){
   SELECTED_YM = document.getElementById('ym-picker').value;
-  // 更新 legacy note 顯示
-  document.getElementById('legacy-note').style.display = isLegacyMonth(SELECTED_YM) ? 'block' : 'none';
+  // 隱藏舊資料月份提示（年份模式下不再使用）
+  var ln = document.getElementById('legacy-note');
+  if(ln) ln.style.display = 'none';
   render();
 }
 
@@ -775,11 +763,11 @@ function calcAnnual(emp){
   var computed = computeAnnualAccrued(emp.hireDate);
   var accrued = Math.max(emp.initialAnnualAccrued || 0, computed);
   var initialUsed = emp.initialAnnualUsed || 0;
-  // 累計已用 = 起始 + 所有 OT（截至選擇月份的月底）
+  // 累計已用 = 起始 + 所有 OT（截至選擇年份的年底）
   var otAll = getOvertimeDatesAfter(emp.name, 'annual', { uptoYm: SELECTED_YM });
   var fromOT = otAll.full.length + otAll.half.length * 0.5;
-  // 該月份的 chip：只顯示選擇月份內的 OT 日期（舊月份不顯示 chip）
-  var otMonth = isLegacyMonth(SELECTED_YM) ? { full:[], half:[] } : getOvertimeDatesAfter(emp.name, 'annual', { ym: SELECTED_YM });
+  // 該年份的 chip：顯示選擇年份內的所有 OT 日期
+  var otMonth = getOvertimeDatesAfter(emp.name, 'annual', { ym: SELECTED_YM });
   var manual = STATE.annualUsedManual[emp.id] || 0;
   var used = initialUsed + fromOT + manual;
   return {
@@ -811,13 +799,13 @@ function calcTravel(emp){
   var cycleStart = currentTravelCycleStart();
   var cycleStartStr = fmtDateISO(cycleStart);
   var entitlement = travelEntitlement(emp.hireDate);
-  // 已用（截至選擇月底）：只算本週期內的
+  // 已用（截至選擇年底）：只算本週期內的
   var otAll = getOvertimeDatesAfter(emp.name, 'travel', { uptoYm: SELECTED_YM });
   var cycleFull = otAll.full.filter(function(d){ return d >= cycleStartStr; });
   var cycleHalf = otAll.half.filter(function(d){ return d >= cycleStartStr; });
   var fromOT = cycleFull.length + cycleHalf.length * 0.5;
-  // 該月份的 chip：只顯示選擇月份內的 OT
-  var otMonth = isLegacyMonth(SELECTED_YM) ? { full:[], half:[] } : getOvertimeDatesAfter(emp.name, 'travel', { ym: SELECTED_YM });
+  // 該年份的 chip：顯示選擇年份內的所有 OT
+  var otMonth = getOvertimeDatesAfter(emp.name, 'travel', { ym: SELECTED_YM });
   var monthFull = otMonth.full.filter(function(d){ return d >= cycleStartStr; });
   var monthHalf = otMonth.half.filter(function(d){ return d >= cycleStartStr; });
   var manual = STATE.travelUsedManual[emp.id] || 0;
@@ -956,26 +944,19 @@ function renderAnnual(){
   var tb = document.getElementById('tbody-annual');
   var ft = activeInSelected(ftOnly());
   if(!ft.length){
-    tb.innerHTML = '<tr><td colspan="5"><div class="empty-row">'+SELECTED_YM+' 沒有在職員工</div></td></tr>';
+    tb.innerHTML = '<tr><td colspan="5"><div class="empty-row">'+SELECTED_YM+' 年 沒有在職員工</div></td></tr>';
     return;
   }
-  var isLegacy = isLegacyMonth(SELECTED_YM);
   var rows = ft.map(function(e){
     var c = calcAnnual(e);
     var cls = c.remaining === 0 ? 'bal-zero' : (c.remaining < 3 ? 'bal-warn' : 'bal-pos');
-    var cellHtml;
-    if(isLegacy){
-      // 舊月份：所有「以前使用」合併顯示於此
-      cellHtml = '<div>以前已使用 <b>'+fmtDays(c.initialUsed)+'</b> 天</div>';
-    } else {
-      // 一般月份：只顯示該月 OT chip，不重複顯示「4/1 以前已用」
-      var fullChips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini">'+fmtMD(d)+'</span>'; });
-      var halfChips = c.fromOTHalfDates.map(function(d){ return '<span class="date-chip-mini" title="特半 0.5 天">'+fmtMD(d)+'<span class="half-mark">½</span></span>'; });
-      var chips = fullChips.concat(halfChips).join('');
-      var chipBlock = chips ? '<div class="date-chips">'+chips+'</div>' : '';
-      var monthFromOT = c.fromOTDates.length + c.fromOTHalfDates.length * 0.5;
-      cellHtml = '<div>已使用 '+fmtDays(monthFromOT)+' 天</div>' + chipBlock;
-    }
+    var fullChips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini">'+fmtMD(d)+'</span>'; });
+    var halfChips = c.fromOTHalfDates.map(function(d){ return '<span class="date-chip-mini" title="特半 0.5 天">'+fmtMD(d)+'<span class="half-mark">½</span></span>'; });
+    var chips = fullChips.concat(halfChips).join('');
+    var chipBlock = chips ? '<div class="date-chips">'+chips+'</div>' : '';
+    var yearFromOT = c.fromOTDates.length + c.fromOTHalfDates.length * 0.5;
+    var initialLine = (c.initialUsed > 0) ? '<div class="tag-line">2026/4 以前另用 '+fmtDays(c.initialUsed)+' 天</div>' : '';
+    var cellHtml = '<div>'+SELECTED_YM+' 年已使用 '+fmtDays(yearFromOT)+' 天</div>' + chipBlock + initialLine;
     return '<tr>'
       + '<td class="c-name">'+e.name+'</td>'
       + '<td>'+e.hireDate+'<div class="tag-line">年資 '+tenureYears(e.hireDate).toFixed(1)+' 年</div></td>'
@@ -1005,26 +986,21 @@ function renderTravel(){
   var tb = document.getElementById('tbody-travel');
   var ft = activeInSelected(ftOnly());
   if(!ft.length){
-    tb.innerHTML = '<tr><td colspan="5"><div class="empty-row">'+SELECTED_YM+' 沒有在職員工</div></td></tr>';
+    tb.innerHTML = '<tr><td colspan="5"><div class="empty-row">'+SELECTED_YM+' 年 沒有在職員工</div></td></tr>';
     return;
   }
-  var isLegacy = isLegacyMonth(SELECTED_YM);
   var rows = ft.map(function(e){
     var c = calcTravel(e);
     var months = tenureMonths(e.hireDate);
     var cls = c.remaining === 0 ? 'bal-zero' : 'bal-pos';
     var note = months < 6 ? '<div class="tag-line">未滿半年</div>' : '';
-    var cellHtml;
-    if(isLegacy){
-      cellHtml = '<div>以前已使用 <b>'+fmtDays(c.initialUsed || 0)+'</b> 天</div>';
-    } else {
-      var fullChips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini travel">'+fmtMD(d)+'</span>'; });
-      var halfChips = c.fromOTHalfDates.map(function(d){ return '<span class="date-chip-mini travel" title="旅半 0.5 天">'+fmtMD(d)+'<span class="half-mark">½</span></span>'; });
-      var chips = fullChips.concat(halfChips).join('');
-      var chipBlock = chips ? '<div class="date-chips">'+chips+'</div>' : '';
-      var monthFromOT = c.fromOTDates.length + c.fromOTHalfDates.length * 0.5;
-      cellHtml = '<div>已使用 '+fmtDays(monthFromOT)+' 天</div>' + chipBlock;
-    }
+    var fullChips = c.fromOTDates.map(function(d){ return '<span class="date-chip-mini travel">'+fmtMD(d)+'</span>'; });
+    var halfChips = c.fromOTHalfDates.map(function(d){ return '<span class="date-chip-mini travel" title="旅半 0.5 天">'+fmtMD(d)+'<span class="half-mark">½</span></span>'; });
+    var chips = fullChips.concat(halfChips).join('');
+    var chipBlock = chips ? '<div class="date-chips">'+chips+'</div>' : '';
+    var yearFromOT = c.fromOTDates.length + c.fromOTHalfDates.length * 0.5;
+    var initialLine = (c.initialUsed > 0) ? '<div class="tag-line">2026/4 以前另用 '+fmtDays(c.initialUsed)+' 天</div>' : '';
+    var cellHtml = '<div>'+SELECTED_YM+' 年已使用 '+fmtDays(yearFromOT)+' 天</div>' + chipBlock + initialLine;
     return '<tr>'
       + '<td class="c-name">'+e.name+'</td>'
       + '<td>'+e.hireDate+note+'</td>'
@@ -1040,7 +1016,7 @@ function renderEmpTabs(){
   var area = document.getElementById('emp-tabs');
   var list = activeInSelected(EMPLOYEES);
   if(!list.length){
-    area.innerHTML = '<div class="empty-row" style="flex:1">'+SELECTED_YM+' 沒有在職員工</div>';
+    area.innerHTML = '<div class="empty-row" style="flex:1">'+SELECTED_YM+' 年 沒有在職員工</div>';
     return;
   }
   var sel = STATE.selectedEmpId;
