@@ -2116,7 +2116,8 @@ function persistSalarySummary(y, m){
     });
   }
 
-  // PT 資料：依人彙總 當月總工時 / 加班時 / 總工資
+  // PT 資料：依人彙總 當月總工時 / 加班時，工資用彙總後一次算再 round
+  //   （避免每日 r.wage round 後加總造成小數點誤差 → 薪水表上會少 1~2 元）
   var byPT = {};
   if(hasPT){
     PT_ANALYSIS.forEach(function(r){
@@ -2124,13 +2125,15 @@ function persistSalarySummary(y, m){
       if(!byPT[n]) byPT[n] = { hours:0, otHours:0, wage:0, hourlyWage: r.hourlyWage || 0 };
       byPT[n].hours   += (r.hours || 0);
       byPT[n].otHours += (r.otHours || 0);
-      byPT[n].wage    += (r.wage || 0);
+      if(r.hourlyWage) byPT[n].hourlyWage = r.hourlyWage;  // 以最後見到的為準
     });
-    // 取 2 位小數精度（避免 0.75 被四捨五入成 0.8、同時去掉浮點雜訊）
+    // 用彙總時數計算總工資（一次 round）
     Object.keys(byPT).forEach(function(n){
       byPT[n].hours   = Math.round(byPT[n].hours * 100) / 100;
       byPT[n].otHours = Math.round(byPT[n].otHours * 100) / 100;
-      byPT[n].wage    = Math.round(byPT[n].wage);
+      var normalH = Math.max(0, byPT[n].hours - byPT[n].otHours);
+      byPT[n].wage = Math.round(normalH * byPT[n].hourlyWage
+                              + byPT[n].otHours * byPT[n].hourlyWage * PT_OT_MULT);
     });
   }
 
@@ -3073,17 +3076,30 @@ function runPtAnalysis(silent){
 
 function renderPtSummary(){
   if(!PT_ANALYSIS) return;
-  var pplSet = {}, totalH = 0, totalOtH = 0, totalWage = 0;
+  // 依人彙總「總時數 / 加班時數」，然後 每人 = round(總時數×時薪 + 加班時數×時薪×倍率)
+  //   避免用「每日工資 round 後再加總」造成小數點累積誤差
+  var pplSet = {}, totalH = 0, totalOtH = 0;
+  var byPerson = {};
   PT_ANALYSIS.forEach(function(r){
     pplSet[r.name] = 1;
     totalH    += r.hours;
     totalOtH  += r.otHours;
-    totalWage += r.wage;
+    if(!byPerson[r.name]) byPerson[r.name] = { h:0, oth:0, hw: r.hourlyWage || 0 };
+    byPerson[r.name].h   += (r.hours   || 0);
+    byPerson[r.name].oth += (r.otHours || 0);
+    // hourlyWage 以最後見到的為準（同一人應該相同）
+    if(r.hourlyWage) byPerson[r.name].hw = r.hourlyWage;
+  });
+  var totalWage = 0;
+  Object.keys(byPerson).forEach(function(n){
+    var p = byPerson[n];
+    var normalH = Math.max(0, p.h - p.oth);
+    totalWage += Math.round(normalH * p.hw + p.oth * p.hw * PT_OT_MULT);
   });
   document.getElementById('pt-s-ppl').textContent   = Object.keys(pplSet).length;
   document.getElementById('pt-s-hours').innerHTML   = totalH.toFixed(1)+'<span class="u"> 小時</span>';
   document.getElementById('pt-s-ot').innerHTML      = totalOtH.toFixed(1)+'<span class="u"> 小時</span>';
-  document.getElementById('pt-s-wage').textContent  = 'NT$ '+Math.round(totalWage).toLocaleString();
+  document.getElementById('pt-s-wage').textContent  = 'NT$ '+totalWage.toLocaleString();
 }
 
 function renderPtResults(){
@@ -3146,12 +3162,16 @@ function renderPtResults(){
       '</tr>');
     });
     // 小計列
+    //   工資：用「該人彙總後的一般時數 × 時薪 + 加班時數 × 時薪 × 倍率」一次算再 round
+    //   （避免每日 wage 各自 round 後加總累積小數點誤差）
+    var personNormalH = Math.max(0, p.totalH - p.totalOtH);
+    var personSubtotal = Math.round(personNormalH * personHourly + p.totalOtH * personHourly * PT_OT_MULT);
     html.push('<tr style="background:rgba(59,130,246,.06);font-weight:700">',
       '<td colspan="4" style="text-align:right;color:#1e40af">↳ ', escapeHtml(name), ' 小計（時薪 NT$', personHourly, '）：</td>',
       '<td class="c-num">', p.totalH.toFixed(2), ' 小時</td>',
-      '<td class="c-num">', (p.totalH - p.totalOtH).toFixed(2), '</td>',
+      '<td class="c-num">', personNormalH.toFixed(2), '</td>',
       '<td class="c-num" style="color:', p.totalOtH>0?'#b45309':'#94a3b8', '">', p.totalOtH.toFixed(2), '</td>',
-      '<td class="c-num" style="color:#15803d">NT$ ', Math.round(p.totalWage).toLocaleString(), '</td>',
+      '<td class="c-num" style="color:#15803d">NT$ ', personSubtotal.toLocaleString(), '</td>',
     '</tr>');
   });
 
@@ -3205,9 +3225,23 @@ function exportPtCsv(){
     ];
     lines.push(cells.join(','));
   });
-  // 加總列
-  var totalH = 0, totalOtH = 0, totalWage = 0;
-  PT_ANALYSIS.forEach(function(r){ totalH += r.hours; totalOtH += r.otHours; totalWage += r.wage; });
+  // 加總列：工資用「每人彙總時數 × 時薪」再 round 加總，避免每日 round 誤差
+  var totalH = 0, totalOtH = 0;
+  var byPerson = {};
+  PT_ANALYSIS.forEach(function(r){
+    totalH += r.hours;
+    totalOtH += r.otHours;
+    if(!byPerson[r.name]) byPerson[r.name] = { h:0, oth:0, hw: r.hourlyWage || 0 };
+    byPerson[r.name].h   += (r.hours || 0);
+    byPerson[r.name].oth += (r.otHours || 0);
+    if(r.hourlyWage) byPerson[r.name].hw = r.hourlyWage;
+  });
+  var totalWage = 0;
+  Object.keys(byPerson).forEach(function(n){
+    var p = byPerson[n];
+    var normalH = Math.max(0, p.h - p.oth);
+    totalWage += Math.round(normalH * p.hw + p.oth * p.hw * PT_OT_MULT);
+  });
   lines.push(['','','','','總計', totalH.toFixed(2), (totalH-totalOtH).toFixed(2), totalOtH.toFixed(2), Math.round(totalWage)].join(','));
   lines.push('');
   lines.push('規則：加班分界 '+PT_OT_HOURS+' 小時/日,加班倍率 ×'+otMult+',工時 15 分鐘為單位');
