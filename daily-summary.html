@@ -172,7 +172,7 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
 <div class="modal-bg" id="settings-modal" onclick="if(event.target===this)closeSettings()">
   <div class="modal">
     <h2>⚙️ 系統設定</h2>
-    <p class="mdesc">AI 模型固定使用 <b>gemini-2.0-flash</b>（免費配額較多：每天 1500 次）</p>
+    <p class="mdesc">AI 模型固定使用 <b>gemini-flash-latest</b>（Google 官方永遠指向最新 Flash 版本，之後升級自動生效）</p>
 
     <hr style="border:none;border-top:1px solid #eee;margin:14px 0">
     <h2 style="margin-bottom:6px">☁️ Apps Script 同步網址</h2>
@@ -477,15 +477,16 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.08.23-01';
+var APP_VERSION = '2026.09.02-01';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
 // ============================================
 // Apps Script 後端網址（同步紀錄 + 上傳/下載圖片到 Drive，AI 識別也走這條後備路徑）
 var BUILTIN_SYNC_URL   = "https://script.google.com/macros/s/AKfycbzQweLpmQ_5SPxr90Iu-GnqleHUFPbJph8RZuFeasAEKIEWA3xBr_MAdenIkIdciYmQDA/exec";
-// 使用 gemini-2.0-flash（免費配額較多：每天 1500 次）
-var BUILTIN_MODEL      = "gemini-2.0-flash";
+// gemini-2.0-flash 已被 Google 下架 → 改用 gemini-flash-latest（永遠指向當前最新 Flash 版）
+// 之後 Google 升到新版本自動生效，不用再改 code / 重新部署
+var BUILTIN_MODEL      = "gemini-flash-latest";
 
 // ⚠️⚠️⚠️ Gemini API 金鑰（直呼叫用，全店共用、寫死在這） ⚠️⚠️⚠️
 // 把你的 KEY 貼到下面引號裡，例：var BUILTIN_GEMINI_KEY = "AIzaSyABC...XYZ";
@@ -914,9 +915,10 @@ async function geminiCall(imageFiles, promptText){
   }
   parts.push({text: promptText});
 
-  var primary = localStorage.getItem('cd_gemini_model') || 'gemini-2.0-flash';
-  // 優先 2.0-flash（免費額度高），若壅塞/下架再退回 latest / 2.5 系列
-  var fallbackChain = [primary, 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
+  var primary = localStorage.getItem('cd_gemini_model') || 'gemini-flash-latest';
+  // gemini-2.0-flash 已被 Google 下架 → 拿掉。改優先 flash-latest（永遠指向最新版）
+  // 若壅塞退回具體版本；不再放 2.0-flash 避免又打到下架的模型
+  var fallbackChain = [primary, 'gemini-flash-latest', 'gemini-2.5-flash'];
   // 去重
   var tried = {};
   var models = fallbackChain.filter(function(m){ if(tried[m]) return false; tried[m] = 1; return true; });

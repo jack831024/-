@@ -261,9 +261,9 @@ function callGeminiProxy(model, parts, clientGenConfig) {
     }
 
     // 模型備援鏈：某個模型當日配額滿了就自動試下一個
-    // 2.0 系列免費額度大很多（每天 1500 次），作為第一線後備
-    // 注意：2.0-flash-lite 已對新使用者下架，拿掉
-    var chain = [model, 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
+    // gemini-2.0-flash 已被 Google 下架，拿掉避免打到會回 400 的舊模型
+    // flash-latest 永遠指向 Google 目前的最新 Flash 版（自動升級不用改 code）
+    var chain = [model, 'gemini-flash-latest', 'gemini-2.5-flash'];
     var seen = {};
     chain = chain.filter(function(m){ if(!m) return false; if(seen[m]) return false; seen[m] = 1; return true; });
 
