@@ -474,7 +474,7 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.09.02-04';
+var APP_VERSION = '2026.09.02-05';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -3004,20 +3004,37 @@ function _cacheImages(fileId, images){
   _imagesByFileId[fileId] = images;
 }
 
-async function cloudGetImages(fileId){
-  var url = localStorage.getItem('cd_sync_url');
-  if(!url || !fileId) return null;
-  // 命中快取 → 秒回，不打網路
-  if(_imagesByFileId.hasOwnProperty(fileId)) return _imagesByFileId[fileId];
+async function _cloudGetImagesOnce(url, fileId){
   var d = await fetchJsonRetry(url, {
     method: 'POST',
     headers: {'Content-Type': 'text/plain;charset=utf-8'},
     body: JSON.stringify({action:'getImages', fileId:fileId})
   }, 'cloudGetImages');
   if(d.error) throw new Error(d.error);
-  var images = d.images || {};
-  _cacheImages(fileId, images);
-  return images;
+  return d.images || {};
+}
+
+async function cloudGetImages(fileId){
+  var url = localStorage.getItem('cd_sync_url');
+  if(!url || !fileId) return null;
+  // 命中快取 → 秒回，不打網路
+  if(_imagesByFileId.hasOwnProperty(fileId)) return _imagesByFileId[fileId];
+
+  var images = await _cloudGetImagesOnce(url, fileId);
+
+  // ⭐ 若拿到空物件（Drive 剛好讀取抽風/延遲，.gs 的 loadImagesFromDrive catch 悄悄回 {}）
+  //   → 等 800ms 再試一次。fileId 存在代表歷史上真的存過圖，空回應多半是暫時故障、不是「本來就沒圖」
+  //   之前只 fetch 一次的話：使用者會看到「下載圖片跑完但沒圖」，要重新整理才恢復
+  if(!images || Object.keys(images).length === 0){
+    console.warn('[cloudGetImages] 首次回空物件，800ms 後重試一次（Drive 讀取抽風）');
+    await new Promise(function(r){ setTimeout(r, 800); });
+    try{ images = await _cloudGetImagesOnce(url, fileId); }catch(e){ console.warn('[cloudGetImages] 重試也失敗：', e); }
+  }
+
+  // ⭐ 只快取「有內容」的回應 — 避免 Drive 抽風的空回應被快取起來，
+  //   後面同一 session 都拿到空的、非重新整理不可
+  if(images && Object.keys(images).length > 0) _cacheImages(fileId, images);
+  return images || {};
 }
 
 // ⭐ 記憶體快取：cloudLoad（同一 session 內 10 秒內重複呼叫直接回快取）
