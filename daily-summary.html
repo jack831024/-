@@ -196,9 +196,6 @@ h3{font-size:13px;font-weight:600;color:#555;margin-bottom:10px}
     <h3>📅 日期與紀錄</h3>
     <div class="date-bar">
       <input type="date" id="record-date" onchange="onDateChange()">
-      <select id="history-select" onchange="loadSelectedRecord()">
-        <option value="">— 選擇過往紀錄 —</option>
-      </select>
     </div>
     <div id="resync-btn" class="sync-status-pill" onclick="manualResync()" title="點擊可強制重新同步並重新上傳圖片" style="margin-top:10px">🟢 ✓ 已同步</div>
     <span class="saved-tag" id="saved-tag">—</span>
@@ -477,7 +474,7 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.09.02-02';
+var APP_VERSION = '2026.09.02-03';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -2236,7 +2233,8 @@ async function saveRecord(opts){
   records[date] = rec;
   setAllRecords(records);
   renderHistoryList();
-  document.getElementById('history-select').value = date;
+  var _histSel = document.getElementById('history-select');
+  if(_histSel) _histSel.value = date;
   updateSavedTag(date);
 
   var syncUrl = localStorage.getItem('cd_sync_url');
@@ -2534,7 +2532,8 @@ async function loadRecord(date, opts){
   showLoading('📅 載入 ' + date + ' 的資料', '正在載入欄位資料...');
   applyData(r.data);
   document.getElementById('record-date').value = date;
-  document.getElementById('history-select').value = date;
+  var _histSel2 = document.getElementById('history-select');
+  if(_histSel2) _histSel2.value = date;
   updateSavedTag(date);
   // 載入完後更新開箱金額比對提示
   onOpeningChange();
@@ -2578,8 +2577,10 @@ async function loadRecord(date, opts){
   return true;
 }
 
+// 這個函式的來源 <select id="history-select"> 已移除，保留為 no-op 以防外部殘留呼叫
 async function loadSelectedRecord(){
   var sel = document.getElementById('history-select');
+  if(!sel) return;
   var date = sel.value;
   if(!date) return;
   if(!confirmLoseUnsaved()){ sel.value = document.getElementById('record-date').value || ''; return; }
@@ -2605,8 +2606,9 @@ async function onDateChange(){
   var date = document.getElementById('record-date').value;
   // 防呆：若使用者剛改了東西還沒儲存就切日期，先警告
   if(!confirmLoseUnsaved()){
-    // 使用者按取消 → 把日期改回去
-    var prev = document.getElementById('history-select').value;
+    // 使用者按取消 → 把日期改回去（history-select 已移除，改從 saved-tag 拿當前日期）
+    var _sel = document.getElementById('history-select');
+    var prev = _sel ? _sel.value : '';
     if(prev) document.getElementById('record-date').value = prev;
     return;
   }
@@ -2703,7 +2705,8 @@ function newRecord(){
   if(!confirm('確定要清空目前所有欄位嗎？（未儲存的資料會消失）')) return;
   clearFields();
   document.getElementById('record-date').value = todayStr();
-  document.getElementById('history-select').value = '';
+  var _histSel3 = document.getElementById('history-select');
+  if(_histSel3) _histSel3.value = '';
   updateSavedTag(todayStr());
 }
 
@@ -2711,6 +2714,7 @@ function renderHistoryList(){
   var records = getAllRecords();
   var dates = Object.keys(records).sort().reverse();
   var sel = document.getElementById('history-select');
+  if(!sel) return;  // history-select 已從 UI 移除 → 直接不做（日期改用旁邊的 <input type="date">）
   var current = sel.value;
   sel.innerHTML = '<option value="">— 選擇過往紀錄 —</option>';
   dates.forEach(function(d){
