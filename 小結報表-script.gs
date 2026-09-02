@@ -47,25 +47,34 @@ var SCHEDULE_CONFIG = {
 function doGet(e) {
   try {
     var store = (e && e.parameter && e.parameter.store) || 'default';
+    // ⭐ 增量同步：前端傳 since=<上次拉到的 latestSavedAt>，這裡只回 savedAt > since 的紀錄
+    //   首次呼叫（since 為空）→ 回全部；後續呼叫 → 通常回 0 筆，payload 從 MB 縮到 KB
+    var since = (e && e.parameter && e.parameter.since) || '';
     var sheet = getSheet(store);
     var data = sheet.getDataRange().getValues();
     var records = {};
+    var latestSavedAt = '';
     for (var i = 1; i < data.length; i++) {
       var row = data[i];
       var rawDate = row[0];
       if (!rawDate) continue;
       var date = normalizeDate(rawDate); // 把 Date 物件轉成 YYYY-MM-DD
       if (!date) continue;
+      var savedAt = row[2] || '';
+      // 追蹤這個 store 目前為止最新的 savedAt（不管有沒有被 since 過濾）
+      if (savedAt && savedAt > latestSavedAt) latestSavedAt = savedAt;
+      // 有 since 就過濾 — 只跳出「這筆比 since 舊或一樣」的（前端已經有這個版本了）
+      if (since && savedAt && savedAt <= since) continue;
       try {
         records[date] = {
           data: JSON.parse(row[1] || '{}'),
-          savedAt: row[2] || '',
+          savedAt: savedAt,
           savedBy: row[3] || '',
           imageFileId: row[4] || ''
         };
       } catch (err) {}
     }
-    return json({ records: records, store: store });
+    return json({ records: records, store: store, since: since, latestSavedAt: latestSavedAt });
   } catch (err) {
     return json({ error: String(err) });
   }

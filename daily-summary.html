@@ -474,7 +474,7 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.09.02-07';
+var APP_VERSION = '2026.09.02-08';
 
 // ⭐ 每個 fetch 的 timeout（毫秒）：超過就 abort，避免 Apps Script/Google 網路抽風時無限等
 //   放最頂端是因為 fetchMasterRoster 在頁面 init 時就會用到（比 fetchJsonRetry 早）
@@ -3107,6 +3107,10 @@ async function cloudGetImages(fileId){
 //   cloudSave 成功時會 invalidate 這個快取
 var _cloudLoadCache = { at: 0, records: null };
 var _CLOUD_LOAD_TTL_MS = 10000;
+// ⭐ 增量同步：記住上次拉到的最新 savedAt，之後只跟後端要「比這新的」紀錄
+//   首次拉全部 (可能 1MB+)；後續 payload 通常 0-2 KB → 快 10-100 倍
+//   forceFresh=true 或 cloudSave 後會清掉，回到首次拉全部的狀態
+var _cloudLoadSinceCursor = '';
 
 async function cloudLoad(opts){
   opts = opts || {};
@@ -3116,12 +3120,26 @@ async function cloudLoad(opts){
   }
   var url = localStorage.getItem('cd_sync_url');
   if(!url) throw new Error('未設定同步網址');
+  // 有 cursor + 有快取 → 增量；否則全量拉
+  var canIncremental = !opts.forceFresh && _cloudLoadSinceCursor && _cloudLoadCache.records;
   var q = '?action=list&store=' + encodeURIComponent(STORE_ID) + '&ts=' + now;
-  var d = await fetchJsonRetry(url + q, {}, 'cloudLoad');
+  if(canIncremental) q += '&since=' + encodeURIComponent(_cloudLoadSinceCursor);
+  var d = await fetchJsonRetry(url + q, {}, canIncremental ? 'cloudLoad(inc)' : 'cloudLoad(full)');
   if(d.error) throw new Error(d.error);
-  var records = d.records || {};
-  _cloudLoadCache = { at: now, records: records };
-  return records;
+  var delta = d.records || {};
+  var fullRecords;
+  if(canIncremental){
+    // 增量合併：既有快照 + 新變動（新覆蓋舊）
+    fullRecords = {};
+    Object.keys(_cloudLoadCache.records).forEach(function(k){ fullRecords[k] = _cloudLoadCache.records[k]; });
+    Object.keys(delta).forEach(function(k){ fullRecords[k] = delta[k]; });
+  } else {
+    fullRecords = delta;
+  }
+  _cloudLoadCache = { at: now, records: fullRecords };
+  // 記住這次拉到的最新 savedAt，下次可用來增量
+  if(d.latestSavedAt) _cloudLoadSinceCursor = d.latestSavedAt;
+  return fullRecords;
 }
 
 // ⭐ 多裝置最新優先：把整個 store 的雲端紀錄拉下來，覆蓋本機 localStorage 快取
@@ -3172,7 +3190,9 @@ async function cloudSave(date, rec, images, keepExistingImages){
   }, 'cloudSave', { timeoutMs: 90000, attempts: [0, 2000] });
   if(d.error) throw new Error(d.error);
   // ⭐ 存完就 invalidate 兩個記憶體快取，避免後續 pull/getImages 拿到剛剛還沒更新的舊資料
-  _cloudLoadCache = { at: 0, records: null };
+  //   只 bust TTL（把 at 歸零），保留 records + cursor → 下次 cloudLoad 走「增量」而非「全量」
+  //   增量只會拉「我剛存的這筆 + 其他裝置在這期間新的變動」，通常幾 KB
+  _cloudLoadCache.at = 0;
   if(d.fileId) delete _imagesByFileId[d.fileId];
   return d;
 }
