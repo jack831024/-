@@ -474,7 +474,7 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.09.02-06';
+var APP_VERSION = '2026.09.02-07';
 
 // ⭐ 每個 fetch 的 timeout（毫秒）：超過就 abort，避免 Apps Script/Google 網路抽風時無限等
 //   放最頂端是因為 fetchMasterRoster 在頁面 init 時就會用到（比 fetchJsonRetry 早）
@@ -2993,9 +2993,14 @@ function setSyncBadge(text){
 //   前端 JSON.parse 直接爆掉 → 使用者看到「Unexpected token '<'」訊息、儲存鈕被鎖。
 //   實務上這種抽風幾秒後自己會好 → 前端多試 2 次通常就能救回，員工感覺不到。
 //   .gs 的 doPost/doGet 對同一個請求是 idempotent 的（upsertRow / setContent），重試安全。
-async function fetchJsonRetry(url, fetchOpts, label){
-  var attempts = [0, 500, 1500];  // 第一次立即；重試等 0.5s / 1.5s
+// config 可選：{ timeoutMs: 覆寫預設 timeout, attempts: 覆寫預設重試延遲陣列 }
+// 例：cloudSave 上傳大圖 → 傳 { timeoutMs: 60000, attempts: [0, 2000] }
+async function fetchJsonRetry(url, fetchOpts, label, config){
+  config = config || {};
+  var attempts = config.attempts || [0, 500, 1500];  // 預設 3 次：立即 / 0.5s / 1.5s
+  var timeoutMs = config.timeoutMs || FETCH_TIMEOUT_MS;
   var lastErr;
+  var abortedByTimeout = false;
   for(var i = 0; i < attempts.length; i++){
     if(attempts[i] > 0){
       await new Promise(function(r){ setTimeout(r, attempts[i]); });
@@ -3003,10 +3008,12 @@ async function fetchJsonRetry(url, fetchOpts, label){
     // 每次都建新的 AbortController
     var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
     var timeoutHandle = null;
+    var wasTimeout = false;
     if(ctrl){
       timeoutHandle = setTimeout(function(){
+        wasTimeout = true;
         try{ ctrl.abort(); }catch(_){}
-      }, FETCH_TIMEOUT_MS);
+      }, timeoutMs);
     }
     // 把 signal 掛進 fetchOpts（不修改呼叫端傳進來的物件）
     var mergedOpts = {};
@@ -3030,11 +3037,15 @@ async function fetchJsonRetry(url, fetchOpts, label){
     }catch(e){
       if(timeoutHandle) clearTimeout(timeoutHandle);
       lastErr = e;
+      if(wasTimeout) abortedByTimeout = true;
       var msg = e.message || String(e);
-      // AbortError 是我們主動 timeout 觸發的 → 換個更易懂的訊息
-      if(e.name === 'AbortError' || msg.indexOf('abort') >= 0) msg = '超過 ' + (FETCH_TIMEOUT_MS/1000) + '秒未回應（timeout abort）';
+      if(wasTimeout) msg = '本次請求超過 ' + (timeoutMs/1000) + ' 秒未回應（timeout）';
       console.warn('[' + (label || 'fetchJsonRetry') + '] 第 ' + (i + 1) + '/' + attempts.length + ' 次失敗：' + msg);
     }
+  }
+  // ⭐ 最後全部失敗 → 拋出看得懂的錯誤訊息（不要拋原生 "Fetch is aborted"）
+  if(abortedByTimeout){
+    throw new Error('伺服器逾時未回應（每次等 ' + (timeoutMs/1000) + ' 秒 × ' + attempts.length + ' 次都失敗）。可能是網路慢或 Apps Script 暫時異常，請稍後再試一次。');
   }
   throw lastErr || new Error('fetchJsonRetry 全部失敗');
 }
@@ -3056,11 +3067,12 @@ function _cacheImages(fileId, images){
 }
 
 async function _cloudGetImagesOnce(url, fileId){
+  // ⭐ 圖片 JSON 可能好幾 MB → timeout 30s（比預設 15s 長）
   var d = await fetchJsonRetry(url, {
     method: 'POST',
     headers: {'Content-Type': 'text/plain;charset=utf-8'},
     body: JSON.stringify({action:'getImages', fileId:fileId})
-  }, 'cloudGetImages');
+  }, 'cloudGetImages', { timeoutMs: 30000 });
   if(d.error) throw new Error(d.error);
   return d.images || {};
 }
@@ -3151,11 +3163,13 @@ async function cloudSave(date, rec, images, keepExistingImages){
   // ⭐ 告訴後端「這次不傳圖片，但請保留現有的圖片，不要刪除」
   if(keepExistingImages) payload.keepImages = true;
   // 使用重試版：後端 upsertRow / setContent 對同一筆日期是 idempotent，重試安全
+  // ⭐ 上傳圖片可能好幾 MB → timeout 拉長到 90 秒，重試次數改 2 次
+  //   （3 次 × 15s 對上傳太短，會把「還在傳」誤判成失敗）
   var d = await fetchJsonRetry(url, {
     method: 'POST',
     headers: {'Content-Type': 'text/plain;charset=utf-8'},
     body: JSON.stringify(payload)
-  }, 'cloudSave');
+  }, 'cloudSave', { timeoutMs: 90000, attempts: [0, 2000] });
   if(d.error) throw new Error(d.error);
   // ⭐ 存完就 invalidate 兩個記憶體快取，避免後續 pull/getImages 拿到剛剛還沒更新的舊資料
   _cloudLoadCache = { at: 0, records: null };
