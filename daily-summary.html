@@ -474,7 +474,7 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.09.02-03';
+var APP_VERSION = '2026.09.02-04';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -648,15 +648,29 @@ async function fetchMasterRoster(store, ym){
   return null;
 }
 function isMasterPT(name){ return !!MASTER_PT_NAMES[canonicalStaffName(name)]; }
-// 以主檔為準：用主檔當月在職名單取代 CURRENT_STAFF_LIST，並重建 A 班下拉（保留目前已選）
+// 主檔 + STAFF_LISTS 相加：主檔為主（新進員工會出現、順序依主檔），
+// STAFF_LISTS 保底（主檔抽風回不完整名單時，硬編碼的正職不會消失）
 // 排班表的人之後仍會由 loadSchedule 另外併入（那是實際出勤，不受影響）
+//
+// ⚠️ 為什麼要相加、不能直接取代：
+//   fetchMasterRoster 偶爾會回不完整名單（Apps Script 抽風或部分資料異常），
+//   若直接取代 CURRENT_STAFF_LIST，剛好漏掉的正職員工就會從下拉消失
+//   → 使用者看到「蔡鈺豪（已離職／不在名單）」等錯誤標籤，重新整理才恢復
 function mergeMasterIntoStaff(){
   return fetchMasterRoster(STORE_ID).then(function(names){
     if(!names || !names.length) return;   // 主檔連不上 → 維持原本清單（保底）
     var seen = {};
-    CURRENT_STAFF_LIST = names.map(canonicalStaffName).filter(function(n){
+    var master = names.map(canonicalStaffName).filter(function(n){
       if(!n || seen[n]) return false; seen[n] = true; return true;
     });
+    // 相加：主檔在前（順序權威）+ STAFF_LISTS 的人若不在主檔中就補上（保底）
+    var baseline = (STAFF_LISTS[STORE_ID] || []).map(canonicalStaffName);
+    baseline.forEach(function(n){
+      if(!n || seen[n]) return;
+      master.push(n);
+      seen[n] = true;
+    });
+    CURRENT_STAFF_LIST = master;
     var sel = document.getElementById('i-shift-a');
     if(!sel) return;
     var cur = sel.value;
@@ -2142,8 +2156,10 @@ function applyData(data){
     var val = (data.inputs && data.inputs[id] != null) ? data.inputs[id] : '';
     // ⭐ <select> 特殊處理：要設的值不在 options 裡的話，動態補一個 option 進去
     //   問題背景：sel.value = X 若 X 不是任何 <option> 的 value，會靜默失敗 → 下拉變空
-    //   觸發情境：STAFF_LISTS 改動後（員工離職、名字改）舊紀錄的 A 班值找不到對應 option
-    //   修法：載入時先確保 option 存在（若不存在就補上，標註「（已離職／不在名單）」讓使用者知情）
+    //   觸發情境：STAFF_LISTS 改動後（員工離職、名字改）舊紀錄的 A 班值找不到對應 option；
+    //             或是主檔 fetchMasterRoster 抽風回不完整名單、把在職員工暫時洗掉
+    //   修法：載入時先確保 option 存在（若不存在就悄悄補上，不加任何標籤 —
+    //         標「已離職」在主檔抽風時是錯誤警報、會嚇到使用者）
     if(el.tagName === 'SELECT' && val){
       var hasOption = false;
       for(var oi = 0; oi < el.options.length; oi++){
@@ -2152,7 +2168,7 @@ function applyData(data){
       if(!hasOption){
         var opt = document.createElement('option');
         opt.value = val;
-        opt.textContent = val + '（已離職／不在名單）';
+        opt.textContent = val;
         el.appendChild(opt);
       }
     }
