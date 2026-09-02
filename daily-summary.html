@@ -474,7 +474,11 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.09.02-05';
+var APP_VERSION = '2026.09.02-06';
+
+// ⭐ 每個 fetch 的 timeout（毫秒）：超過就 abort，避免 Apps Script/Google 網路抽風時無限等
+//   放最頂端是因為 fetchMasterRoster 在頁面 init 時就會用到（比 fetchJsonRetry 早）
+var FETCH_TIMEOUT_MS = 15000;
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -634,15 +638,21 @@ async function fetchMasterRoster(store, ym){
   var pw = EMP_MASTER_PW[store];
   if(!pw) return null;   // 十城等主檔沒有的店 → 維持原本清單
   for(var i=0;i<4;i++){   // Apps Script 偶爾抽風回 HTML → 重試
+    // ⭐ 每次都加 15 秒 timeout — 避免主檔抓取卡住整條 mergeMasterIntoStaff Promise
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var to = ctrl ? setTimeout(function(){ try{ ctrl.abort(); }catch(_){} }, FETCH_TIMEOUT_MS) : null;
     try{
-      var txt = await fetch(EMP_MASTER_URL, { method:'POST', body: JSON.stringify({ action:'getActiveRoster', args:[pw, store, ym||''] }) }).then(function(x){ return x.text(); });
+      var opts = { method:'POST', body: JSON.stringify({ action:'getActiveRoster', args:[pw, store, ym||''] }) };
+      if(ctrl) opts.signal = ctrl.signal;
+      var txt = await fetch(EMP_MASTER_URL, opts).then(function(x){ return x.text(); });
+      if(to) clearTimeout(to);
       var r = JSON.parse(txt);
       if(r && r.ok && Array.isArray(r.roster)){
         MASTER_PT_NAMES = {};
         r.roster.forEach(function(e){ if(e.empType === 'PT') MASTER_PT_NAMES[canonicalStaffName(e.name)] = true; });
         return r.roster.filter(function(e){ return e.empType !== 'PT'; }).map(function(e){ return e.name; });   // 小結不顯示 PT
       }
-    }catch(e){}
+    }catch(e){ if(to) clearTimeout(to); }
     await new Promise(function(res){ setTimeout(res, 900); });
   }
   return null;
@@ -2531,9 +2541,24 @@ function refreshBonusLockState(){
 
 async function loadRecord(date, opts){
   opts = opts || {};
+  var syncUrl = localStorage.getItem('cd_sync_url');
+
+  // ⭐⭐ 平行加速：先拿「本機已知的 fileId」提早開始下載圖片，
+  //   同時另一條線去 pullCloudOverwriteLocal 拉最新紀錄。
+  //   如果 pull 後 fileId 沒變（絕大多數情況）→ 直接用 prefetch 的圖，等於同步跟下載平行跑
+  //   如果 fileId 變了（別台剛更新過圖）→ prefetch 白跑，重抓新 fileId 的圖
+  var localFileIdBefore = (getAllRecords()[date] || {}).imageFileId || '';
+  var imagesPrefetch = null;
+  if(localFileIdBefore && syncUrl){
+    imagesPrefetch = cloudGetImages(localFileIdBefore).catch(function(e){
+      console.warn('[loadRecord] 圖片 prefetch 失敗（保留讓後面正式路徑重試）：', e);
+      return null;
+    });
+  }
+
   // ⭐ 多裝置最新優先：開啟一個日期前，先從雲端拉這個 store 的最新紀錄覆蓋本機
   //   （opts.skipCloudPull 是給「剛剛才 syncFromCloud 過、不必再拉一次」的呼叫端用）
-  if(!opts.skipCloudPull && localStorage.getItem('cd_sync_url')){
+  if(!opts.skipCloudPull && syncUrl){
     // 若 cloudLoad 快取還新鮮（10 秒內拉過），連 loading UI 都不用閃 → 切日期秒開
     var cacheFresh = _cloudLoadCache.records && (Date.now() - _cloudLoadCache.at) < _CLOUD_LOAD_TTL_MS;
     if(!cacheFresh) showLoading('☁️ 同步雲端', '正在拉取 ' + date + ' 最新版本（避免裝置間舊版互蓋）...');
@@ -2560,11 +2585,20 @@ async function loadRecord(date, opts){
   recalcStaffBonus();
 
   // 如果這筆有圖片，從雲端拉下來
-  if(r.imageFileId && localStorage.getItem('cd_sync_url')){
+  if(r.imageFileId && syncUrl){
     updateLoadingDetail('正在從雲端下載圖片...');
     setSyncBadge('⏳ 下載圖片...');
     try{
-      var images = await cloudGetImages(r.imageFileId);
+      var images;
+      if(imagesPrefetch && r.imageFileId === localFileIdBefore){
+        // pull 後 fileId 沒變 → 用剛剛平行 prefetch 的結果，接近瞬時
+        images = await imagesPrefetch;
+        // prefetch 結果為 null（曾失敗）→ 正式再抓一次
+        if(!images) images = await cloudGetImages(r.imageFileId);
+      } else {
+        // fileId 變了或沒 prefetch → 正常抓
+        images = await cloudGetImages(r.imageFileId);
+      }
       var totalCount = 0;
       if(images){ Object.keys(images).forEach(function(k){ totalCount += (images[k] || []).length; }); }
       updateLoadingDetail('正在還原 ' + totalCount + ' 張圖片到畫面...');
@@ -2966,9 +3000,22 @@ async function fetchJsonRetry(url, fetchOpts, label){
     if(attempts[i] > 0){
       await new Promise(function(r){ setTimeout(r, attempts[i]); });
     }
+    // 每次都建新的 AbortController
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timeoutHandle = null;
+    if(ctrl){
+      timeoutHandle = setTimeout(function(){
+        try{ ctrl.abort(); }catch(_){}
+      }, FETCH_TIMEOUT_MS);
+    }
+    // 把 signal 掛進 fetchOpts（不修改呼叫端傳進來的物件）
+    var mergedOpts = {};
+    if(fetchOpts) for(var k in fetchOpts) if(fetchOpts.hasOwnProperty(k)) mergedOpts[k] = fetchOpts[k];
+    if(ctrl) mergedOpts.signal = ctrl.signal;
     try{
-      var resp = await fetch(url, fetchOpts || {});
+      var resp = await fetch(url, mergedOpts);
       var text = await resp.text();
+      if(timeoutHandle) clearTimeout(timeoutHandle);
       var trimmed = (text || '').trim();
       // 偵測「後端回 HTML 而不是 JSON」— Apps Script 部署失效 / Google 登入牆 / 錯誤頁
       if(trimmed.charAt(0) === '<'){
@@ -2981,8 +3028,12 @@ async function fetchJsonRetry(url, fetchOpts, label){
         throw new Error('後端回應無法解析為 JSON：' + trimmed.substring(0, 180));
       }
     }catch(e){
+      if(timeoutHandle) clearTimeout(timeoutHandle);
       lastErr = e;
-      console.warn('[' + (label || 'fetchJsonRetry') + '] 第 ' + (i + 1) + '/' + attempts.length + ' 次失敗：' + (e.message || e));
+      var msg = e.message || String(e);
+      // AbortError 是我們主動 timeout 觸發的 → 換個更易懂的訊息
+      if(e.name === 'AbortError' || msg.indexOf('abort') >= 0) msg = '超過 ' + (FETCH_TIMEOUT_MS/1000) + '秒未回應（timeout abort）';
+      console.warn('[' + (label || 'fetchJsonRetry') + '] 第 ' + (i + 1) + '/' + attempts.length + ' 次失敗：' + msg);
     }
   }
   throw lastErr || new Error('fetchJsonRetry 全部失敗');
