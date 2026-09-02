@@ -477,7 +477,7 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.09.02-01';
+var APP_VERSION = '2026.09.02-02';
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -2520,7 +2520,9 @@ async function loadRecord(date, opts){
   // ⭐ 多裝置最新優先：開啟一個日期前，先從雲端拉這個 store 的最新紀錄覆蓋本機
   //   （opts.skipCloudPull 是給「剛剛才 syncFromCloud 過、不必再拉一次」的呼叫端用）
   if(!opts.skipCloudPull && localStorage.getItem('cd_sync_url')){
-    showLoading('☁️ 同步雲端', '正在拉取 ' + date + ' 最新版本（避免裝置間舊版互蓋）...');
+    // 若 cloudLoad 快取還新鮮（10 秒內拉過），連 loading UI 都不用閃 → 切日期秒開
+    var cacheFresh = _cloudLoadCache.records && (Date.now() - _cloudLoadCache.at) < _CLOUD_LOAD_TTL_MS;
+    if(!cacheFresh) showLoading('☁️ 同步雲端', '正在拉取 ' + date + ' 最新版本（避免裝置間舊版互蓋）...');
     await pullCloudOverwriteLocal();
   }
   var records = getAllRecords();
@@ -2583,9 +2585,11 @@ async function loadSelectedRecord(){
   if(!confirmLoseUnsaved()){ sel.value = document.getElementById('record-date').value || ''; return; }
   // ⭐ 多裝置最新優先：選歷史紀錄也先拉雲端最新（其他裝置可能剛改完）
   if(localStorage.getItem('cd_sync_url')){
-    showLoading('☁️ 同步雲端', '正在拉取 ' + date + ' 最新版本...');
+    // 若 cloudLoad 快取還新鮮（10 秒內拉過），連 loading UI 都不用閃 → 切日期秒開
+    var _cacheFresh = _cloudLoadCache.records && (Date.now() - _cloudLoadCache.at) < _CLOUD_LOAD_TTL_MS;
+    if(!_cacheFresh) showLoading('☁️ 同步雲端', '正在拉取 ' + date + ' 最新版本...');
     await pullCloudOverwriteLocal();
-    hideLoading();
+    if(!_cacheFresh) hideLoading();
   }
   var ok = await loadRecord(date, {skipCloudPull: true});
   if(!ok) alert('找不到這筆紀錄');
@@ -2609,9 +2613,11 @@ async function onDateChange(){
   // ⭐ 多裝置最新優先：切日期前先拉雲端最新版本，再決定走「載入既有」還是「清空新一天」分支
   //   不先拉的話：本機沒這天 → 走清空分支 → 使用者不知道別台已經存過 → 一存就「新增」了空白覆蓋
   if(localStorage.getItem('cd_sync_url')){
-    showLoading('☁️ 同步雲端', '正在拉取 ' + date + ' 最新版本...');
+    // 若 cloudLoad 快取還新鮮（10 秒內拉過），連 loading UI 都不用閃 → 切日期秒開
+    var _cacheFresh = _cloudLoadCache.records && (Date.now() - _cloudLoadCache.at) < _CLOUD_LOAD_TTL_MS;
+    if(!_cacheFresh) showLoading('☁️ 同步雲端', '正在拉取 ' + date + ' 最新版本...');
     await pullCloudOverwriteLocal();
-    hideLoading();
+    if(!_cacheFresh) hideLoading();
   }
   var records = getAllRecords();
   if(records[date]){
@@ -2962,25 +2968,60 @@ async function fetchJsonRetry(url, fetchOpts, label){
   throw lastErr || new Error('fetchJsonRetry 全部失敗');
 }
 
+// ⭐ 記憶體快取：cloudGetImages（同一份 fileId 只下載一次；LRU 上限 20 個日期避免爆記憶體）
+//   多裝置一致性：cloudSave 成功時會 invalidate 這個快取的 fileId，避免拿到舊圖
+var _imagesByFileId = {};
+var _imagesCacheOrder = [];  // fileId 插入順序，用來做 LRU
+var _IMAGES_CACHE_MAX = 20;
+function _cacheImages(fileId, images){
+  if(!_imagesByFileId.hasOwnProperty(fileId)){
+    _imagesCacheOrder.push(fileId);
+    while(_imagesCacheOrder.length > _IMAGES_CACHE_MAX){
+      var oldest = _imagesCacheOrder.shift();
+      delete _imagesByFileId[oldest];
+    }
+  }
+  _imagesByFileId[fileId] = images;
+}
+
 async function cloudGetImages(fileId){
   var url = localStorage.getItem('cd_sync_url');
   if(!url || !fileId) return null;
+  // 命中快取 → 秒回，不打網路
+  if(_imagesByFileId.hasOwnProperty(fileId)) return _imagesByFileId[fileId];
   var d = await fetchJsonRetry(url, {
     method: 'POST',
     headers: {'Content-Type': 'text/plain;charset=utf-8'},
     body: JSON.stringify({action:'getImages', fileId:fileId})
   }, 'cloudGetImages');
   if(d.error) throw new Error(d.error);
-  return d.images || {};
+  var images = d.images || {};
+  _cacheImages(fileId, images);
+  return images;
 }
 
-async function cloudLoad(){
+// ⭐ 記憶體快取：cloudLoad（同一 session 內 10 秒內重複呼叫直接回快取）
+//   為什麼有這個：使用者快速切幾天日期 → 每次 pullCloudOverwriteLocal 都打一次 → 每次等 1-2 秒
+//   有快取後：切第一天等一次；連續切別天在 10s 內都秒開
+//   代價：多裝置一致性最多延遲 10 秒（可接受，B 裝置剛存的東西也要幾秒才 round-trip 上去）
+//   cloudSave 成功時會 invalidate 這個快取
+var _cloudLoadCache = { at: 0, records: null };
+var _CLOUD_LOAD_TTL_MS = 10000;
+
+async function cloudLoad(opts){
+  opts = opts || {};
+  var now = Date.now();
+  if(!opts.forceFresh && _cloudLoadCache.records && (now - _cloudLoadCache.at) < _CLOUD_LOAD_TTL_MS){
+    return _cloudLoadCache.records;
+  }
   var url = localStorage.getItem('cd_sync_url');
   if(!url) throw new Error('未設定同步網址');
-  var q = '?action=list&store=' + encodeURIComponent(STORE_ID) + '&ts=' + Date.now();
+  var q = '?action=list&store=' + encodeURIComponent(STORE_ID) + '&ts=' + now;
   var d = await fetchJsonRetry(url + q, {}, 'cloudLoad');
   if(d.error) throw new Error(d.error);
-  return d.records || {};
+  var records = d.records || {};
+  _cloudLoadCache = { at: now, records: records };
+  return records;
 }
 
 // ⭐ 多裝置最新優先：把整個 store 的雲端紀錄拉下來，覆蓋本機 localStorage 快取
@@ -3028,6 +3069,9 @@ async function cloudSave(date, rec, images, keepExistingImages){
     body: JSON.stringify(payload)
   }, 'cloudSave');
   if(d.error) throw new Error(d.error);
+  // ⭐ 存完就 invalidate 兩個記憶體快取，避免後續 pull/getImages 拿到剛剛還沒更新的舊資料
+  _cloudLoadCache = { at: 0, records: null };
+  if(d.fileId) delete _imagesByFileId[d.fileId];
   return d;
 }
 
@@ -3049,7 +3093,8 @@ async function syncFromCloud(){
   if(!url){ alert('請先在「⚙️ 設定」設定同步網址'); return; }
   setSyncBadge('⏳ 同步中...');
   try{
-    var cloudRecords = await cloudLoad();
+    // 使用者主動按同步 → forceFresh 跳過 10s 快取，保證拿到最新
+    var cloudRecords = await cloudLoad({ forceFresh: true });
     // ⚡ 智慧合併：以 savedAt 時間戳判斷誰較新
     // 避免「載入時雲端拉取覆蓋掉使用者期間的本機儲存」競態
     var localRecords = getAllRecords();
