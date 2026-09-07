@@ -932,8 +932,8 @@ function maybeAutoCredit(){
     });
   });
   if(added > 0){
-    pushToCloud(false);
-    toast('已自動加值 '+added+' 筆節慶禮金', 'ok');
+    setPending(PENDING_GIFT_COUNT + added);
+    toast('已自動加值 '+added+' 筆節慶禮金（記得按「💾 儲存變更」）', 'ok');
   }
 }
 
@@ -1389,10 +1389,12 @@ function saveEmpFromModal(){
   closeEmpModal();
   refreshEmployeesFromState();
   render();
-  // 立刻推雲端
-  pushToCloudNow()
-    .then(function(){ showNotice('已上傳雲端', (EMP_MODAL_EDITING ? '員工資料已更新' : '員工「'+name+'」已新增')); })
-    .catch(function(err){ showNotice('❌ 儲存失敗', err.message||''); });
+  // 手動儲存模式：只標記待儲存，不自動推雲端
+  setPending(PENDING_GIFT_COUNT + 1);
+  showNotice(
+    (EMP_MODAL_EDITING ? '員工資料已更新（尚未儲存）' : '員工「'+name+'」已新增（尚未儲存）'),
+    '請按右下「💾 儲存變更」推到雲端'
+  );
   EMP_MODAL_EDITING = null;
 }
 async function unmarkEmpLeft(empId){
@@ -1410,9 +1412,9 @@ async function unmarkEmpLeft(empId){
   }
   refreshEmployeesFromState();
   render();
-  pushToCloudNow()
-    .then(function(){ showNotice('已上傳雲端', emp.name + ' 已復職，重新顯示於員工清單'); })
-    .catch(function(err){ showNotice('❌ 儲存失敗', err.message||''); });
+  // 手動儲存模式
+  setPending(PENDING_GIFT_COUNT + 1);
+  showNotice(emp.name + ' 已標記為復職（尚未儲存）', '請按右下「💾 儲存變更」推到雲端');
 }
 
 async function markEmpLeft(empId){
@@ -1431,9 +1433,9 @@ async function markEmpLeft(empId){
   if(target){ target.leftDate = leftDate; }
   refreshEmployeesFromState();
   render();
-  pushToCloudNow()
-    .then(function(){ showNotice('已上傳雲端', emp.name + ' 已標記為離職 ('+leftDate+')'); })
-    .catch(function(err){ showNotice('❌ 儲存失敗', err.message||''); });
+  // 手動儲存模式
+  setPending(PENDING_GIFT_COUNT + 1);
+  showNotice(emp.name + ' 已標記為離職 ('+leftDate+')（尚未儲存）', '請按右下「💾 儲存變更」推到雲端');
 }
 
 // ============================================
@@ -1564,12 +1566,11 @@ async function onGiftFile(files){
     render();
     document.getElementById('gift-file').value = '';
 
-    // ⚡ 同步等待推雲端成功 → 才顯示「已上傳」通知
-    //   若失敗會 throw 進 catch，跳出明確錯誤 modal 讓使用者知道要重試
-    busy.innerHTML = '<span style="color:var(--info);font-size:12px">☁ 同步雲端中…</span>';
-    await pushToCloudNow();
-    busy.innerHTML = '<span style="color:var(--ok);font-size:12px">✓ 已扣款 $'+fmt(amount)+'，雲端已同步</span>';
-    showNotice('已上傳雲端', '已從 '+emp.name+' 的禮金扣款 $'+fmt(amount)+'，圖片已存到 Drive');
+    // 手動儲存模式：圖片已存 Drive、log 已寫，但 STATE 只在本機
+    //   → 標記待儲存，讓使用者最後統一按「💾 儲存變更」推雲端（避免中途覆蓋別的裝置寫的資料）
+    setPending(PENDING_GIFT_COUNT + 1);
+    busy.innerHTML = '<span style="color:var(--ok);font-size:12px">✓ 已扣款 $'+fmt(amount)+'，記得按「💾 儲存變更」</span>';
+    showNotice('已扣款 $'+fmt(amount)+'（尚未儲存）', '圖片與 log 已存到雲端；請按右下「💾 儲存變更」把餘額同步到雲端 STATE。');
   } catch(e){
     if(pv){ pv.el.classList.remove('busy'); pv.el.classList.add('err'); pv.tag.textContent = '失敗'; }
     var msg = e && e.message ? e.message : String(e || '失敗');
@@ -1811,7 +1812,8 @@ function pullFromCloud(){
       INIT_LOADED = true; // ✅ 只有在雲端成功讀取或確認「無資料」後才允許寫入
       var seedAdded = ensureInitialSeed();
       maybeAutoCredit();
-      if(seedAdded > 0) pushToCloud(false);
+      // 手動儲存模式：初始 seed 有新增時只標記待儲存，不自動推
+      if(seedAdded > 0) setPending(PENDING_GIFT_COUNT + seedAdded);
       render();
     })
     .catch(function(err){
