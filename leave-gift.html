@@ -402,7 +402,7 @@ var EMP_DATA = {
     { id:'yc4', name:'呂直宸', hireDate:'2023-12-01', birthday:'', initialAnnualAccrued:20, initialAnnualUsed:10, initialTravelRemaining:2, initialGiftBalance:1895 },
     { id:'yc5', name:'吳孟澤', hireDate:'2025-02-01', birthday:'', initialAnnualAccrued:10, initialAnnualUsed:3,  initialTravelRemaining:0, initialGiftBalance:913  },
     { id:'yc6', name:'邱昊勳', hireDate:'2026-04-01', birthday:'', initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0    },
-    { id:'yc7', name:'林梓彥', hireDate:'2025-02-01', birthday:'', initialAnnualAccrued:0,  initialAnnualUsed:1,  initialTravelRemaining:0, initialGiftBalance:0    }
+    { id:'yc7', name:'林梓彥', hireDate:'2025-02-01', birthday:'', initialAnnualAccrued:0,  initialAnnualUsed:1,  initialTravelRemaining:0, initialGiftBalance:0, noAutoGift:true }
   ],
   'chudian-xinzhuang': [
     // FT
@@ -870,6 +870,7 @@ function maybeAutoCredit(){
   var effDate = parseDate(EFFECTIVE_DATE);
   var added = 0;
   EMPLOYEES.forEach(function(emp){
+    if(emp.noAutoGift) return;   // 特別排除：不自動加值（生日/端午/中秋）
     var hire = parseDate(emp.hireDate);
     var halfYearDate = new Date(hire.getFullYear(), hire.getMonth()+6, hire.getDate());
     var creditYears = STATE.giftCreditYears[emp.id] || (STATE.giftCreditYears[emp.id] = {});
