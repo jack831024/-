@@ -244,7 +244,7 @@ table.grid .c-num.big{font-size:15px;font-weight:700}
   <span class="spacer"></span>
   <select id="ym-picker" class="month-picker" onchange="onYmChange()" title="選擇年份"></select>
   <span id="sync-chip" class="sync-chip off" title="點擊重新同步" onclick="syncNow()">☁ 未設定</span>
-  <button class="btn btn-ghost btn-sm" onclick="pullOTLeaveFromCloud(false)" title="只重抓加班費 OT 資料到本機（唯讀，不會覆蓋任何雲端 STATE；特休/旅遊假顯示變動請按「💾 儲存變更」手動存）">🔄 同步加班費</button>
+  <button class="btn btn-ghost btn-sm" onclick="pullOTLeaveFromCloud(false)" title="重抓加班費 OT 資料。若跟前次抓到的不同 → 會標「待儲存」，請自己按「💾 儲存變更」把 STATE 存到雲端">🔄 同步加班費</button>
 </div>
 
 <div class="wrap">
@@ -1825,9 +1825,9 @@ function pullFromCloud(){
 
 // 獨立抓雲端「加班費假別」資料（不再綁在 pullFromCloud，失敗也會重試）
 // 每次成功都會 render 一次，讓當台裝置立刻同步顯示
-// ⚠️ 唯讀動作：只把加班費 OT 資料抓進本機 OT_LEAVE_CLOUD 記憶體變數
-//   完全不寫 STATE、不 push 到雲端；特休/旅遊假是即時 by getOvertimeDatesAfter 計算，
-//   它們的顯示變動只是本機 render 結果，需要「儲存」的地方仍是手動 💾。
+// ⚠️ 唯讀動作：把加班費 OT 資料抓進本機 OT_LEAVE_CLOUD
+//   本身不 push 到雲端；但若抓到的 OT 跟先前不同（代表特休/旅遊假顯示會有變動），
+//   會標「待儲存」讓使用者手動按「💾 儲存變更」把當前 STATE 快照存到雲端。
 function pullOTLeaveFromCloud(silent){
   var url = getSyncUrl();
   if(!url) return Promise.resolve();
@@ -1838,12 +1838,18 @@ function pullOTLeaveFromCloud(silent){
         OT_LEAVE_CLOUD = r.byEmp || {};
         console.log('[特休雲端] 已同步 OT 假別資料：', OT_LEAVE_CLOUD);
         render();
+        var after = JSON.stringify(OT_LEAVE_CLOUD);
+        var changed = (before && before !== after);
+        // OT 資料有變 → 標 pending，使用者自己決定是否 💾 儲存
+        // （before 為空 = 首次載入，不算「變動」，不標 pending）
+        if(changed){
+          setPending(PENDING_GIFT_COUNT + 1);
+        }
         if(!silent){
-          var after = JSON.stringify(OT_LEAVE_CLOUD);
-          if(before && before !== after){
-            toast('已同步加班費資料（本機顯示已更新，未寫雲端 STATE）', 'ok');
+          if(changed){
+            toast('加班費資料已更新 → 已標「待儲存」；請按「💾 儲存變更」把 STATE 存到雲端', 'ok');
           } else {
-            toast('已同步加班費資料', 'ok');
+            toast('已同步加班費資料（無變動）', 'ok');
           }
         }
       } else {
