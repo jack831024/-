@@ -474,7 +474,7 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.09.02-08';
+var APP_VERSION = '2026.09.08-01';
 
 // ⭐ 每個 fetch 的 timeout（毫秒）：超過就 abort，避免 Apps Script/Google 網路抽風時無限等
 //   放最頂端是因為 fetchMasterRoster 在頁面 init 時就會用到（比 fetchJsonRetry 早）
@@ -628,7 +628,30 @@ function canonicalStaffName(name){
   if(!s) return '';
   return STAFF_ALIASES[s] || s;
 }
-var CURRENT_STAFF_LIST = STAFF_LISTS[STORE_ID] || [];
+// ⭐ 主檔名單 localStorage 快取（by store）— 主檔抽風時的保底，避免整個名單變空
+//   之前的 bug：STAFF_LISTS 是空 + fetchMasterRoster 抽風 → CURRENT_STAFF_LIST 是空
+//   → 跳「本店員工名單尚未設定」警告、獎金計算全部歸「未指定 A 班」
+//   有 localStorage 快取後：上次成功抓的名單當保底，抽風時無感 recovery
+function _rosterCacheKey(){ return 'cd_staff_roster_' + (STORE_ID || 'default'); }
+function loadCachedRoster(){
+  try{
+    var s = localStorage.getItem(_rosterCacheKey());
+    if(!s) return null;
+    var arr = JSON.parse(s);
+    return Array.isArray(arr) && arr.length ? arr : null;
+  }catch(_){ return null; }
+}
+function saveCachedRoster(arr){
+  try{ if(arr && arr.length) localStorage.setItem(_rosterCacheKey(), JSON.stringify(arr)); }catch(_){}
+}
+
+// 初始 CURRENT_STAFF_LIST：優先 STAFF_LISTS 硬編碼 → 沒有就用上次成功抓的快取 → 都沒才是 []
+var CURRENT_STAFF_LIST = (function(){
+  var hard = STAFF_LISTS[STORE_ID] || [];
+  if(hard.length) return hard;
+  var cached = loadCachedRoster();
+  return cached || [];
+})();
 
 // ===== 員工主檔：當月在職名單（採「相加」：主檔的人加進來，保留原本清單的跨店支援名字）=====
 var EMP_MASTER_URL = 'https://script.google.com/macros/s/AKfycbyLDnvILhiL0iIWjnoN14iwZZg5p9DobG1Ik3Fq-LiR6gcj3-_AKGTdnywDnmNrZLp6/exec';
@@ -668,7 +691,7 @@ function isMasterPT(name){ return !!MASTER_PT_NAMES[canonicalStaffName(name)]; }
 //   → 使用者看到「蔡鈺豪（已離職／不在名單）」等錯誤標籤，重新整理才恢復
 function mergeMasterIntoStaff(){
   return fetchMasterRoster(STORE_ID).then(function(names){
-    if(!names || !names.length) return;   // 主檔連不上 → 維持原本清單（保底）
+    if(!names || !names.length) return;   // 主檔連不上 → 維持既有清單（可能來自快取或硬編碼）
     var seen = {};
     var master = names.map(canonicalStaffName).filter(function(n){
       if(!n || seen[n]) return false; seen[n] = true; return true;
@@ -681,6 +704,8 @@ function mergeMasterIntoStaff(){
       seen[n] = true;
     });
     CURRENT_STAFF_LIST = master;
+    // ⭐ 快取這次成功的名單，下次抽風時就有保底
+    saveCachedRoster(master);
     var sel = document.getElementById('i-shift-a');
     if(!sel) return;
     var cur = sel.value;
