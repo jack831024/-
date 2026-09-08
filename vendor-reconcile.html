@@ -330,6 +330,33 @@ table.recon tfoot .ft-sum{text-align:right;font-family:ui-monospace,"SF Mono",Me
 
 <script>
 // ============================================
+// 🔐 店長密碼閘（3 組任一即可通過，同 index.html 的 a-prefix 店長密碼）
+//   - a90369287（中和店長）
+//   - a94213054（永春店長）
+//   - a60749791（新莊店長）
+//   通過後存 sessionStorage，同分頁不再問；關掉瀏覽器再開會再問一次。
+// ============================================
+(function reconcileAuthGate(){
+  var VALID = ['a90369287','a94213054','a60749791'];
+  if(sessionStorage.getItem('cd_reconcile_auth') === '1') return;
+  for(var i = 0; i < 3; i++){
+    var pw = prompt('【廠商對帳】請輸入店長密碼：');
+    if(pw === null){
+      // 使用者按取消 → 回主頁
+      window.location.href = 'home.html';
+      return;
+    }
+    if(VALID.indexOf(String(pw).trim()) >= 0){
+      sessionStorage.setItem('cd_reconcile_auth', '1');
+      return;
+    }
+    alert('❌ 密碼錯誤（還可以試 ' + (2 - i) + ' 次）');
+  }
+  alert('❌ 密碼錯誤次數過多，返回主頁');
+  window.location.href = 'home.html';
+})();
+
+// ============================================
 // 廠商對帳 · 店長版
 // 本機 localStorage + 雲端 Google 試算表（透過 Apps Script）
 // ============================================
