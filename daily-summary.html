@@ -474,7 +474,7 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.09.15-02';
+var APP_VERSION = '2026.09.15-03';
 
 // ⭐ 每個 fetch 的 timeout（毫秒）：超過就 abort，避免 Apps Script/Google 網路抽風時無限等
 //   放最頂端是因為 fetchMasterRoster 在頁面 init 時就會用到（比 fetchJsonRetry 早）
@@ -880,7 +880,10 @@ async function callModelOnce(model, key, parts){
   }
 
   // 給所有路徑通用的低 temperature 設定（讓辨識數字更穩定）
-  var genConfig = { temperature: 0, topP: 0.1, topK: 1 };
+  // ⭐ thinkingBudget: 0 — 關掉 Gemini 2.5 系列預設開啟的 "thinking mode"
+  //   OCR / 抽數字這種簡單任務不需要「思考」5-10 秒，關掉直接省時
+  //   對舊模型（1.5、2.0、flash-latest 別名）這個欄位會被忽略，不會出錯
+  var genConfig = { temperature: 0, topP: 0.1, topK: 1, thinkingConfig: { thinkingBudget: 0 } };
 
   // ========== 1) 優先：直接呼叫 Gemini（KEY 已寫死在 BUILTIN_GEMINI_KEY）==========
   if(directKey && !DIRECT_CALL_DISABLED){

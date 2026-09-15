@@ -1519,11 +1519,16 @@ async function callModelOnce(model, parts){
   var proxyUrl  = localStorage.getItem('cd_sync_url');
   if(!workerUrl && !directKey && !proxyUrl) throw new Error('尚未設定任何 AI 路徑');
 
+  // ⭐ thinkingBudget: 0 — 關掉 Gemini 2.5 系列預設開啟的 "thinking mode"
+  //   OCR / 抽數字不需要「思考」5-10 秒，關掉直接省時
+  //   舊模型（1.5、2.0）此欄位會被忽略、不會出錯
+  var genConfig = { temperature: 0, topP: 0.1, topK: 1, thinkingConfig: { thinkingBudget: 0 } };
+
   if(workerUrl){
     try{
       var wr = await fetch(workerUrl, {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ model: model, parts: parts })
+        body: JSON.stringify({ model: model, parts: parts, generationConfig: genConfig })
       });
       var wd = await wr.json();
       if(!wr.ok && !wd.error){ var e = new Error('Worker HTTP '+wr.status); e.code = wr.status; throw e; }
@@ -1541,7 +1546,7 @@ async function callModelOnce(model, parts){
       var directUrl = 'https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(directKey);
       var dr = await fetch(directUrl, {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ contents:[{ parts: parts }] })
+        body: JSON.stringify({ contents:[{ parts: parts }], generationConfig: genConfig })
       });
       var dd = await dr.json();
       if(!dr.ok && !dd.error){ var he = new Error('HTTP '+dr.status); he.code = dr.status; throw he; }
@@ -1557,7 +1562,7 @@ async function callModelOnce(model, parts){
   if(!proxyUrl) throw new Error('沒有代理網址可後備');
   var r = await fetch(proxyUrl, {
     method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body: JSON.stringify({ action:'geminiProxy', model: model, parts: parts })
+    body: JSON.stringify({ action:'geminiProxy', model: model, parts: parts, generationConfig: genConfig })
   });
   var wrap = await r.json();
   if(wrap.error){

@@ -1639,7 +1639,9 @@ async function callModelOnce(model, parts){
   var directKey = localStorage.getItem('cd_gemini_direct_key');
   var proxyUrl  = localStorage.getItem('cd_sync_url');
   if(!workerUrl && !directKey && !proxyUrl) throw new Error('尚未設定 Gemini 路徑（請先到「小結報表」設定一次）');
-  var genConfig = { temperature: 0, topP: 0.1, topK: 1 };
+  // ⭐ thinkingBudget: 0 — 關掉 Gemini 2.5 系列預設開啟的 "thinking mode"
+  //   OCR 不需要「思考」5-10 秒；舊模型會忽略此欄位、不會出錯
+  var genConfig = { temperature: 0, topP: 0.1, topK: 1, thinkingConfig: { thinkingBudget: 0 } };
 
   if(workerUrl){
     try{
