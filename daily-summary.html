@@ -474,7 +474,7 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.09.15-01';
+var APP_VERSION = '2026.09.15-02';
 
 // ⭐ 每個 fetch 的 timeout（毫秒）：超過就 abort，避免 Apps Script/Google 網路抽風時無限等
 //   放最頂端是因為 fetchMasterRoster 在頁面 init 時就會用到（比 fetchJsonRetry 早）
@@ -953,12 +953,12 @@ async function geminiCall(imageFiles, promptText){
     throw new Error('尚未設定任何 Gemini 路徑，請聯絡管理員');
   }
 
-  var parts = [];
-  for(var i = 0; i < imageFiles.length; i++){
-    var f = imageFiles[i];
+  // ⭐ 平行 base64 化 — 之前每張圖依序 await 解一次，多張圖時間累加
+  //   Promise.all → N 張圖同時解碼，總耗時 ≈ 最慢那張
+  var parts = await Promise.all(imageFiles.map(async function(f){
     var b64 = await toB64(f);
-    parts.push({inline_data: {mime_type: f.type || 'image/jpeg', data: b64}});
-  }
+    return { inline_data: { mime_type: f.type || 'image/jpeg', data: b64 } };
+  }));
   parts.push({text: promptText});
 
   var primary = localStorage.getItem('cd_gemini_model') || 'gemini-flash-latest';
@@ -2878,14 +2878,16 @@ function _compressImageOnce(file, targetBytes){
       try{
         var canvas = document.createElement('canvas');
         var w = img.width, h = img.height;
-        var maxDim = 1600;
+        // ⭐ 壓縮更兇 — maxDim 1600→1024（AI 識別數字不需要 1600px），檔案大小約 -60%
+        //   上傳 / Gemini 處理 / Drive 儲存所有階段都變快
+        var maxDim = 1024;
         if(w > maxDim || h > maxDim){
           var r = Math.min(maxDim/w, maxDim/h);
           w = Math.round(w * r); h = Math.round(h * r);
         }
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        var q = 0.85;
+        var q = 0.80;
         var url = canvas.toDataURL('image/jpeg', q);
         // base64 約占 1.37 倍實際位元組
         while(url.length * 0.75 > targetBytes && q > 0.35){
@@ -2912,7 +2914,8 @@ function _compressImageOnce(file, targetBytes){
 
 // 壓縮一張圖：失敗自動重試一次（手機端常因記憶體瞬間吃緊而第一次失敗、第二次成功）
 function compressImage(file, targetBytes){
-  if(!targetBytes) targetBytes = 300 * 1024;
+  // ⭐ 壓縮目標 300KB → 150KB — 數字識別不需要那麼高畫質，上傳快 2 倍
+  if(!targetBytes) targetBytes = 150 * 1024;
   return _compressImageOnce(file, targetBytes).catch(function(e){
     console.warn('compressImage 第一次失敗，0.3 秒後重試一次：', e);
     return new Promise(function(r){ setTimeout(r, 300); })

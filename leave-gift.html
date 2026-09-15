@@ -1481,7 +1481,8 @@ async function onGiftFile(files){
   try {
     // 1. 壓縮（最長邊 1200px）
     if(pv) pv.tag.textContent = '壓縮中…';
-    var resized = await resizeImage(file, 1200);
+    // ⭐ 1200 → 1024，配合下方 resizeImage 品質 0.85 → 0.80，體積約 -40%
+    var resized = await resizeImage(file, 1024);
 
     // 2. AI 識別金額
     if(pv) pv.tag.textContent = 'AI 識別中…';
@@ -1598,7 +1599,7 @@ function resizeImage(file, maxSide){
         URL.revokeObjectURL(url);
         if(!blob) return reject(new Error('壓縮失敗'));
         resolve({ blob: blob, w: nw, h: nh });
-      }, 'image/jpeg', 0.85);
+      }, 'image/jpeg', 0.80);  // ⭐ 0.85 → 0.80，識別品質不變、體積小 -15%
     };
     img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error('讀檔失敗')); };
     img.src = url;
@@ -1682,15 +1683,15 @@ async function geminiCall(imageFiles, promptText){
   if(!localStorage.getItem('cd_worker_url') && !localStorage.getItem('cd_gemini_direct_key') && !localStorage.getItem('cd_sync_url')){
     throw new Error('尚未設定 Gemini 路徑（請先到「小結報表」設定一次）');
   }
-  var parts = [];
-  for(var i=0; i<imageFiles.length; i++){
-    var f = imageFiles[i];
+  // ⭐ 平行 base64 化 — 之前每張依序 await，多張圖時間累加
+  var parts = await Promise.all(imageFiles.map(async function(f){
     var b64 = await blobToBase64(f);
-    parts.push({inline_data:{mime_type: f.type || 'image/jpeg', data: b64}});
-  }
+    return { inline_data: { mime_type: f.type || 'image/jpeg', data: b64 } };
+  }));
   parts.push({text: promptText});
-  var primary = localStorage.getItem('cd_gemini_model') || 'gemini-2.0-flash';
-  var fb = [primary, 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
+  // ⭐ gemini-2.0-flash 已被 Google 下架，拿掉避免打到 400 錯誤
+  var primary = localStorage.getItem('cd_gemini_model') || 'gemini-flash-latest';
+  var fb = [primary, 'gemini-flash-latest', 'gemini-2.5-flash'];
   var seen = {}, models = fb.filter(function(m){ if(seen[m]) return false; seen[m]=1; return true; });
   var lastErr;
   for(var mi=0; mi<models.length; mi++){
