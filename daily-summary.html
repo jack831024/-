@@ -474,7 +474,7 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.09.08-01';
+var APP_VERSION = '2026.09.15-01';
 
 // ⭐ 每個 fetch 的 timeout（毫秒）：超過就 abort，避免 Apps Script/Google 網路抽風時無限等
 //   放最頂端是因為 fetchMasterRoster 在頁面 init 時就會用到（比 fetchJsonRetry 早）
@@ -3134,8 +3134,12 @@ var _cloudLoadCache = { at: 0, records: null };
 var _CLOUD_LOAD_TTL_MS = 10000;
 // ⭐ 增量同步：記住上次拉到的最新 savedAt，之後只跟後端要「比這新的」紀錄
 //   首次拉全部 (可能 1MB+)；後續 payload 通常 0-2 KB → 快 10-100 倍
-//   forceFresh=true 或 cloudSave 後會清掉，回到首次拉全部的狀態
-var _cloudLoadSinceCursor = '';
+//   ⭐⭐ localStorage 持久化：即使 F5、關頁面再開，cursor 都不會遺失
+//     → 之前 F5 每次都變全量拉、常常 timeout 的 bug 的根治
+function _cursorKey(){ return 'cd_load_cursor_' + (STORE_ID || 'default'); }
+var _cloudLoadSinceCursor = (function(){
+  try{ return localStorage.getItem(_cursorKey()) || ''; }catch(_){ return ''; }
+})();
 
 async function cloudLoad(opts){
   opts = opts || {};
@@ -3145,11 +3149,22 @@ async function cloudLoad(opts){
   }
   var url = localStorage.getItem('cd_sync_url');
   if(!url) throw new Error('未設定同步網址');
-  // 有 cursor + 有快取 → 增量；否則全量拉
+  // ⭐ 頁面剛載入時 in-memory 快取是空的、但 localStorage 有歷史紀錄
+  //   → hydrate 一下讓 canIncremental 可以生效（免全量拉）
+  if(!_cloudLoadCache.records){
+    var persisted = getAllRecords();
+    if(Object.keys(persisted).length > 0){
+      _cloudLoadCache.records = persisted;  // 只補 records，at=0 讓後面的 TTL 判斷仍認定要 refetch
+    }
+  }
+  // 有 cursor + 有 records → 增量；否則全量拉
   var canIncremental = !opts.forceFresh && _cloudLoadSinceCursor && _cloudLoadCache.records;
   var q = '?action=list&store=' + encodeURIComponent(STORE_ID) + '&ts=' + now;
   if(canIncremental) q += '&since=' + encodeURIComponent(_cloudLoadSinceCursor);
-  var d = await fetchJsonRetry(url + q, {}, canIncremental ? 'cloudLoad(inc)' : 'cloudLoad(full)');
+  // ⭐ 全量拉時給更長 timeout（30s）— Apps Script cold start + 讀整份 sheet 可能超過 15s
+  //   增量拉維持預設 15s 就夠（payload 幾 KB、幾百毫秒就完成）
+  var timeoutMs = canIncremental ? FETCH_TIMEOUT_MS : 30000;
+  var d = await fetchJsonRetry(url + q, {}, canIncremental ? 'cloudLoad(inc)' : 'cloudLoad(full)', { timeoutMs: timeoutMs });
   if(d.error) throw new Error(d.error);
   var delta = d.records || {};
   var fullRecords;
@@ -3162,8 +3177,11 @@ async function cloudLoad(opts){
     fullRecords = delta;
   }
   _cloudLoadCache = { at: now, records: fullRecords };
-  // 記住這次拉到的最新 savedAt，下次可用來增量
-  if(d.latestSavedAt) _cloudLoadSinceCursor = d.latestSavedAt;
+  // 記住這次拉到的最新 savedAt，下次可用來增量（同時持久化到 localStorage 讓 F5 也有效）
+  if(d.latestSavedAt){
+    _cloudLoadSinceCursor = d.latestSavedAt;
+    try{ localStorage.setItem(_cursorKey(), d.latestSavedAt); }catch(_){}
+  }
   return fullRecords;
 }
 
