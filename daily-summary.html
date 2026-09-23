@@ -474,7 +474,7 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.09.15-03';
+var APP_VERSION = '2026.09.23-01';
 
 // ⭐ 每個 fetch 的 timeout（毫秒）：超過就 abort，避免 Apps Script/Google 網路抽風時無限等
 //   放最頂端是因為 fetchMasterRoster 在頁面 init 時就會用到（比 fetchJsonRetry 早）
@@ -2089,7 +2089,21 @@ function recalc(){
   } else { sDz.textContent = '—'; sDz.className = 'status neutral'; }
 
   recalcNextDay();
+
+  // ⭐ 開箱金額 vs 前一天明日開箱 — 這條之前只出現在 UI 小提示，沒進「所有項目確認無誤」判定
+  //   結果 AI 讀錯開箱時、下面卻顯示「所有項目確認無誤」誤導使用者
+  var opOk = null;
+  try{
+    var _todayD = document.getElementById('record-date');
+    var _openingVal = parseFloat(document.getElementById('i-opening').value);
+    var _prevNext = (_todayD && _todayD.value) ? getPrevDayNextOpening(_todayD.value) : null;
+    if(!isNaN(_openingVal) && _prevNext != null){
+      opOk = Math.abs(_openingVal - _prevNext) < 1;
+    }
+  }catch(_){}
+
   var errors = [];
+  if(opOk === false) errors.push('開箱金額對不上前一天明日開箱');
   if(wOk === false) errors.push('提現金額不一致');
   if(dOk === false) errors.push('代收金額不一致');
   if(jpOk === false) errors.push('全支付金額不一致');
@@ -2098,7 +2112,7 @@ function recalc(){
   if(cnOk === false) errors.push('取消單金額不一致');
   if(dzOk === false) errors.push('代支金額不一致');
   var ra = document.getElementById('result-area');
-  var hasAny = wOk !== null || dOk !== null || jpOk !== null || jkOk !== null || rfOk !== null || cnOk !== null || dzOk !== null;
+  var hasAny = opOk !== null || wOk !== null || dOk !== null || jpOk !== null || jkOk !== null || rfOk !== null || cnOk !== null || dzOk !== null;
   if(!hasAny){ ra.innerHTML = ''; return; }
   if(errors.length === 0){
     ra.innerHTML = '<div class="result-box result-ok"><p class="rtitle">所有項目確認無誤</p></div>';
@@ -2183,6 +2197,24 @@ function collectData(){
   });
   var nd = document.getElementById('no-deposit');
   if(nd) data.noDeposit = nd.checked;
+  // ⭐ 存入「今日開箱 vs 前一天明日開箱」驗算結果，讓下游（LINE bot / 報表）能檢查
+  //   之前這個比對只出現在 UI 提示，沒進紀錄 → LINE 「全數通過」不會抓到開箱寫錯
+  try{
+    var todayDate = document.getElementById('record-date') && document.getElementById('record-date').value;
+    var openingVal = parseFloat(data.inputs['i-opening']);
+    var prevNext = todayDate ? getPrevDayNextOpening(todayDate) : null;
+    if(!isNaN(openingVal) && prevNext != null){
+      var diff = Math.round(openingVal - prevNext);
+      data.openingCheck = {
+        prevExpected: Math.round(prevNext),
+        currentOpening: Math.round(openingVal),
+        diff: diff,
+        match: Math.abs(diff) < 1
+      };
+    } else if(prevNext != null){
+      data.openingCheck = { prevExpected: Math.round(prevNext), currentOpening: null, diff: null, match: null };
+    }
+  }catch(e){ /* getPrevDayNextOpening 可能還沒定義好，靜默略過 */ }
   return data;
 }
 
@@ -2474,6 +2506,26 @@ async function manualResync(){
     alert('⚠️ 雲端圖片還在載入中，請等載入完再儲存（避免把已上傳的圖蓋掉）');
     return;
   }
+  // ⭐ 防呆：今日開箱 vs 前一天明日開箱不一致 → 跳確認框強迫使用者面對
+  //   之前只有 UI 上小字提示、使用者容易略過 → LINE 報表就跟著錯
+  try{
+    var _todayDate = document.getElementById('record-date') && document.getElementById('record-date').value;
+    var _openingVal = parseFloat(document.getElementById('i-opening').value);
+    var _prevNext = _todayDate ? getPrevDayNextOpening(_todayDate) : null;
+    if(!isNaN(_openingVal) && _prevNext != null && Math.abs(_openingVal - _prevNext) >= 1){
+      var _diff = Math.round(_openingVal - _prevNext);
+      var _msg = '⚠️ 開箱金額對不上前一天！\n\n' +
+                 '今日開箱：NT$ ' + fmt(_openingVal) + '\n' +
+                 '前一天明日開箱：NT$ ' + fmt(_prevNext) + '\n' +
+                 '差額：' + (_diff > 0 ? '+' : '') + 'NT$ ' + fmt(_diff) + '\n\n' +
+                 '可能原因：\n' +
+                 '  • AI 讀錯開箱金額（最常見）\n' +
+                 '  • 前一天存款金額或預期錢櫃記錯\n' +
+                 '  • 昨晚跟今早之間錢櫃真的有動過\n\n' +
+                 '確定要就這樣存下去嗎？（存下去 LINE 報表會顯示不一致）';
+      if(!confirm(_msg)) return;
+    }
+  }catch(_){}
   _manualSaving = true;
   var hasNewImages = _imagesDirty;
   if(hasNewImages){
