@@ -474,7 +474,7 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.09.23-01';
+var APP_VERSION = '2026.09.29-01';
 
 // ⭐ 每個 fetch 的 timeout（毫秒）：超過就 abort，避免 Apps Script/Google 網路抽風時無限等
 //   放最頂端是因為 fetchMasterRoster 在頁面 init 時就會用到（比 fetchJsonRetry 早）
@@ -2619,15 +2619,70 @@ function refreshBonusLockState(){
   if(lockBtn) lockBtn.style.display = unlocked ? 'inline-block' : 'none';
 }
 
+// 背景 pull 完成後，若這天內容改了就決定要不要靜默套用
+//   - 使用者沒編輯過（!_hasUnsavedChanges）→ 靜默套用最新資料 + 更新圖片
+//   - 使用者已編輯 → 不動，只在 sync-badge 顯示提示、避免蓋掉未存的變更
+function _kickBackgroundPullReconcile(date, beforeSavedAt, localFileIdBefore){
+  pullCloudOverwriteLocal().then(function(){
+    // 若使用者已切走這個日期，別套錯
+    var recordDateEl = document.getElementById('record-date');
+    if(!recordDateEl || recordDateEl.value !== date) return;
+
+    var newR = getAllRecords()[date];
+    if(!newR) return;
+    var newSavedAt = newR.savedAt || '';
+    if(newSavedAt === beforeSavedAt) return;  // 雲端沒更新 → 什麼都不用做
+
+    if(_hasUnsavedChanges){
+      // 使用者已編輯 → 不覆蓋，只提示
+      setSyncBadge('⚠️ 雲端有其他裝置存的新版，你目前的編輯不會被覆蓋');
+      return;
+    }
+
+    // 使用者沒編輯 → 靜默套用
+    console.log('[loadRecord] 背景 pull 到更新版，靜默套用');
+    applyData(newR.data);
+    updateSavedTag(date);
+    onOpeningChange();
+    recalc(); recalcNextDay(); recalcMonthly(); recalcStaffBonus();
+
+    // 圖片 fileId 有變 → 重載
+    if(newR.imageFileId && newR.imageFileId !== localFileIdBefore){
+      cloudGetImages(newR.imageFileId).then(function(images){
+        if(!images) return;
+        var recordDateEl2 = document.getElementById('record-date');
+        if(recordDateEl2 && recordDateEl2.value === date && !_hasUnsavedChanges){
+          applyImages(images);
+          setSyncBadge('☁️ 已同步（雲端更新）');
+        }
+      }).catch(function(){/* 圖片失敗保留原本的，靜默 */});
+    } else {
+      setSyncBadge('☁️ 已同步（雲端更新）');
+    }
+  }).catch(function(e){
+    console.warn('[loadRecord] 背景 pull 失敗（本機資料仍可用）：', e);
+    // 本機資料仍可用、不打擾使用者
+  });
+}
+
 async function loadRecord(date, opts){
   opts = opts || {};
   var syncUrl = localStorage.getItem('cd_sync_url');
 
-  // ⭐⭐ 平行加速：先拿「本機已知的 fileId」提早開始下載圖片，
-  //   同時另一條線去 pullCloudOverwriteLocal 拉最新紀錄。
-  //   如果 pull 後 fileId 沒變（絕大多數情況）→ 直接用 prefetch 的圖，等於同步跟下載平行跑
-  //   如果 fileId 變了（別台剛更新過圖）→ prefetch 白跑，重抓新 fileId 的圖
-  var localFileIdBefore = (getAllRecords()[date] || {}).imageFileId || '';
+  // ⭐⭐⭐ 樂觀載入策略（重大 UX 優化）
+  //   之前：每次切日期都要等 pullCloudOverwriteLocal 完成才顯示（5-15 秒，冷啟動更久）
+  //   現在：先看本機有沒有 → 有就立刻顯示；雲端 pull 放背景跑
+  //         背景 pull 完後：若使用者沒動過畫面就靜默套用新版；若動過就給徽章提示不覆蓋
+  //   對「本機沒這天」的情況（例如剛切到未來日期）維持原本 blocking 行為
+  var records = getAllRecords();
+  var r = records[date];
+  var localFileIdBefore = (r || {}).imageFileId || '';
+  var beforeSavedAt = (r || {}).savedAt || '';
+
+  var canOptimistic = !!r && !opts.skipCloudPull && syncUrl;
+  var mustWaitPull = !r && !opts.skipCloudPull && syncUrl;
+
+  // 平行提早下載圖片（本機已知 fileId）
   var imagesPrefetch = null;
   if(localFileIdBefore && syncUrl){
     imagesPrefetch = cloudGetImages(localFileIdBefore).catch(function(e){
@@ -2636,17 +2691,21 @@ async function loadRecord(date, opts){
     });
   }
 
-  // ⭐ 多裝置最新優先：開啟一個日期前，先從雲端拉這個 store 的最新紀錄覆蓋本機
-  //   （opts.skipCloudPull 是給「剛剛才 syncFromCloud 過、不必再拉一次」的呼叫端用）
-  if(!opts.skipCloudPull && syncUrl){
-    // 若 cloudLoad 快取還新鮮（10 秒內拉過），連 loading UI 都不用閃 → 切日期秒開
-    var cacheFresh = _cloudLoadCache.records && (Date.now() - _cloudLoadCache.at) < _CLOUD_LOAD_TTL_MS;
-    if(!cacheFresh) showLoading('☁️ 同步雲端', '正在拉取 ' + date + ' 最新版本（避免裝置間舊版互蓋）...');
+  if(mustWaitPull){
+    // 本機沒這天 → 必須等 pull 才知道雲端有沒有
+    showLoading('☁️ 同步雲端', '正在拉取 ' + date + ' 資料...');
     await pullCloudOverwriteLocal();
+    records = getAllRecords();
+    r = records[date];
+    if(!r){ hideLoading(); return false; }
+  } else if(canOptimistic){
+    // ⭐ 樂觀路徑：本機有 → 立刻顯示；pull 放背景、之後靜默 reconcile
+    _kickBackgroundPullReconcile(date, beforeSavedAt, localFileIdBefore);
+  } else if(!r){
+    // 沒設雲端 + 本機也沒 → 直接回 false
+    hideLoading();
+    return false;
   }
-  var records = getAllRecords();
-  var r = records[date];
-  if(!r){ hideLoading(); return false; }
   // ⭐ 載入新紀錄前先標記「圖還沒載入」，避免任何 autoSave 在這空檔送出 keepImages=false 誤刪 Drive 檔
   _imagesLoaded = false;
   _imagesDirty = false;
@@ -3081,13 +3140,18 @@ function setSyncBadge(text){
 async function fetchJsonRetry(url, fetchOpts, label, config){
   config = config || {};
   var attempts = config.attempts || [0, 500, 1500];  // 預設 3 次：立即 / 0.5s / 1.5s
+  // ⭐ 進度式 timeout — 第一次短（快失敗）、後續長（給冷啟動時間）
+  //   之前每次都用同樣 timeout；現在若 caller 傳 perAttemptTimeouts 就每次不同
+  //   預設沿用 timeoutMs（單一值）維持向後相容
   var timeoutMs = config.timeoutMs || FETCH_TIMEOUT_MS;
+  var perAttemptTimeouts = config.perAttemptTimeouts;  // e.g. [6000, 15000, 30000]
   var lastErr;
   var abortedByTimeout = false;
   for(var i = 0; i < attempts.length; i++){
     if(attempts[i] > 0){
       await new Promise(function(r){ setTimeout(r, attempts[i]); });
     }
+    var thisTimeout = perAttemptTimeouts && perAttemptTimeouts[i] ? perAttemptTimeouts[i] : timeoutMs;
     // 每次都建新的 AbortController
     var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
     var timeoutHandle = null;
@@ -3096,7 +3160,7 @@ async function fetchJsonRetry(url, fetchOpts, label, config){
       timeoutHandle = setTimeout(function(){
         wasTimeout = true;
         try{ ctrl.abort(); }catch(_){}
-      }, timeoutMs);
+      }, thisTimeout);
     }
     // 把 signal 掛進 fetchOpts（不修改呼叫端傳進來的物件）
     var mergedOpts = {};
@@ -3122,7 +3186,7 @@ async function fetchJsonRetry(url, fetchOpts, label, config){
       lastErr = e;
       if(wasTimeout) abortedByTimeout = true;
       var msg = e.message || String(e);
-      if(wasTimeout) msg = '本次請求超過 ' + (timeoutMs/1000) + ' 秒未回應（timeout）';
+      if(wasTimeout) msg = '本次請求超過 ' + (thisTimeout/1000) + ' 秒未回應（timeout）';
       console.warn('[' + (label || 'fetchJsonRetry') + '] 第 ' + (i + 1) + '/' + attempts.length + ' 次失敗：' + msg);
     }
   }
@@ -3219,10 +3283,11 @@ async function cloudLoad(opts){
   var canIncremental = !opts.forceFresh && _cloudLoadSinceCursor && _cloudLoadCache.records;
   var q = '?action=list&store=' + encodeURIComponent(STORE_ID) + '&ts=' + now;
   if(canIncremental) q += '&since=' + encodeURIComponent(_cloudLoadSinceCursor);
-  // ⭐ 全量拉時給更長 timeout（30s）— Apps Script cold start + 讀整份 sheet 可能超過 15s
-  //   增量拉維持預設 15s 就夠（payload 幾 KB、幾百毫秒就完成）
-  var timeoutMs = canIncremental ? FETCH_TIMEOUT_MS : 30000;
-  var d = await fetchJsonRetry(url + q, {}, canIncremental ? 'cloudLoad(inc)' : 'cloudLoad(full)', { timeoutMs: timeoutMs });
+  // ⭐ 進度式 timeout：第一次短（快失敗、常常會成功）、後續給更長時間吃 cold start
+  //   增量：6s → 12s → 20s（payload 幾 KB，第一次通常秒開；抽風才會走到第 3 次）
+  //   全量：10s → 20s → 40s（讀整份 sheet 加冷啟動最多可到 30+s）
+  var perAttemptTimeouts = canIncremental ? [6000, 12000, 20000] : [10000, 20000, 40000];
+  var d = await fetchJsonRetry(url + q, {}, canIncremental ? 'cloudLoad(inc)' : 'cloudLoad(full)', { perAttemptTimeouts: perAttemptTimeouts });
   if(d.error) throw new Error(d.error);
   var delta = d.records || {};
   var fullRecords;
@@ -3363,6 +3428,19 @@ async function syncFromCloud(){
   renderHistoryList();
 
   var syncUrl = localStorage.getItem('cd_sync_url');
+
+  // ⭐ Warm-up ping — 開頁面時立刻打一發輕量 GET 喚醒 Apps Script
+  //   之後使用者按存、切日期時 Apps Script 已經熱著、不用等冷啟動 5-10 秒
+  //   這個 request 不 await、不用等它完成、失敗也不影響任何流程
+  if(syncUrl){
+    try{
+      var warmupUrl = syncUrl + '?action=list&store=' + encodeURIComponent(STORE_ID || 'default') + '&since=9999&ts=' + Date.now();
+      fetch(warmupUrl, { method: 'GET', signal: (typeof AbortController !== 'undefined' ? (function(){ var c = new AbortController(); setTimeout(function(){ try{c.abort();}catch(_){}} , 20000); return c.signal; })() : undefined) })
+        .then(function(){ console.log('[warmup] Apps Script 已喚醒'); })
+        .catch(function(){ /* 失敗無所謂，只是熱身 */ });
+    }catch(_){}
+  }
+
   if(syncUrl){
     // 有同步：從雲端拉最新資料
     showLoading('☁️ 載入雲端資料', '正在從 Google Sheet 拉取所有歷史紀錄...');
