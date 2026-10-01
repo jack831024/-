@@ -2068,6 +2068,48 @@ function callSalaryGAS(action, args){
   }).then(function(r){ return r.json(); });
 }
 
+// 判斷 STATE 看起來是不是「幾乎空白」（還沒輸入資料）
+// 用來防呆：本機空白 + 雲端有資料 → 禁止無聲覆蓋
+function stateIsEssentiallyBlank(state){
+  if(!state) return true;
+  function sumAbs(obj){
+    if(!obj) return 0;
+    var s = 0;
+    Object.keys(obj).forEach(function(k){ s += Math.abs(obj[k]|0); });
+    return s;
+  }
+  function sumS2(obj){
+    if(!obj) return 0;
+    var s = 0;
+    Object.keys(obj).forEach(function(k){
+      var o = obj[k]; if(!o) return;
+      s += Math.abs(o.sick|0) + Math.abs(o.personal|0) + Math.abs(o.late|0);
+    });
+    return s;
+  }
+  function sumDetail(obj){
+    if(!obj) return 0;
+    var s = 0;
+    Object.keys(obj).forEach(function(k){
+      var o = obj[k]; if(!o) return;
+      ['sickDays','personalDays','otHours','dtDays','restDays'].forEach(function(f){
+        s += Math.abs((o[f]||0) * 10);
+      });
+    });
+    return s;
+  }
+  var total = sumAbs(state.insurance) + sumAbs(state.s1) + sumS2(state.s2)
+            + sumAbs(state.s3) + sumAbs(state.s4) + sumAbs(state.s5)
+            + sumAbs(state.s6) + sumAbs(state.s7) + sumAbs(state.ptWage)
+            + sumAbs(state.fixedOT) + sumDetail(state.detail);
+  var hasCustom = (state.customEmployees||[]).length > 0;
+  var hasNotes = Object.values(state.notes||{}).some(function(n){ return n && String(n).trim(); });
+  var hasOther = Object.values(state.otherBonuses||{}).some(function(arr){
+    return Array.isArray(arr) && arr.length;
+  });
+  return total === 0 && !hasCustom && !hasNotes && !hasOther;
+}
+
 var _pushTimer = null;
 function pushToCloud(showToastWhenOk){
   if(!STATE) return;
@@ -2077,6 +2119,37 @@ function pushToCloud(showToastWhenOk){
     return;
   }
 
+  // 🛡 防呆：本機 STATE 看起來是空的 → 先問雲端有沒有資料，若有則確認覆蓋
+  if(stateIsEssentiallyBlank(STATE)){
+    setSyncChip('busy', '☁ 檢查雲端中…', '本機看似空白，確認是否覆蓋');
+    callSalaryGAS('loadSalary', [getStorePassword(), STORE, getSelectedYM()])
+      .then(function(res){
+        if(res && res.ok && res.found && res.state && !stateIsEssentiallyBlank(res.state)){
+          var t = res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : '';
+          var msg = '⚠ 本機這個月份看起來是空的（沒有輸入任何值）\n'
+                  + '但雲端有資料（上次儲存：'+t+'）\n\n'
+                  + '按「確定」會把雲端覆蓋成空白\n'
+                  + '按「取消」放棄本次儲存（建議先按右上 ☁ 從雲端拉）';
+          if(!confirm(msg)){
+            setSyncChip('err', '☁ 已取消（本機空白）', '按 ☁ 從雲端拉再改');
+            if(showToastWhenOk) toast('已取消儲存，請先從雲端拉最新', 'warn');
+            return;
+          }
+        }
+        _doPushToCloud(showToastWhenOk);
+      })
+      .catch(function(){
+        _doPushToCloud(showToastWhenOk);
+      });
+    return;
+  }
+  _doPushToCloud(showToastWhenOk);
+}
+
+function _doPushToCloud(showToastWhenOk){
+  if(!STATE) return;
+  var url = getSyncUrl();
+  if(!url){ setSyncChip('off', '☁ 未設定', ''); return; }
   // debounce：500ms 內多次呼叫合併一次
   if(_pushTimer) clearTimeout(_pushTimer);
   _pushTimer = setTimeout(function(){
