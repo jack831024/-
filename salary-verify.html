@@ -941,8 +941,24 @@ function stateKey(ym){
   return 'cd_salary_verify_' + (STORE || 'nostore') + '_' + ym;
 }
 
+function syncedKey(ym){
+  return 'cd_salary_verify_synced_' + (STORE || 'nostore') + '_' + ym;
+}
+
+function loadSyncedSnapshotToMem(ym){
+  try { _lastSyncedJson = localStorage.getItem(syncedKey(ym)) || ''; }
+  catch(e){ _lastSyncedJson = ''; }
+}
+
+function persistSyncedSnapshot(){
+  if(!STATE) return;
+  try { localStorage.setItem(syncedKey(STATE.ym), snapshotJson()); } catch(e){}
+}
+
 function loadState(){
   var ym = getSelectedYM();
+  // 把這個月的「已同步 snapshot」從 localStorage 讀進記憶體
+  loadSyncedSnapshotToMem(ym);
   try {
     var raw = localStorage.getItem(stateKey(ym));
     if(raw){
@@ -956,11 +972,13 @@ function loadState(){
       if(!obj.activeEmp) obj.activeEmp = EMPLOYEES[0].id;
       STATE = obj;
       rebuildEmployeeLists();
+      if(!_lastSyncedJson){ _lastSyncedJson = snapshotJson(); }
       return;
     }
   } catch(e){ console.warn('load state fail', e); }
   STATE = blankState();
   rebuildEmployeeLists();
+  if(!_lastSyncedJson){ _lastSyncedJson = snapshotJson(); }
 }
 
 function saveAll(){
@@ -988,10 +1006,14 @@ function onMonthChange(){
   }
   loadState();
   render();
-  // 手動模式：切月「不」自動從雲端拉，避免蓋掉別台裝置改的
-  // 要看雲端最新版 → 手動按右上 ☁ 圖示
-  setSyncChip('off', '☁ 本機（未從雲端拉）', '按此從雲端讀最新版本');
-  markSynced();
+  // 載入新月份的「已同步 snapshot」後，判斷本機是否有未推上的變更
+  // 乾淨（本機 == snapshot）→ 自動從雲端拉最新，其他裝置就能即時看到
+  // 髒（本機 ≠ snapshot）→ 不拉，顯示「● 有未儲存」提醒使用者按 💾
+  if(isDirty()){
+    updateDirtyChip();
+  } else {
+    pullFromCloud(true);
+  }
 }
 
 // ============================================
@@ -2025,7 +2047,7 @@ function setSyncChip(state, text, title){
 var _lastSyncedJson = '';
 function snapshotJson(){ return STATE ? JSON.stringify(STATE) : ''; }
 function isDirty(){ return snapshotJson() !== _lastSyncedJson; }
-function markSynced(){ _lastSyncedJson = snapshotJson(); updateDirtyChip(); }
+function markSynced(){ _lastSyncedJson = snapshotJson(); persistSyncedSnapshot(); updateDirtyChip(); }
 function updateDirtyChip(){
   var btn = document.getElementById('save-btn');
   if(isDirty()){
@@ -2099,7 +2121,8 @@ function pullFromCloud(showToast){
         // 本月雲端沒資料 → 從最近月份抓 customEmployees 過來（給新月份/新裝置繼承）
         seedCustomEmployeesFromLatestMonth();
         setSyncChip('ok', '☁ 已連線（本月無雲端資料）', '改了東西按 💾 才會建立');
-        markSynced();
+        // 不呼叫 markSynced：若本機已有未推上的變更，isDirty 要保持 true 提醒使用者按 💾
+        updateDirtyChip();
         return;
       }
       // 雲端有資料 → 合併到 STATE（以雲端為主）
@@ -2211,16 +2234,19 @@ function initKpiMode(){
 // 啟動
 // ============================================
 initKpiMode();
-loadState();
+loadState();  // 內部會把 synced snapshot 讀進 _lastSyncedJson
 render();
-// 載入後先把當前狀態當成「已同步」基準（pullFromCloud 成功會再覆寫成雲端版）
-markSynced();
 // 顯示「🔄 從小結雲端匯入」按鈕
 setupSalesBonusUI();
 // 對帳模式：初次載入不自動匯入；營業額/評分/加班費 都要點按鈕
-// 手動模式：頁面載入「不」自動從雲端拉（避免蓋掉本機未存的變更）
-// 要看雲端最新版 → 手動按右上 ☁ 圖示
-setSyncChip('off', '☁ 本機（未從雲端拉）', '按此從雲端讀最新版本');
+// 載入時「有條件」自動拉雲端：
+// 乾淨（本機 == snapshot）→ 自動拉雲端
+// 髒（本機 ≠ snapshot）→ 不拉，顯示「● 有未儲存」提醒
+if(isDirty()){
+  updateDirtyChip();
+} else {
+  pullFromCloud(false);
+}
 
 // 防呆：如果 cd_store 沒設（例如直接打開 salary-verify.html，沒從 index 進入），
 // 給使用者明確訊息而不是默默失敗

@@ -1029,6 +1029,9 @@ function stateKey(ym){
 
 function loadState(){
   var ym = getSelectedYM();
+  // 把這個月的「已同步 snapshot」從 localStorage 讀進記憶體
+  // → isDirty 判斷才會跨 page load 準確
+  loadSyncedSnapshotToMem(ym);
   try {
     var raw = localStorage.getItem(stateKey(ym));
     if(raw){
@@ -1043,11 +1046,16 @@ function loadState(){
       if(!obj.activeEmp) obj.activeEmp = EMPLOYEES[0].id;
       STATE = obj;
       rebuildEmployeeLists();
+      // 舊版使用者（沒有 syncedKey）或新裝置首次開 → 補一份 snapshot 當基準
+      // 否則 isDirty 永遠 true，auto-pull 永遠跳過
+      if(!_lastSyncedJson){ _lastSyncedJson = snapshotJson(); }
       return;
     }
   } catch(e){ console.warn('load state fail', e); }
   STATE = blankState();
   rebuildEmployeeLists();
+  // 全新裝置：STATE 是 blankState，沒 snapshot → 把 blankState 當基準，才能 auto-pull
+  if(!_lastSyncedJson){ _lastSyncedJson = snapshotJson(); }
 }
 
 function saveAll(){
@@ -1075,10 +1083,14 @@ function onMonthChange(){
   }
   loadState();
   render();
-  // 手動模式：切月「不」自動從雲端拉，避免蓋掉別台裝置改的
-  // 要看雲端最新版 → 手動按右上 ☁ 圖示
-  setSyncChip('off', '☁ 本機（未從雲端拉）', '按此從雲端讀最新版本');
-  markSynced();
+  // 載入新月份的「已同步 snapshot」後，判斷本機是否有未推上的變更
+  // isDirty（本機狀態 ≠ snapshot）→ 不自動拉，避免覆蓋
+  // 乾淨（本機狀態 == snapshot）→ 自動從雲端拉最新，其他裝置就能即時看到
+  if(isDirty()){
+    updateDirtyChip();  // 會顯示「● 有未儲存」提醒使用者按 💾
+  } else {
+    pullFromCloud(true);
+  }
 }
 
 // ============================================
@@ -2216,8 +2228,26 @@ function setSyncChip(state, text, title){
 
 // ============================================
 // 髒資料追蹤：手動儲存模式必備
+// _lastSyncedJson 持久化到 localStorage，跨 page load / 跨裝置還能判斷
+// 這樣：切月份 / 載入頁面時，可安全自動 pull（已存的月份）；
+//      本機有未存變更時，不會自動 pull 覆蓋
 // ============================================
 var _lastSyncedJson = '';
+
+function syncedKey(ym){
+  return 'cd_salary_synced_' + (STORE || 'nostore') + '_' + ym;
+}
+
+function loadSyncedSnapshotToMem(ym){
+  try {
+    _lastSyncedJson = localStorage.getItem(syncedKey(ym)) || '';
+  } catch(e){ _lastSyncedJson = ''; }
+}
+
+function persistSyncedSnapshot(){
+  if(!STATE) return;
+  try { localStorage.setItem(syncedKey(STATE.ym), snapshotJson()); } catch(e){}
+}
 
 function snapshotJson(){
   return STATE ? JSON.stringify(STATE) : '';
@@ -2230,6 +2260,7 @@ function isDirty(){
 // 把目前狀態標記為「已同步」（push 或 pull 成功後呼叫）
 function markSynced(){
   _lastSyncedJson = snapshotJson();
+  persistSyncedSnapshot();
   updateDirtyChip();
 }
 
@@ -2302,7 +2333,9 @@ function pullFromCloud(showToast){
         // （這樣別台裝置新增的員工也能繼承過來）
         seedCustomEmployeesFromLatestMonth();
         setSyncChip('ok', '☁ 已連線（本月無雲端資料）', '改了東西按 💾 才會建立');
-        markSynced();
+        // 不呼叫 markSynced：若本機已有未推上的變更，isDirty 要保持 true 提醒使用者按 💾
+        // 若本機是空的，isDirty 本來就是 false，不會多出警告
+        updateDirtyChip();
         return;
       }
       // 雲端有資料 → 合併到 STATE（以雲端為主）
@@ -2418,16 +2451,19 @@ function initKpiMode(){
 // 啟動
 // ============================================
 initKpiMode();
-loadState();
+loadState();  // loadState 內會依持久化 snapshot 設定 _lastSyncedJson
 render();
-// 載入後先把當前狀態當成「已同步」基準（pullFromCloud 成功會再覆寫成雲端版）
-markSynced();
 // 顯示營業額獎金的「🔄 從小結雲端匯入」按鈕
 setupSalesBonusUI();
 // 初次載入：不自動匯入任何來源；營業額/評分/加班費 全都要點按鈕
-// 手動模式：頁面載入「不」自動從雲端拉（避免蓋掉本機未存的變更）
-// 使用者要看雲端最新版 → 手動按右上 ☁ 圖示
-setSyncChip('off', '☁ 本機（未從雲端拉）', '按此從雲端讀最新版本');
+// 載入時「有條件」自動拉雲端：
+// - 本機 == 已同步 snapshot（乾淨）→ 自動拉雲端（看別台剛存的）
+// - 本機 ≠ snapshot（有未推上雲端的變更）→ 不拉，顯示「● 有未儲存」提醒
+if(isDirty()){
+  updateDirtyChip();  // 會顯示「● 有未儲存」提醒
+} else {
+  pullFromCloud(false);
+}
 // 抓員工主檔當月在職名單（read-only，不會蓋 STATE）
 pullMasterRoster();
 
