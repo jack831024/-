@@ -753,11 +753,21 @@ function pullMasterRoster(attempt){
   var pw = EMP_MASTER_PW[STORE];
   if(!pw) return;   // 十城等主檔沒有 → 不動
   attempt = attempt || 1;
+  // 記住本機此刻是不是「真的乾淨」。若是乾淨 → 之後 rebuildEmployeeLists 加 slot 雖然會改 STATE，
+  // 也不該算 dirty（那只是加空槽，不是使用者輸入）
+  var wasClean = !isDirty();
   fetch(EMP_MASTER_URL, { method:'POST', body: JSON.stringify({ action:'getActiveRoster', args:[pw, STORE, ''] }) })
     .then(function(x){ return x.text(); })
     .then(function(txt){
       var r = null; try{ r = JSON.parse(txt); }catch(e){}
-      if(r && r.ok && Array.isArray(r.roster)){ MASTER_EMPS = r.roster; rebuildEmployeeLists(); render(); return; }
+      if(r && r.ok && Array.isArray(r.roster)){
+        MASTER_EMPS = r.roster;
+        rebuildEmployeeLists();
+        render();
+        // 加 slot 不算真的改動 → 若原本乾淨，就把這份當新基準，避免誤報「有未儲存」
+        if(wasClean) markSynced();
+        return;
+      }
       if(attempt < 4) setTimeout(function(){ pullMasterRoster(attempt+1); }, 900);
     })
     .catch(function(){ if(attempt < 4) setTimeout(function(){ pullMasterRoster(attempt+1); }, 900); });
@@ -1083,14 +1093,9 @@ function onMonthChange(){
   }
   loadState();
   render();
-  // 載入新月份的「已同步 snapshot」後，判斷本機是否有未推上的變更
-  // isDirty（本機狀態 ≠ snapshot）→ 不自動拉，避免覆蓋
-  // 乾淨（本機狀態 == snapshot）→ 自動從雲端拉最新，其他裝置就能即時看到
-  if(isDirty()){
-    updateDirtyChip();  // 會顯示「● 有未儲存」提醒使用者按 💾
-  } else {
-    pullFromCloud(true);
-  }
+  // 切月：一律從雲端拉最新（上面已經處理過「有未儲存要先存嗎」的 confirm）
+  // 避免「月份切來切去看到本機舊快取、誤以為要按儲存」的情境
+  pullFromCloud(true);
 }
 
 // ============================================
@@ -2334,27 +2339,38 @@ function pushToCloud(showToastWhenOk){
   var url = getSyncUrl();
   if(!url){ setSyncChip('off', '☁ 未設定', '點 ⚙️ 設定雲端網址'); return; }
 
-  // 🛡 防呆：本機 STATE 看起來是空的 → 先問雲端有沒有資料，若有則確認覆蓋
+  // 🛡 防呆：本機 STATE 看起來是空的 → 強制確認，不管雲端有沒有資料
   if(stateIsEssentiallyBlank(STATE)){
     setSyncChip('busy', '☁ 檢查雲端中…', '本機看似空白，確認是否覆蓋');
     callSalaryGAS('loadSalary', [getStorePassword(), STORE, getSelectedYM()])
       .then(function(res){
-        if(res && res.ok && res.found && res.state && !stateIsEssentiallyBlank(res.state)){
-          var t = res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : '';
-          var msg = '⚠ 本機這個月份看起來是空的（沒有輸入任何值）\n'
-                  + '但雲端有資料（上次儲存：'+t+'）\n\n'
-                  + '按「確定」會把雲端覆蓋成空白\n'
-                  + '按「取消」放棄本次儲存（建議先按右上 ☁ 從雲端拉）';
-          if(!confirm(msg)){
-            setSyncChip('err', '☁ 已取消（本機空白）', '按 ☁ 從雲端拉再改');
-            if(showToastWhenOk) toast('已取消儲存，請先從雲端拉最新', 'warn');
-            return;
-          }
+        var cloudHasData = res && res.ok && res.found && res.state && !stateIsEssentiallyBlank(res.state);
+        var t = (res && res.savedAt) ? new Date(res.savedAt).toLocaleString('zh-TW') : '';
+        var msg;
+        if(cloudHasData){
+          msg = '⚠⚠⚠ 危險！本機這個月份看起來是空的\n'
+              + '但雲端有資料（上次儲存：'+t+'）\n\n'
+              + '✘ 按「確定」= 把雲端覆蓋成空白（可能是別人輸入的資料會不見！）\n'
+              + '✔ 按「取消」= 不覆蓋（建議先按右上 ☁ 從雲端拉最新）\n\n'
+              + '若不確定，請按取消！';
+        } else {
+          msg = '⚠ 本機這個月份是空的（沒有輸入任何值）\n'
+              + '雲端也是空的，確定要儲存嗎？\n\n'
+              + '通常你應該要先輸入資料再按儲存。';
+        }
+        if(!confirm(msg)){
+          setSyncChip('err', '☁ 已取消（本機空白）', '按 ☁ 從雲端拉再改');
+          if(showToastWhenOk) toast('已取消儲存', 'warn');
+          return;
         }
         _doPushToCloud(showToastWhenOk);
       })
       .catch(function(){
-        // 讀雲端失敗 → 繼續原本流程
+        // 讀雲端失敗 → 保守做法：直接彈 confirm 不冒險
+        if(!confirm('⚠ 本機這個月份是空的\n無法確認雲端狀態（網路可能有問題）\n\n按「確定」仍要推上雲端（可能覆蓋別人資料）\n按「取消」不推（建議）')){
+          setSyncChip('err', '☁ 已取消（網路失敗）', '');
+          return;
+        }
         _doPushToCloud(showToastWhenOk);
       });
     return;
@@ -2408,9 +2424,10 @@ function pullFromCloud(showToast){
         // （這樣別台裝置新增的員工也能繼承過來）
         seedCustomEmployeesFromLatestMonth();
         setSyncChip('ok', '☁ 已連線（本月無雲端資料）', '改了東西按 💾 才會建立');
-        // 不呼叫 markSynced：若本機已有未推上的變更，isDirty 要保持 true 提醒使用者按 💾
-        // 若本機是空的，isDirty 本來就是 false，不會多出警告
-        updateDirtyChip();
+        // ✅ 既然雲端是空的，就把「現在這份本機 blank」當成「已同步基準」
+        //    → 避免 isDirty 常態 true → 避免別人誤以為要按 💾 → 避免再次覆蓋雲端
+        //    使用者真的輸入資料後才會變 dirty
+        markSynced();
         return;
       }
       // 雲端有資料 → 合併到 STATE（以雲端為主）
@@ -2531,14 +2548,9 @@ render();
 // 顯示營業額獎金的「🔄 從小結雲端匯入」按鈕
 setupSalesBonusUI();
 // 初次載入：不自動匯入任何來源；營業額/評分/加班費 全都要點按鈕
-// 載入時「有條件」自動拉雲端：
-// - 本機 == 已同步 snapshot（乾淨）→ 自動拉雲端（看別台剛存的）
-// - 本機 ≠ snapshot（有未推上雲端的變更）→ 不拉，顯示「● 有未儲存」提醒
-if(isDirty()){
-  updateDirtyChip();  // 會顯示「● 有未儲存」提醒
-} else {
-  pullFromCloud(false);
-}
+// 載入時「一律」從雲端拉最新（避免別台裝置看到本機舊快取、誤以為要按儲存）
+// 本機有未儲存變更的保護：pushToCloud 的 stateIsEssentiallyBlank 防呆會擋
+pullFromCloud(false);
 // 抓員工主檔當月在職名單（read-only，不會蓋 STATE）
 pullMasterRoster();
 
