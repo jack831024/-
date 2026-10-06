@@ -108,6 +108,12 @@ h1{font-size:24px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
       <span class="brand-label">CHUDIAN</span>
       <span class="name">新莊店</span>
     </button>
+    <!-- 2026-10 第四家店：目前只接上「計算加班費」，其他流程尚未建立北新店資料 → 先隱藏 -->
+    <button class="store-btn chudian beixin" style="display:none" onclick="selectStore('chudian-beixin','初殿北新店')">
+      <span class="icon-wrap">🍲</span>
+      <span class="brand-label">CHUDIAN</span>
+      <span class="name">北新店</span>
+    </button>
   </div>
 
   <p class="footer">© INTERNAL SYSTEM</p>
@@ -127,6 +133,11 @@ h1{font-size:24px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px;backg
   if(flow === 'employeeMaster'){
     var sc = document.querySelector('.store-btn.shicheng');
     if(sc) sc.style.display = 'none';
+  }
+  // 北新店：目前只開放「計算加班費」
+  if(flow === 'overtime'){
+    var bx = document.querySelector('.store-btn.beixin');
+    if(bx) bx.style.display = '';
   }
   var el = document.getElementById('flow-indicator');
   if(!flow){ return; }

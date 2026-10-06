@@ -422,6 +422,20 @@ var DEFAULT_SHIFTS = [
   { code:'休', name:'休假',   workIn:'',      workOut:'',      breakIn:'',      breakOut:'',      punches:0 }
 ];
 
+// 各店內建班別（沒有本機/雲端設定時的預設值）
+var STORE_DEFAULT_SHIFTS = {
+  // 北新店（取自 2026-10 班表下方班別說明；平日 A/C1/C/E、假日 A/B/C/D/E）
+  'chudian-beixin': [
+    { code:'A',  name:'A班',  workIn:'11:00', workOut:'21:00', breakIn:'14:00', breakOut:'15:00', punches:4 },
+    { code:'B',  name:'B班',  workIn:'11:30', workOut:'21:30', breakIn:'14:30', breakOut:'15:30', punches:4 },
+    { code:'C',  name:'C班',  workIn:'11:30', workOut:'22:30', breakIn:'15:00', breakOut:'17:00', punches:4 },
+    { code:'C1', name:'C1班', workIn:'11:30', workOut:'22:30', breakIn:'14:00', breakOut:'16:00', punches:4 },
+    { code:'D',  name:'D班',  workIn:'12:00', workOut:'22:30', breakIn:'15:30', breakOut:'17:00', punches:4 },
+    { code:'E',  name:'E班',  workIn:'13:00', workOut:'23:00', breakIn:'17:00', breakOut:'18:00', punches:4 },
+    { code:'休', name:'休假', workIn:'',      workOut:'',      breakIn:'',      breakOut:'',      punches:0 }
+  ]
+};
+
 var LS_KEY_SHIFTS = 'cd_ot_shifts_' + STORE;
 var LS_KEY_URL    = 'cd_ot_sync_url_' + STORE;
 var LS_KEY_URL_FALLBACK = 'cd_ot_sync_url';
@@ -438,7 +452,8 @@ var BUILTIN_OT_URLS = {
   'chudian-zhonghe':    'https://script.google.com/macros/s/AKfycbywaE2lU2yQkr2pBykks6Uq76RbI9uhy7fwwyv3vjkwjKCmwbkRzz_vwwV3H7MRQx00/exec',
   'chudian-yongchun':   'https://script.google.com/macros/s/AKfycbyeBOooaxsKRzJMHKJ6Wg3sXXzuxTVrDRdHon2sNpZ2FhFLtSz0rNu0qSOcNVtyuDUQ/exec',
   'chudian-xinzhuang':  'https://script.google.com/macros/s/AKfycbzJHJtGRvctit_PJei1lZyodzb4tPsg5_cghxARcUvHwFmhKEbDPf8AE_mjYs_OtWlX/exec',
-  'shicheng-zhongxiao': 'https://script.google.com/macros/s/AKfycbw9u5NK_GXlvI1R8tDdXI7lLKhnFjXsTEmC6QjmcC35lNZzxgp6Yk3wOdYdqsAOoYk/exec'
+  // 2026-10 北新店取代十城（十城已結束營業）；班表 = 「2026-北新店班表」，Apps Script 專案「北新店班表-加班費」
+  'chudian-beixin':     'https://script.google.com/macros/s/AKfycbwnVPOzkXLNwgIIwOYbdmFPtmeTukff2R2yL1l_Egb1XNYEyqyCIm2CJ2Qy04ARNJI/exec'
 };
 
 // ============================================
@@ -453,7 +468,7 @@ var PUNCH_STORE_MAP = {
   'chudian-zhonghe':    '中和店',
   'chudian-yongchun':   '永春店',
   'chudian-xinzhuang':  '新莊店',
-  'shicheng-zhongxiao': '十城滷肉飯'
+  'chudian-beixin':     '北新店'      // 打卡系統店家設定 store_id=BX
 };
 
 // 每次載入若該店有內建網址，自動寫入 localStorage（讓新裝置即用）
@@ -500,11 +515,8 @@ var NAME_MAP_BY_STORE = {
     // 洪晟育: 打卡記錄無對應
     '林詩縈': 'abby'
   },
-  'shicheng-zhongxiao': {
-    '王謖':   'wangsu',
-    '林哲民': 'abc',
-    '林梓彥': 'ziyan',
-    '陳柏維': 'michael'
+  'chudian-beixin': {
+    // 北新店：打卡資料已是中文名，與班表同名即可直接配對，不需對照
   }
 };
 
@@ -513,15 +525,10 @@ var NAME_MAP_BY_STORE = {
 // 邏輯：班表底下若有「開會」這一格 → SCHEDULE.events[d] = '開會'
 //   - A 班（code === 'A'）跟「其他人」上下班時間不一樣
 //   - 火鍋店（初殿）：開會日打卡 2 次（上班 + 下班，無休息卡）
-//   - 滷肉飯店（十城）：開會日打卡 3 次
 //   - 開會日只看遲到、不算加班費
 //   - code === '休' 的人開會日仍然休息，不套用
 // ============================================
 var MEETING_DAY_SHIFTS = {
-  'shicheng-zhongxiao': {
-    A:     { workIn:'14:00', workOut:'21:00', punches:3 },
-    other: { workIn:'15:00', workOut:'21:30', punches:3 }
-  },
   // 火鍋店改 2 次打卡（一次上班、一次下班）
   'chudian-zhonghe': {
     A:     { workIn:'14:30', workOut:'21:00', punches:2 },
@@ -532,6 +539,10 @@ var MEETING_DAY_SHIFTS = {
     other: { workIn:'15:00', workOut:'23:00', punches:2 }
   },
   'chudian-xinzhuang': {
+    A:     { workIn:'14:30', workOut:'21:00', punches:2 },
+    other: { workIn:'15:00', workOut:'23:00', punches:2 }
+  },
+  'chudian-beixin': {
     A:     { workIn:'14:30', workOut:'21:00', punches:2 },
     other: { workIn:'15:00', workOut:'23:00', punches:2 }
   }
@@ -666,7 +677,7 @@ function loadShifts(){
     var raw = localStorage.getItem(LS_KEY_SHIFTS);
     if(raw){ return JSON.parse(raw); }
   } catch(e){}
-  return JSON.parse(JSON.stringify(DEFAULT_SHIFTS));
+  return JSON.parse(JSON.stringify(STORE_DEFAULT_SHIFTS[STORE] || DEFAULT_SHIFTS));
 }
 
 function saveShifts(){
@@ -2169,7 +2180,7 @@ var STORE_PWS_FOR_LEAVEGIFT = {
   'chudian-zhonghe':    'a90369287',
   'chudian-yongchun':   'a94213054',
   'chudian-xinzhuang':  'a60749791',
-  'shicheng-zhongxiao': 'a61222042'
+  // 北新店：特休系統尚未建立該店資料 → 暫不推送（之後建好再補密碼）
 };
 function pushOTLeaveToCloud(payload){
   if(!STORE || !payload || !payload.ym) return;
