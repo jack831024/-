@@ -474,11 +474,12 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.09.29-01';
+var APP_VERSION = '2026.10.06-01';
 
 // ⭐ 每個 fetch 的 timeout（毫秒）：超過就 abort，避免 Apps Script/Google 網路抽風時無限等
-//   放最頂端是因為 fetchMasterRoster 在頁面 init 時就會用到（比 fetchJsonRetry 早）
-var FETCH_TIMEOUT_MS = 15000;
+//   15s → 30s：Apps Script cold-start / 流量尖峰時單次會超過 15s，造成「每次等 15 秒 × 3 次都失敗」
+//   實測正常 2 秒內回應，cold-start 可能 20-25 秒，給 30 秒安全邊際
+var FETCH_TIMEOUT_MS = 30000;
 
 // ============================================
 // ⭐ 內建設定（員工免設定）
@@ -880,10 +881,7 @@ async function callModelOnce(model, key, parts){
   }
 
   // 給所有路徑通用的低 temperature 設定（讓辨識數字更穩定）
-  // ⭐ thinkingBudget: 0 — 關掉 Gemini 2.5 系列預設開啟的 "thinking mode"
-  //   OCR / 抽數字這種簡單任務不需要「思考」5-10 秒，關掉直接省時
-  //   對舊模型（1.5、2.0、flash-latest 別名）這個欄位會被忽略，不會出錯
-  var genConfig = { temperature: 0, topP: 0.1, topK: 1, thinkingConfig: { thinkingBudget: 0 } };
+  var genConfig = { temperature: 0, topP: 0.1, topK: 1 };
 
   // ========== 1) 優先：直接呼叫 Gemini（KEY 已寫死在 BUILTIN_GEMINI_KEY）==========
   if(directKey && !DIRECT_CALL_DISABLED){
@@ -956,12 +954,12 @@ async function geminiCall(imageFiles, promptText){
     throw new Error('尚未設定任何 Gemini 路徑，請聯絡管理員');
   }
 
-  // ⭐ 平行 base64 化 — 之前每張圖依序 await 解一次，多張圖時間累加
-  //   Promise.all → N 張圖同時解碼，總耗時 ≈ 最慢那張
-  var parts = await Promise.all(imageFiles.map(async function(f){
+  var parts = [];
+  for(var i = 0; i < imageFiles.length; i++){
+    var f = imageFiles[i];
     var b64 = await toB64(f);
-    return { inline_data: { mime_type: f.type || 'image/jpeg', data: b64 } };
-  }));
+    parts.push({inline_data: {mime_type: f.type || 'image/jpeg', data: b64}});
+  }
   parts.push({text: promptText});
 
   var primary = localStorage.getItem('cd_gemini_model') || 'gemini-flash-latest';
@@ -2089,21 +2087,7 @@ function recalc(){
   } else { sDz.textContent = '—'; sDz.className = 'status neutral'; }
 
   recalcNextDay();
-
-  // ⭐ 開箱金額 vs 前一天明日開箱 — 這條之前只出現在 UI 小提示，沒進「所有項目確認無誤」判定
-  //   結果 AI 讀錯開箱時、下面卻顯示「所有項目確認無誤」誤導使用者
-  var opOk = null;
-  try{
-    var _todayD = document.getElementById('record-date');
-    var _openingVal = parseFloat(document.getElementById('i-opening').value);
-    var _prevNext = (_todayD && _todayD.value) ? getPrevDayNextOpening(_todayD.value) : null;
-    if(!isNaN(_openingVal) && _prevNext != null){
-      opOk = Math.abs(_openingVal - _prevNext) < 1;
-    }
-  }catch(_){}
-
   var errors = [];
-  if(opOk === false) errors.push('開箱金額對不上前一天明日開箱');
   if(wOk === false) errors.push('提現金額不一致');
   if(dOk === false) errors.push('代收金額不一致');
   if(jpOk === false) errors.push('全支付金額不一致');
@@ -2112,7 +2096,7 @@ function recalc(){
   if(cnOk === false) errors.push('取消單金額不一致');
   if(dzOk === false) errors.push('代支金額不一致');
   var ra = document.getElementById('result-area');
-  var hasAny = opOk !== null || wOk !== null || dOk !== null || jpOk !== null || jkOk !== null || rfOk !== null || cnOk !== null || dzOk !== null;
+  var hasAny = wOk !== null || dOk !== null || jpOk !== null || jkOk !== null || rfOk !== null || cnOk !== null || dzOk !== null;
   if(!hasAny){ ra.innerHTML = ''; return; }
   if(errors.length === 0){
     ra.innerHTML = '<div class="result-box result-ok"><p class="rtitle">所有項目確認無誤</p></div>';
@@ -2197,24 +2181,6 @@ function collectData(){
   });
   var nd = document.getElementById('no-deposit');
   if(nd) data.noDeposit = nd.checked;
-  // ⭐ 存入「今日開箱 vs 前一天明日開箱」驗算結果，讓下游（LINE bot / 報表）能檢查
-  //   之前這個比對只出現在 UI 提示，沒進紀錄 → LINE 「全數通過」不會抓到開箱寫錯
-  try{
-    var todayDate = document.getElementById('record-date') && document.getElementById('record-date').value;
-    var openingVal = parseFloat(data.inputs['i-opening']);
-    var prevNext = todayDate ? getPrevDayNextOpening(todayDate) : null;
-    if(!isNaN(openingVal) && prevNext != null){
-      var diff = Math.round(openingVal - prevNext);
-      data.openingCheck = {
-        prevExpected: Math.round(prevNext),
-        currentOpening: Math.round(openingVal),
-        diff: diff,
-        match: Math.abs(diff) < 1
-      };
-    } else if(prevNext != null){
-      data.openingCheck = { prevExpected: Math.round(prevNext), currentOpening: null, diff: null, match: null };
-    }
-  }catch(e){ /* getPrevDayNextOpening 可能還沒定義好，靜默略過 */ }
   return data;
 }
 
@@ -2506,26 +2472,6 @@ async function manualResync(){
     alert('⚠️ 雲端圖片還在載入中，請等載入完再儲存（避免把已上傳的圖蓋掉）');
     return;
   }
-  // ⭐ 防呆：今日開箱 vs 前一天明日開箱不一致 → 跳確認框強迫使用者面對
-  //   之前只有 UI 上小字提示、使用者容易略過 → LINE 報表就跟著錯
-  try{
-    var _todayDate = document.getElementById('record-date') && document.getElementById('record-date').value;
-    var _openingVal = parseFloat(document.getElementById('i-opening').value);
-    var _prevNext = _todayDate ? getPrevDayNextOpening(_todayDate) : null;
-    if(!isNaN(_openingVal) && _prevNext != null && Math.abs(_openingVal - _prevNext) >= 1){
-      var _diff = Math.round(_openingVal - _prevNext);
-      var _msg = '⚠️ 開箱金額對不上前一天！\n\n' +
-                 '今日開箱：NT$ ' + fmt(_openingVal) + '\n' +
-                 '前一天明日開箱：NT$ ' + fmt(_prevNext) + '\n' +
-                 '差額：' + (_diff > 0 ? '+' : '') + 'NT$ ' + fmt(_diff) + '\n\n' +
-                 '可能原因：\n' +
-                 '  • AI 讀錯開箱金額（最常見）\n' +
-                 '  • 前一天存款金額或預期錢櫃記錯\n' +
-                 '  • 昨晚跟今早之間錢櫃真的有動過\n\n' +
-                 '確定要就這樣存下去嗎？（存下去 LINE 報表會顯示不一致）';
-      if(!confirm(_msg)) return;
-    }
-  }catch(_){}
   _manualSaving = true;
   var hasNewImages = _imagesDirty;
   if(hasNewImages){
@@ -2619,70 +2565,15 @@ function refreshBonusLockState(){
   if(lockBtn) lockBtn.style.display = unlocked ? 'inline-block' : 'none';
 }
 
-// 背景 pull 完成後，若這天內容改了就決定要不要靜默套用
-//   - 使用者沒編輯過（!_hasUnsavedChanges）→ 靜默套用最新資料 + 更新圖片
-//   - 使用者已編輯 → 不動，只在 sync-badge 顯示提示、避免蓋掉未存的變更
-function _kickBackgroundPullReconcile(date, beforeSavedAt, localFileIdBefore){
-  pullCloudOverwriteLocal().then(function(){
-    // 若使用者已切走這個日期，別套錯
-    var recordDateEl = document.getElementById('record-date');
-    if(!recordDateEl || recordDateEl.value !== date) return;
-
-    var newR = getAllRecords()[date];
-    if(!newR) return;
-    var newSavedAt = newR.savedAt || '';
-    if(newSavedAt === beforeSavedAt) return;  // 雲端沒更新 → 什麼都不用做
-
-    if(_hasUnsavedChanges){
-      // 使用者已編輯 → 不覆蓋，只提示
-      setSyncBadge('⚠️ 雲端有其他裝置存的新版，你目前的編輯不會被覆蓋');
-      return;
-    }
-
-    // 使用者沒編輯 → 靜默套用
-    console.log('[loadRecord] 背景 pull 到更新版，靜默套用');
-    applyData(newR.data);
-    updateSavedTag(date);
-    onOpeningChange();
-    recalc(); recalcNextDay(); recalcMonthly(); recalcStaffBonus();
-
-    // 圖片 fileId 有變 → 重載
-    if(newR.imageFileId && newR.imageFileId !== localFileIdBefore){
-      cloudGetImages(newR.imageFileId).then(function(images){
-        if(!images) return;
-        var recordDateEl2 = document.getElementById('record-date');
-        if(recordDateEl2 && recordDateEl2.value === date && !_hasUnsavedChanges){
-          applyImages(images);
-          setSyncBadge('☁️ 已同步（雲端更新）');
-        }
-      }).catch(function(){/* 圖片失敗保留原本的，靜默 */});
-    } else {
-      setSyncBadge('☁️ 已同步（雲端更新）');
-    }
-  }).catch(function(e){
-    console.warn('[loadRecord] 背景 pull 失敗（本機資料仍可用）：', e);
-    // 本機資料仍可用、不打擾使用者
-  });
-}
-
 async function loadRecord(date, opts){
   opts = opts || {};
   var syncUrl = localStorage.getItem('cd_sync_url');
 
-  // ⭐⭐⭐ 樂觀載入策略（重大 UX 優化）
-  //   之前：每次切日期都要等 pullCloudOverwriteLocal 完成才顯示（5-15 秒，冷啟動更久）
-  //   現在：先看本機有沒有 → 有就立刻顯示；雲端 pull 放背景跑
-  //         背景 pull 完後：若使用者沒動過畫面就靜默套用新版；若動過就給徽章提示不覆蓋
-  //   對「本機沒這天」的情況（例如剛切到未來日期）維持原本 blocking 行為
-  var records = getAllRecords();
-  var r = records[date];
-  var localFileIdBefore = (r || {}).imageFileId || '';
-  var beforeSavedAt = (r || {}).savedAt || '';
-
-  var canOptimistic = !!r && !opts.skipCloudPull && syncUrl;
-  var mustWaitPull = !r && !opts.skipCloudPull && syncUrl;
-
-  // 平行提早下載圖片（本機已知 fileId）
+  // ⭐⭐ 平行加速：先拿「本機已知的 fileId」提早開始下載圖片，
+  //   同時另一條線去 pullCloudOverwriteLocal 拉最新紀錄。
+  //   如果 pull 後 fileId 沒變（絕大多數情況）→ 直接用 prefetch 的圖，等於同步跟下載平行跑
+  //   如果 fileId 變了（別台剛更新過圖）→ prefetch 白跑，重抓新 fileId 的圖
+  var localFileIdBefore = (getAllRecords()[date] || {}).imageFileId || '';
   var imagesPrefetch = null;
   if(localFileIdBefore && syncUrl){
     imagesPrefetch = cloudGetImages(localFileIdBefore).catch(function(e){
@@ -2691,21 +2582,17 @@ async function loadRecord(date, opts){
     });
   }
 
-  if(mustWaitPull){
-    // 本機沒這天 → 必須等 pull 才知道雲端有沒有
-    showLoading('☁️ 同步雲端', '正在拉取 ' + date + ' 資料...');
+  // ⭐ 多裝置最新優先：開啟一個日期前，先從雲端拉這個 store 的最新紀錄覆蓋本機
+  //   （opts.skipCloudPull 是給「剛剛才 syncFromCloud 過、不必再拉一次」的呼叫端用）
+  if(!opts.skipCloudPull && syncUrl){
+    // 若 cloudLoad 快取還新鮮（10 秒內拉過），連 loading UI 都不用閃 → 切日期秒開
+    var cacheFresh = _cloudLoadCache.records && (Date.now() - _cloudLoadCache.at) < _CLOUD_LOAD_TTL_MS;
+    if(!cacheFresh) showLoading('☁️ 同步雲端', '正在拉取 ' + date + ' 最新版本（避免裝置間舊版互蓋）...');
     await pullCloudOverwriteLocal();
-    records = getAllRecords();
-    r = records[date];
-    if(!r){ hideLoading(); return false; }
-  } else if(canOptimistic){
-    // ⭐ 樂觀路徑：本機有 → 立刻顯示；pull 放背景、之後靜默 reconcile
-    _kickBackgroundPullReconcile(date, beforeSavedAt, localFileIdBefore);
-  } else if(!r){
-    // 沒設雲端 + 本機也沒 → 直接回 false
-    hideLoading();
-    return false;
   }
+  var records = getAllRecords();
+  var r = records[date];
+  if(!r){ hideLoading(); return false; }
   // ⭐ 載入新紀錄前先標記「圖還沒載入」，避免任何 autoSave 在這空檔送出 keepImages=false 誤刪 Drive 檔
   _imagesLoaded = false;
   _imagesDirty = false;
@@ -2992,16 +2879,14 @@ function _compressImageOnce(file, targetBytes){
       try{
         var canvas = document.createElement('canvas');
         var w = img.width, h = img.height;
-        // ⭐ 壓縮更兇 — maxDim 1600→1024（AI 識別數字不需要 1600px），檔案大小約 -60%
-        //   上傳 / Gemini 處理 / Drive 儲存所有階段都變快
-        var maxDim = 1024;
+        var maxDim = 1600;
         if(w > maxDim || h > maxDim){
           var r = Math.min(maxDim/w, maxDim/h);
           w = Math.round(w * r); h = Math.round(h * r);
         }
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        var q = 0.80;
+        var q = 0.85;
         var url = canvas.toDataURL('image/jpeg', q);
         // base64 約占 1.37 倍實際位元組
         while(url.length * 0.75 > targetBytes && q > 0.35){
@@ -3028,8 +2913,7 @@ function _compressImageOnce(file, targetBytes){
 
 // 壓縮一張圖：失敗自動重試一次（手機端常因記憶體瞬間吃緊而第一次失敗、第二次成功）
 function compressImage(file, targetBytes){
-  // ⭐ 壓縮目標 300KB → 150KB — 數字識別不需要那麼高畫質，上傳快 2 倍
-  if(!targetBytes) targetBytes = 150 * 1024;
+  if(!targetBytes) targetBytes = 300 * 1024;
   return _compressImageOnce(file, targetBytes).catch(function(e){
     console.warn('compressImage 第一次失敗，0.3 秒後重試一次：', e);
     return new Promise(function(r){ setTimeout(r, 300); })
@@ -3139,12 +3023,13 @@ function setSyncBadge(text){
 // 例：cloudSave 上傳大圖 → 傳 { timeoutMs: 60000, attempts: [0, 2000] }
 async function fetchJsonRetry(url, fetchOpts, label, config){
   config = config || {};
-  var attempts = config.attempts || [0, 500, 1500];  // 預設 3 次：立即 / 0.5s / 1.5s
+  // 預設 3 次：立即 / 3s 後 / 8s 後
+  // 間隔拉長：Apps Script cold-start 時第一次還沒結束，第二次間隔太短會撞到同一個卡住的執行
+  var attempts = config.attempts || [0, 3000, 8000];
   // ⭐ 進度式 timeout — 第一次短（快失敗）、後續長（給冷啟動時間）
-  //   之前每次都用同樣 timeout；現在若 caller 傳 perAttemptTimeouts 就每次不同
-  //   預設沿用 timeoutMs（單一值）維持向後相容
+  //   caller 可傳 perAttemptTimeouts e.g. [15000, 30000, 45000]，否則都用 timeoutMs
   var timeoutMs = config.timeoutMs || FETCH_TIMEOUT_MS;
-  var perAttemptTimeouts = config.perAttemptTimeouts;  // e.g. [6000, 15000, 30000]
+  var perAttemptTimeouts = config.perAttemptTimeouts;
   var lastErr;
   var abortedByTimeout = false;
   for(var i = 0; i < attempts.length; i++){
@@ -3192,7 +3077,8 @@ async function fetchJsonRetry(url, fetchOpts, label, config){
   }
   // ⭐ 最後全部失敗 → 拋出看得懂的錯誤訊息（不要拋原生 "Fetch is aborted"）
   if(abortedByTimeout){
-    throw new Error('伺服器逾時未回應（每次等 ' + (timeoutMs/1000) + ' 秒 × ' + attempts.length + ' 次都失敗）。可能是網路慢或 Apps Script 暫時異常，請稍後再試一次。');
+    var timeoutDesc = perAttemptTimeouts ? perAttemptTimeouts.map(function(t){return (t/1000)+'s';}).join('/') : (timeoutMs/1000) + '秒';
+    throw new Error('伺服器逾時未回應（每次等 ' + timeoutDesc + ' × ' + attempts.length + ' 次都失敗）。可能是網路慢或 Apps Script 暫時異常，請稍後再試一次。');
   }
   throw lastErr || new Error('fetchJsonRetry 全部失敗');
 }
@@ -3256,12 +3142,8 @@ var _cloudLoadCache = { at: 0, records: null };
 var _CLOUD_LOAD_TTL_MS = 10000;
 // ⭐ 增量同步：記住上次拉到的最新 savedAt，之後只跟後端要「比這新的」紀錄
 //   首次拉全部 (可能 1MB+)；後續 payload 通常 0-2 KB → 快 10-100 倍
-//   ⭐⭐ localStorage 持久化：即使 F5、關頁面再開，cursor 都不會遺失
-//     → 之前 F5 每次都變全量拉、常常 timeout 的 bug 的根治
-function _cursorKey(){ return 'cd_load_cursor_' + (STORE_ID || 'default'); }
-var _cloudLoadSinceCursor = (function(){
-  try{ return localStorage.getItem(_cursorKey()) || ''; }catch(_){ return ''; }
-})();
+//   forceFresh=true 或 cloudSave 後會清掉，回到首次拉全部的狀態
+var _cloudLoadSinceCursor = '';
 
 async function cloudLoad(opts){
   opts = opts || {};
@@ -3271,23 +3153,13 @@ async function cloudLoad(opts){
   }
   var url = localStorage.getItem('cd_sync_url');
   if(!url) throw new Error('未設定同步網址');
-  // ⭐ 頁面剛載入時 in-memory 快取是空的、但 localStorage 有歷史紀錄
-  //   → hydrate 一下讓 canIncremental 可以生效（免全量拉）
-  if(!_cloudLoadCache.records){
-    var persisted = getAllRecords();
-    if(Object.keys(persisted).length > 0){
-      _cloudLoadCache.records = persisted;  // 只補 records，at=0 讓後面的 TTL 判斷仍認定要 refetch
-    }
-  }
-  // 有 cursor + 有 records → 增量；否則全量拉
+  // 有 cursor + 有快取 → 增量；否則全量拉
   var canIncremental = !opts.forceFresh && _cloudLoadSinceCursor && _cloudLoadCache.records;
   var q = '?action=list&store=' + encodeURIComponent(STORE_ID) + '&ts=' + now;
   if(canIncremental) q += '&since=' + encodeURIComponent(_cloudLoadSinceCursor);
-  // ⭐ 進度式 timeout：第一次短（快失敗、常常會成功）、後續給更長時間吃 cold start
-  //   增量：6s → 12s → 20s（payload 幾 KB，第一次通常秒開；抽風才會走到第 3 次）
-  //   全量：10s → 20s → 40s（讀整份 sheet 加冷啟動最多可到 30+s）
-  var perAttemptTimeouts = canIncremental ? [6000, 12000, 20000] : [10000, 20000, 40000];
-  var d = await fetchJsonRetry(url + q, {}, canIncremental ? 'cloudLoad(inc)' : 'cloudLoad(full)', { perAttemptTimeouts: perAttemptTimeouts });
+  // ⭐ 進度式 timeout：第一次 15s（快失敗，網路爛不用等太久）、第二次 30s、第三次 45s（給冷啟動）
+  var d = await fetchJsonRetry(url + q, {}, canIncremental ? 'cloudLoad(inc)' : 'cloudLoad(full)',
+    { perAttemptTimeouts: [15000, 30000, 45000] });
   if(d.error) throw new Error(d.error);
   var delta = d.records || {};
   var fullRecords;
@@ -3300,11 +3172,8 @@ async function cloudLoad(opts){
     fullRecords = delta;
   }
   _cloudLoadCache = { at: now, records: fullRecords };
-  // 記住這次拉到的最新 savedAt，下次可用來增量（同時持久化到 localStorage 讓 F5 也有效）
-  if(d.latestSavedAt){
-    _cloudLoadSinceCursor = d.latestSavedAt;
-    try{ localStorage.setItem(_cursorKey(), d.latestSavedAt); }catch(_){}
-  }
+  // 記住這次拉到的最新 savedAt，下次可用來增量
+  if(d.latestSavedAt) _cloudLoadSinceCursor = d.latestSavedAt;
   return fullRecords;
 }
 
@@ -3428,19 +3297,6 @@ async function syncFromCloud(){
   renderHistoryList();
 
   var syncUrl = localStorage.getItem('cd_sync_url');
-
-  // ⭐ Warm-up ping — 開頁面時立刻打一發輕量 GET 喚醒 Apps Script
-  //   之後使用者按存、切日期時 Apps Script 已經熱著、不用等冷啟動 5-10 秒
-  //   這個 request 不 await、不用等它完成、失敗也不影響任何流程
-  if(syncUrl){
-    try{
-      var warmupUrl = syncUrl + '?action=list&store=' + encodeURIComponent(STORE_ID || 'default') + '&since=9999&ts=' + Date.now();
-      fetch(warmupUrl, { method: 'GET', signal: (typeof AbortController !== 'undefined' ? (function(){ var c = new AbortController(); setTimeout(function(){ try{c.abort();}catch(_){}} , 20000); return c.signal; })() : undefined) })
-        .then(function(){ console.log('[warmup] Apps Script 已喚醒'); })
-        .catch(function(){ /* 失敗無所謂，只是熱身 */ });
-    }catch(_){}
-  }
-
   if(syncUrl){
     // 有同步：從雲端拉最新資料
     showLoading('☁️ 載入雲端資料', '正在從 Google Sheet 拉取所有歷史紀錄...');
