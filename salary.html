@@ -1083,18 +1083,14 @@ function saveAll(){
 }
 
 // 切月份時：只存本機 cache，不推雲端（手動儲存才會推）
+// 不彈 confirm — 誤判 dirty 的裝置會讓人誤按確定，導致空白資料推上雲端
 function onMonthChange(){
   if(STATE){
-    if(isDirty()){
-      var ok = confirm('當前月份有未儲存到雲端的變更，要先儲存嗎？\n\n按「確定」先儲存到雲端再切月\n按「取消」直接切月（變更只存本機）');
-      if(ok){ saveAll(); }
-    }
     try { localStorage.setItem(stateKey(STATE.ym), JSON.stringify(STATE)); } catch(e){}
   }
   loadState();
   render();
-  // 切月：一律從雲端拉最新（上面已經處理過「有未儲存要先存嗎」的 confirm）
-  // 避免「月份切來切去看到本機舊快取、誤以為要按儲存」的情境
+  // 切月：一律從雲端拉最新（新月份顯示別台裝置剛存的資料）
   pullFromCloud(true);
 }
 
