@@ -1767,6 +1767,51 @@ function setSyncChip(state, text, title){
   if(title) chip.title = title;
 }
 
+// 📸 寫試算表快照：把當前「特休 / 旅遊假」計算結果寫到「特休快照 / 旅遊假快照」兩張表
+//   每次成功 push STATE 之後自動呼叫，讓試算表本身也能查到員工目前狀況（資料遺失可當備援）
+function pushLeaveSnapshot(){
+  try {
+    if(!INIT_LOADED || !STATE) return;
+    var annualRows = [];
+    var travelRows = [];
+    var noTravel = !!STORES_WITHOUT_TRAVEL[STORE];
+    var noGift   = !!STORES_WITHOUT_GIFT[STORE];
+    var ft = activeInSelected(ftOnly());
+    ft.forEach(function(e){
+      var tenure = tenureYears(e.hireDate).toFixed(1)+' 年';
+      var a = calcAnnual(e);
+      var aYearUsed = a.fromOTDates.length + a.fromOTHalfDates.length * 0.5;
+      var aDates = a.fromOTDates.map(function(d){return fmtMD(d);})
+                   .concat(a.fromOTHalfDates.map(function(d){return fmtMD(d)+'(半)';})).join(', ');
+      annualRows.push([
+        STORE_NAME, e.name, e.hireDate || '', tenure,
+        a.accrued, a.initialUsed || 0,
+        aYearUsed, Math.max(0, a.accrued - a.used), aDates
+      ]);
+      if(!noTravel){
+        var t = calcTravel(e);
+        var tYearUsed = t.fromOTDates.length + t.fromOTHalfDates.length * 0.5;
+        var tDates = t.fromOTDates.map(function(d){return fmtMD(d);})
+                     .concat(t.fromOTHalfDates.map(function(d){return fmtMD(d)+'(半)';})).join(', ');
+        travelRows.push([
+          STORE_NAME, e.name, e.hireDate || '',
+          t.entitlement, t.initialUsed || 0,
+          tYearUsed, Math.max(0, t.entitlement - t.used), tDates
+        ]);
+      }
+    });
+    callGAS('writeLeaveSnapshot', [getStorePassword(), STORE, annualRows, travelRows])
+      .then(function(res){
+        if(res && res.ok){
+          console.log('[特休快照] 已寫入試算表：特休 '+res.annual+' 列、旅遊假 '+res.travel+' 列');
+        } else {
+          console.warn('[特休快照] 寫入失敗：', res);
+        }
+      })
+      .catch(function(err){ console.warn('[特休快照] 連線失敗：', err); });
+  } catch (e){ console.warn('[特休快照] 準備失敗：', e); }
+}
+
 var _pushTimer = null;
 function pushToCloud(showToastWhenOk){
   if(!STATE) return;
@@ -1788,6 +1833,8 @@ function pushToCloud(showToastWhenOk){
           PENDING_GIFT_COUNT = 0;
           var fab = document.getElementById('save-fab');
           if(fab) fab.classList.remove('show');
+          // 📸 也把當前特休/旅遊假快照寫到試算表
+          pushLeaveSnapshot();
           if(showToastWhenOk){
             showNotice('已上傳雲端', '所有變更已同步到雲端');
           }
@@ -1825,6 +1872,7 @@ function pushToCloudNow(){
         PENDING_GIFT_COUNT = 0;
         var fab = document.getElementById('save-fab');
         if(fab) fab.classList.remove('show');
+        pushLeaveSnapshot();   // 📸 寫快照到試算表
         return res;
       }
       var err = new Error((res && res.error) || '雲端回覆失敗');

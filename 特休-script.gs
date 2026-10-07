@@ -106,6 +106,7 @@ function doPost(e) {
       case 'loadOTLeave':     res = loadOTLeave(args[0], args[1]); break;
       case 'restoreGiftHistoryFromLog': res = restoreGiftHistoryFromLog(args[0], args[1]); break;
       case 'undoRestoreGiftHistory':    res = undoRestoreGiftHistory(args[0], args[1]);    break;
+      case 'writeLeaveSnapshot':        res = writeLeaveSnapshot(args[0], args[1], args[2], args[3]); break;
       // 舊介面（保留向後相容）
       case 'saveLeave':  res = saveLeave(args[0], args[1], args[2], args[3]); break;
       case 'loadLeave':  res = loadLeave(args[0], args[1], args[2]);          break;
@@ -481,6 +482,70 @@ function undoRestoreGiftHistory(password, store){
     return { ok: true, removed: removed, byEmp: removedByEmp };
   } catch (err){
     return { ok: false, error: String(err) };
+  }
+}
+
+
+// ============================================
+// 📸 writeLeaveSnapshot — 把前端計算好的「特休 / 旅遊假」快照寫到試算表
+//   讓試算表本身就能查「每位員工目前特休/旅遊假狀況」，資料遺失時可以當備援
+//   args: password, store, annualRows, travelRows
+//     annualRows = [[store, name, hireDate, tenure, accrued, usedBefore, usedYear, remaining, datesStr], ...]
+//     travelRows = [[store, name, hireDate, entitlement, usedBefore, usedYear, remaining, datesStr], ...]
+// ============================================
+var ANNUAL_SNAPSHOT_HEADERS = ['更新時間','店','員工','到職日','年資','總累計','2026/4 以前已用','2026 年已用','剩餘','2026 年日期'];
+var TRAVEL_SNAPSHOT_HEADERS = ['更新時間','店','員工','到職日','本年可用','2026/4 以前已用','2026 年已用','剩餘','2026 年日期'];
+
+function writeLeaveSnapshot(password, store, annualRows, travelRows){
+  try {
+    if (VALID_STORES.indexOf(store) === -1) return { ok: false, error: '無效的店家：' + store };
+    if (!_verifyFor(password, store))       return { ok: false, error: 'unauthorized' };
+    var ss = SpreadsheetApp.openById(LEAVE_SHEET_ID);
+    var annualSheet = _ensureSnapshotSheet(ss, '特休快照', ANNUAL_SNAPSHOT_HEADERS);
+    var travelSheet = _ensureSnapshotSheet(ss, '旅遊假快照', TRAVEL_SNAPSHOT_HEADERS);
+    _replaceSnapshotRowsForStore(annualSheet, store, annualRows || []);
+    _replaceSnapshotRowsForStore(travelSheet, store, travelRows || []);
+    return { ok: true, annual: (annualRows || []).length, travel: (travelRows || []).length };
+  } catch (err){
+    return { ok: false, error: String(err) };
+  }
+}
+
+function _ensureSnapshotSheet(ss, name, headers){
+  var sh = ss.getSheetByName(name);
+  if (!sh){
+    sh = ss.insertSheet(name);
+    sh.appendRow(headers);
+    sh.setFrozenRows(1);
+    for (var i = 0; i < headers.length; i++){
+      sh.setColumnWidth(i + 1, i === 0 ? 155 : (i === headers.length - 1 ? 320 : 100));
+    }
+    // header 樣式
+    var hdr = sh.getRange(1, 1, 1, headers.length);
+    hdr.setBackground('#f3f4f6').setFontWeight('bold').setHorizontalAlignment('center');
+  }
+  return sh;
+}
+
+function _replaceSnapshotRowsForStore(sheet, store, rows){
+  var data = sheet.getDataRange().getValues();
+  var header = data[0];
+  var keep = [];
+  for (var i = 1; i < data.length; i++){
+    if (String(data[i][1]) !== store) keep.push(data[i]);
+  }
+  var now = new Date();
+  rows.forEach(function(r){
+    // r = [store, name, hireDate, ...]；前面補 updateTime
+    keep.push([now].concat(r));
+  });
+  // 清空舊內容
+  if (data.length > 1){
+    sheet.getRange(2, 1, data.length - 1, header.length).clearContent();
+  }
+  // 寫回所有保留的列
+  if (keep.length){
+    sheet.getRange(2, 1, keep.length, header.length).setValues(keep);
   }
 }
 
