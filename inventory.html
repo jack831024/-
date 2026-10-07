@@ -711,7 +711,9 @@ function vendorDeletionsKey(){ return 'cd_vendor_deleted_' + STORE_ID; }
 
 // ⭐ 月度盤點表 picker 切月份 → 同時：
 //   1. 更新 currentVendorMonth，讓廠商清單依「刪除月份」過濾重畫
-//   2. 呼叫 loadHistory 拉該月盤點資料
+//   2. 呼叫 loadHistory 拉該月盤點資料（當前廠商）
+//   3. 強制重拉該月的「所有廠商成本/營業額/人事成本」雲端最新資料
+//      → 利潤顯示才會跟其他裝置一致、不會被 10 分鐘 cache 卡住
 // （以前有獨立的 vendor-month-picker，已刪除，改用這顆一顆控制兩者）
 function onMonthPickerChange(){
   var picker = document.getElementById('month-picker');
@@ -722,9 +724,22 @@ function onMonthPickerChange(){
     try{ renderVendorGrid(brand); }catch(e){}
   }
   if(typeof loadHistory === 'function') loadHistory();
+  if(typeof refreshAllAnalysisData === 'function') refreshAllAnalysisData(newYm);
 }
 // 保留舊 API 名稱，避免有其他地方呼叫（現在就導到新函式）
 function onVendorMonthChange(){ onMonthPickerChange(); }
+
+// ⭐ 強制重拉月度分析的三組雲端資料 — 讓「利潤」在每台裝置看到一致、永遠是最新
+//   1. 所有廠商成本（用新輕量 API getMonthlyVendorTotals，forceFresh 清 cache）
+//   2. 營業額（從小結報表雲端）
+//   3. 人事成本（從薪水雲端 + 自己算）
+// 完成後 renderBusinessSummary 自然會被各自的 .then 觸發重畫
+function refreshAllAnalysisData(yearMonth){
+  if(!yearMonth) return;
+  if(typeof fetchAllVendorTotalsFromCloud === 'function') fetchAllVendorTotalsFromCloud(yearMonth, true);
+  if(typeof fetchRevenueFromCloud === 'function') fetchRevenueFromCloud(yearMonth);
+  if(typeof fetchHrTotalFromCloud === 'function') fetchHrTotalFromCloud(yearMonth);
+}
 
 // 一次性遷移：把舊版的廠商清單合併到新格式
 //   v1（極舊）：cd_custom_vendors_{STORE_ID}                         ← 全域陣列
@@ -995,9 +1010,12 @@ async function manualSyncVendors(){
     var p1 = (typeof syncVendorsFromCloudRecords === 'function') ? syncVendorsFromCloudRecords() : Promise.resolve();
     var p2 = (typeof pullVendorConfigFromCloud === 'function') ? pullVendorConfigFromCloud() : Promise.resolve();
     await Promise.all([p1, p2]);
+    // ⭐ 順手強制重拉當前月度分析的所有雲端資料（利潤才會跟其他裝置一致）
+    var curYm = (document.getElementById('month-picker') || {}).value || todayMonth();
+    if(typeof refreshAllAnalysisData === 'function') refreshAllAnalysisData(curYm);
     var added = getCustomVendors().length - before;
-    if(added > 0) setStatus('✓ 已從雲端同步 '+added+' 家新廠商', '#047857');
-    else          setStatus('✓ 已是最新（雲端沒有本機沒有的廠商）', '#047857');
+    if(added > 0) setStatus('✓ 已從雲端同步 '+added+' 家新廠商 + 月度分析數字', '#047857');
+    else          setStatus('✓ 已是最新（含月度分析所有數字）', '#047857');
   }catch(e){
     setStatus('⚠️ 同步失敗，請檢查網路', '#b45309');
   }finally{
@@ -1011,6 +1029,9 @@ document.addEventListener('visibilitychange', function(){
   if(document.visibilityState !== 'visible') return;
   if(typeof syncVendorsFromCloudRecords === 'function') syncVendorsFromCloudRecords();
   if(typeof pullVendorConfigFromCloud === 'function') pullVendorConfigFromCloud();
+  // ⭐ 月度分析所有數字也強制重拉，避免切回來看到的利潤跟剛才其他裝置改的不同步
+  var curYm = (document.getElementById('month-picker') || {}).value || todayMonth();
+  if(typeof refreshAllAnalysisData === 'function') refreshAllAnalysisData(curYm);
 });
 
 // ⭐ 跨裝置新增廠商不需重新部署：用「占位紀錄」讓現有後端就能傳遞廠商名
@@ -2944,10 +2965,18 @@ function getAllVendorTotals(yearMonth){
 // ⭐ 用輕量後端 API 抓當月每廠商合計（payload 僅 ~300B，過去用 getInventoryHistory
 //    要拉整店幾百 KB → 手機弱網常失敗 → 是「數字跳來跳去」的根源）
 //    若撞到 rate limit 回 HTML，會退回舊版 getInventoryHistory 全量拉當備援
-function fetchAllVendorTotalsFromCloud(yearMonth){
+function fetchAllVendorTotalsFromCloud(yearMonth, forceFresh){
   if(_allVendorTotalsPending[yearMonth]) return;
   var url = localStorage.getItem('cd_inv_sync_url');
   if(!url || !yearMonth) return;
+  // ⭐ forceFresh：切月份或手動按同步時用，清掉該月 cache 讓新拉的一定寫入
+  if(forceFresh){
+    var cache = _loadAllVendorTotalsCache();
+    if(cache[yearMonth]){
+      delete cache[yearMonth];
+      _saveAllVendorTotalsCache(cache);
+    }
+  }
   _allVendorTotalsPending[yearMonth] = true;
 
   function saveTotals(totals){
