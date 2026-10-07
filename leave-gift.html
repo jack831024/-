@@ -592,9 +592,47 @@ function setPending(n){
 }
 function saveDirty(){
   if(!STATE) return;
-  pushToCloud(true);
-  // 成功 callback 會在 pushToCloud 內處理；這邊提前清計數讓按鈕消失
-  setPending(0);
+  if(!INIT_LOADED){ showNotice('⏳ 頁面尚未載入完成', '雲端資料還沒讀取完，先別存。'); return; }
+  // 先 re-pull 雲端，比對「我方最後一次拉下來的 savedAt」vs「雲端現在的 savedAt」
+  // 若雲端比較新（代表別裝置剛剛存了） → 擋下來讓使用者決定要覆蓋還是取消
+  setSyncChip('busy', '☁ 檢查雲端新舊…', '');
+  callGAS('loadStore', [getStorePassword(), STORE])
+    .then(function(res){
+      if(!res || !res.ok){
+        // 雲端讀取失敗 → 保守擋下儲存
+        setSyncChip('err', '☁ 檢查失敗', (res && res.error) || '');
+        showNotice('❌ 無法檢查雲端狀態', '網路或雲端有問題，先不存。請稍後再試。');
+        return;
+      }
+      var cloudAt = res.savedAt || null;
+      var ourAt = LAST_PULLED_SAVED_AT;
+      var cloudTime = cloudAt ? Date.parse(cloudAt) : 0;
+      var ourTime   = ourAt   ? Date.parse(ourAt)   : 0;
+      if(cloudTime > ourTime){
+        // 雲端有別裝置剛剛存的資料 → 擋下
+        var cloudStr = new Date(cloudAt).toLocaleString('zh-TW');
+        var ourStr   = ourAt ? new Date(ourAt).toLocaleString('zh-TW') : '（未知）';
+        var proceed = confirm(
+          '⚠️ 雲端上有別人剛剛存的更新！\n\n' +
+          '雲端最新：'+cloudStr+'\n' +
+          '你的版本：'+ourStr+'\n\n' +
+          '直接存會覆蓋別人的資料。\n' +
+          '建議取消 → 重新整理頁面抓最新 → 再做你的改動 → 再存。\n\n' +
+          '仍要覆蓋？'
+        );
+        if(!proceed){
+          setSyncChip('ok', '☁ 已取消儲存', '雲端有更新，重新整理頁面抓最新資料');
+          return;
+        }
+      }
+      // 通過檢查 → 真的推上雲端
+      pushToCloud(true);
+      setPending(0);
+    })
+    .catch(function(err){
+      setSyncChip('err', '☁ 檢查失敗', err.message||'');
+      showNotice('❌ 無法檢查雲端狀態', err.message||'');
+    });
 }
 
 function getSyncUrl(){
@@ -1745,6 +1783,7 @@ function pushToCloud(showToastWhenOk){
     callGAS('saveStore', [getStorePassword(), STORE, JSON.parse(JSON.stringify(STATE))])
       .then(function(res){
         if(res && res.ok){
+          if(res.savedAt) LAST_PULLED_SAVED_AT = res.savedAt; // 這版就是雲端最新
           setSyncChip('ok', '☁ 已同步', '最後同步：'+(res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : ''));
           PENDING_GIFT_COUNT = 0;
           var fab = document.getElementById('save-fab');
@@ -1781,6 +1820,7 @@ function pushToCloudNow(){
   return callGAS('saveStore', [getStorePassword(), STORE, JSON.parse(JSON.stringify(STATE))])
     .then(function(res){
       if(res && res.ok){
+        if(res.savedAt) LAST_PULLED_SAVED_AT = res.savedAt; // 這版就是雲端最新
         setSyncChip('ok', '☁ 已同步', '最後同步：'+(res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : ''));
         PENDING_GIFT_COUNT = 0;
         var fab = document.getElementById('save-fab');
@@ -1792,6 +1832,10 @@ function pushToCloudNow(){
       throw err;
     });
 }
+
+// 追蹤「本機 STATE 是雲端什麼時候儲存的那一版」
+// 用途：按 💾 儲存變更前先 re-pull 比對，若雲端比我方新 → 擋下來避免蓋掉別裝置剛存的資料
+var LAST_PULLED_SAVED_AT = null;
 
 function pullFromCloud(){
   var url = getSyncUrl();
@@ -1807,10 +1851,12 @@ function pullFromCloud(){
       if(res.found){
         STATE = res.state || blankState();
         ensureSlots();
+        LAST_PULLED_SAVED_AT = res.savedAt || null;
         setSyncChip('ok', '☁ 已同步', '從雲端讀取：'+(res.savedAt ? new Date(res.savedAt).toLocaleString('zh-TW') : ''));
       } else {
         STATE = blankState();
         ensureSlots();
+        LAST_PULLED_SAVED_AT = null;
         setSyncChip('ok', '☁ 已連線（雲端無資料）', '');
       }
       INIT_LOADED = true; // ✅ 只有在雲端成功讀取或確認「無資料」後才允許寫入
