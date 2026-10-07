@@ -741,9 +741,10 @@ function onVendorMonthChange(){ onMonthPickerChange(); }
 // 完成後 renderBusinessSummary 自然會被各自的 .then 觸發重畫
 function refreshAllAnalysisData(yearMonth){
   if(!yearMonth) return;
+  // force=true：bypass 60s 節流，強制重拉最新雲端資料
   if(typeof fetchAllVendorTotalsFromCloud === 'function') fetchAllVendorTotalsFromCloud(yearMonth, true);
-  if(typeof fetchRevenueFromCloud === 'function') fetchRevenueFromCloud(yearMonth);
-  if(typeof fetchHrTotalFromCloud === 'function') fetchHrTotalFromCloud(yearMonth);
+  if(typeof fetchRevenueFromCloud === 'function') fetchRevenueFromCloud(yearMonth, true);
+  if(typeof fetchHrTotalFromCloud === 'function') fetchHrTotalFromCloud(yearMonth, true);
 }
 
 // 一次性遷移：把舊版的廠商清單合併到新格式
@@ -3068,10 +3069,15 @@ var DEFAULT_RENTS = {
 //    用現有的 BUILTIN_SYNC_URL（小結報表 doGet）拉全部紀錄、寫進本機 cd_records_<store>，
 //    讓 getMonthlyRevenue 之後讀本機就有數字
 var _revenueCloudPending = {};
-function fetchRevenueFromCloud(yearMonth){
+var _revenueCloudLastAt = {};
+var FETCH_THROTTLE_MS = 60000;   // 同月 1 分鐘內只拉一次，避免無限循環
+function fetchRevenueFromCloud(yearMonth, force){
   if(!yearMonth || _revenueCloudPending[yearMonth]) return;
+  // 節流：短時間內（60s）同月份不重複拉，除非明確 force
+  if(!force && _revenueCloudLastAt[yearMonth] && (Date.now() - _revenueCloudLastAt[yearMonth]) < FETCH_THROTTLE_MS) return;
   var summaryUrl = localStorage.getItem('cd_sync_url') || (typeof BUILTIN_SYNC_URL !== 'undefined' ? BUILTIN_SYNC_URL : '');
   if(!summaryUrl) return;
+  _revenueCloudLastAt[yearMonth] = Date.now();
   _revenueCloudPending[yearMonth] = true;
   fetch(summaryUrl + (summaryUrl.indexOf('?')>=0?'&':'?') + 'store=' + encodeURIComponent(STORE_ID), { method:'GET' })
     .then(function(r){ return r.json(); })
@@ -3090,10 +3096,14 @@ function fetchRevenueFromCloud(yearMonth){
 //    3. 沒有就自己算（複製 salary.html 的 calcEmp，見下方 computeHrTotalFromState）
 var BUILTIN_SALARY_URL = 'https://script.google.com/macros/s/AKfycbykQ-2CnEFLxy9Qs3o_9kqzOk2E9aIr-ODnY0wx8OS9SWGIAFGJu0Nmss2GqjQcbtNL/exec';
 var _hrCloudPending = {};
-function fetchHrTotalFromCloud(yearMonth){
+var _hrCloudLastAt = {};
+function fetchHrTotalFromCloud(yearMonth, force){
   if(!yearMonth || _hrCloudPending[yearMonth]) return;
+  // 節流：60s 內同月不重拉，避免無限循環（loadBizInputs→fetch→render→loadBizInputs→...）
+  if(!force && _hrCloudLastAt[yearMonth] && (Date.now() - _hrCloudLastAt[yearMonth]) < FETCH_THROTTLE_MS) return;
   var password = (typeof ANALYSIS_PASSWORDS !== 'undefined') ? ANALYSIS_PASSWORDS[STORE_ID] : null;
   if(!password) return;
+  _hrCloudLastAt[yearMonth] = Date.now();
   _hrCloudPending[yearMonth] = true;
   fetch(BUILTIN_SALARY_URL, {
     method:'POST',
@@ -3256,10 +3266,11 @@ function computeHrTotalFromState(storeId, state){
 }
 
 function loadBizInputs(yearMonth){
-  // ⭐ 以前這裡會觸發 fetchRevenueFromCloud + fetchHrTotalFromCloud，但 fetchHrTotalFromCloud
-  //    完成後又會呼叫 loadBizInputs → 又觸發新一輪 fetch → 無限迴圈，造成每隔幾秒數字跳一次。
-  //    現在 loadBizInputs 只做 UI 更新（從 localStorage 讀最新值），fetch 由外部明確觸發：
-  //    refreshAllAnalysisData（切月/手動同步/切回 App 時呼叫）
+  // ⭐ 背景拉雲端最新值（有 60s 節流，避免 render→loadBizInputs→fetch→render→... 無限迴圈）
+  //    第一次打開頁面會真的 fetch 一次填上數字；之後 render 多次呼叫會被節流擋住，不會跳
+  //    refreshAllAnalysisData 用 force=true bypass 節流強制重拉
+  if(typeof fetchRevenueFromCloud === 'function') fetchRevenueFromCloud(yearMonth);
+  if(typeof fetchHrTotalFromCloud === 'function') fetchHrTotalFromCloud(yearMonth);
   // 人事成本：優先從薪資系統同步的總和讀取，沒有才讓使用者手動輸入
   var hrEl = document.getElementById('biz-hr-input');
   var hrSynced = localStorage.getItem('cd_hr_total_'+STORE_ID+'_'+yearMonth);
