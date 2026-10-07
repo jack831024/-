@@ -681,6 +681,11 @@ var STORE_NAME = sessionStorage.getItem('cd_store_name');
   // 常駐徽章 + 每 30 秒自動同步一次
   if(typeof _updateSyncStatusBadge === 'function') _updateSyncStatusBadge();
   if(typeof startVendorPeriodicSync === 'function') startVendorPeriodicSync();
+  // 若使用者本次 session 已經解鎖過月度分析 → 開頁時主動拉一次雲端資料
+  //（避免看到 10 分鐘前的舊 cache；loadBizInputs 已不自己 fetch 所以要在這裡主動觸發）
+  if(sessionStorage.getItem('cd_biz_unlocked_' + STORE_ID) === '1' && typeof refreshAllAnalysisData === 'function'){
+    refreshAllAnalysisData(thisMonth);
+  }
 
   // 預設日期為今天
   document.getElementById('inv-date').value = todayDate();
@@ -3104,8 +3109,9 @@ function fetchHrTotalFromCloud(yearMonth){
       }
       if(!isFinite(total) || total <= 0) return;
       try{ localStorage.setItem('cd_hr_total_'+STORE_ID+'_'+yearMonth, String(Math.round(total))); }catch(e){}
-      // 重新套用人事卡 + 重算分析摘要
-      try{ loadBizInputs(yearMonth); }catch(e){}
+      // 只呼叫 renderBusinessSummary（它內部會呼叫 loadBizInputs 讀 localStorage 新值）
+      // 不要在這裡直接呼叫 loadBizInputs，否則會跟 renderBusinessSummary 之前觸發的 fetch
+      // 混在一起、UI 跳兩次。更不能跟以前一樣讓 loadBizInputs 再觸發 fetch（無限迴圈）
       if(typeof renderBusinessSummary === 'function'){ try{ renderBusinessSummary(); }catch(e){} }
     }).catch(function(){ /* 離線容忍 */ })
     .finally(function(){ delete _hrCloudPending[yearMonth]; });
@@ -3250,9 +3256,10 @@ function computeHrTotalFromState(storeId, state){
 }
 
 function loadBizInputs(yearMonth){
-  // 背景拉雲端營業額+人事（這台裝置沒開過小結報表/薪水也能拿到）
-  if(typeof fetchRevenueFromCloud === 'function') fetchRevenueFromCloud(yearMonth);
-  if(typeof fetchHrTotalFromCloud === 'function') fetchHrTotalFromCloud(yearMonth);
+  // ⭐ 以前這裡會觸發 fetchRevenueFromCloud + fetchHrTotalFromCloud，但 fetchHrTotalFromCloud
+  //    完成後又會呼叫 loadBizInputs → 又觸發新一輪 fetch → 無限迴圈，造成每隔幾秒數字跳一次。
+  //    現在 loadBizInputs 只做 UI 更新（從 localStorage 讀最新值），fetch 由外部明確觸發：
+  //    refreshAllAnalysisData（切月/手動同步/切回 App 時呼叫）
   // 人事成本：優先從薪資系統同步的總和讀取，沒有才讓使用者手動輸入
   var hrEl = document.getElementById('biz-hr-input');
   var hrSynced = localStorage.getItem('cd_hr_total_'+STORE_ID+'_'+yearMonth);
@@ -3323,6 +3330,9 @@ function tryUnlockAnalysis(){
     err.textContent = '';
     input.value = '';
     renderBusinessSummary();
+    // ⭐ 解鎖當下強制拉一次雲端（loadBizInputs 現在只讀 localStorage，不會自己 fetch）
+    var curYm = (document.getElementById('month-picker') || {}).value || todayMonth();
+    if(typeof refreshAllAnalysisData === 'function') refreshAllAnalysisData(curYm);
   }else{
     err.textContent = '❌ 密碼錯誤';
     input.value = '';
