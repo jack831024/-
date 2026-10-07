@@ -2971,10 +2971,15 @@ function getAllVendorTotals(yearMonth){
 // ⭐ 用輕量後端 API 抓當月每廠商合計（payload 僅 ~300B，過去用 getInventoryHistory
 //    要拉整店幾百 KB → 手機弱網常失敗 → 是「數字跳來跳去」的根源）
 //    若撞到 rate limit 回 HTML，會退回舊版 getInventoryHistory 全量拉當備援
+var _allVendorTotalsLastAt = {};
 function fetchAllVendorTotalsFromCloud(yearMonth, forceFresh){
   if(_allVendorTotalsPending[yearMonth]) return;
   var url = localStorage.getItem('cd_inv_sync_url');
   if(!url || !yearMonth) return;
+  // ⭐ 節流：短時間內（60s）同月份不重拉，除非明確 forceFresh
+  //    不然當雲端回空 totals（這月真的沒資料）時，getAllVendorTotals 判定 hasContent=false
+  //    → 每次 render 都重拉 → 數字每隔幾秒就跳一次
+  if(!forceFresh && _allVendorTotalsLastAt[yearMonth] && (Date.now() - _allVendorTotalsLastAt[yearMonth]) < FETCH_THROTTLE_MS) return;
   // ⭐ forceFresh：切月份或手動按同步時用，清掉該月 cache 讓新拉的一定寫入
   if(forceFresh){
     var cache = _loadAllVendorTotalsCache();
@@ -2983,6 +2988,7 @@ function fetchAllVendorTotalsFromCloud(yearMonth, forceFresh){
       _saveAllVendorTotalsCache(cache);
     }
   }
+  _allVendorTotalsLastAt[yearMonth] = Date.now();
   _allVendorTotalsPending[yearMonth] = true;
 
   function saveTotals(totals){
