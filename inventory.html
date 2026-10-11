@@ -3188,27 +3188,57 @@ function saveBizInputs(){
   var picker = document.getElementById('month-picker');
   if(!picker) return;
   var yearMonth = picker.value;
-  _setRentSaveState('儲存中…', 'rgba(59,130,246,.15)', 'var(--brand)');
+  // ⭐ 關鍵路徑：只做「寫 localStorage」（<1ms）+ 立即顯示「✓ 已儲存」
+  //    不要在這裡做任何「可能卡 UI」的事（render、cloud push）→ 全部丟 idle callback
   var hrEl = document.getElementById('biz-hr-input');
-  // 人事成本若來自薪資系統同步（readonly），不覆寫
   if(!hrEl.readOnly){
     var hrCost = Number(hrEl.value) || 0;
     localStorage.setItem('cd_biz_hr_'+STORE_ID+'_'+yearMonth, String(hrCost));
   }
   var rent = Number(document.getElementById('biz-rent-input').value) || 0;
-  // ⭐ 房租改成「依月份」儲存：使用者在 2026-09 輸入 60000，之後看 2026-09 以後都是 60000；
-  //    但看 2026-08 以前仍然顯示舊值（或預設）。原理：rent 存成 {YYYY-MM: 金額} map，
-  //    讀取時找「最近一次 ≤ 當前月」的那筆
   setRentForMonth(STORE_ID, yearMonth, rent);
-  // ⭐ 房租也推到雲端（跨裝置同步）— scheduleVendorCfgPush 已有 debounce 不會連打
-  if(typeof scheduleVendorCfgPush === 'function') scheduleVendorCfgPush();
-  // ⭐ 延後 renderBusinessSummary（讓 input 失焦動畫、鍵盤關閉動畫先跑完 → 體感順很多）
-  //    直接呼叫會卡 UI 數百 ms（內部有重畫整張廠商成本列表 + 利潤計算）
+  // 立即顯示「✓ 已儲存」(本機已存 = 資料不會遺失，就算當下沒推到雲端)
   _setRentSaveState('✓ 已儲存', 'rgba(16,185,129,.15)', '#047857');
-  setTimeout(function(){
-    try{ renderBusinessSummary(); }catch(e){}
-  }, 30);
   setTimeout(function(){ _setRentSaveState('', '', ''); }, 2500);
+
+  // ⭐ 立即更新「房租」+「利潤」兩張卡的數字（輕量 DOM 更新，<1ms）
+  //    不呼叫整個 renderBusinessSummary（它會重畫所有廠商列表 + 觸發雲端 fetch）
+  _quickUpdateRentProfit(yearMonth, rent);
+
+  // 推雲端 + 完整 render 全部丟到 idle callback（瀏覽器閒時才跑，絕不卡 UI）
+  var idle = window.requestIdleCallback || function(fn){ return setTimeout(fn, 0); };
+  idle(function(){
+    if(typeof scheduleVendorCfgPush === 'function') scheduleVendorCfgPush();
+    try{ renderBusinessSummary(); }catch(e){}
+  }, { timeout: 500 });
+}
+
+// 不跑完整 render，只把「房租」+「利潤」卡上的數字快速更新
+// 讀既有 DOM 文字（已經顯示的營業額/廠商成本/人事）直接算出新利潤
+function _quickUpdateRentProfit(yearMonth, newRent){
+  function parseMoney(txt){
+    if(!txt) return 0;
+    var m = String(txt).replace(/[^\d.-]/g, '');
+    return Number(m) || 0;
+  }
+  try{
+    var revenue = parseMoney((document.getElementById('biz-revenue')||{}).textContent);
+    var vendor  = parseMoney((document.getElementById('biz-vendor-total')||{}).textContent);
+    var hr      = Number((document.getElementById('biz-hr-input')||{}).value) || 0;
+    var mk      = parseMoney((document.getElementById('biz-marketing')||{}).textContent);
+    var mkCard  = document.getElementById('biz-marketing-card');
+    if(mkCard && mkCard.style.display === 'none') mk = 0;
+    var profit = revenue - vendor - hr - newRent - mk;
+
+    var rentPctEl = document.getElementById('biz-rent-pct');
+    if(rentPctEl) rentPctEl.textContent = (typeof pctOf === 'function') ? pctOf(newRent, revenue) : '—';
+    var profEl = document.getElementById('biz-profit');
+    if(profEl) profEl.textContent = (typeof fmtNT === 'function') ? fmtNT(profit) : ('NT$ ' + profit.toLocaleString());
+    var profPctEl = document.getElementById('biz-profit-pct');
+    if(profPctEl) profPctEl.textContent = (typeof pctOf === 'function') ? pctOf(profit, revenue) : '—';
+    var profitCard = document.querySelector('.biz-card.profit');
+    if(profitCard) profitCard.classList.toggle('loss', profit < 0);
+  }catch(e){}
 }
 
 // ⭐ 依月份存取房租 — 格式 { "YYYY-MM": 金額, ... }
