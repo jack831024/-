@@ -855,7 +855,11 @@ function setVendorCfgSavedAt(iso){ if(iso) localStorage.setItem(vendorCfgSavedAt
 function invSyncUrl(){ return localStorage.getItem('cd_inv_sync_url') || ''; }
 
 function buildVendorConfig(){
-  return { custom: getCustomVendors(), deleted: getVendorDeletions() };
+  // ⭐ rent 也一起同步（本機 cd_biz_rent_<store> 作為來源，雲端做跨裝置鏡像）
+  var rent = localStorage.getItem('cd_biz_rent_'+STORE_ID);
+  var cfg = { custom: getCustomVendors(), deleted: getVendorDeletions() };
+  if(rent !== null && rent !== '') cfg.rent = Number(rent) || 0;
+  return cfg;
 }
 
 // 把一份設定寫進本機（不觸發反向 push）
@@ -868,6 +872,10 @@ function applyVendorConfigLocal(cfg){
     var del = (cfg.deleted && typeof cfg.deleted === 'object' && !Array.isArray(cfg.deleted)) ? cfg.deleted : {};
     if(Object.keys(del).length === 0) localStorage.removeItem(vendorDeletionsKey());
     else localStorage.setItem(vendorDeletionsKey(), JSON.stringify(del));
+    // ⭐ 房租：只有雲端有明確值才覆蓋本機（避免剛從雲端拉空值把使用者剛打的 rent 蓋掉）
+    if(cfg.rent !== undefined && cfg.rent !== null && cfg.rent !== ''){
+      localStorage.setItem('cd_biz_rent_'+STORE_ID, String(Number(cfg.rent) || 0));
+    }
   }finally{ _applyingRemoteVendorCfg = false; }
 }
 
@@ -2123,7 +2131,7 @@ async function manualResync(){
     // 大 payload / 慢網 容忍：batch API 給 60s timeout + 自動重試 1 次
     async function callBatch(){
       var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-      var to = ctrl ? setTimeout(function(){ try{ ctrl.abort(); }catch(_){} }, 60000) : null;
+      var to = ctrl ? setTimeout(function(){ try{ ctrl.abort(); }catch(_){} }, 120000) : null;
       try{
         var r = await fetch(url, {
           method:'POST',
@@ -3114,7 +3122,16 @@ function saveBizInputs(){
   }
   var rent = Number(document.getElementById('biz-rent-input').value) || 0;
   localStorage.setItem('cd_biz_rent_'+STORE_ID, String(rent));
+  // ⭐ 房租也推到雲端（跨裝置同步）— scheduleVendorCfgPush 已有 debounce 不會連打
+  if(typeof scheduleVendorCfgPush === 'function') scheduleVendorCfgPush();
   renderBusinessSummary();
+  // 小小視覺回饋：欄位閃一下綠底代表存了
+  var el = document.getElementById('biz-rent-input');
+  if(el){
+    var old = el.style.background;
+    el.style.background = 'rgba(16,185,129,.15)';
+    setTimeout(function(){ el.style.background = old; }, 600);
+  }
 }
 
 // 各店房租預設值（使用者可在前端手動改，改過的值會存 localStorage 蓋過預設）

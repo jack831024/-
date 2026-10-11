@@ -115,45 +115,70 @@ function doPost(e) {
       try {
         var bSheet = getInventorySheet(bStore);
         var bResults = [];
-        // 一次 Lock 內處理全部日期，避免每筆各搶 Lock
+
+        // ⭐ 整表只掃一次（不是每個 date 都掃一遍），大幅省時：
+        //   步驟 1: 收集所有要寫入的 (date -> normalized rows)
+        //   步驟 2: 一次掃 sheet，標記所有「要被清掉的 (vendor,date) 既有列」
+        //   步驟 3: 一次清、一次寫
+        var targetDates = {};   // normalizedDate → true（這批要重寫的）
+        var dateRows = {};      // normalizedDate → [row array...]
         for (var di = 0; di < bDates.length; di++) {
           var entry = bDates[di] || {};
           var eDate = normalizeDate(entry.date);
           if (!eDate) { bResults.push({ date: entry.date || '', ok: false, error: 'date 格式錯誤' }); continue; }
           var eItems = entry.items || [];
           var eSavedAt = entry.savedAt || bSavedAtDefault;
-          try {
-            deleteInventoryRows(bSheet, bVendor, eDate);
-            var dedupMap = {};
-            var orderedKeys = [];
-            for (var ii = 0; ii < eItems.length; ii++) {
-              var it = eItems[ii] || {};
-              var name = String(it.name || '').trim();
-              if (!name) continue;
-              var itDate = normalizeDate(it.date) || eDate;
-              var k = itDate + '|' + name;
-              if (!(k in dedupMap)) orderedKeys.push(k);
-              dedupMap[k] = {
-                date: itDate, name: name,
-                price: Number(it.price) || 0,
-                qty: Number(it.qty) || 0
-              };
-            }
-            var rows = orderedKeys.map(function(k){
-              var x = dedupMap[k];
-              return [x.date, bVendor, x.name, x.price, x.qty, x.price * x.qty, eSavedAt, bSavedBy];
-            });
-            if (rows.length > 0) {
-              var startRow = bSheet.getLastRow() + 1;
-              bSheet.getRange(startRow, 1, rows.length, rows[0].length).setValues(rows);
-              bSheet.getRange(startRow, 1, rows.length, 1).setNumberFormat('@');
-            }
-            bResults.push({ date: eDate, ok: true, count: rows.length });
-          } catch (dErr) {
-            bResults.push({ date: eDate, ok: false, error: String(dErr) });
+          targetDates[eDate] = true;
+          var dedupMap = {};
+          var orderedKeys = [];
+          for (var ii = 0; ii < eItems.length; ii++) {
+            var it = eItems[ii] || {};
+            var name = String(it.name || '').trim();
+            if (!name) continue;
+            var itDate = normalizeDate(it.date) || eDate;
+            var k = itDate + '|' + name;
+            if (!(k in dedupMap)) orderedKeys.push(k);
+            dedupMap[k] = {
+              date: itDate, name: name,
+              price: Number(it.price) || 0,
+              qty: Number(it.qty) || 0
+            };
           }
+          dateRows[eDate] = orderedKeys.map(function(k){
+            var x = dedupMap[k];
+            return [x.date, bVendor, x.name, x.price, x.qty, x.price * x.qty, eSavedAt, bSavedBy];
+          });
+          bResults.push({ date: eDate, ok: true, count: dateRows[eDate].length });
         }
-        return json({ ok: true, store: bStore, vendor: bVendor, results: bResults });
+
+        // 一次掃整張 sheet：找出所有 (bVendor, 在 targetDates 內) 的既有列 index
+        var allData = bSheet.getDataRange().getValues();
+        var deleteIdx = [];   // 1-based 列號（header=1，data 從 2 開始）
+        for (var si = 1; si < allData.length; si++) {
+          var sdate = normalizeDate(allData[si][0]);
+          if (!sdate || !targetDates[sdate]) continue;
+          var svendor = String(allData[si][1] || '').trim();
+          if (svendor !== bVendor) continue;
+          deleteIdx.push(si + 1);
+        }
+        // 由下往上刪，避免 index 位移
+        for (var ddi = deleteIdx.length - 1; ddi >= 0; ddi--) {
+          bSheet.deleteRow(deleteIdx[ddi]);
+        }
+
+        // 一次 append 全部新 row（連續 setValues 比多次呼叫快很多）
+        var allNewRows = [];
+        Object.keys(dateRows).forEach(function(d){
+          var rs = dateRows[d];
+          for (var ri = 0; ri < rs.length; ri++) allNewRows.push(rs[ri]);
+        });
+        if (allNewRows.length > 0) {
+          var startRow = bSheet.getLastRow() + 1;
+          bSheet.getRange(startRow, 1, allNewRows.length, allNewRows[0].length).setValues(allNewRows);
+          bSheet.getRange(startRow, 1, allNewRows.length, 1).setNumberFormat('@');
+        }
+
+        return json({ ok: true, store: bStore, vendor: bVendor, results: bResults, deleted: deleteIdx.length, written: allNewRows.length });
       } finally {
         try { bLock.releaseLock(); } catch (e) {}
       }
