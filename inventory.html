@@ -560,9 +560,12 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
 
         <!-- 房租 -->
         <div class="biz-card rent">
-          <div class="biz-label"><span class="ico">🏠</span>房租</div>
-          <input type="number" id="biz-rent-input" class="biz-input" placeholder="預設 45000" onchange="saveBizInputs()">
-          <div class="biz-hint"><span class="pct" id="biz-rent-pct">—</span> 佔營業額</div>
+          <div class="biz-label"><span class="ico">🏠</span>房租
+            <span id="biz-rent-save-state" style="margin-left:8px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px"></span>
+          </div>
+          <input type="number" id="biz-rent-input" class="biz-input" placeholder="預設 45000"
+                 oninput="markRentDirty()" onchange="saveBizInputs()">
+          <div class="biz-hint"><span class="pct" id="biz-rent-pct">—</span> 佔營業額 · <span style="color:var(--ink-3)">改完按 Enter 或點別處立即儲存</span></div>
         </div>
 
         <!-- 行銷（僅火鍋店/初殿顯示，營業額 × 10%） -->
@@ -3128,10 +3131,27 @@ function pctOf(part, whole){
   return ((part / whole) * 100).toFixed(2).replace(/\.?0+$/, '') + '%';
 }
 
+// 使用者正在打字時 → 顯示「● 未儲存」提示（實際儲存等失焦/Enter 的 onchange 觸發 saveBizInputs）
+function markRentDirty(){
+  var tag = document.getElementById('biz-rent-save-state');
+  if(!tag) return;
+  tag.textContent = '● 未儲存';
+  tag.style.background = 'rgba(249,115,22,.15)';
+  tag.style.color = '#b45309';
+}
+function _setRentSaveState(text, bg, color){
+  var tag = document.getElementById('biz-rent-save-state');
+  if(!tag) return;
+  tag.textContent = text || '';
+  tag.style.background = bg || '';
+  tag.style.color = color || '';
+}
+
 function saveBizInputs(){
   var picker = document.getElementById('month-picker');
   if(!picker) return;
   var yearMonth = picker.value;
+  _setRentSaveState('儲存中…', 'rgba(59,130,246,.15)', 'var(--brand)');
   var hrEl = document.getElementById('biz-hr-input');
   // 人事成本若來自薪資系統同步（readonly），不覆寫
   if(!hrEl.readOnly){
@@ -3145,14 +3165,13 @@ function saveBizInputs(){
   setRentForMonth(STORE_ID, yearMonth, rent);
   // ⭐ 房租也推到雲端（跨裝置同步）— scheduleVendorCfgPush 已有 debounce 不會連打
   if(typeof scheduleVendorCfgPush === 'function') scheduleVendorCfgPush();
-  renderBusinessSummary();
-  // 小小視覺回饋：欄位閃一下綠底代表存了
-  var el = document.getElementById('biz-rent-input');
-  if(el){
-    var old = el.style.background;
-    el.style.background = 'rgba(16,185,129,.15)';
-    setTimeout(function(){ el.style.background = old; }, 600);
-  }
+  // ⭐ 延後 renderBusinessSummary（讓 input 失焦動畫、鍵盤關閉動畫先跑完 → 體感順很多）
+  //    直接呼叫會卡 UI 數百 ms（內部有重畫整張廠商成本列表 + 利潤計算）
+  _setRentSaveState('✓ 已儲存', 'rgba(16,185,129,.15)', '#047857');
+  setTimeout(function(){
+    try{ renderBusinessSummary(); }catch(e){}
+  }, 30);
+  setTimeout(function(){ _setRentSaveState('', '', ''); }, 2500);
 }
 
 // ⭐ 依月份存取房租 — 格式 { "YYYY-MM": 金額, ... }
