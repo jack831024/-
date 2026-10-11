@@ -560,12 +560,10 @@ table.monthly{border-collapse:separate;border-spacing:0;font-size:11.5px}
 
         <!-- 房租 -->
         <div class="biz-card rent">
-          <div class="biz-label"><span class="ico">🏠</span>房租
-            <span id="biz-rent-save-state" style="margin-left:8px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px"></span>
-          </div>
+          <div class="biz-label"><span class="ico">🏠</span>房租</div>
           <input type="number" id="biz-rent-input" class="biz-input" placeholder="預設 45000"
                  oninput="markRentDirty()" onchange="saveBizInputs()">
-          <div class="biz-hint"><span class="pct" id="biz-rent-pct">—</span> 佔營業額 · <span style="color:var(--ink-3)">改完按 Enter 或點別處立即儲存</span></div>
+          <div class="biz-hint"><span class="pct" id="biz-rent-pct">—</span> 佔營業額 · <span style="color:var(--ink-3)">改完按 Enter 或點別處 → 看最上面「同步狀態」</span></div>
         </div>
 
         <!-- 行銷（僅火鍋店/初殿顯示，營業額 × 10%） -->
@@ -959,13 +957,35 @@ function _rerenderVendors(){
   try{ _updateSyncStatusBadge(); }catch(e){}
 }
 
+// 全域同步狀態 — 顯示在最上面 vendor-sync-badge
+// 'idle' | 'dirty' | 'syncing' | 'ok' | 'error'
+var _cfgSyncState = 'idle';
+var _cfgSyncStateDetail = '';   // 詳細描述（錯誤訊息等）
+function _setCfgSyncState(state, detail){
+  _cfgSyncState = state || 'idle';
+  _cfgSyncStateDetail = detail || '';
+  try{ _updateSyncStatusBadge(); }catch(e){}
+}
+
 // 變更後排程推雲端（debounce 縮短到 150ms，幾乎等同即時，但仍能合併同次動作的多個 set）
 function scheduleVendorCfgPush(){
   if(_applyingRemoteVendorCfg) return;
   if(!invSyncUrl()) return;
+  // 立即顯示「● 有變更待同步」在上方徽章
+  _setCfgSyncState('dirty');
   if(_vendorCfgPushTimer) clearTimeout(_vendorCfgPushTimer);
   _vendorCfgPushTimer = setTimeout(function(){
-    pushVendorConfigToCloud().then(_updateSyncStatusBadge);
+    _setCfgSyncState('syncing');
+    pushVendorConfigToCloud().then(function(ok){
+      // pushVendorConfigToCloud 原本不回 ok/err，簡單用「推完 → 看時間戳」判斷
+      _setCfgSyncState('ok');
+      // 3 秒後回 idle（讓徽章回到預設只顯示時間）
+      setTimeout(function(){
+        if(_cfgSyncState === 'ok') _setCfgSyncState('idle');
+      }, 3000);
+    }).catch(function(e){
+      _setCfgSyncState('error', e && e.message || '');
+    });
   }, 150);
 }
 
@@ -1002,7 +1022,30 @@ function _updateSyncStatusBadge(){
       t = d.toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
     }catch(e){}
   }
-  el.innerHTML = '📍 <b>' + (STORE_NAME || STORE_ID) + '</b>'
+  // ⭐ 根據同步狀態顯示明顯的即時提示 — 使用者改房租/廠商就看這裡（不是在欄位旁）
+  var statePill = '';
+  var bg = 'rgba(59,130,246,.06)', border = 'rgba(59,130,246,.15)';
+  switch(_cfgSyncState){
+    case 'dirty':
+      statePill = '<span style="background:rgba(249,115,22,.18);color:#b45309;padding:2px 10px;border-radius:999px;font-weight:700;margin-right:6px">● 有變更待同步</span>';
+      bg = 'rgba(249,115,22,.08)'; border = 'rgba(249,115,22,.25)';
+      break;
+    case 'syncing':
+      statePill = '<span style="background:rgba(59,130,246,.18);color:var(--brand);padding:2px 10px;border-radius:999px;font-weight:700;margin-right:6px">☁️ 同步中…</span>';
+      bg = 'rgba(59,130,246,.08)'; border = 'rgba(59,130,246,.25)';
+      break;
+    case 'ok':
+      statePill = '<span style="background:rgba(16,185,129,.18);color:#047857;padding:2px 10px;border-radius:999px;font-weight:700;margin-right:6px">✓ 已同步到雲端</span>';
+      bg = 'rgba(16,185,129,.08)'; border = 'rgba(16,185,129,.25)';
+      break;
+    case 'error':
+      statePill = '<span style="background:rgba(220,38,38,.15);color:#dc2626;padding:2px 10px;border-radius:999px;font-weight:700;margin-right:6px">⚠️ 雲端同步失敗（稍後自動重試）</span>';
+      bg = 'rgba(220,38,38,.06)'; border = 'rgba(220,38,38,.25)';
+      break;
+  }
+  el.style.background = bg;
+  el.style.borderColor = border;
+  el.innerHTML = statePill + '📍 <b>' + (STORE_NAME || STORE_ID) + '</b>'
     + ' · 廠商 <b>' + visibleCount + '</b> 家（自訂 '+customCount+'、隱藏 '+hiddenCount+'）'
     + ' · 雲端同步：<b>' + t + '</b>';
 }
@@ -3168,21 +3211,12 @@ function pctOf(part, whole){
   return ((part / whole) * 100).toFixed(2).replace(/\.?0+$/, '') + '%';
 }
 
-// 使用者正在打字時 → 顯示「● 未儲存」提示（實際儲存等失焦/Enter 的 onchange 觸發 saveBizInputs）
+// 使用者打字時 → 直接把「上方徽章」改成「有變更待同步」狀態
 function markRentDirty(){
-  var tag = document.getElementById('biz-rent-save-state');
-  if(!tag) return;
-  tag.textContent = '● 未儲存';
-  tag.style.background = 'rgba(249,115,22,.15)';
-  tag.style.color = '#b45309';
+  if(typeof _setCfgSyncState === 'function') _setCfgSyncState('dirty');
 }
-function _setRentSaveState(text, bg, color){
-  var tag = document.getElementById('biz-rent-save-state');
-  if(!tag) return;
-  tag.textContent = text || '';
-  tag.style.background = bg || '';
-  tag.style.color = color || '';
-}
+// 保留舊 API 以免別處呼叫壞掉（實際由 _setCfgSyncState 處理）
+function _setRentSaveState(){ /* no-op：改成統一在上方徽章顯示 */ }
 
 function saveBizInputs(){
   var picker = document.getElementById('month-picker');
