@@ -95,6 +95,70 @@ function doPost(e) {
       }
     }
 
+    // ⭐ 批次儲存：一次送多個日期（避免前端 24 個平行 fetch 各搶 Lock 導致大量 timeout 失敗）
+    // body: { action:'batchSaveInventory', store, vendor, savedBy?, savedAt?,
+    //         dates: [{ date:'YYYY-MM-DD', items:[{name,price,qty,unit?}] }, ...] }
+    // 回傳: { ok, store, vendor, results: [{date, ok, count?, error?}] }
+    if (body.action === 'batchSaveInventory') {
+      var bStore = body.store || 'default';
+      var bVendor = String(body.vendor || '').trim();
+      var bDates = body.dates || [];
+      var bSavedBy = body.savedBy || '';
+      var bSavedAtDefault = body.savedAt || new Date().toISOString();
+      if (!bVendor) return json({ error: 'vendor 必填' });
+      if (!Array.isArray(bDates) || bDates.length === 0) return json({ error: 'dates 必填且需為陣列' });
+
+      var bLock = LockService.getScriptLock();
+      try { bLock.waitLock(45000); } catch (e) {
+        return json({ error: '取鎖逾時，請稍後再試：' + String(e) });
+      }
+      try {
+        var bSheet = getInventorySheet(bStore);
+        var bResults = [];
+        // 一次 Lock 內處理全部日期，避免每筆各搶 Lock
+        for (var di = 0; di < bDates.length; di++) {
+          var entry = bDates[di] || {};
+          var eDate = normalizeDate(entry.date);
+          if (!eDate) { bResults.push({ date: entry.date || '', ok: false, error: 'date 格式錯誤' }); continue; }
+          var eItems = entry.items || [];
+          var eSavedAt = entry.savedAt || bSavedAtDefault;
+          try {
+            deleteInventoryRows(bSheet, bVendor, eDate);
+            var dedupMap = {};
+            var orderedKeys = [];
+            for (var ii = 0; ii < eItems.length; ii++) {
+              var it = eItems[ii] || {};
+              var name = String(it.name || '').trim();
+              if (!name) continue;
+              var itDate = normalizeDate(it.date) || eDate;
+              var k = itDate + '|' + name;
+              if (!(k in dedupMap)) orderedKeys.push(k);
+              dedupMap[k] = {
+                date: itDate, name: name,
+                price: Number(it.price) || 0,
+                qty: Number(it.qty) || 0
+              };
+            }
+            var rows = orderedKeys.map(function(k){
+              var x = dedupMap[k];
+              return [x.date, bVendor, x.name, x.price, x.qty, x.price * x.qty, eSavedAt, bSavedBy];
+            });
+            if (rows.length > 0) {
+              var startRow = bSheet.getLastRow() + 1;
+              bSheet.getRange(startRow, 1, rows.length, rows[0].length).setValues(rows);
+              bSheet.getRange(startRow, 1, rows.length, 1).setNumberFormat('@');
+            }
+            bResults.push({ date: eDate, ok: true, count: rows.length });
+          } catch (dErr) {
+            bResults.push({ date: eDate, ok: false, error: String(dErr) });
+          }
+        }
+        return json({ ok: true, store: bStore, vendor: bVendor, results: bResults });
+      } finally {
+        try { bLock.releaseLock(); } catch (e) {}
+      }
+    }
+
     // 讀取某廠商的全部歷史
     if (body.action === 'getInventoryHistory') {
       var gStore = body.store || 'default';

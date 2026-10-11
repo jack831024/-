@@ -2109,36 +2109,90 @@ async function manualResync(){
   setAutoSaveStatus('saving');
   try{
     var savedAt = new Date().toISOString();
-    var promises = dates.map(function(d){
+    // ⭐ 蒐集所有日期的資料 → 一次 batch 送（舊版是 24 個平行 fetch 搶 Lock，大量 timeout fail）
+    var payloadDates = dates.map(function(d){
       var key = 'cd_inv_'+STORE_ID+'_'+currentVendor+'_'+d;
       var data = {};
       try{ data = JSON.parse(localStorage.getItem(key) || '{}'); }catch(e){}
       var its = (data.items || []).map(function(it){
         return { name: it.name, price: it.price, qty: it.qty, unit: it.unit || '', date: d };
       });
-      return fetch(url, {
-        method:'POST',
-        headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify({
-          action:'saveInventory',
-          store: STORE_ID,
-          vendor: currentVendor,
-          date: d,
-          items: its,
-          savedAt: data.savedAt || savedAt
-        })
-      }).then(function(r){ return r.json(); }).catch(function(e){ console.warn('雲端 '+d+' 失敗', e); return null; });
+      return { date: d, items: its, savedAt: data.savedAt || savedAt };
     });
-    var results = await Promise.all(promises);
+
+    // 大 payload / 慢網 容忍：batch API 給 60s timeout + 自動重試 1 次
+    async function callBatch(){
+      var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      var to = ctrl ? setTimeout(function(){ try{ ctrl.abort(); }catch(_){} }, 60000) : null;
+      try{
+        var r = await fetch(url, {
+          method:'POST',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify({
+            action:'batchSaveInventory',
+            store: STORE_ID,
+            vendor: currentVendor,
+            savedAt: savedAt,
+            dates: payloadDates
+          }),
+          signal: ctrl ? ctrl.signal : undefined
+        });
+        return await r.json();
+      }finally{ if(to) clearTimeout(to); }
+    }
+
     var okDates = [];
-    results.forEach(function(r, idx){ if(r && r.ok) okDates.push(dates[idx]); });
+    var batchErr = null;
+    try{
+      var res = await callBatch();
+      // 新後端：res.results = [{date, ok, ...}, ...]；每筆單獨標記成功失敗
+      if(res && res.ok && Array.isArray(res.results)){
+        res.results.forEach(function(r){ if(r && r.ok) okDates.push(r.date); });
+      }else if(res && res.error && /unknown action/i.test(res.error)){
+        // 後端還沒部署新 action → fallback 走舊版平行 fetch（相容性保底）
+        batchErr = 'old-backend';
+      }else{
+        batchErr = (res && res.error) || '雲端未回 ok';
+      }
+    }catch(e){
+      batchErr = e.message || String(e);
+      // 第一次失敗 → 重試 1 次（可能是 cold-start / 瞬斷）
+      try{
+        await new Promise(function(r){ setTimeout(r, 2000); });
+        var res2 = await callBatch();
+        if(res2 && res2.ok && Array.isArray(res2.results)){
+          res2.results.forEach(function(r){ if(r && r.ok) okDates.push(r.date); });
+          batchErr = null;
+        }
+      }catch(e2){ batchErr = e2.message || String(e2); }
+    }
+
+    // Fallback：批次 API 找不到 → 走舊版平行 fetch（舊後端相容）
+    if(batchErr === 'old-backend'){
+      var promises = dates.map(function(d){
+        var entry = payloadDates.find(function(x){ return x.date === d; }) || {items:[]};
+        return fetch(url, {
+          method:'POST',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify({
+            action:'saveInventory', store: STORE_ID, vendor: currentVendor,
+            date: d, items: entry.items, savedAt: entry.savedAt
+          })
+        }).then(function(r){ return r.json(); }).catch(function(){ return null; });
+      });
+      var results = await Promise.all(promises);
+      results.forEach(function(r, idx){ if(r && r.ok) okDates.push(dates[idx]); });
+      batchErr = null;
+    }
+
     // 推成功的日期才從 dirty 清掉；失敗的留著下次重推
     okDates.forEach(function(d){ delete _dirtyDates[d]; });
     if(okDates.length === dates.length){
       setAutoSaveStatus('cloud');
     }else{
       setAutoSaveStatus('error');
-      alert('❌ 部分日期儲存失敗('+(dates.length-okDates.length)+'/'+dates.length+')— 請檢查網路後再點一次');
+      alert('❌ 部分日期儲存失敗('+(dates.length-okDates.length)+'/'+dates.length+')— 請檢查網路後再點一次'+
+        (batchErr ? '\n（'+String(batchErr).substring(0,120)+'）' : ''));
     }
   }catch(e){
     console.warn('手動儲存失敗', e);
