@@ -855,10 +855,11 @@ function setVendorCfgSavedAt(iso){ if(iso) localStorage.setItem(vendorCfgSavedAt
 function invSyncUrl(){ return localStorage.getItem('cd_inv_sync_url') || ''; }
 
 function buildVendorConfig(){
-  // ⭐ rent 也一起同步（本機 cd_biz_rent_<store> 作為來源，雲端做跨裝置鏡像）
-  var rent = localStorage.getItem('cd_biz_rent_'+STORE_ID);
+  // ⭐ rent 改成「每月各自的 map」{YYYY-MM: 金額} 一起同步雲端
+  //    （以前只存單一數字，9 月調漲就會把 8 月以前也變成新金額）
   var cfg = { custom: getCustomVendors(), deleted: getVendorDeletions() };
-  if(rent !== null && rent !== '') cfg.rent = Number(rent) || 0;
+  var rentMap = (typeof _parseRentMap === 'function') ? _parseRentMap(STORE_ID) : null;
+  if(rentMap && Object.keys(rentMap).length > 0) cfg.rentMap = rentMap;
   return cfg;
 }
 
@@ -872,9 +873,26 @@ function applyVendorConfigLocal(cfg){
     var del = (cfg.deleted && typeof cfg.deleted === 'object' && !Array.isArray(cfg.deleted)) ? cfg.deleted : {};
     if(Object.keys(del).length === 0) localStorage.removeItem(vendorDeletionsKey());
     else localStorage.setItem(vendorDeletionsKey(), JSON.stringify(del));
-    // ⭐ 房租：只有雲端有明確值才覆蓋本機（避免剛從雲端拉空值把使用者剛打的 rent 蓋掉）
-    if(cfg.rent !== undefined && cfg.rent !== null && cfg.rent !== ''){
-      localStorage.setItem('cd_biz_rent_'+STORE_ID, String(Number(cfg.rent) || 0));
+    // ⭐ 房租 map：合併本機與雲端 — 兩邊都有同月份就以雲端為準（跨裝置多台改同月份時後存勝）
+    //    新格式：cfg.rentMap = {YYYY-MM: 金額}
+    //    向後相容：舊 cfg.rent 若還是單一數字，當作 2000-01（意為「所有月份用這個」）
+    var cloudRentMap = null;
+    if(cfg.rentMap && typeof cfg.rentMap === 'object' && !Array.isArray(cfg.rentMap)){
+      cloudRentMap = cfg.rentMap;
+    }else if(cfg.rent !== undefined && cfg.rent !== null && cfg.rent !== '' && typeof _parseRentMap === 'function'){
+      cloudRentMap = { '2000-01': Number(cfg.rent) || 0 };
+    }
+    if(cloudRentMap){
+      var local = (typeof _parseRentMap === 'function') ? _parseRentMap(STORE_ID) : {};
+      var merged = {};
+      Object.keys(local).forEach(function(k){ merged[k] = local[k]; });
+      Object.keys(cloudRentMap).forEach(function(k){
+        if(/^\d{4}-\d{2}$/.test(k)){
+          var n = Number(cloudRentMap[k]);
+          if(isFinite(n) && n > 0) merged[k] = n;
+        }
+      });
+      if(typeof _saveRentMap === 'function') _saveRentMap(STORE_ID, merged);
     }
   }finally{ _applyingRemoteVendorCfg = false; }
 }
@@ -3121,7 +3139,10 @@ function saveBizInputs(){
     localStorage.setItem('cd_biz_hr_'+STORE_ID+'_'+yearMonth, String(hrCost));
   }
   var rent = Number(document.getElementById('biz-rent-input').value) || 0;
-  localStorage.setItem('cd_biz_rent_'+STORE_ID, String(rent));
+  // ⭐ 房租改成「依月份」儲存：使用者在 2026-09 輸入 60000，之後看 2026-09 以後都是 60000；
+  //    但看 2026-08 以前仍然顯示舊值（或預設）。原理：rent 存成 {YYYY-MM: 金額} map，
+  //    讀取時找「最近一次 ≤ 當前月」的那筆
+  setRentForMonth(STORE_ID, yearMonth, rent);
   // ⭐ 房租也推到雲端（跨裝置同步）— scheduleVendorCfgPush 已有 debounce 不會連打
   if(typeof scheduleVendorCfgPush === 'function') scheduleVendorCfgPush();
   renderBusinessSummary();
@@ -3134,7 +3155,59 @@ function saveBizInputs(){
   }
 }
 
-// 各店房租預設值（使用者可在前端手動改，改過的值會存 localStorage 蓋過預設）
+// ⭐ 依月份存取房租 — 格式 { "YYYY-MM": 金額, ... }
+//    使用者 9 月輸入 60000 → 9/10/11... 月都看 60000；8 月以前仍顯示舊值或預設
+//    舊版儲存的是純數字字串（代表「所有月份用這個值」），讀出時當作 {"2000-01": num}
+function _parseRentMap(storeId){
+  var raw = localStorage.getItem('cd_biz_rent_' + storeId);
+  if(raw === null || raw === '') return {};
+  // 先試 JSON（新格式）
+  try{
+    var obj = JSON.parse(raw);
+    if(obj && typeof obj === 'object' && !Array.isArray(obj)){
+      // 確保 key 是 YYYY-MM 格式
+      var out = {};
+      Object.keys(obj).forEach(function(k){
+        if(/^\d{4}-\d{2}$/.test(k)){
+          var n = Number(obj[k]);
+          if(isFinite(n) && n > 0) out[k] = n;
+        }
+      });
+      return out;
+    }
+  }catch(e){}
+  // 舊版：純數字字串 → 當作「從古到今」都是這金額
+  var legacyNum = Number(raw);
+  if(isFinite(legacyNum) && legacyNum > 0) return { '2000-01': legacyNum };
+  return {};
+}
+function _saveRentMap(storeId, map){
+  if(!map || Object.keys(map).length === 0){
+    localStorage.removeItem('cd_biz_rent_' + storeId);
+  }else{
+    localStorage.setItem('cd_biz_rent_' + storeId, JSON.stringify(map));
+  }
+}
+// 讀某月的房租：找 map 裡「最近一次 ≤ ym」的設定，沒有就 fallback 到 DEFAULT_RENTS
+function getRentForMonth(storeId, ym){
+  var map = _parseRentMap(storeId);
+  var keys = Object.keys(map).sort();  // 由小到大
+  var hit = null;
+  for(var i = 0; i < keys.length; i++){
+    if(keys[i] <= ym) hit = keys[i];
+    else break;
+  }
+  if(hit !== null) return map[hit];
+  return DEFAULT_RENTS[storeId] || 45000;
+}
+function setRentForMonth(storeId, ym, amount){
+  var map = _parseRentMap(storeId);
+  if(amount && amount > 0) map[ym] = amount;
+  else delete map[ym];
+  _saveRentMap(storeId, map);
+}
+
+// 各店房租預設值（使用者在某月手動輸入後，從該月起套用該值；之前的月份仍用這預設或更早的輸入）
 var DEFAULT_RENTS = {
   'chudian-zhonghe':    44000,
   'chudian-yongchun':   60000,
@@ -3384,9 +3457,9 @@ function loadBizInputs(yearMonth){
   }
 
   var defaultRent = DEFAULT_RENTS[STORE_ID] || 45000;
-  var rent = localStorage.getItem('cd_biz_rent_'+STORE_ID);
-  if(rent === null) rent = String(defaultRent);
-  document.getElementById('biz-rent-input').value = rent;
+  // ⭐ 依月份找房租：使用 getRentForMonth（會回「最近 ≤ yearMonth 的設定值」，沒設過用預設）
+  var rentForYm = getRentForMonth(STORE_ID, yearMonth);
+  document.getElementById('biz-rent-input').value = String(rentForYm);
   // 動態 placeholder 顯示該店預設值
   document.getElementById('biz-rent-input').placeholder = '預設 ' + defaultRent.toLocaleString();
 }
