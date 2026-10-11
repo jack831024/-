@@ -731,6 +731,8 @@ function onMonthPickerChange(){
   }
   if(typeof loadHistory === 'function') loadHistory();
   if(typeof refreshAllAnalysisData === 'function') refreshAllAnalysisData(newYm);
+  // ⭐ 切月也 pull 一次 vendor config（別台剛改的房租/廠商會自動帶進來）
+  if(typeof pullVendorConfigFromCloud === 'function') pullVendorConfigFromCloud();
 }
 // 保留舊 API 名稱，避免有其他地方呼叫（現在就導到新函式）
 function onVendorMonthChange(){ onMonthPickerChange(); }
@@ -1016,11 +1018,22 @@ function pushVendorConfigToCloud(){
   var savedAt = new Date().toISOString();
   setVendorCfgSavedAt(savedAt);
   var cfg = buildVendorConfig();
-  return fetch(url, {
-    method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body: JSON.stringify({ action:'saveVendorConfig', store: STORE_ID, config: cfg, savedAt: savedAt })
-  }).then(function(r){ return r.json(); }).then(function(res){
+  // ⭐ 加 20s timeout + 失敗自動重試 1 次（Apps Script 冷啟動常常 15~20 秒）
+  //    以前無 timeout → 冷啟動時「儲存中」會卡住 20+ 秒感覺很慢
+  function fetchOnce(timeoutMs){
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var to = ctrl ? setTimeout(function(){ try{ ctrl.abort(); }catch(_){} }, timeoutMs) : null;
+    return fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action:'saveVendorConfig', store: STORE_ID, config: cfg, savedAt: savedAt }),
+      signal: ctrl ? ctrl.signal : undefined
+    }).then(function(r){ return r.json(); }).finally(function(){ if(to) clearTimeout(to); });
+  }
+  return fetchOnce(20000).catch(function(e){
+    // 第一次失敗（通常是冷啟動 timeout）→ 等 1.5 秒重試一次（這時 Script 已預熱）
+    return new Promise(function(r){ setTimeout(r, 1500); }).then(function(){ return fetchOnce(30000); });
+  }).then(function(res){
     // 雲端有更新的版本（stale=雲端較新）→ 採用雲端 deleted、custom 聯集，重畫
     if(res && res.stale && res.config){
       var merged = mergeVendorConfig(buildVendorConfig(), res.config, true);
@@ -1028,16 +1041,20 @@ function pushVendorConfigToCloud(){
       setVendorCfgSavedAt(res.savedAt || savedAt);
       _rerenderVendors();
     }
-  }).catch(function(){ /* 離線容忍：保留本機，下次再推 */ });
+  }).catch(function(){ /* 兩次都失敗 → 離線容忍：保留本機 dirty flag，下次再推 */ });
 }
 
 function pullVendorConfigFromCloud(){
   var url = invSyncUrl();
   if(!url) return Promise.resolve();
+  // 15s timeout 避免 Apps Script 冷啟動時整頁卡住等雲端
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var to = ctrl ? setTimeout(function(){ try{ ctrl.abort(); }catch(_){} }, 15000) : null;
   return fetch(url, {
     method:'POST',
     headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body: JSON.stringify({ action:'getVendorConfig', store: STORE_ID })
+    body: JSON.stringify({ action:'getVendorConfig', store: STORE_ID }),
+    signal: ctrl ? ctrl.signal : undefined
   }).then(function(r){ return r.json(); }).then(function(res){
     if(!res || !res.ok) return;
     var localCfg = buildVendorConfig();
@@ -1056,13 +1073,20 @@ function pullVendorConfigFromCloud(){
       if(typeof loadBizInputs === 'function') loadBizInputs(curYm);
       if(typeof renderBusinessSummary === 'function') renderBusinessSummary();
     }catch(e){}
-    // 合併結果跟雲端不一致（或雲端原本沒資料）→ 把聯集推回雲端，讓所有裝置收斂
+    // 合併結果跟雲端不一致 → 標 dirty，讓使用者下次按「💾」會一併推回雲端
+    //   以前這裡會自動 push，但使用者希望完全手動 → 改成只標 dirty
     var changed = !cloudCfg ||
       JSON.stringify(merged.custom) !== JSON.stringify(cloudCfg.custom || []) ||
       JSON.stringify(merged.deleted) !== JSON.stringify(cloudCfg.deleted || {}) ||
       JSON.stringify(merged.rentMap || {}) !== JSON.stringify(cloudCfg.rentMap || {});
-    if(changed) pushVendorConfigToCloud();
-  }).catch(function(){ /* 離線容忍 */ });
+    if(changed){
+      _vendorCfgDirty = true;
+      if(typeof setAutoSaveStatus === 'function' && typeof hasDirty === 'function' && hasDirty()){
+        setAutoSaveStatus('dirty');
+      }
+    }
+  }).catch(function(){ /* 離線容忍 */ })
+    .finally(function(){ if(to) clearTimeout(to); });
 }
 
 // 手動同步：使用者按「🔄 同步」按鈕觸發，顯示同步結果讓使用者看得到
