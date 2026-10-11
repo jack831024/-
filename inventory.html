@@ -914,13 +914,43 @@ function unionCustomList(cloudCustom, localCustom){
 //   • deleted：「較新的那份整包為準」（last-write-wins），
 //     不可用聯集，否則某台還原後會被另一台舊的刪除標記蓋回去
 // cloudNewer = 雲端 savedAt 是否比本機新
+// ⭐ 房租 map 聯集 — 不同月份都保留；同一月份依 cloudNewer 決定誰勝
+function _unionRentMap(cloudMap, localMap, cloudNewer){
+  var out = {};
+  var first = cloudNewer ? localMap : cloudMap;
+  var second = cloudNewer ? cloudMap : localMap;
+  function copy(m){
+    if(!m) return;
+    Object.keys(m).forEach(function(k){
+      if(/^\d{4}-\d{2}$/.test(k)){
+        var n = Number(m[k]);
+        if(isFinite(n) && n > 0) out[k] = n;
+      }
+    });
+  }
+  copy(first);
+  copy(second);  // 後面的覆蓋前面的 → "勝方" 的值生效
+  return out;
+}
+
 function mergeVendorConfig(localCfg, cloudCfg, cloudNewer){
   localCfg = localCfg || {}; cloudCfg = cloudCfg || null;
   var custom = unionCustomList(cloudCfg && cloudCfg.custom, localCfg.custom);
   var deleted;
   if(cloudCfg && cloudNewer) deleted = cloudCfg.deleted || {};
   else                       deleted = localCfg.deleted || {};
-  return { custom: custom, deleted: deleted };
+  // ⭐ rentMap 要跟著合併（以前漏掉這段，房租永遠不會從雲端同步到別台裝置）
+  //    cfg.rentMap 新格式 / cfg.rent 舊格式（單一數字 → 當 2000-01 同月份）
+  var cloudRent = cloudCfg && (
+    cloudCfg.rentMap ||
+    (cloudCfg.rent !== undefined && cloudCfg.rent !== null && cloudCfg.rent !== ''
+      ? { '2000-01': Number(cloudCfg.rent) || 0 }
+      : null)
+  );
+  var rentMap = _unionRentMap(cloudRent, localCfg.rentMap, cloudNewer);
+  var result = { custom: custom, deleted: deleted };
+  if(Object.keys(rentMap).length > 0) result.rentMap = rentMap;
+  return result;
 }
 
 function _rerenderVendors(){
@@ -1017,10 +1047,17 @@ function pullVendorConfigFromCloud(){
     var newest = cloudSavedAt > localSavedAt ? cloudSavedAt : localSavedAt;
     if(newest) setVendorCfgSavedAt(newest);
     _rerenderVendors();
+    // ⭐ 房租可能被雲端更新了 → 重新套用月度分析的輸入欄 + 利潤計算
+    try{
+      var curYm = (document.getElementById('month-picker') || {}).value || todayMonth();
+      if(typeof loadBizInputs === 'function') loadBizInputs(curYm);
+      if(typeof renderBusinessSummary === 'function') renderBusinessSummary();
+    }catch(e){}
     // 合併結果跟雲端不一致（或雲端原本沒資料）→ 把聯集推回雲端，讓所有裝置收斂
     var changed = !cloudCfg ||
       JSON.stringify(merged.custom) !== JSON.stringify(cloudCfg.custom || []) ||
-      JSON.stringify(merged.deleted) !== JSON.stringify(cloudCfg.deleted || {});
+      JSON.stringify(merged.deleted) !== JSON.stringify(cloudCfg.deleted || {}) ||
+      JSON.stringify(merged.rentMap || {}) !== JSON.stringify(cloudCfg.rentMap || {});
     if(changed) pushVendorConfigToCloud();
   }).catch(function(){ /* 離線容忍 */ });
 }
