@@ -33,7 +33,8 @@ var EMP_PROP_KEY = 'EMP_MASTER_SHEET_ID';   // PropertiesService 存自動建立
 var STORE_PASSWORDS = {
   'chudian-yongchun':  'a94213054',   // 永春店
   'chudian-xinzhuang': 'a60749791',   // 新莊店
-  'chudian-zhonghe':   'a90369287'    // 中和店
+  'chudian-zhonghe':   'a90369287',   // 中和店
+  'chudian-beixin':    'a62084145'    // 北新店
 };
 var VALID_STORES = Object.keys(STORE_PASSWORDS);
 

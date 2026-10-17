@@ -439,6 +439,7 @@ var SALES_BONUS_RATES = {
   'chudian-zhonghe':    0.0165,
   'chudian-yongchun':   0.02,
   'chudian-xinzhuang':  0.0175,
+  'chudian-beixin':     0.0175, // 北新 1.75%（開店時跟新莊同）
   'shicheng-zhongxiao': 0.025
 };
 
@@ -543,6 +544,16 @@ var STORE_CONFIG = {
       { id:'xz_pt2', name:'洪晟育' }
     ],
     // 火鍋店：店長 10000/20000、副店長 5000/15000、正職 0/10000
+    headBonus: 10000, headFixedOT: 20000,
+    deputyBonus: 5000, deputyFixedOT: 15000,
+    regularFixedOT: 10000,
+    defaultInsurance: {}
+  },
+  'chudian-beixin': {
+    // 新店開幕時員工名單還未定 → 空陣列，透過 employee-master.html 新增後再回來補 salesAlias
+    employees: [],
+    pt: [],
+    // 火鍋店：店長 10000/20000、副店長 5000/15000、正職 0/10000（跟其他初殿店一樣）
     headBonus: 10000, headFixedOT: 20000,
     deputyBonus: 5000, deputyFixedOT: 15000,
     regularFixedOT: 10000,
@@ -747,7 +758,7 @@ function seedCustomEmployeesFromLatestMonth(){
 
 // ===== 員工資料主檔：當月在職名單（以主檔為準；過濾+疊加，含保底）=====
 var EMP_MASTER_URL = 'https://script.google.com/macros/s/AKfycbyLDnvILhiL0iIWjnoN14iwZZg5p9DobG1Ik3Fq-LiR6gcj3-_AKGTdnywDnmNrZLp6/exec';
-var EMP_MASTER_PW  = { 'chudian-yongchun':'a94213054', 'chudian-xinzhuang':'a60749791', 'chudian-zhonghe':'a90369287' };
+var EMP_MASTER_PW  = { 'chudian-yongchun':'a94213054', 'chudian-xinzhuang':'a60749791', 'chudian-zhonghe':'a90369287', 'chudian-beixin':'a62084145' };
 var MASTER_EMPS = null;   // null=尚未載入(不過濾，用原本清單) ; 陣列=已載入
 function pullMasterRoster(attempt){
   var pw = EMP_MASTER_PW[STORE];
@@ -2199,6 +2210,7 @@ var BUILTIN_SALARY_URLS = {
   'chudian-zhonghe':    SALARY_SYNC_URL,
   'chudian-yongchun':   SALARY_SYNC_URL,
   'chudian-xinzhuang':  SALARY_SYNC_URL,
+  'chudian-beixin':     SALARY_SYNC_URL,
   'shicheng-zhongxiao': SALARY_SYNC_URL
 };
 var LS_SALARY_SYNC_URL = 'cd_salary_sync_url';  // 使用者自行貼上的（優先於內建）

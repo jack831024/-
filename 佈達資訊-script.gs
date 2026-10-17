@@ -202,6 +202,7 @@ function storeToSheetName(store) {
     'chudian-zhonghe':    '初殿中和店',
     'chudian-yongchun':   '初殿永春店',
     'chudian-xinzhuang':  '初殿新莊店',
+    'chudian-beixin':     '初殿北新店',
     'shicheng-zhongxiao': '十城忠孝店'
   };
   return map[store] || String(store);
@@ -235,7 +236,7 @@ function json(obj) {
 //    （URL 不變，announce.html 不用改任何設定）
 // ============================================
 function forceAuth() {
-  var stores = ['chudian-zhonghe', 'chudian-yongchun', 'chudian-xinzhuang', 'shicheng-zhongxiao'];
+  var stores = ['chudian-zhonghe', 'chudian-yongchun', 'chudian-xinzhuang', 'chudian-beixin', 'shicheng-zhongxiao'];
   stores.forEach(function(s){
     var sh = getAnnounceSheet(s);
     var fd = getAnnounceFolder(s);

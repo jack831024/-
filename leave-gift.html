@@ -414,6 +414,9 @@ var EMP_DATA = {
     { id:'xz_pt1', name:'洪晟育', pt:true, hireDate:'2025-10-01', birthday:'', initialGiftBalance:0 },
     { id:'xz_pt2', name:'林詩縈', pt:true, hireDate:'2025-12-01', birthday:'', initialGiftBalance:0 }
   ],
+  'chudian-beixin': [
+    // 新店開幕時員工還未定 → 空陣列，之後到 employee-master 新增後再回來補初始已用/禮金
+  ],
   'shicheng-zhongxiao': [
     // 十城沒有旅遊假；起始已用全部歸 0，由加班費系統 OT 資料當「已用」唯一來源
     { id:'sc1', name:'林梓彥', hireDate:'2025-02-01', birthday:'',      initialAnnualAccrued:10, initialAnnualUsed:1,  initialTravelRemaining:0, initialGiftBalance:0 },
@@ -468,7 +471,7 @@ function refreshEmployeesFromState(){
 
 // ===== 員工資料主檔：當月在職名單（覆蓋層；只補進特休沒有的人，不寫進 STATE，非破壞性）=====
 var EMP_MASTER_URL = 'https://script.google.com/macros/s/AKfycbyLDnvILhiL0iIWjnoN14iwZZg5p9DobG1Ik3Fq-LiR6gcj3-_AKGTdnywDnmNrZLp6/exec';
-var EMP_MASTER_PW  = { 'chudian-yongchun':'a94213054', 'chudian-xinzhuang':'a60749791', 'chudian-zhonghe':'a90369287' };
+var EMP_MASTER_PW  = { 'chudian-yongchun':'a94213054', 'chudian-xinzhuang':'a60749791', 'chudian-zhonghe':'a90369287', 'chudian-beixin':'a62084145' };
 var MASTER_EMPS = [];   // 主檔當月在職名單快取
 function pullMasterRoster(attempt){
   var pw = EMP_MASTER_PW[STORE];
@@ -643,6 +646,7 @@ function getStorePassword(){
     'chudian-zhonghe':    'a90369287',
     'chudian-yongchun':   'a94213054',
     'chudian-xinzhuang':  'a60749791',
+    'chudian-beixin':     'a62084145',
     'shicheng-zhongxiao': 'a61222042'
   };
   return pw[STORE] || '';

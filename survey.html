@@ -463,7 +463,7 @@ function syncUrl(){ return localStorage.getItem('cd_survey_sync_url') || ''; }
 
 // ===== 員工主檔：當月在職名單（唯一來源；失敗或十城→回 null，由呼叫端用原本清單保底）=====
 var EMP_MASTER_URL = 'https://script.google.com/macros/s/AKfycbyLDnvILhiL0iIWjnoN14iwZZg5p9DobG1Ik3Fq-LiR6gcj3-_AKGTdnywDnmNrZLp6/exec';
-var EMP_MASTER_PW  = { 'chudian-yongchun':'a94213054', 'chudian-xinzhuang':'a60749791', 'chudian-zhonghe':'a90369287' };
+var EMP_MASTER_PW  = { 'chudian-yongchun':'a94213054', 'chudian-xinzhuang':'a60749791', 'chudian-zhonghe':'a90369287', 'chudian-beixin':'a62084145' };
 async function fetchMasterRoster(store, ym){
   var pw = EMP_MASTER_PW[store];
   if(!pw) return null;   // 十城等主檔沒有的店 → 用原本清單
@@ -517,7 +517,8 @@ function getCategories(storeId){
 var STORES = [
   { id:'chudian-zhonghe',    name:'初殿中和店', brand:'chudian',  brandLabel:'CHUDIAN · 初殿',  emoji:'🍲' },
   { id:'chudian-yongchun',   name:'初殿永春店', brand:'chudian',  brandLabel:'CHUDIAN · 初殿',  emoji:'🍲' },
-  { id:'chudian-xinzhuang',  name:'初殿新莊店', brand:'chudian',  brandLabel:'CHUDIAN · 初殿',  emoji:'🍲' }
+  { id:'chudian-xinzhuang',  name:'初殿新莊店', brand:'chudian',  brandLabel:'CHUDIAN · 初殿',  emoji:'🍲' },
+  { id:'chudian-beixin',     name:'初殿北新店', brand:'chudian',  brandLabel:'CHUDIAN · 初殿',  emoji:'🍲' }
 ];
 
 // 各店預設員工職位（後端是同一份；若主管改過，loadPositions 會用後端覆蓋）
@@ -530,6 +531,9 @@ var STORE_DEFAULT_POSITIONS = {
   },
   'chudian-xinzhuang': {
     '蔡鈺豪':'店長', '蘇奕誠':'副店長', '李嘉真':'正職'
+  },
+  'chudian-beixin': {
+    // 新店開幕時員工未定，由 employee-master 補；loadPositions 會用後端覆蓋
   },
   'shicheng-zhongxiao': {
     '林梓彥':'店長', '王謖':'正職', '林哲民':'正職', '陳柏維':'正職'

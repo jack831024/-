@@ -213,7 +213,8 @@ var BUILTIN_REVIEW_SYNC_URL = "https://script.google.com/macros/s/AKfycbwhMQQqBW
 var STORES = [
   { key: 'chudian-zhonghe',    name: '中和店', brand: '初殿' },
   { key: 'chudian-yongchun',   name: '永春店', brand: '初殿' },
-  { key: 'chudian-xinzhuang',  name: '新莊店', brand: '初殿' }
+  { key: 'chudian-xinzhuang',  name: '新莊店', brand: '初殿' },
+  { key: 'chudian-beixin',     name: '北新店', brand: '初殿' }
   // 十城忠孝店：前端隱藏（後端資料保留）
 ];
 
@@ -222,6 +223,7 @@ var EDIT_PASSWORDS = {
   'chudian-zhonghe':    'a90369287',
   'chudian-yongchun':   'a94213054',
   'chudian-xinzhuang':  'a60749791',
+  'chudian-beixin':     'a62084145',
   'shicheng-zhongxiao': 'a61222042'
 };
 // 全域密碼：可登記所有店＋管理項目清單
@@ -601,7 +603,7 @@ function esc(s){
 // ============================================
 // ===== 員工資料主檔：當月在職名單（相加疊加；缺失只讀名單，不會寫回共享雲端）=====
 var EMP_MASTER_URL = 'https://script.google.com/macros/s/AKfycbyLDnvILhiL0iIWjnoN14iwZZg5p9DobG1Ik3Fq-LiR6gcj3-_AKGTdnywDnmNrZLp6/exec';
-var EMP_MASTER_PW  = { 'chudian-yongchun':'a94213054', 'chudian-xinzhuang':'a60749791', 'chudian-zhonghe':'a90369287' };
+var EMP_MASTER_PW  = { 'chudian-yongchun':'a94213054', 'chudian-xinzhuang':'a60749791', 'chudian-zhonghe':'a90369287', 'chudian-beixin':'a62084145' };
 var MASTER_EMPS_BY_STORE = {};
 function pullMasterRoster(store, attempt){
   var pw = EMP_MASTER_PW[store];

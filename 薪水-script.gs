@@ -32,6 +32,7 @@ var STORE_PASSWORDS = {
   'chudian-zhonghe':    'a90369287',
   'chudian-yongchun':   'a94213054',
   'chudian-xinzhuang':  'a60749791',
+  'chudian-beixin':     'a62084145',
   'shicheng-zhongxiao': 'a61222042'
 };
 

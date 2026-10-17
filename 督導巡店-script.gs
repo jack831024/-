@@ -28,6 +28,7 @@ const STORE_PASSWORDS = {
   'chudian-zhonghe':   'a90369287',
   'chudian-yongchun':  'a94213054',
   'chudian-xinzhuang': 'a60749791',
+  'chudian-beixin':    'a62084145',
 };
 const GLOBAL_PASSWORD = 'yuanxin2022';
 

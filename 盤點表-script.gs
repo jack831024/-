@@ -419,6 +419,7 @@ function storeToSheetName(store) {
     'chudian-zhonghe':    '初殿中和店',
     'chudian-yongchun':   '初殿永春店',
     'chudian-xinzhuang':  '初殿新莊店',
+    'chudian-beixin':     '初殿北新店',
     'shicheng-zhongxiao': '十城忠孝店'
   };
   return map[store] || String(store);
@@ -493,7 +494,7 @@ function json(obj) {
 // 5. 把網址貼進 inventory.html 的設定（localStorage cd_inv_sync_url）
 // ============================================
 function forceAuth() {
-  var stores = ['chudian-zhonghe', 'chudian-yongchun', 'chudian-xinzhuang', 'shicheng-zhongxiao'];
+  var stores = ['chudian-zhonghe', 'chudian-yongchun', 'chudian-xinzhuang', 'chudian-beixin', 'shicheng-zhongxiao'];
   stores.forEach(function(s){
     var sh = getInventorySheet(s);
     Logger.log('✓ 盤點工作表已就緒：' + sh.getName());

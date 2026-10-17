@@ -21,6 +21,7 @@ var STORE_PASSWORDS = {
   'chudian-zhonghe':    'a90369287',  // 中和店
   'chudian-yongchun':   'a94213054',  // 永春店
   'chudian-xinzhuang':  'a60749791',  // 新莊店
+  'chudian-beixin':     'a62084145',  // 北新店
   'shicheng-zhongxiao': 'a61222042'   // 十城忠孝店
 };
 
@@ -59,6 +60,9 @@ var STORE_DEFAULT_POSITIONS = {
     '蔡鈺豪': '店長',
     '蘇奕誠': '副店長',
     '李嘉真': '正職'
+  },
+  'chudian-beixin': {
+    // 新店開幕時員工未定；主管可在前端 UI 編輯後存回 Script Properties
   },
   'shicheng-zhongxiao': {
     '林梓彥': '店長',

@@ -143,6 +143,7 @@
         <option value="chudian-yongchun">永春店</option>
         <option value="chudian-xinzhuang">新莊店</option>
         <option value="chudian-zhonghe">中和店</option>
+        <option value="chudian-beixin">北新店</option>
       </select>
     </div>
     <div class="field">
@@ -197,13 +198,14 @@ function apiUrl(){ return localStorage.getItem('cd_emp_sync_url') || ''; }
 // 店別
 var STORE = sessionStorage.getItem('cd_store') || '';
 var STORE_NAME = sessionStorage.getItem('cd_store_name') || STORE;
-var VALID_STORES = ['chudian-yongchun','chudian-xinzhuang','chudian-zhonghe'];
+var VALID_STORES = ['chudian-yongchun','chudian-xinzhuang','chudian-zhonghe','chudian-beixin'];
 
 // 各店密碼（內建，進店免再輸入；後端仍以此驗證）
 var STORE_PW = {
   'chudian-yongchun':  'a94213054',
   'chudian-xinzhuang': 'a60749791',
-  'chudian-zhonghe':   'a90369287'
+  'chudian-zhonghe':   'a90369287',
+  'chudian-beixin':    'a62084145'
 };
 var PW = '';               // 帶入的店家密碼
 var ALL = [];              // 完整員工清單（含個資）
@@ -395,7 +397,7 @@ async function saveEmpFields(e, patch, okMsg){
 // ============================================
 // 表單
 // ============================================
-var STORE_LABEL = { 'chudian-yongchun':'永春店', 'chudian-xinzhuang':'新莊店', 'chudian-zhonghe':'中和店' };
+var STORE_LABEL = { 'chudian-yongchun':'永春店', 'chudian-xinzhuang':'新莊店', 'chudian-zhonghe':'中和店', 'chudian-beixin':'北新店' };
 function storeLabel(s){ return STORE_LABEL[s] || s; }
 
 function openForm(){

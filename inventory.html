@@ -3345,6 +3345,7 @@ var DEFAULT_RENTS = {
   'chudian-zhonghe':    44000,
   'chudian-yongchun':   60000,
   'chudian-xinzhuang':  70000,
+  'chudian-beixin':     60000,  // 北新預設 60000，可到 ⚙️ 修改
   'shicheng-zhongxiao': 45000  // 十城未指定，暫用 45000，可手動調整
 };
 
@@ -3446,6 +3447,15 @@ var SALARY_STORE_CONFIG = {
       { id:'xz3', defaultRole:'regular' }, { id:'xz4', defaultRole:'regular' }
     ],
     pt: [ { id:'xz_pt1' }, { id:'xz_pt2' } ],
+    headBonus:10000, headFixedOT:20000,
+    deputyBonus:5000, deputyFixedOT:15000,
+    regularFixedOT:10000
+  },
+  'chudian-beixin': {
+    // 新店開幕時員工名單還不固定 → 暫留空，之後進 employee-master.html 新增
+    // 預設薪資條件沿用初殿體系（head/deputy/regular 固定）
+    employees: [],
+    pt: [],
     headBonus:10000, headFixedOT:20000,
     deputyBonus:5000, deputyFixedOT:15000,
     regularFixedOT:10000
@@ -3603,6 +3613,7 @@ var ANALYSIS_PASSWORDS = {
   'chudian-zhonghe':    'a90369287',
   'chudian-yongchun':   'a94213054',
   'chudian-xinzhuang':  'a60749791',
+  'chudian-beixin':     'a62084145',
   'shicheng-zhongxiao': 'a61222042'
 };
 

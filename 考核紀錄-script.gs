@@ -18,11 +18,12 @@ var SH_CONFIG    = '設定';       // key/value（checklists＝檢查細項、de
 var SH_DEFECTS   = '缺失紀錄';   // 店 + 月份 + 員工 + 缺失項目/日期/原因，每筆一列
 
 // 合法店家 key（與 review.html 一致）
-var STORE_KEYS = ['chudian-zhonghe', 'chudian-yongchun', 'chudian-xinzhuang', 'shicheng-zhongxiao'];
+var STORE_KEYS = ['chudian-zhonghe', 'chudian-yongchun', 'chudian-xinzhuang', 'chudian-beixin', 'shicheng-zhongxiao'];
 var STORE_NAMES = {
   'chudian-zhonghe':    '初殿中和店',
   'chudian-yongchun':   '初殿永春店',
   'chudian-xinzhuang':  '初殿新莊店',
+  'chudian-beixin':     '初殿北新店',
   'shicheng-zhongxiao': '十城忠孝店'
 };
 

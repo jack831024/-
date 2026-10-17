@@ -30,6 +30,7 @@ var SCHEDULE_SHEETS = {
   'chudian-zhonghe':    '12CevJ9CRa8NtVMt8hNzUOQtehgv9yDJBQBW_uruDoe0', // 中和
   'chudian-yongchun':   '1CZhHAmZUReT7vGDLf43x_wYGLFGaA3h2Q7MVES5CaVo', // 永春
   'chudian-xinzhuang':  '1fracaYdxg4LWt2ZQ7rSRRnhlGXMMDB5mdKzlgHEIC-A', // 新莊
+  'chudian-beixin':     '12u3rRg2R742_T_PA_Bp3LnHK_eozwRU5ll6aR_CoWn8', // 北新
   'shicheng-zhongxiao': '1cwFvdZt3nEPnNxaCS0VmX7NOH-Zvk1ih'              // 十城
 };
 
@@ -41,6 +42,7 @@ var SCHEDULE_CONFIG = {
   'chudian-zhonghe':    { sheetName: null, headerRow: 0, dateCol: 0, startRow: 2 },
   'chudian-yongchun':   { sheetName: null, headerRow: 0, dateCol: 0, startRow: 2 },
   'chudian-xinzhuang':  { sheetName: null, headerRow: 0, dateCol: 0, startRow: 2 },
+  'chudian-beixin':     { sheetName: null, headerRow: 0, dateCol: 0, startRow: 2 },
   'shicheng-zhongxiao': { sheetName: null, headerRow: 0, dateCol: 0, startRow: 2 }
 };
 
@@ -480,6 +482,7 @@ function storeToSheetName(store) {
     'chudian-zhonghe': '初殿中和店',
     'chudian-yongchun': '初殿永春店',
     'chudian-xinzhuang': '初殿新莊店',
+    'chudian-beixin': '初殿北新店',
     'shicheng-zhongxiao': '十城忠孝店'
   };
   return map[store] || store;
@@ -597,7 +600,7 @@ function restoreImageFileIds() {
   }
   var imagesRoot = rootFolders.next();
 
-  var stores = ['chudian-zhonghe', 'chudian-yongchun', 'chudian-xinzhuang', 'shicheng-zhongxiao'];
+  var stores = ['chudian-zhonghe', 'chudian-yongchun', 'chudian-xinzhuang', 'chudian-beixin', 'shicheng-zhongxiao'];
   var totalRestored = 0;
   var totalAlreadyOk = 0;
   var totalNoMatch = 0;
@@ -670,7 +673,7 @@ function restoreImageFileIds() {
 // 一次性清理：把試算表裡所有日期欄位統一成 YYYY-MM-DD 文字格式
 // 執行方式：Apps Script 編輯器 → 函式下拉選「normalizeAllSheets」→ ▶️ 執行
 function normalizeAllSheets() {
-  var stores = ['chudian-zhonghe', 'chudian-yongchun', 'chudian-xinzhuang', 'shicheng-zhongxiao'];
+  var stores = ['chudian-zhonghe', 'chudian-yongchun', 'chudian-xinzhuang', 'chudian-beixin', 'shicheng-zhongxiao'];
   stores.forEach(function(store) {
     try {
       var sheet = getSheet(store);
@@ -712,7 +715,7 @@ function forceAuth() {
   var root = DriveApp.getRootFolder();
   var folder = getOrCreateFolder(root, IMAGES_ROOT);
   // 順便把四家店的子資料夾都先建好
-  var stores = ['初殿中和店', '初殿永春店', '初殿新莊店', '十城忠孝店'];
+  var stores = ['初殿中和店', '初殿永春店', '初殿新莊店', '初殿北新店', '十城忠孝店'];
   stores.forEach(function(name){
     getOrCreateFolder(folder, name);
   });

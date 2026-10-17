@@ -474,7 +474,7 @@ function hideLoading(){ /* no-op */ }
 // 🏷️ 版本編號（每次改完程式碼，手動改這行即可）
 // 員工打開頁面會自動偵測新版、提示重載，不用手動清快取
 // ============================================
-var APP_VERSION = '2026.10.06-01';
+var APP_VERSION = '2026.10.17-01';
 
 // ⭐ 每個 fetch 的 timeout（毫秒）：超過就 abort，避免 Apps Script/Google 網路抽風時無限等
 //   放最頂端是因為 fetchMasterRoster 在頁面 init 時就會用到（比 fetchJsonRetry 早）
@@ -572,6 +572,7 @@ var BONUS_RATES = {
   'chudian-zhonghe':    0.0165, // 中和店 1.65%
   'chudian-yongchun':   0.02,   // 永春店 2%
   'chudian-xinzhuang':  0.0175, // 新莊店 1.75%
+  'chudian-beixin':     0.0175, // 北新店 1.75%（開店時跟新莊同比例）
   'shicheng-zhongxiao': 0.025   // 十城忠孝店 2.5%
 };
 
@@ -605,6 +606,7 @@ var STAFF_LISTS = {
   'chudian-zhonghe':    [],
   'chudian-yongchun':   [],
   'chudian-xinzhuang':  [],
+  'chudian-beixin':     [],
   'shicheng-zhongxiao': []
 };
 
@@ -655,7 +657,7 @@ var CURRENT_STAFF_LIST = (function(){
 
 // ===== 員工主檔：當月在職名單（採「相加」：主檔的人加進來，保留原本清單的跨店支援名字）=====
 var EMP_MASTER_URL = 'https://script.google.com/macros/s/AKfycbyLDnvILhiL0iIWjnoN14iwZZg5p9DobG1Ik3Fq-LiR6gcj3-_AKGTdnywDnmNrZLp6/exec';
-var EMP_MASTER_PW  = { 'chudian-yongchun':'a94213054', 'chudian-xinzhuang':'a60749791', 'chudian-zhonghe':'a90369287' };
+var EMP_MASTER_PW  = { 'chudian-yongchun':'a94213054', 'chudian-xinzhuang':'a60749791', 'chudian-zhonghe':'a90369287', 'chudian-beixin':'a62084145' };
 var MASTER_PT_NAMES = {};   // 主檔 PT 名單（正規化姓名）→ 小結不顯示 PT
 async function fetchMasterRoster(store, ym){
   var pw = EMP_MASTER_PW[store];
@@ -2573,6 +2575,7 @@ var BONUS_PASSWORDS = {
   'chudian-zhonghe':    '90369287',
   'chudian-yongchun':   '94213054',
   'chudian-xinzhuang':  '60749791',
+  'chudian-beixin':     '62084145',
   'shicheng-zhongxiao': '61222042'
 };
 
