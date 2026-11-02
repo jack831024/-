@@ -19,8 +19,8 @@ var SH_VENDORS = '廠商清單';      // 廠商主檔（排序、隱藏）
 var SH_NOTES   = '月備註';        // 每月備註
 
 // 4 家店欄位 key 與顯示名（順序固定）
-var STORE_KEYS  = ['zhonghe', 'yongchun', 'xinzhuang', 'zhongxiao'];
-var STORE_NAMES = ['中和店',  '永春店',   '新莊店',     '忠孝店'];
+var STORE_KEYS  = ['zhonghe', 'yongchun', 'xinzhuang', 'beixin', 'zhongxiao'];
+var STORE_NAMES = ['中和店',  '永春店',   '新莊店',     '北新店', '忠孝店'];
 
 // ============================================
 // 🚪 入口

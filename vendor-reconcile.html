@@ -136,6 +136,8 @@ table.recon tfoot .ft-sum{text-align:right;font-family:ui-monospace,"SF Mono",Me
 .summary-grid .stat.yongchun .val{color:#a16207}
 .summary-grid .stat.xinzhuang{border-color:#86efac}
 .summary-grid .stat.xinzhuang .val{color:#15803d}
+.summary-grid .stat.beixin{border-color:#c4b5fd}
+.summary-grid .stat.beixin .val{color:#6d28d9}
 .summary-grid .stat.zhongxiao{border-color:#7dd3fc}
 .summary-grid .stat.zhongxiao .val{color:#0369a1}
 
@@ -254,6 +256,7 @@ table.recon tfoot .ft-sum{text-align:right;font-family:ui-monospace,"SF Mono",Me
             <th data-store="zhonghe"><span class="store-tag">CHUDIAN</span><span class="store-name">中和店</span></th>
             <th data-store="yongchun"><span class="store-tag">CHUDIAN</span><span class="store-name">永春店</span></th>
             <th data-store="xinzhuang"><span class="store-tag">CHUDIAN</span><span class="store-name">新莊店</span></th>
+            <th data-store="beixin"><span class="store-tag">CHUDIAN</span><span class="store-name">北新店</span></th>
             <th data-store="zhongxiao"><span class="store-tag">SHICHENG</span><span class="store-name">忠孝店</span></th>
             <th class="col-skip"><span class="store-tag">SKIP</span><span class="store-name">不計總</span></th>
             <th class="col-rowsum"><span class="store-tag">SUBTOTAL</span><span class="store-name">小計</span></th>
@@ -267,6 +270,7 @@ table.recon tfoot .ft-sum{text-align:right;font-family:ui-monospace,"SF Mono",Me
             <td class="ft-sum" id="sum-zhonghe" data-store="zhonghe">0</td>
             <td class="ft-sum" id="sum-yongchun" data-store="yongchun">0</td>
             <td class="ft-sum" id="sum-xinzhuang" data-store="xinzhuang">0</td>
+            <td class="ft-sum" id="sum-beixin" data-store="beixin">0</td>
             <td class="ft-sum" id="sum-zhongxiao" data-store="zhongxiao">0</td>
             <td></td>
             <td class="ft-sum ft-grand" id="sum-grand">0</td>
@@ -303,6 +307,10 @@ table.recon tfoot .ft-sum{text-align:right;font-family:ui-monospace,"SF Mono",Me
       <div class="stat xinzhuang" data-store="xinzhuang">
         <span class="lbl">新莊店</span>
         <span class="val" id="card-xinzhuang">$0</span>
+      </div>
+      <div class="stat beixin" data-store="beixin">
+        <span class="lbl">北新店</span>
+        <span class="val" id="card-beixin">$0</span>
       </div>
       <div class="stat zhongxiao" data-store="zhongxiao">
         <span class="lbl">忠孝店</span>
@@ -384,6 +392,7 @@ var STORES = [
   {key:'zhonghe',   name:'中和店'},
   {key:'yongchun',  name:'永春店'},
   {key:'xinzhuang', name:'新莊店'},
+  {key:'beixin',    name:'北新店'},
   {key:'zhongxiao', name:'忠孝店'}
 ];
 
@@ -392,10 +401,17 @@ var STORES = [
 var STORE_HIDDEN_FROM = {
   zhongxiao: '2026-08'   // 忠孝店 2026-08 起隱藏
 };
+// ⭐ 某家店從指定月份起才顯示（< 該月份隱藏）
+var STORE_SHOWN_FROM = {
+  beixin: '2026-10'      // 北新店 2026-10 起才開
+};
 function isStoreHidden(storeKey, month){
-  var from = STORE_HIDDEN_FROM[storeKey];
-  if(!from) return false;
-  return String(month || '') >= from;
+  var m = String(month || '');
+  var hideFrom = STORE_HIDDEN_FROM[storeKey];
+  if(hideFrom && m >= hideFrom) return true;
+  var showFrom = STORE_SHOWN_FROM[storeKey];
+  if(showFrom && m < showFrom) return true;
+  return false;
 }
 function visibleStores(month){
   var m = month || currentMonth;
@@ -569,7 +585,7 @@ function rowSum(vendorName){
 }
 
 function renderTotals(){
-  var totals = { zhonghe:0, yongchun:0, xinzhuang:0, zhongxiao:0 };
+  var totals = { zhonghe:0, yongchun:0, xinzhuang:0, beixin:0, zhongxiao:0 };
   var grand = 0;
   var vs = visibleStores();
   vendors.forEach(function(v){
