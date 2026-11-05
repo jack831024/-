@@ -559,9 +559,7 @@ function render(){
   // 以主檔為準：主檔抓得到名單時，只顯示主檔當月在職者（依姓名）——僅顯示層，不改雲端
   var mlist = MASTER_EMPS_BY_STORE[curStore];
   if(mlist && mlist.length){
-    var allow = {};
-    mlist.forEach(function(m){ if(m && m.name) allow[m.name] = true; });
-    emps = emps.filter(function(e){ return e.fromMaster || allow[e.name]; });
+    emps = emps.filter(function(e){ return e.fromMaster || isInMaster(e, mlist); });
   }
   if(emps.length === 0){
     var div = document.createElement('div');
@@ -970,25 +968,58 @@ function pullMasterRoster(store, attempt){
     })
     .catch(function(){ if(attempt < 4) setTimeout(function(){ pullMasterRoster(store, attempt+1); }, 900); });
 }
-// 依姓名把主檔的人補進目前店名單（不重複；標 fromMaster，存雲端時會被濾掉）
+// 把主檔的人補進目前店名單（不重複；標 fromMaster）
+// 比對順序：① 員工ID（master_<主檔empId>，主檔改名也對得上，並自動同步成主檔姓名）② 姓名
 function mergeMasterIntoStore(){
   var list = MASTER_EMPS_BY_STORE[curStore];
   if(!list || !list.length) return;
   var d = storeData();
   if(!d.employees) d.employees = [];
-  var have = {};
-  d.employees.forEach(function(e){ if(e && e.name) have[e.name] = true; });
+  var haveName = {}, byId = {};
+  d.employees.forEach(function(e){ if(!e) return; if(e.name) haveName[e.name] = true; byId[e.id] = e; });
   list.forEach(function(m){
-    if(!m || !m.name || have[m.name]) return;
-    d.employees.push({ id:'master_'+(m.empId||m.name), name:m.name, level:'1', active:true, fromMaster:true, empType:m.empType });
-    have[m.name] = true;
+    if(!m || !m.name) return;
+    var mid = 'master_' + (m.empId || m.name);
+    var ex = byId[mid];
+    if(ex){                                   // 同一人（ID 相同）→ 名字以主檔為準
+      if(ex.name !== m.name){ delete haveName[ex.name]; ex.name = m.name; }
+      ex.empType = m.empType;
+      haveName[m.name] = true;
+      return;
+    }
+    if(haveName[m.name]) return;
+    d.employees.push({ id: mid, name: m.name, level: 'staff', active: true, passed: [], fromMaster: true, empType: m.empType });
+    haveName[m.name] = true;
   });
 }
-// 存雲端用：濾掉主檔疊加的人，避免污染共享資料
+// 主檔判定在職：姓名相同，或員工ID＝master_<主檔empId>
+function isInMaster(e, mlist){
+  for(var i=0;i<mlist.length;i++){
+    var m = mlist[i]; if(!m) continue;
+    if(m.name === e.name || e.id === 'master_' + (m.empId || m.name)) return true;
+  }
+  return false;
+}
+// 主檔補進來的人有沒有被編輯過（有已通過站別或任何月份紀錄）
+function hasReviewData(e){
+  if(e.passed && e.passed.length) return true;
+  var recs = storeData().records || {};
+  return Object.keys(recs).some(function(m){
+    var r = recs[m] && recs[m][e.id];
+    return r && (r.station || r.late || r.pass || (r.mistakes||[]).length || (r.checks||[]).length);
+  });
+}
+// 存雲端用：主檔疊加但從沒編輯過的人濾掉（不污染共享資料）；
+// 編輯過的人轉成正式名單一起存（修正：新進員工的「已通過站別」以前存不進去）
 function cleanStoreData(){
   var d = storeData();
   var copy = Object.assign({}, d);
-  copy.employees = (d.employees||[]).filter(function(e){ return !e.fromMaster; });
+  copy.employees = (d.employees||[]).filter(function(e){ return !e.fromMaster || hasReviewData(e); })
+    .map(function(e){
+      if(!e.fromMaster) return e;
+      var c = Object.assign({}, e); delete c.fromMaster; c.level = 'staff';
+      return c;
+    });
   return copy;
 }
 // 依主檔判定是否 PT（PT 沒有幹部站「值品訂訓」）
