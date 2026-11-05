@@ -1810,6 +1810,44 @@ function buildMatchTable(){
       }
     });
   });
+
+  // 時薪改動 → 即時把新時薪同步到已分析的 PT_ANALYSIS 列（不用再按一次「開始分析」）
+  tbody.querySelectorAll('input.match-wage').forEach(function(wageInput){
+    wageInput.addEventListener('change', propagateMatchWageToAnalysis);
+    wageInput.addEventListener('blur', propagateMatchWageToAnalysis);
+  });
+}
+
+function propagateMatchWageToAnalysis(){
+  if(typeof PT_ANALYSIS === 'undefined' || !PT_ANALYSIS || !PT_ANALYSIS.length) return;
+  var rows = readMatchTable().filter(function(r){ return r.role === 'pt'; });
+  if(!rows.length) return;
+  // 用 name 和 punchName 兩個 key 都能命中（班表來源用中文名、打卡來源用英文名）
+  var wageMap = {};
+  rows.forEach(function(r){
+    var w = Number(r.wage) || 0;
+    var nz = normalizeName(r.name);
+    if(nz) wageMap[nz] = w;
+    var pk = normalizeName(r.punchName);
+    if(pk && !(pk in wageMap)) wageMap[pk] = w;
+  });
+  var otMult = (typeof PT_OT_MULT !== 'undefined') ? PT_OT_MULT : 1.34;
+  var changed = false;
+  PT_ANALYSIS.forEach(function(r){
+    var nz = normalizeName(r.name);
+    if(!(nz in wageMap)) return;
+    var hw = wageMap[nz];
+    if((Number(r.hourlyWage) || 0) === hw) return;
+    r.hourlyWage = hw;
+    r.wage = (Number(r.normalHours) || 0) * hw + (Number(r.otHours) || 0) * hw * otMult;
+    changed = true;
+  });
+  if(changed){
+    renderPtSummary();
+    renderPtResults();
+    persistSalarySummary();
+    if(typeof scheduleAutoSync === 'function') scheduleAutoSync();
+  }
 }
 
 function renderMatchRow(key, name, sourceTag, defaultPunch, defaultRole, defaultWage, punchNames){
