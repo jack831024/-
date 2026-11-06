@@ -355,7 +355,7 @@ table.recon tfoot .ft-sum{text-align:right;font-family:ui-monospace,"SF Mono",Me
       window.location.href = 'home.html';
       return;
     }
-    if(VALID.indexOf(String(pw).trim()) >= 0){
+    if(VALID.indexOf(String(pw).trim().toLowerCase()) >= 0){
       sessionStorage.setItem('cd_reconcile_auth', '1');
       return;
     }
