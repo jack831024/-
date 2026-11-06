@@ -347,15 +347,23 @@ table.recon tfoot .ft-sum{text-align:right;font-family:ui-monospace,"SF Mono",Me
 // ============================================
 (function reconcileAuthGate(){
   var VALID = ['a90369287','a94213054','a60749791','a62084145'];
+  // 把全形英數轉半形、去掉所有空白、小寫化（防中文 IME 全形 'ａ' / caps lock / 空白）
+  function normPw(s){
+    return String(s||'')
+      .replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(ch){
+        return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+      })
+      .replace(/\s+/g, '')
+      .toLowerCase();
+  }
   if(sessionStorage.getItem('cd_reconcile_auth') === '1') return;
   for(var i = 0; i < 3; i++){
     var pw = prompt('【廠商對帳】請輸入店長密碼：');
     if(pw === null){
-      // 使用者按取消 → 回主頁
       window.location.href = 'home.html';
       return;
     }
-    if(VALID.indexOf(String(pw).trim().toLowerCase()) >= 0){
+    if(VALID.indexOf(normPw(pw)) >= 0){
       sessionStorage.setItem('cd_reconcile_auth', '1');
       return;
     }
