@@ -387,9 +387,11 @@ var EMP_DATA = {
   'chudian-zhonghe': [
     // FT
     { id:'zh1', name:'李文少', hireDate:'2024-03-16', birthday:'', initialAnnualAccrued:20, initialAnnualUsed:7,  initialTravelRemaining:0, initialGiftBalance:2834 },
-    { id:'zh2', name:'施偉祥', hireDate:'2023-12-01', birthday:'', initialAnnualAccrued:20, initialAnnualUsed:13, initialTravelRemaining:0, initialGiftBalance:869  },
+    // zh2 施偉祥 已調至北新店（bx1）— 原 initial 值保留在那邊的 EMP_DATA；本店不再顯示
     { id:'zh3', name:'劉濡瑜', hireDate:'2024-07-01', birthday:'', initialAnnualAccrued:10, initialAnnualUsed:6,  initialTravelRemaining:0, initialTravelUsed:2, initialGiftBalance:768  },
     { id:'zh4', name:'褚心榆', hireDate:'2025-08-01', birthday:'', initialAnnualAccrued:3,  initialAnnualUsed:0,  initialTravelRemaining:0, initialTravelUsed:0, initialGiftBalance:407  },
+    // zh5 林梓彥 從永春（原 yc7）調過來；initial 值跟 yc7 一致（含旅遊假 travelBonus:2、不自動加端午）
+    { id:'zh5', name:'林梓彥', hireDate:'2025-02-01', birthday:'', initialAnnualAccrued:0,  initialAnnualUsed:1,  initialTravelRemaining:2, initialGiftBalance:0, noAutoDragonBoat:true, travelBonus:2 },
     // PT（沒有特休/旅遊假；節慶 +1000 而非 +2000）
     { id:'zh_pt1', name:'潘立軒', pt:true, hireDate:'2023-07-01', birthday:'', initialGiftBalance:3384 },
     { id:'zh_pt2', name:'江竑緯', pt:true, hireDate:'2025-08-01', birthday:'', initialGiftBalance:0 },
@@ -401,8 +403,8 @@ var EMP_DATA = {
     { id:'yc3', name:'洪文祥', hireDate:'2023-10-16', birthday:'', initialAnnualAccrued:20, initialAnnualUsed:12, initialTravelRemaining:2, initialGiftBalance:1200 },
     { id:'yc4', name:'呂直宸', hireDate:'2023-12-01', birthday:'', initialAnnualAccrued:20, initialAnnualUsed:10, initialTravelRemaining:2, initialGiftBalance:1895 },
     { id:'yc5', name:'吳孟澤', hireDate:'2025-02-01', birthday:'', initialAnnualAccrued:10, initialAnnualUsed:3,  initialTravelRemaining:0, initialGiftBalance:913  },
-    { id:'yc6', name:'邱昊勳', hireDate:'2026-04-01', birthday:'', initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0    },
-    { id:'yc7', name:'林梓彥', hireDate:'2025-02-01', birthday:'', initialAnnualAccrued:0,  initialAnnualUsed:1,  initialTravelRemaining:2, initialGiftBalance:0, noAutoDragonBoat:true, travelBonus:2 }
+    { id:'yc6', name:'邱昊勳', hireDate:'2026-04-01', birthday:'', initialAnnualAccrued:0,  initialAnnualUsed:0,  initialTravelRemaining:0, initialGiftBalance:0    }
+    // yc7 林梓彥 已調至中和店（zh5）
   ],
   'chudian-xinzhuang': [
     // FT
@@ -415,7 +417,8 @@ var EMP_DATA = {
     { id:'xz_pt2', name:'林詩縈', pt:true, hireDate:'2025-12-01', birthday:'', initialGiftBalance:0 }
   ],
   'chudian-beixin': [
-    // 新店開幕時員工還未定 → 空陣列，之後到 employee-master 新增後再回來補初始已用/禮金
+    // bx1 施偉祥 從中和店（原 zh2）調過來；initial 值跟 zh2 一致
+    { id:'bx1', name:'施偉祥', hireDate:'2023-12-01', birthday:'', initialAnnualAccrued:20, initialAnnualUsed:13, initialTravelRemaining:0, initialGiftBalance:869 }
   ],
   'shicheng-zhongxiao': [
     // 十城沒有旅遊假；起始已用全部歸 0，由加班費系統 OT 資料當「已用」唯一來源
