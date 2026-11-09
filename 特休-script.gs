@@ -128,10 +128,17 @@ function doPost(e) {
 // 💾 saveStore / loadStore — 每店一份完整 STATE
 // ============================================
 function saveStore(password, store, state) {
+  var lock = null;
   try {
     if (VALID_STORES.indexOf(store) === -1) return { ok: false, error: '無效的店家：' + store };
     if (!_verifyFor(password, store))       return { ok: false, error: 'unauthorized' };
     if (!state || typeof state !== 'object') return { ok: false, error: 'state 必須是物件' };
+
+    // 鎖：避免多裝置同時 push 時彼此覆蓋（同之前永春禮金被洗掉的事件）
+    lock = LockService.getScriptLock();
+    try { lock.waitLock(20000); } catch (e) {
+      return { ok: false, error: '系統正忙（其他裝置正在儲存），請稍後重試' };
+    }
 
     var sheet = getStateSheet();
     var now = new Date();
@@ -141,12 +148,15 @@ function saveStore(password, store, state) {
     for (var i = 1; i < data.length; i++) {
       if (String(data[i][1]) === store) {
         sheet.getRange(i + 1, 1, 1, STATE_HEADERS.length).setValues([[now, store, json]]);
+        try { lock.releaseLock(); } catch (e) {}
         return { ok: true, updated: true, savedAt: now.toISOString() };
       }
     }
     sheet.appendRow([now, store, json]);
+    try { lock.releaseLock(); } catch (e) {}
     return { ok: true, inserted: true, savedAt: now.toISOString() };
   } catch (err) {
+    try { lock && lock.releaseLock(); } catch (e) {}
     return { ok: false, error: String(err) };
   }
 }
@@ -272,6 +282,14 @@ function saveOTLeave(password, store, ym, byEmp) {
     if (!/^\d{4}-\d{2}$/.test(String(ym || ''))) return { ok: false, error: 'ym 格式錯誤' };
     if (!byEmp || typeof byEmp !== 'object') byEmp = {};
 
+    // 跨請求鎖：避免兩台裝置同時 push 時彼此覆蓋（這是歷次 4-9 月 OT 資料被洗掉的主因）
+    //   - getScriptLock 全域一把鎖，每 saveOTLeave 一次至多 1 個在跑
+    //   - waitLock(25000) = 等 25 秒，若還沒拿到就 return error（寧可顯示失敗叫他重 analyze，也不要 race）
+    var lock = LockService.getScriptLock();
+    try { lock.waitLock(25000); } catch (e) {
+      return { ok: false, error: '系統正忙（其他裝置正在儲存 OT 資料），請 10 秒後重按分析' };
+    }
+
     var sheet = getOTLeaveSheet();
     var data = sheet.getDataRange().getValues();
 
@@ -316,8 +334,10 @@ function saveOTLeave(password, store, ym, byEmp) {
       if (safeRow[5]) safeRow[5] = "'" + String(safeRow[5]);  // 日期
       sheet.appendRow(safeRow);
     });
+    try { lock.releaseLock(); } catch (e) {}
     return { ok: true, written: newRows.length, kept: keepRows.length, replaced: replacedCount };
   } catch (err) {
+    try { lock && lock.releaseLock(); } catch (e) {}
     return { ok: false, error: String(err) };
   }
 }
@@ -531,20 +551,29 @@ function _ensureSnapshotSheet(ss, name, headers){
 function _replaceSnapshotRowsForStore(sheet, store, rows){
   var data = sheet.getDataRange().getValues();
   var header = data[0];
+  // 前端送來的 rows 第一欄是「中文店名」(例：初殿中和店)，
+  // 但這 function 收到的 `store` 是店家 ID (chudian-zhonghe)。
+  // 之前用 ID 去比對 column B 永遠不中 → 新資料 append 而非取代 → 累積重複。
+  // 修正：建一組「所有可能的舊店名別名」集合，凡 column B 命中任何一個都視為「這店的舊資料」全部清掉。
+  var storeNames = {};
+  // (A) 從要新寫入的 rows 收集
+  rows.forEach(function(r){ if (r && r[0]) storeNames[String(r[0])] = 1; });
+  // (B) 補上 ID 本身（舊資料若誤用 ID 當值也一併清）
+  storeNames[String(store)] = 1;
+  // (C) 若 rows 為空（該店沒員工），rows 無法給我們店名 → 至少用 ID
   var keep = [];
   for (var i = 1; i < data.length; i++){
-    if (String(data[i][1]) !== store) keep.push(data[i]);
+    var colB = String(data[i][1] || '');
+    if (!storeNames[colB]) keep.push(data[i]);
   }
   var now = new Date();
   rows.forEach(function(r){
-    // r = [store, name, hireDate, ...]；前面補 updateTime
     keep.push([now].concat(r));
   });
   // 清空舊內容
   if (data.length > 1){
     sheet.getRange(2, 1, data.length - 1, header.length).clearContent();
   }
-  // 寫回所有保留的列
   if (keep.length){
     sheet.getRange(2, 1, keep.length, header.length).setValues(keep);
   }
