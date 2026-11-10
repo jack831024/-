@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>巡店檢查</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand:#c2410c;--brand-dark:#9a3412;--brand-soft:#ffedd5;
+  --ink:#0f172a;--ink-2:#475569;--ink-3:#94a3b8;--line:#e2e8f0;
+  --ok:#16a34a;--bad:#dc2626;--warn:#d97706;--na:#94a3b8;--blue:#2563eb;
+}
+body{font-family:"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);min-height:100vh;
+  background:radial-gradient(1100px 560px at 8% -10%,#ffedd5 0%,transparent 50%),radial-gradient(900px 500px at 110% 6%,#fee2e2 0%,transparent 55%),linear-gradient(180deg,#fafaf9 0%,#f1f5f9 100%);background-attachment:fixed}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit}
+.wrap{max-width:720px;margin:0 auto;padding:16px 14px 110px}
+.hidden{display:none!important}
+.card{background:rgba(255,255,255,.88);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.9);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 22px -14px rgba(15,23,42,.14)}
+.btn{border:none;border-radius:12px;padding:11px 16px;font-size:14.5px;font-weight:800;background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;box-shadow:0 8px 18px -8px rgba(194,65,12,.6)}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.5;box-shadow:none}
+.btn.ghost{background:#f1f5f9;color:var(--ink-2);box-shadow:none}
+.btn.green{background:linear-gradient(135deg,#16a34a,#15803d);box-shadow:0 8px 18px -8px rgba(22,163,74,.6)}
+.btn.red{background:linear-gradient(135deg,#dc2626,#b91c1c)}
+.btn.sm{padding:7px 12px;font-size:12.5px;border-radius:10px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.chip.red{background:#fee2e2;color:#b91c1c}.chip.rep{background:#fef3c7;color:#92400e}.chip.quiz{background:#dbeafe;color:#1d4ed8}
+.chip.open{background:#ffedd5;color:#9a3412}.chip.review{background:#dbeafe;color:#1d4ed8}.chip.closed{background:#dcfce7;color:#15803d}.chip.over{background:#dc2626;color:#fff}
+.g{font-weight:800;border-radius:999px;padding:3px 10px;font-size:12.5px}
+.g.A{background:#dcfce7;color:#15803d}.g.B{background:#fef9c3;color:#a16207}.g.C{background:#fee2e2;color:#b91c1c}.g.R{background:#dc2626;color:#fff}
+.toast{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:99;background:var(--ink);color:#fff;font-size:13.5px;font-weight:600;padding:11px 18px;border-radius:12px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%}
+.toast.show{opacity:1}.toast.err{background:var(--bad)}
+.demo{background:#fef3c7;border:1px solid #fde68a;color:#92400e;font-size:12.5px;font-weight:600;border-radius:12px;padding:9px 12px;margin-bottom:12px;line-height:1.5}
+
+/* login */
+.login{max-width:380px;margin:10vh auto 0;text-align:center;padding:28px 22px}
+.login .ico{font-size:44px}
+.login h1{font-size:21px;margin:8px 0 4px}
+.login p{font-size:13px;color:var(--ink-2);margin-bottom:16px;line-height:1.55}
+.login input{width:100%;font-size:16px;text-align:center;letter-spacing:2px;border:1px solid var(--line);border-radius:12px;padding:12px;outline:none}
+.login .btn{width:100%;margin-top:12px}
+.login .err{color:var(--bad);font-size:13px;margin-top:10px;min-height:18px;font-weight:600}
+
+/* top */
+.top{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.top h1{flex:1;font-size:20px;font-weight:800}
+.top .ib{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--ink-2);text-decoration:none}
+
+/* store cards */
+.stores{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.sc{padding:12px;margin:0;display:flex;flex-direction:column;gap:6px}
+.sc .nm{font-weight:800;font-size:14px}
+.sc .sc-score{font-size:26px;font-weight:800;line-height:1}
+.sc .sc-score small{font-size:12px;color:var(--ink-3)}
+.sc .meta{font-size:11.5px;color:var(--ink-2);line-height:1.6}
+.sc .meta b{color:var(--bad)}
+.sc .btn{margin-top:auto;padding:8px;font-size:13px}
+@media(max-width:520px){.stores{grid-template-columns:1fr}.sc{flex-direction:row;flex-wrap:wrap;align-items:center}.sc .meta{flex:1 1 100%}.sc .btn{margin-top:0;margin-left:auto}}
+
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 13px;font-size:13px;font-weight:700;color:var(--ink-2);white-space:nowrap}
+.tab.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.tab .n{display:inline-block;min-width:18px;margin-left:3px;font-size:11px;border-radius:999px;background:rgba(0,0,0,.08);padding:0 5px}
+.tab.on .n{background:rgba(255,255,255,.25)}
+.filters{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.filters .tab{padding:5px 11px;font-size:12px}
+
+/* issue card */
+.ic{display:flex;gap:11px;padding:11px;margin-bottom:8px;cursor:pointer;align-items:flex-start}
+.ic img,.ic .noimg{width:64px;height:64px;border-radius:10px;object-fit:cover;flex:none;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:22px}
+.ic .bd{flex:1;min-width:0}
+.ic .t1{font-size:14px;font-weight:700;line-height:1.4}
+.ic .t2{font-size:12px;color:var(--ink-2);margin-top:3px;line-height:1.5;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.ic .t3{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;align-items:center;font-size:11.5px;color:var(--ink-3)}
+.ic.over{border-color:#fecaca;background:rgba(254,242,242,.9)}
+.empty{text-align:center;color:var(--ink-3);font-size:13px;padding:26px 0}
+
+.ar{display:flex;align-items:center;gap:10px;padding:11px 12px;margin-bottom:8px;cursor:pointer}
+.ar .d{font-size:12px;color:var(--ink-3);width:78px}
+.ar .s{flex:1;font-weight:700;font-size:14px}
+.ar .sc2{font-size:18px;font-weight:800}
+table.trend{width:100%;border-collapse:collapse;font-size:12.5px}
+table.trend th,table.trend td{padding:6px 4px;text-align:center;border-bottom:1px solid #eef1f5}
+table.trend th{color:var(--ink-3);font-weight:700}
+table.trend td:first-child,table.trend th:first-child{text-align:left}
+
+/* audit */
+.ahead{position:sticky;top:0;z-index:30;background:rgba(250,250,249,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);margin:-16px -14px 12px;padding:12px 14px 8px;border-bottom:1px solid var(--line)}
+.ahead .r1{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.ahead .r1 b{flex:1;font-size:16px}
+.ahead .prog{height:5px;border-radius:999px;background:#e7e5e4;overflow:hidden;margin-bottom:8px}
+.ahead .prog i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),#fb923c);transition:width .25s}
+.atab{flex:none;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:6px 10px;font-size:12.5px;font-weight:700;color:var(--ink-2);white-space:nowrap;display:flex;align-items:center;gap:4px}
+.atab.on{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-dark)}
+.atab .dot{width:7px;height:7px;border-radius:50%;background:#d6d3d1}
+.atab .dot.done{background:var(--ok)}.atab .dot.bad{background:var(--bad)}
+.area-h{display:flex;align-items:center;gap:8px;margin:4px 2px 10px}
+.area-h h2{font-size:18px;flex:1}
+.area-h .sub{font-size:12px;color:var(--ink-3)}
+.it{padding:12px;margin-bottom:9px}
+.it.red{border-color:#fecaca}
+.it.isbad{background:rgba(254,242,242,.92);border-color:#fca5a5}
+.it .tt{font-size:14.5px;font-weight:600;line-height:1.45;margin-bottom:4px}
+.it .tt .chip{margin-right:4px;vertical-align:1px}
+.it .hint{font-size:12px;color:var(--ink-3);margin-bottom:8px;line-height:1.45}
+.seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px}
+.seg button{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:10px 4px;font-size:13.5px;font-weight:800;color:var(--ink-2)}
+.seg button.ok.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.seg button.bad.on{background:var(--bad);border-color:var(--bad);color:#fff}
+.seg button.na.on{background:var(--na);border-color:var(--na);color:#fff}
+.meas{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
+.meas label{font-size:12px;color:var(--ink-2);font-weight:700}
+.meas input{width:92px;font-size:16px;font-weight:700;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;outline:none;text-align:center}
+.meas input:focus{border-color:var(--brand)}
+.meas .u{font-size:13px;color:var(--ink-2);font-weight:700}
+.meas .std{font-size:12px;color:var(--ink-3)}
+.meas .res{font-size:13px;font-weight:800}
+.meas .res.ok{color:var(--ok)}.meas .res.bad{color:var(--bad)}
+.meas .nab{margin-left:auto;border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:7px 10px;font-size:12.5px;font-weight:700;color:var(--ink-2)}
+.meas .nab.on{background:var(--na);border-color:var(--na);color:#fff}
+.isum{margin-top:10px;border-top:1px dashed #fca5a5;padding-top:9px;display:flex;gap:9px;align-items:flex-start}
+.isum .ph{display:flex;gap:4px;flex:none}
+.isum .ph img{width:46px;height:46px;border-radius:8px;object-fit:cover}
+.isum .tx{flex:1;font-size:12.5px;color:#7f1d1d;line-height:1.5;min-width:0}
+.isum .tx .warn{color:var(--bad);font-weight:800}
+.rc{padding:12px;margin-bottom:9px}
+.rc .top2{display:flex;gap:10px}
+.rc img{width:60px;height:60px;border-radius:9px;object-fit:cover;flex:none}
+.rc .seg{grid-template-columns:1fr 1fr}
+.abar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(255,255,255,.93);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+.abar .in{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.abar .sv{font-size:24px;font-weight:800;line-height:1}
+.abar .sl{font-size:11px;color:var(--ink-3);font-weight:700}
+.abar .sp{flex:1}
+.sumbox{text-align:center;padding:18px 14px}
+.sumbox .big{font-size:52px;font-weight:800;letter-spacing:-.02em;line-height:1.05}
+.sumbox .big small{font-size:18px;color:var(--ink-3)}
+.veto{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:700;margin-top:10px;line-height:1.5;text-align:left}
+.field{margin-bottom:11px}
+.field label{display:block;font-size:12.5px;font-weight:700;color:var(--ink-2);margin-bottom:5px}
+.field input,.field textarea,.field select{width:100%;font-size:15px;border:1px solid var(--line);border-radius:11px;padding:10px 12px;outline:none;background:#fff}
+.field input:focus,.field textarea:focus{border-color:var(--brand)}
+.field textarea{min-height:70px;resize:vertical;line-height:1.5}
+.req{color:var(--bad)}
+.li{font-size:13px;padding:8px 10px;background:#fff;border:1px solid #f1f5f9;border-radius:9px;margin-bottom:6px;line-height:1.45;display:flex;gap:6px;align-items:flex-start}
+
+/* dialog */
+dialog{margin:auto;border:none;border-radius:20px;padding:0;max-width:520px;width:94%;max-height:90vh;box-shadow:0 30px 80px -20px rgba(15,23,42,.5);background:#fff}
+dialog::backdrop{background:rgba(15,23,42,.5)}
+.dlg{padding:18px}
+.dlg h3{font-size:17px;margin-bottom:4px;line-height:1.4}
+.dlg .sub{font-size:12.5px;color:var(--ink-3);margin-bottom:12px}
+.dlg .row{display:flex;gap:8px;margin-top:14px}
+.dlg .row .btn{flex:1}
+.photos{display:flex;gap:8px;flex-wrap:wrap}
+.photos .p{position:relative;width:84px;height:84px;border-radius:11px;overflow:hidden;background:#f1f5f9}
+.photos .p img{width:100%;height:100%;object-fit:cover;cursor:zoom-in}
+.photos .p .x{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;border:none;background:rgba(15,23,42,.7);color:#fff;font-size:13px;line-height:1}
+.photos .p .ld{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.7);font-size:11px;font-weight:800;color:var(--ink-2)}
+.photos .add{width:84px;height:84px;border-radius:11px;border:2px dashed #fdba74;background:#fff7ed;color:var(--brand-dark);font-size:12.5px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.photos .add span{font-size:22px}
+.kv{display:grid;grid-template-columns:76px 1fr;gap:6px 10px;font-size:13px;margin:10px 0;line-height:1.5}
+.kv dt{color:var(--ink-3);font-weight:700}
+.sec{font-size:12.5px;font-weight:800;color:var(--ink-2);margin:14px 0 7px;display:flex;align-items:center;gap:8px}
+.sec::after{content:"";flex:1;height:1px;background:var(--line)}
+.notebox{font-size:13px;background:#f8fafc;border-radius:10px;padding:9px 11px;line-height:1.55;white-space:pre-wrap}
+.viewer{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center}
+.viewer img{max-width:96vw;max-height:92vh;border-radius:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 登入 -->
+  <div id="vLogin" class="card login">
+    <div class="ico">🔍</div>
+    <h1>巡店檢查・缺失追蹤</h1>
+    <p>督導：用主管密碼登入，可巡店、審核<br>店長：用門市密碼登入，回傳改善照片</p>
+    <input id="pw" type="password" placeholder="輸入密碼" autocomplete="off">
+    <button class="btn" id="loginBtn">進入</button>
+    <div class="err" id="loginErr"></div>
+    <a href="home.html" style="font-size:12.5px;color:var(--ink-3);text-decoration:none;display:inline-block;margin-top:10px">← 回主系統</a>
+  </div>
+
+  <!-- 督導首頁 -->
+  <div id="vSup" class="hidden">
+    <div class="top">
+      <a class="ib" href="home.html" title="回主系統">⌂</a>
+      <h1>🔍 巡店檢查</h1>
+      <button class="ib" onclick="reload()" title="重新整理">↻</button>
+      <button class="ib" onclick="openSettings()" title="設定">⚙️</button>
+      <button class="ib" onclick="logout()" title="登出">⎋</button>
+    </div>
+    <div id="demoBanner1"></div>
+    <div id="draftBanner"></div>
+    <div class="stores" id="storeCards"></div>
+    <div class="tabs" id="supTabs"></div>
+    <div class="filters" id="storeFilter"></div>
+    <div id="supList"></div>
+  </div>
+
+  <!-- 店長首頁 -->
+  <div id="vStore" class="hidden">
+    <div class="top">
+      <a class="ib" href="home.html" title="回主系統">⌂</a>
+      <h1 id="storeTitle">缺失改善</h1>
+      <button class="ib" onclick="reload()" title="重新整理">↻</button>
+      <button class="ib" onclick="logout()" title="登出">⎋</button>
+    </div>
+    <div id="demoBanner2"></div>
+    <div class="tabs" id="storeTabs"></div>
+    <div id="storeList"></div>
+  </div>
+
+  <!-- 巡店中 -->
+  <div id="vAudit" class="hidden">
+    <div class="ahead">
+      <div class="r1">
+        <button class="btn ghost sm" onclick="leaveAudit()">← 暫存離開</button>
+        <b id="aStore">—</b>
+        <span id="aCount" style="font-size:12px;color:var(--ink-3);font-weight:700"></span>
+      </div>
+      <div class="prog"><i id="aProg" style="width:0"></i></div>
+      <div class="tabs" id="aTabs" style="margin-bottom:0"></div>
+    </div>
+    <div id="aBody"></div>
+  </div>
+</div>
+
+<div class="abar hidden" id="aBar">
+  <div class="in">
+    <div><div class="sv" id="barScore">—</div><div class="sl" id="barLbl">目前分數</div></div>
+    <span id="barGrade"></span>
+    <div class="sp"></div>
+    <button class="btn ghost" id="barPrev">上一區</button>
+    <button class="btn" id="barNext">下一區 →</button>
+  </div>
+</div>
+
+<!-- 缺失登記 -->
+<dialog id="dIssue"><div class="dlg">
+  <h3 id="diTitle">登記待改善</h3>
+  <div class="sub" id="diSub"></div>
+  <div class="field"><label>缺失描述 <span class="req">*</span></label>
+    <textarea id="diDesc" placeholder="例：冷藏庫第二層生肉放在熟食上方；地墊積水"></textarea></div>
+  <div class="field"><label>照片（1～3 張） <span class="req">*</span></label>
+    <div class="photos" id="diPhotos"></div></div>
+  <div class="field"><label>負責人</label>
+    <input id="diOwner" list="ownerList" placeholder="店長"></div>
+  <div class="field"><label>改善期限</label>
+    <input id="diDue" type="date"></div>
+  <div class="row">
+    <button class="btn ghost" id="diCancel">取消</button>
+    <button class="btn" id="diSave">儲存</button>
+  </div>
+</div></dialog>
+<datalist id="ownerList"></datalist>
+
+<!-- 缺失明細 -->
+<dialog id="dDetail"><div class="dlg" id="ddBody"></div></dialog>
+<!-- 巡店明細 -->
+<dialog id="dAudit"><div class="dlg" id="daBody"></div></dialog>
+
+<input type="file" id="fileIn" accept="image/*" capture="environment" class="hidden">
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= 設定 ================= */
+// 部署「巡店檢查-script.gs」後，把 /exec 網址貼這裡（或頁面右上 ⚙️ 設定）。留空＝本機示範模式。
+const BUILTIN_URL = "https://script.google.com/macros/s/AKfycbwh07T6uwaXsLVpbvLNq6Lsu91PXPxhzLo2obj1VOx5fcEaRuVP9U2USSy1qthEJhgc/exec";
+// 員工主檔（負責人下拉選單用，取不到就只能手打）
+const EMP_URL_DEFAULT = "https://script.google.com/macros/s/AKfycbyLDnvILhiL0iIWjnoN14iwZZg5p9DobG1Ik3Fq-LiR6gcj3-_AKGTdnywDnmNrZLp6/exec";
+const STORES = [
+  { id:"chudian-yongchun",  name:"初殿永春店", short:"永春", pw:"a94213054" },
+  { id:"chudian-zhonghe",   name:"初殿中和店", short:"中和", pw:"a90369287" },
+  { id:"chudian-xinzhuang", name:"初殿新莊店", short:"新莊", pw:"a60749791" },
+  { id:"chudian-beixin",    name:"初殿北新店", short:"北新", pw:"a62084145" },
+];
+const REPEAT_DAYS = 90;   // 這幾天內同一項目再犯 → 重複缺失，扣分加倍
+const DUE_DAYS = 3;       // 一般缺失預設改善期限（天）；紅線＝當天
+
+/* ================= 檢查表 =================
+   type: 不填=合格/待改善/不適用
+         measure: 單一實測值，max=上限 / min=下限
+         compare: 標準值 vs 實測值，誤差 tolPct% 內合格
+   red: 紅線（一票否決） */
+const AREAS = [
+  { key:"front", name:"門口與候位", icon:"🚪", items:[
+    { k:"front1", t:"招牌燈、門口玻璃、地墊乾淨無破損", hint:"玻璃無手印、地墊無積水" },
+    { k:"front2", t:"營業時間、公告標示正確" },
+    { k:"front3", t:"當月活動海報與菜單一致（無過期活動、價格正確）" },
+    { k:"front4", t:"外送平台營業中、品項無異常停售", hint:"打開外送平台後台確認" },
+    { k:"front5", t:"候位動線順暢、候位座椅乾淨" },
+  ]},
+  { key:"dining", name:"內用座位區", icon:"🍲", items:[
+    { k:"din1", t:"桌面、桌邊、椅面乾淨無油漬殘渣" },
+    { k:"din2", t:"電磁爐抽測開機正常、面板無焦痕", hint:"隨機抽 2 桌實際開機" },
+    { k:"din3", t:"鍋具無焦垢變形；餐具無破口、無水痕" },
+    { k:"din4", t:"地板乾燥不滑、無湯漬" },
+    { k:"din5", t:"空調溫度舒適、音樂音量適中、燈光全亮" },
+    { k:"din6", t:"廁所乾淨無異味、備品足、清潔紀錄有簽" },
+  ]},
+  { key:"bar", name:"醬料吧／自助區", icon:"🥢", items:[
+    { k:"bar1", t:"醬料加蓋、標示清楚、每種醬料獨立湯匙" },
+    { k:"bar2", t:"補充量足夠、檯面無滴漏與混醬" },
+    { k:"bar3", t:"自助蔬菜新鮮、無爛葉" },
+    { k:"bar4", t:"自助區冷藏溫度", type:"measure", unit:"°C", max:7, hint:"溫度計實測" },
+    { k:"bar5", t:"飲料、冰品有開封日期且未過期" },
+  ]},
+  { key:"cold", name:"冷藏冷凍與備料", icon:"🧊", items:[
+    { k:"cold1", t:"冷藏庫溫度", type:"measure", unit:"°C", max:7, red:true, hint:"用溫度計實測，不看面板" },
+    { k:"cold2", t:"冷凍庫溫度", type:"measure", unit:"°C", max:-18, red:true, hint:"用溫度計實測，不看面板" },
+    { k:"cold3", t:"無過期或標示不明的食材", red:true },
+    { k:"cold4", t:"生熟分開存放（熟上生下）、有加蓋", red:true },
+    { k:"cold5", t:"標籤有品名／製備日／效期，先進先出" },
+    { k:"cold6", t:"肉品冷藏解凍（無室溫、無泡水解凍）" },
+    { k:"cold7", t:"肉盤抽秤", type:"compare", unit:"g", tolPct:5, hint:"隨機抽 1 盤，輸入標準克數和實秤克數（誤差 5% 內合格）" },
+    { k:"cold8", t:"刀具砧板分色使用（生／熟／蔬果）" },
+    { k:"cold9", t:"蛤蜊吐沙、切菜流程符合 SOP" },
+  ]},
+  { key:"soup", name:"湯頭與出餐", icon:"♨️", items:[
+    { k:"soup1", t:"湯底熬煮紀錄完整" },
+    { k:"soup2", t:"湯頭鹽度抽測", type:"compare", unit:"%", tolPct:10, hint:"鹽度計實測，與標準值比較（誤差 10% 內合格）" },
+    { k:"soup3", t:"出湯使用正確量杯、比例確實" },
+    { k:"soup4", t:"點餐到上鍋時間", type:"measure", unit:"分鐘", max:10, hint:"碼表實測 1 桌" },
+    { k:"soup5", t:"擺盤與標準照一致", hint:"拍照與標準照並排比對" },
+    { k:"soup6", t:"海鮮數量、品質確實" },
+  ]},
+  { key:"back", name:"洗滌與後場", icon:"🧽", items:[
+    { k:"back1", t:"無蟲鼠跡證（蟑螂、鼠糞、果蠅）", red:true },
+    { k:"back2", t:"洗淨餐具無油膩、無殘渣" },
+    { k:"back3", t:"洗碗機沖洗水溫", type:"measure", unit:"°C", min:80, hint:"化學消毒式機型請按不適用" },
+    { k:"back4", t:"清潔劑等化學品與食材分開存放", red:true },
+    { k:"back5", t:"截油槽定期清理、排水順暢" },
+    { k:"back6", t:"垃圾分類、廚餘加蓋、無滿溢" },
+    { k:"back7", t:"病媒防治紀錄在有效期內" },
+    { k:"back8", t:"公安：瓦斯、電線、滅火器、逃生動線正常", red:true },
+  ]},
+  { key:"staff", name:"人員與服務", icon:"🙋", items:[
+    { k:"staff1", t:"服儀：帽子、口罩、短指甲、無飾品" },
+    { k:"staff2", t:"抽一位員工實際示範洗手（步驟、時間）" },
+    { k:"staff3", t:"客人進門有招呼、帶位說明（Line、掃碼點餐）" },
+    { k:"staff4", t:"主動加湯、巡桌、收空盤" },
+    { k:"staff5", t:"員工清楚當月活動內容" },
+    { k:"staff6", t:"結帳金額正確、發票交付" },
+  ]},
+  { key:"admin", name:"管理與文件", icon:"📋", items:[
+    { k:"adm1", t:"現場人數與班表一致" },
+    { k:"adm2", t:"溫度紀錄表、清潔表每天簽核" },
+    { k:"adm3", t:"進貨驗收有紀錄（溫度、效期）" },
+    { k:"adm4", t:"抽點現金，帳實相符" },
+    { k:"adm5", t:"滅火器在有效期內、證照依規定公告" },
+  ]},
+];
+// 抽問題庫：每次巡店隨機抽 3 題，放在「人員與服務」
+const QUIZ = [
+  "客人問「有沒有含海鮮／堅果」要怎麼回答？",
+  "加湯的流程，以及要對客人說的話？",
+  "客人反應湯太鹹，怎麼處理？",
+  "肉品正確的解凍方式？",
+  "冷藏、冷凍的標準溫度是幾度？",
+  "遇到客訴，第一步要做什麼？",
+  "本月活動內容和價格？",
+  "過敏客人點餐要注意什麼？",
+  "打烊時瓦斯、電源的關閉順序？",
+];
+
+/* ================= 工具 ================= */
+const $ = function(id){ return document.getElementById(id); };
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function ymd(d){ d = d || new Date(); return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+function addDays(n){ const d = new Date(); d.setDate(d.getDate() + n); return ymd(d); }
+function storeName(id){ const s = STORES.find(function(x){ return x.id === id; }); return s ? s.name : id; }
+function storeShort(id){ const s = STORES.find(function(x){ return x.id === id; }); return s ? s.short : id; }
+function toast(msg, err){ const t = $("toast"); t.textContent = msg; t.className = "toast show" + (err ? " err" : ""); clearTimeout(toast._t); toast._t = setTimeout(function(){ t.className = "toast"; }, 2800); }
+function lsGet(k, def){ try { const v = localStorage.getItem(k); return v == null ? def : JSON.parse(v); } catch(e){ return def; } }
+function lsSet(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+function isOver(i){ return i.status !== "closed" && i.due && i.due < ymd(); }
+function shortDate(s){ return s ? String(s).slice(5, 10).replace("-", "/") : ""; }
+function photoUrl(p){ return p && (p.url || p); }
+
+/* ================= API ================= */
+function apiUrl(){ try { return localStorage.getItem("cd_audit_url") || BUILTIN_URL; } catch(e){ return BUILTIN_URL; } }
+function isDemo(){ return !apiUrl(); }
+
+async function api(action, data){
+  const body = Object.assign({ action:action, pw:S.pw }, data || {});
+  if(isDemo()) return mockApi(body);
+  let last = "連線失敗";
+  for(let i = 0; i < 3; i++){
+    try{
+      const txt = await fetch(apiUrl(), { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body:JSON.stringify(body) }).then(function(r){ return r.text(); });
+      return JSON.parse(txt);
+    }catch(e){ last = String(e.message || e); }
+    await new Promise(function(r){ setTimeout(r, 800); });
+  }
+  return { ok:false, error:last };
+}
+
+/* 示範模式：資料只存在這台裝置（用來試用介面；部署後端後自動改用雲端） */
+function mockApi(b){
+  const db = lsGet("cd_audit_mock", { audits:[], issues:[] });
+  const save = function(){ lsSet("cd_audit_mock", db); };
+  let who = null;
+  if(b.pw === "yuanxin2022") who = { role:"supervisor" };
+  STORES.forEach(function(s){ if(s.pw === b.pw) who = { role:"store", store:s.id }; });
+  if(!who) return { ok:false, error:"密碼錯誤" };
+  const now = new Date().toISOString();
+  const find = function(id){ return db.issues.find(function(x){ return x.id === id; }); };
+  switch(b.action){
+    case "login": return { ok:true, role:who.role, store:who.store || "" };
+    case "getData": {
+      const mine = function(o){ return who.role === "supervisor" || o.store === who.store; };
+      return { ok:true, role:who.role, store:who.store || "", audits:db.audits.filter(mine).slice().reverse(), issues:db.issues.filter(mine).slice().reverse() };
+    }
+    case "uploadPhoto": return { ok:true, photo:{ id:"local-" + Date.now(), url:b.dataUrl } };
+    case "submitAudit": {
+      const a = b.audit, ts = now.replace(/\D/g, "").slice(0, 14);
+      a.auditId = "AU-" + ts + "-" + a.store.replace("chudian-", ""); a.storeName = storeName(a.store); a.submittedAt = now;
+      (b.recheck || []).forEach(function(rc){
+        const x = find(rc.id); if(!x) return;
+        if(rc.result === "fixed"){ x.status = "closed"; x.reviewNote = "巡店複查已改善（" + a.auditId + "）"; x.closedAt = now; }
+        else if(rc.result === "notfixed"){ x.notFixed = (x.notFixed || 0) + 1; x.status = "open"; }
+      });
+      (b.issues || []).forEach(function(x, i){
+        db.issues.push(Object.assign({}, x, { id:"IS-" + ts + "-" + String(i+1).padStart(2,"0"), auditId:a.auditId, store:a.store, storeName:a.storeName,
+          status:"open", fixNote:"", fixPhotos:[], fixAt:"", reviewNote:"", closedAt:"", createdAt:now, rejects:0, notFixed:0 }));
+      });
+      db.audits.push(a); save();
+      return { ok:true, auditId:a.auditId };
+    }
+    case "submitFix": {
+      const x = find(b.issueId); if(!x) return { ok:false, error:"找不到" };
+      if(who.role === "store" && x.store !== who.store) return { ok:false, error:"不是你的門市" };
+      x.status = "review"; x.fixNote = b.note || ""; x.fixPhotos = b.photos; x.fixAt = now; save(); return { ok:true };
+    }
+    case "reviewIssue": {
+      if(who.role !== "supervisor") return { ok:false, error:"只有督導可以審核" };
+      const x = find(b.issueId); if(!x) return { ok:false, error:"找不到" };
+      if(b.approve){ x.status = "closed"; x.reviewNote = b.note || "核可"; x.closedAt = now; }
+      else { x.status = "open"; x.rejects = (x.rejects || 0) + 1; x.reviewNote = "退回：" + (b.note || ""); }
+      save(); return { ok:true };
+    }
+  }
+  return { ok:false, error:"unknown" };
+}
+
+/* ================= 照片 ================= */
+function compressImage(file){
+  return new Promise(function(res, rej){
+    const fr = new FileReader();
+    fr.onerror = rej;
+    fr.onload = function(){
+      const img = new Image();
+      img.onerror = rej;
+      img.onload = function(){
+        const MAX = 1280; let w = img.width, h = img.height;
+        if(Math.max(w, h) > MAX){ const r = MAX / Math.max(w, h); w = Math.round(w * r); h = Math.round(h * r); }
+        const c = document.createElement("canvas"); c.width = w; c.height = h;
+        c.getContext("2d").drawImage(img, 0, 0, w, h);
+        res(c.toDataURL("image/jpeg", 0.72));
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+function pickPhoto(){
+  return new Promise(function(res){
+    const inp = $("fileIn"); inp.value = "";
+    inp.onchange = function(){ res(inp.files && inp.files[0] || null); };
+    inp.click();
+  });
+}
+/* 照片編輯器：list 是 [{id,url}] 陣列（會直接修改），onChange 重繪 */
+function photoEditor(host, list, max, onChange){
+  let uploading = 0;
+  function draw(){
+    host.innerHTML = list.map(function(p, i){
+      return '<div class="p"><img src="' + esc(photoUrl(p)) + '" data-v="' + i + '"><button class="x" data-x="' + i + '" type="button">✕</button></div>';
+    }).join("") + (uploading ? '<div class="p"><div class="ld">上傳中…</div></div>' : "") +
+    (list.length + uploading < max ? '<button class="add" type="button"><span>📷</span>拍照</button>' : "");
+    host.querySelectorAll("[data-x]").forEach(function(b){ b.onclick = function(){ list.splice(+b.dataset.x, 1); draw(); onChange && onChange(); }; });
+    host.querySelectorAll("[data-v]").forEach(function(im){ im.onclick = function(){ viewPhoto(im.src); }; });
+    const add = host.querySelector(".add");
+    if(add) add.onclick = async function(){
+      const f = await pickPhoto(); if(!f) return;
+      uploading++; draw(); onChange && onChange();
+      try{
+        const dataUrl = await compressImage(f);
+        const r = await api("uploadPhoto", { dataUrl:dataUrl, name:"audit_" + Date.now() + ".jpg" });
+        if(!r.ok) throw new Error(r.error);
+        list.push(r.photo);
+      }catch(e){ toast("照片上傳失敗：" + (e.message || e), true); }
+      uploading--; draw(); onChange && onChange();
+    };
+  }
+  draw();
+  return { busy:function(){ return uploading > 0; } };
+}
+function viewPhoto(src){
+  const v = document.createElement("div"); v.className = "viewer";
+  v.innerHTML = '<img src="' + esc(src) + '">';
+  v.onclick = function(){ v.remove(); };
+  document.body.appendChild(v);
+}
+function thumbs(list, size){
+  return (list || []).map(function(p){ return '<img src="' + esc(photoUrl(p)) + '" style="width:' + size + 'px;height:' + size + 'px;border-radius:9px;object-fit:cover;cursor:zoom-in" onclick="viewPhoto(this.src)">'; }).join(" ");
+}
+
+/* ================= 登入／資料 ================= */
+const S = { pw:"", role:"", store:"", audits:[], issues:[], tab:"review", filter:"all", stab:"open" };
+
+async function login(pw){
+  $("loginErr").textContent = "登入中…";
+  const r = await api("login", { pw:pw });
+  if(!r.ok){ $("loginErr").textContent = r.error || "密碼錯誤"; S.pw = ""; return; }
+  S.role = r.role; S.store = r.store;
+  try { sessionStorage.setItem("cd_audit_pw", pw); } catch(e){}
+  $("loginErr").textContent = "";
+  await reload();
+}
+function logout(){ try { sessionStorage.removeItem("cd_audit_pw"); } catch(e){} location.reload(); }
+
+async function reload(){
+  const r = await api("getData");
+  if(!r.ok){ toast("讀取失敗：" + r.error, true); return; }
+  S.audits = r.audits || []; S.issues = r.issues || [];
+  $("vLogin").classList.add("hidden");
+  const demo = isDemo() ? '<div class="demo">⚠️ 示範模式：後端還沒設定，資料只存在這台裝置。部署「巡店檢查-script.gs」後按 ⚙️ 貼上網址即可改用雲端。</div>' : "";
+  if(S.role === "supervisor"){ $("demoBanner1").innerHTML = demo; showView("vSup"); renderSup(); }
+  else { $("demoBanner2").innerHTML = demo; showView("vStore"); renderStore(); }
+}
+function showView(id){
+  ["vSup","vStore","vAudit"].forEach(function(v){ $(v).classList.toggle("hidden", v !== id); });
+  $("aBar").classList.toggle("hidden", id !== "vAudit");
+  window.scrollTo(0, 0);
+}
+function openSettings(){
+  const cur = apiUrl();
+  const v = prompt("巡店檢查後端 /exec 網址（留空＝示範模式）", cur);
+  if(v === null) return;
+  try { if(v.trim()) localStorage.setItem("cd_audit_url", v.trim()); else localStorage.removeItem("cd_audit_url"); } catch(e){}
+  toast("已儲存，請重新登入"); setTimeout(logout, 900);
+}
+
+/* ================= 督導首頁 ================= */
+function issueCard(i){
+  const over = isOver(i);
+  const img = i.photos && i.photos[0] ? '<img src="' + esc(photoUrl(i.photos[0])) + '">' : '<div class="noimg">📝</div>';
+  const st = { open:"待改善", review:"待審核", closed:"已結案" }[i.status];
+  return '<div class="card ic' + (over ? " over" : "") + '" data-issue="' + esc(i.id) + '">' + img +
+    '<div class="bd"><div class="t1">' + (S.role === "supervisor" ? "【" + esc(storeShort(i.store)) + "】" : "") + esc(i.item) + '</div>' +
+    '<div class="t2">' + esc(i.area) + "・" + esc(i.desc) + '</div>' +
+    '<div class="t3"><span class="chip ' + i.status + '">' + st + '</span>' +
+      (over ? '<span class="chip over">逾期</span>' : "") +
+      (i.red ? '<span class="chip red">紅線</span>' : "") +
+      (i.repeat ? '<span class="chip rep">重複</span>' : "") +
+      (i.rejects ? '<span class="chip rep">退回 ' + i.rejects + '</span>' : "") +
+      (i.notFixed ? '<span class="chip rep">複查未改 ' + i.notFixed + '</span>' : "") +
+      '<span>' + esc(i.owner || "") + (i.due ? "・期限 " + shortDate(i.due) : "") + '</span></div></div></div>';
+}
+function bindIssueCards(host){
+  host.querySelectorAll("[data-issue]").forEach(function(el){ el.onclick = function(){ openDetail(el.dataset.issue); }; });
+}
+function gradeHtml(a){
+  if(!a) return "";
+  const cls = a.redFail ? "R" : a.grade;
+  return '<span class="g ' + cls + '">' + (a.redFail ? "紅線" : a.grade + " 級") + '</span>';
+}
+
+function renderSup(){
+  const draft = lsGet("cd_audit_draft", null);
+  $("draftBanner").innerHTML = draft ? '<div class="card" style="display:flex;align-items:center;gap:10px;border-color:#fdba74"><div style="flex:1;font-size:13.5px"><b>有未完成的巡店</b><br><span style="color:var(--ink-2);font-size:12.5px">' + esc(storeName(draft.store)) + "・" + esc(draft.date) + '</span></div><button class="btn ghost sm" id="dropDraft">捨棄</button><button class="btn sm" id="goDraft">繼續</button></div>' : "";
+  if(draft){
+    $("goDraft").onclick = function(){ D = draft; enterAudit(); };
+    $("dropDraft").onclick = function(){ if(confirm("確定捨棄這次未完成的巡店？")){ localStorage.removeItem("cd_audit_draft"); renderSup(); } };
+  }
+  $("storeCards").innerHTML = STORES.map(function(s){
+    const last = S.audits.find(function(a){ return a.store === s.id; });
+    const iss = S.issues.filter(function(i){ return i.store === s.id; });
+    const open = iss.filter(function(i){ return i.status !== "closed"; }).length;
+    const over = iss.filter(isOver).length;
+    const rev = iss.filter(function(i){ return i.status === "review"; }).length;
+    return '<div class="card sc"><div class="nm">' + esc(s.short) + '店 ' + gradeHtml(last) + '</div>' +
+      '<div class="sc-score">' + (last ? last.score : "—") + '<small> 分</small></div>' +
+      '<div class="meta">' + (last ? "上次 " + shortDate(last.date) : "尚未巡店") + '<br>未結案 ' + open + (over ? '・<b>逾期 ' + over + '</b>' : "") + (rev ? "・待審 " + rev : "") + '</div>' +
+      '<button class="btn" data-start="' + s.id + '">開始巡店</button></div>';
+  }).join("");
+  $("storeCards").querySelectorAll("[data-start]").forEach(function(b){ b.onclick = function(){ startAudit(b.dataset.start); }; });
+
+  const n = {
+    review: S.issues.filter(function(i){ return i.status === "review"; }).length,
+    open: S.issues.filter(function(i){ return i.status === "open"; }).length,
+    over: S.issues.filter(isOver).length,
+  };
+  const tabs = [["review","待審核",n.review],["open","待改善",n.open],["over","逾期",n.over],["closed","已結案",null],["audits","巡店紀錄",null],["trend","月趨勢",null]];
+  $("supTabs").innerHTML = tabs.map(function(t){ return '<button class="tab' + (S.tab === t[0] ? " on" : "") + '" data-t="' + t[0] + '">' + t[1] + (t[2] != null ? '<span class="n">' + t[2] + '</span>' : "") + '</button>'; }).join("");
+  $("supTabs").querySelectorAll("[data-t]").forEach(function(b){ b.onclick = function(){ S.tab = b.dataset.t; renderSup(); }; });
+  $("storeFilter").innerHTML = S.tab === "trend" ? "" : [["all","全部"]].concat(STORES.map(function(s){ return [s.id, s.short]; })).map(function(f){
+    return '<button class="tab' + (S.filter === f[0] ? " on" : "") + '" data-f="' + f[0] + '">' + f[1] + '</button>'; }).join("");
+  $("storeFilter").querySelectorAll("[data-f]").forEach(function(b){ b.onclick = function(){ S.filter = b.dataset.f; renderSup(); }; });
+
+  const fs = function(o){ return S.filter === "all" || o.store === S.filter; };
+  const host = $("supList");
+  if(S.tab === "audits"){
+    const list = S.audits.filter(fs);
+    host.innerHTML = list.length ? list.map(function(a){
+      return '<div class="card ar" data-audit="' + esc(a.auditId) + '"><span class="d">' + esc(a.date) + '</span><span class="s">' + esc(storeShort(a.store)) + '店・' + esc(a.reviewer || "") + '<br><span style="font-size:12px;color:var(--ink-3);font-weight:600">待改善 ' + (a.badCount || 0) + ' 項</span></span>' + gradeHtml(a) + '<span class="sc2">' + a.score + '</span></div>';
+    }).join("") : '<div class="empty">還沒有巡店紀錄</div>';
+    host.querySelectorAll("[data-audit]").forEach(function(el){ el.onclick = function(){ openAuditDetail(el.dataset.audit); }; });
+    return;
+  }
+  if(S.tab === "trend"){ host.innerHTML = trendHtml(); return; }
+  let list = S.issues.filter(fs);
+  if(S.tab === "over") list = list.filter(isOver);
+  else list = list.filter(function(i){ return i.status === S.tab; });
+  if(S.tab !== "closed") list.sort(function(a, b){ return (b.red - a.red) || String(a.due).localeCompare(String(b.due)); });
+  else list = list.slice(0, 50);
+  host.innerHTML = list.length ? list.map(issueCard).join("") : '<div class="empty">' + ({ review:"沒有待審核的改善 👍", open:"沒有待改善項目 👍", over:"沒有逾期 👍", closed:"還沒有結案紀錄" })[S.tab] + '</div>';
+  bindIssueCards(host);
+}
+
+function trendHtml(){
+  const months = [];
+  const d = new Date(); d.setDate(1);
+  for(let i = 0; i < 6; i++){ months.unshift(d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0")); d.setMonth(d.getMonth() - 1); }
+  const cell = function(sid, m){
+    const xs = S.audits.filter(function(a){ return a.store === sid && String(a.date).slice(0,7) === m; });
+    if(!xs.length) return '<td style="color:var(--ink-3)">—</td>';
+    const avg = Math.round(xs.reduce(function(s, a){ return s + Number(a.score || 0); }, 0) / xs.length);
+    const red = xs.some(function(a){ return a.redFail; });
+    return '<td><b style="color:' + (red ? "var(--bad)" : avg >= 90 ? "var(--ok)" : avg >= 80 ? "var(--warn)" : "var(--bad)") + '">' + avg + '</b>' + (red ? "🔴" : "") + '<br><span style="font-size:10.5px;color:var(--ink-3)">' + xs.length + ' 次</span></td>';
+  };
+  // 最常出問題的項目（近 90 天）
+  const since = addDays(-90);
+  const cnt = {};
+  S.issues.forEach(function(i){ if(String(i.createdAt).slice(0,10) >= since){ const k = i.item; cnt[k] = (cnt[k] || 0) + 1; } });
+  const top = Object.keys(cnt).sort(function(a, b){ return cnt[b] - cnt[a]; }).slice(0, 8);
+  return '<div class="card"><div style="font-weight:800;margin-bottom:8px">各店月平均分數</div><div style="overflow-x:auto"><table class="trend"><tr><th>門市</th>' +
+    months.map(function(m){ return "<th>" + Number(m.slice(5)) + "月</th>"; }).join("") + "</tr>" +
+    STORES.map(function(s){ return "<tr><td><b>" + s.short + "</b></td>" + months.map(function(m){ return cell(s.id, m); }).join("") + "</tr>"; }).join("") +
+    '</table></div></div><div class="card"><div style="font-weight:800;margin-bottom:8px">近 90 天最常出問題的項目</div>' +
+    (top.length ? top.map(function(k){ return '<div class="li"><b style="color:var(--bad);min-width:30px">' + cnt[k] + ' 次</b><span>' + esc(k) + '</span></div>'; }).join("") : '<div class="empty">沒有資料</div>') + '</div>';
+}
+
+/* ================= 店長首頁 ================= */
+function renderStore(){
+  $("storeTitle").textContent = storeShort(S.store) + "店・缺失改善";
+  const mine = S.issues;
+  const n = { open: mine.filter(function(i){ return i.status === "open"; }).length, review: mine.filter(function(i){ return i.status === "review"; }).length };
+  const tabs = [["open","需要改善",n.open],["review","等督導審核",n.review],["closed","已結案",null],["audits","巡店分數",null]];
+  $("storeTabs").innerHTML = tabs.map(function(t){ return '<button class="tab' + (S.stab === t[0] ? " on" : "") + '" data-t="' + t[0] + '">' + t[1] + (t[2] != null ? '<span class="n">' + t[2] + '</span>' : "") + '</button>'; }).join("");
+  $("storeTabs").querySelectorAll("[data-t]").forEach(function(b){ b.onclick = function(){ S.stab = b.dataset.t; renderStore(); }; });
+  const host = $("storeList");
+  if(S.stab === "audits"){
+    host.innerHTML = S.audits.length ? S.audits.map(function(a){
+      return '<div class="card ar" data-audit="' + esc(a.auditId) + '"><span class="d">' + esc(a.date) + '</span><span class="s">督導 ' + esc(a.reviewer || "") + '</span>' + gradeHtml(a) + '<span class="sc2">' + a.score + '</span></div>';
+    }).join("") : '<div class="empty">還沒有巡店紀錄</div>';
+    host.querySelectorAll("[data-audit]").forEach(function(el){ el.onclick = function(){ openAuditDetail(el.dataset.audit); }; });
+    return;
+  }
+  let list = mine.filter(function(i){ return i.status === S.stab; });
+  list.sort(function(a, b){ return (b.red - a.red) || String(a.due).localeCompare(String(b.due)); });
+  host.innerHTML = (S.stab === "open" && list.length ? '<div class="demo" style="background:#fff7ed;border-color:#fed7aa">點進每一項，拍「改善後」的照片回傳，督導核可後才算結案。</div>' : "") +
+    (list.length ? list.map(issueCard).join("") : '<div class="empty">' + ({ open:"全部改善完成 👍", review:"沒有等待審核的項目", closed:"還沒有結案紀錄" })[S.stab] + '</div>');
+  bindIssueCards(host);
+}
+
+/* ================= 缺失明細（督導審核／店長回傳） ================= */
+function openDetail(id){
+  const i = S.issues.find(function(x){ return x.id === id; });
+  if(!i) return;
+  const st = { open:"待改善", review:"待審核", closed:"已結案" }[i.status];
+  let h = '<h3>' + (i.red ? '<span class="chip red">紅線</span> ' : "") + esc(i.item) + '</h3>' +
+    '<div class="sub">' + esc(storeName(i.store)) + "・" + esc(i.area) + '</div>' +
+    '<div><span class="chip ' + i.status + '">' + st + '</span> ' + (isOver(i) ? '<span class="chip over">逾期</span> ' : "") + (i.repeat ? '<span class="chip rep">重複缺失</span>' : "") + '</div>' +
+    '<dl class="kv"><dt>缺失描述</dt><dd>' + esc(i.desc) + '</dd>' + (i.value ? '<dt>實測值</dt><dd>' + esc(i.value) + '</dd>' : "") +
+    '<dt>負責人</dt><dd>' + esc(i.owner || "—") + '</dd><dt>改善期限</dt><dd>' + esc(i.due || "—") + '</dd>' +
+    '<dt>登記日</dt><dd>' + esc(String(i.createdAt).slice(0,10)) + '</dd></dl>' +
+    '<div class="sec">改善前</div><div>' + (thumbs(i.photos, 92) || '<span style="color:var(--ink-3);font-size:12.5px">無照片</span>') + '</div>';
+  if(i.fixPhotos && i.fixPhotos.length){
+    h += '<div class="sec">改善後（' + esc(String(i.fixAt).slice(0,10)) + '）</div><div>' + thumbs(i.fixPhotos, 92) + '</div>' + (i.fixNote ? '<div class="notebox" style="margin-top:8px">' + esc(i.fixNote) + '</div>' : "");
+  }
+  if(i.reviewNote) h += '<div class="sec">督導說明</div><div class="notebox">' + esc(i.reviewNote) + '</div>';
+
+  let mode = "";
+  if(i.status === "open" && (S.role === "store" || S.role === "supervisor")){
+    mode = "fix";
+    h += '<div class="sec">回傳改善</div><div class="field"><label>改善後照片 <span class="req">*</span></label><div class="photos" id="fxPhotos"></div></div>' +
+      '<div class="field"><label>改善說明</label><textarea id="fxNote" placeholder="例：已重新整理冷藏庫，熟食移到上層並加蓋"></textarea></div>' +
+      '<div class="row"><button class="btn ghost" data-close>關閉</button><button class="btn green" id="fxSend">送出改善</button></div>';
+  } else if(i.status === "review" && S.role === "supervisor"){
+    mode = "review";
+    h += '<div class="sec">審核</div><div class="field"><textarea id="rvNote" placeholder="說明（退回時必填）"></textarea></div>' +
+      '<div class="row"><button class="btn red" id="rvNo">退回</button><button class="btn green" id="rvYes">核可結案</button></div>' +
+      '<div class="row" style="margin-top:8px"><button class="btn ghost" data-close>關閉</button></div>';
+  } else {
+    h += '<div class="row"><button class="btn ghost" data-close>關閉</button></div>';
+  }
+  $("ddBody").innerHTML = h;
+  const dlg = $("dDetail");
+  dlg.querySelectorAll("[data-close]").forEach(function(b){ b.onclick = function(){ dlg.close(); }; });
+  if(mode === "fix"){
+    const photos = [];
+    const ed = photoEditor($("fxPhotos"), photos, 3);
+    $("fxSend").onclick = async function(){
+      if(ed.busy()) return toast("照片還在上傳", true);
+      if(!photos.length) return toast("請至少拍一張改善後照片", true);
+      this.disabled = true; this.textContent = "送出中…";
+      const r = await api("submitFix", { issueId:i.id, photos:photos, note:$("fxNote").value.trim() });
+      if(!r.ok){ this.disabled = false; this.textContent = "送出改善"; return toast(r.error, true); }
+      dlg.close(); toast("✅ 已送出，等待督導審核"); reload();
+    };
+  }
+  if(mode === "review"){
+    const go = async function(approve){
+      const note = $("rvNote").value.trim();
+      if(!approve && !note) return toast("退回請寫原因", true);
+      const r = await api("reviewIssue", { issueId:i.id, approve:approve, note:note });
+      if(!r.ok) return toast(r.error, true);
+      dlg.close(); toast(approve ? "✅ 已結案" : "已退回給門市"); reload();
+    };
+    $("rvYes").onclick = function(){ go(true); };
+    $("rvNo").onclick = function(){ go(false); };
+  }
+  dlg.showModal();
+}
+
+function openAuditDetail(id){
+  const a = S.audits.find(function(x){ return x.auditId === id; });
+  if(!a) return;
+  const iss = S.issues.filter(function(i){ return i.auditId === id; });
+  let h = '<h3>' + esc(storeName(a.store)) + '・' + esc(a.date) + '</h3><div class="sub">督導 ' + esc(a.reviewer || "") + '</div>' +
+    '<div class="sumbox" style="padding:8px 0"><div class="big">' + a.score + '<small> 分</small></div><div style="margin-top:6px">' + gradeHtml(a) + '</div></div>' +
+    '<dl class="kv"><dt>檢查項目</dt><dd>' + (a.checked || 0) + ' 項（合格 ' + (a.okCount || 0) + '、待改善 ' + (a.badCount || 0) + '、不適用 ' + (a.naCount || 0) + '）</dd>' +
+    (a.recheckCount ? '<dt>上次複查</dt><dd>' + a.recheckCount + ' 項，仍未改善 ' + (a.notFixedCount || 0) + ' 項</dd>' : "") + '</dl>';
+  if(a.measures && a.measures.length){
+    h += '<div class="sec">實測數值</div>' + a.measures.map(function(m){ return '<div class="li"><span style="flex:1">' + esc(m.item) + '</span><b style="color:' + (m.ok ? "var(--ok)" : "var(--bad)") + '">' + esc(m.value) + '</b></div>'; }).join("");
+  }
+  h += '<div class="sec">本次待改善（' + iss.length + '）</div>' + (iss.length ? iss.map(issueCard).join("") : '<div class="empty" style="padding:10px">全部合格 👍</div>');
+  if(a.notes) h += '<div class="sec">總評</div><div class="notebox">' + esc(a.notes) + '</div>';
+  h += '<div class="row"><button class="btn ghost" data-close>關閉</button></div>';
+  $("daBody").innerHTML = h;
+  const dlg = $("dAudit");
+  dlg.querySelector("[data-close]").onclick = function(){ dlg.close(); };
+  dlg.querySelectorAll("[data-issue]").forEach(function(el){ el.onclick = function(){ dlg.close(); openDetail(el.dataset.issue); }; });
+  dlg.showModal();
+}
+
+/* ================= 巡店流程 ================= */
+let D = null;   // 巡店草稿
+function saveDraft(){ if(D) lsSet("cd_audit_draft", D); }
+
+function startAudit(store){
+  const old = lsGet("cd_audit_draft", null);
+  if(old && !confirm("有一份未完成的巡店（" + storeName(old.store) + "），要捨棄它開始新的嗎？")) return;
+  const pool = QUIZ.map(function(_, i){ return i; }).sort(function(){ return Math.random() - .5; }).slice(0, 3);
+  const pending = S.issues.filter(function(i){ return i.store === store && i.status !== "closed"; });
+  D = { store:store, date:ymd(), reviewer:lsGet("cd_audit_reviewer", ""), quiz:pool, ans:{}, recheck:{},
+        recheckIds:pending.map(function(i){ return i.id; }), notes:"", area:pending.length ? "recheck" : AREAS[0].key, startedAt:new Date().toISOString() };
+  saveDraft();
+  enterAudit();
+}
+
+function auditAreas(){
+  const list = [];
+  if(D.recheckIds.length) list.push({ key:"recheck", name:"上次缺失複查", icon:"🔁" });
+  AREAS.forEach(function(a){ list.push(a); });
+  list.push({ key:"summary", name:"總結送出", icon:"✅" });
+  return list;
+}
+function areaItems(a){
+  if(!a.items) return [];
+  let items = a.items.slice();
+  if(a.key === "staff") D.quiz.forEach(function(qi){ items.push({ k:"quiz" + qi, t:QUIZ[qi], quiz:true }); });
+  return items;
+}
+function allItems(){
+  const out = [];
+  AREAS.forEach(function(a){ areaItems(a).forEach(function(it){ out.push({ area:a, it:it }); }); });
+  return out;
+}
+function isRepeat(key){
+  const since = addDays(-REPEAT_DAYS);
+  return S.issues.some(function(i){ return i.store === D.store && i.itemKey === key && String(i.createdAt).slice(0,10) >= since; });
+}
+
+function computeScore(){
+  let total = 0, lost = 0, redFail = false, ok = 0, bad = 0, na = 0, checked = 0;
+  allItems().forEach(function(x){
+    const a = D.ans[x.it.k]; if(!a || !a.r) return;
+    checked++;
+    if(a.r === "na"){ na++; return; }
+    const w = x.it.red ? 2 : 1;
+    total += w;
+    if(a.r === "bad"){ bad++; lost += w * (a.repeat ? 2 : 1); if(x.it.red) redFail = true; }
+    else ok++;
+  });
+  let notFixed = 0, rechecked = 0;
+  D.recheckIds.forEach(function(id){
+    const r = D.recheck[id]; if(!r) return;
+    rechecked++; total += 1;
+    if(r === "notfixed"){ notFixed++; lost += 2; }
+  });
+  const score = total ? Math.max(0, Math.round(100 * (1 - lost / total))) : null;
+  const grade = score == null ? "" : score >= 90 ? "A" : score >= 80 ? "B" : "C";
+  const totalItems = allItems().length + D.recheckIds.length;
+  return { score:score, grade:grade, redFail:redFail, ok:ok, bad:bad, na:na, checked:checked, notFixed:notFixed, rechecked:rechecked,
+           done:checked + rechecked, totalItems:totalItems };
+}
+
+function enterAudit(){
+  showView("vAudit");
+  loadRoster(D.store);
+  renderAudit();
+}
+function leaveAudit(){ saveDraft(); toast("已暫存，可以從首頁繼續"); showView("vSup"); renderSup(); }
+
+function areaStatus(a){
+  if(a.key === "recheck"){
+    const done = D.recheckIds.every(function(id){ return D.recheck[id]; });
+    const bad = D.recheckIds.some(function(id){ return D.recheck[id] === "notfixed"; });
+    return bad ? "bad" : done ? "done" : "";
+  }
+  if(a.key === "summary") return "";
+  const items = areaItems(a);
+  const bad = items.some(function(it){ return D.ans[it.k] && D.ans[it.k].r === "bad"; });
+  const done = items.every(function(it){ return D.ans[it.k] && D.ans[it.k].r; });
+  return bad ? "bad" : done ? "done" : "";
+}
+
+function renderAudit(){
+  const areas = auditAreas();
+  const sc = computeScore();
+  $("aStore").textContent = storeName(D.store) + "・" + D.date;
+  $("aCount").textContent = sc.done + " / " + sc.totalItems;
+  $("aProg").style.width = (sc.totalItems ? 100 * sc.done / sc.totalItems : 0) + "%";
+  $("aTabs").innerHTML = areas.map(function(a, i){
+    const st = areaStatus(a);
+    return '<button class="atab' + (D.area === a.key ? " on" : "") + '" data-a="' + a.key + '">' + (a.key === "summary" ? "" : '<span class="dot ' + st + '"></span>') + a.icon + " " + a.name + '</button>';
+  }).join("");
+  $("aTabs").querySelectorAll("[data-a]").forEach(function(b){ b.onclick = function(){ goArea(b.dataset.a); }; });
+  const on = $("aTabs").querySelector(".on"); if(on) on.scrollIntoView({ block:"nearest", inline:"center" });
+
+  $("barScore").textContent = sc.score == null ? "—" : sc.score;
+  $("barGrade").innerHTML = sc.redFail ? '<span class="g R">紅線</span>' : sc.grade ? '<span class="g ' + sc.grade + '">' + sc.grade + ' 級</span>' : "";
+  const idx = areas.findIndex(function(a){ return a.key === D.area; });
+  $("barPrev").style.display = idx > 0 ? "" : "none";
+  $("barPrev").onclick = function(){ goArea(areas[idx - 1].key); };
+  if(D.area === "summary"){ $("barNext").textContent = "送出巡店"; $("barNext").onclick = submitAudit; }
+  else { $("barNext").textContent = "下一區 →"; $("barNext").onclick = function(){ goArea(areas[idx + 1].key); }; }
+
+  const area = areas[idx];
+  if(area.key === "recheck") renderRecheck();
+  else if(area.key === "summary") renderSummary(sc);
+  else renderArea(area);
+}
+function goArea(k){ D.area = k; saveDraft(); renderAudit(); window.scrollTo(0, 0); }
+
+function renderRecheck(){
+  const list = D.recheckIds.map(function(id){ return S.issues.find(function(i){ return i.id === id; }); }).filter(Boolean);
+  $("aBody").innerHTML = '<div class="area-h"><h2>🔁 上次缺失複查</h2><span class="sub">' + list.length + ' 項未結案</span></div>' +
+    '<div class="demo" style="background:#fff7ed;border-color:#fed7aa">先確認上次的問題有沒有改好。「已改善」會直接結案；「仍未改善」會扣分並留在待改善清單。</div>' +
+    list.map(function(i){
+      const r = D.recheck[i.id] || "";
+      return '<div class="card rc"><div class="top2">' + (i.photos && i.photos[0] ? '<img src="' + esc(photoUrl(i.photos[0])) + '" onclick="viewPhoto(this.src)">' : "") +
+        '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px">' + (i.red ? '<span class="chip red">紅線</span> ' : "") + esc(i.item) + '</div>' +
+        '<div style="font-size:12.5px;color:var(--ink-2);margin-top:3px;line-height:1.5">' + esc(i.desc) + '</div>' +
+        '<div style="font-size:11.5px;color:var(--ink-3);margin-top:3px">' + esc(String(i.createdAt).slice(0,10)) + ' 登記・' + ({ open:"店長尚未回傳", review:"店長已回傳，待審核" })[i.status] + '</div></div></div>' +
+        (i.fixPhotos && i.fixPhotos.length ? '<div style="margin-top:8px;font-size:12px;color:var(--ink-2)">改善後：' + thumbs(i.fixPhotos, 50) + '</div>' : "") +
+        '<div class="seg"><button class="ok' + (r === "fixed" ? " on" : "") + '" data-rc="' + i.id + '" data-v="fixed">已改善</button><button class="bad' + (r === "notfixed" ? " on" : "") + '" data-rc="' + i.id + '" data-v="notfixed">仍未改善</button></div></div>';
+    }).join("");
+  $("aBody").querySelectorAll("[data-rc]").forEach(function(b){
+    b.onclick = function(){
+      const id = b.dataset.rc;
+      D.recheck[id] = D.recheck[id] === b.dataset.v ? "" : b.dataset.v;
+      saveDraft(); renderAudit();
+    };
+  });
+}
+
+function measureStd(it){
+  if(it.type === "measure") return it.max != null ? "標準 ≤ " + it.max + it.unit : "標準 ≥ " + it.min + it.unit;
+  if(it.type === "compare") return "誤差 ±" + it.tolPct + "% 內";
+  return "";
+}
+function judge(it, a){
+  if(it.type === "measure"){
+    const v = parseFloat(a.val); if(isNaN(v)) return "";
+    return (it.max != null ? v <= it.max : v >= it.min) ? "ok" : "bad";
+  }
+  if(it.type === "compare"){
+    const v = parseFloat(a.val), s = parseFloat(a.std); if(isNaN(v) || isNaN(s) || !s) return "";
+    return Math.abs(v - s) / s * 100 <= it.tolPct ? "ok" : "bad";
+  }
+  return "";
+}
+function valueText(it, a){
+  if(it.type === "measure") return a.val + it.unit + "（" + measureStd(it) + "）";
+  if(it.type === "compare"){ const d = (a.val - a.std) / a.std * 100; return "實測 " + a.val + it.unit + " / 標準 " + a.std + it.unit + "（" + (d >= 0 ? "+" : "") + d.toFixed(1) + "%）"; }
+  return "";
+}
+
+function renderArea(area){
+  const items = areaItems(area);
+  $("aBody").innerHTML = '<div class="area-h"><h2>' + area.icon + " " + area.name + '</h2><span class="sub">' + items.length + ' 項</span></div>' +
+    items.map(function(it){
+      const a = D.ans[it.k] || {};
+      const rep = a.r === "bad" && a.repeat;
+      let h = '<div class="card it' + (it.red ? " red" : "") + (a.r === "bad" ? " isbad" : "") + '" data-k="' + it.k + '">' +
+        '<div class="tt">' + (it.red ? '<span class="chip red">🔴 紅線</span>' : "") + (it.quiz ? '<span class="chip quiz">抽問</span>' : "") + esc(it.t) + '</div>' +
+        (it.hint ? '<div class="hint">' + esc(it.hint) + '</div>' : "");
+      if(it.type === "measure" || it.type === "compare"){
+        const res = a.r === "ok" ? '<span class="res ok">✓ 合格</span>' : a.r === "bad" ? '<span class="res bad">✗ 不合格</span>' : "";
+        h += '<div class="meas">' +
+          (it.type === "compare" ? '<label>標準</label><input type="number" inputmode="decimal" step="any" data-std value="' + esc(a.std == null ? "" : a.std) + '"' + (a.r === "na" ? " disabled" : "") + '><span class="u">' + it.unit + '</span>' : "") +
+          '<label>實測</label><input type="number" inputmode="decimal" step="any" data-val value="' + esc(a.val == null ? "" : a.val) + '"' + (a.r === "na" ? " disabled" : "") + '><span class="u">' + it.unit + '</span>' +
+          (it.type === "measure" ? '<span class="std">' + measureStd(it) + '</span>' : "") + res +
+          '<button class="nab' + (a.r === "na" ? " on" : "") + '" data-na type="button">不適用</button></div>';
+      } else {
+        h += '<div class="seg"><button class="ok' + (a.r === "ok" ? " on" : "") + '" data-r="ok">合格</button><button class="bad' + (a.r === "bad" ? " on" : "") + '" data-r="bad">待改善</button><button class="na' + (a.r === "na" ? " on" : "") + '" data-r="na">不適用</button></div>';
+      }
+      if(a.r === "bad"){
+        h += '<div class="isum"><div class="ph">' + (a.photos || []).slice(0, 3).map(function(p){ return '<img src="' + esc(photoUrl(p)) + '">'; }).join("") + '</div>' +
+          '<div class="tx">' + (rep ? '<span class="warn">🔁 ' + REPEAT_DAYS + ' 天內重複缺失，扣分加倍</span><br>' : "") +
+          (a.desc ? esc(a.desc) : '<span class="warn">⚠ 尚未填寫缺失描述與照片</span>') +
+          '<br><span style="color:var(--ink-3)">' + esc(a.owner || "") + (a.due ? "・期限 " + shortDate(a.due) : "") + '</span></div>' +
+          '<button class="btn ghost sm" data-edit type="button">編輯</button></div>';
+      }
+      return h + '</div>';
+    }).join("");
+
+  $("aBody").querySelectorAll(".it").forEach(function(card){
+    const k = card.dataset.k;
+    const it = items.find(function(x){ return x.k === k; });
+    card.querySelectorAll("[data-r]").forEach(function(b){
+      b.onclick = function(){
+        const v = b.dataset.r, a = D.ans[k] || {};
+        if(a.r === v){ delete D.ans[k]; saveDraft(); renderAudit(); return; }
+        if(v === "bad"){ openIssue(area, it, Object.assign({}, a, { r:"bad" })); return; }
+        D.ans[k] = { r:v }; saveDraft(); renderAudit();
+      };
+    });
+    const na = card.querySelector("[data-na]");
+    if(na) na.onclick = function(){
+      const a = D.ans[k] || {};
+      if(a.r === "na") delete D.ans[k]; else D.ans[k] = { r:"na" };
+      saveDraft(); renderAudit();
+    };
+    const vIn = card.querySelector("[data-val]"), sIn = card.querySelector("[data-std]");
+    const onMeas = function(){
+      const a = Object.assign({}, D.ans[k] || {});
+      a.val = vIn.value === "" ? null : parseFloat(vIn.value);
+      if(sIn) a.std = sIn.value === "" ? null : parseFloat(sIn.value);
+      const j = judge(it, a);
+      if(j === "bad"){
+        a.r = "bad"; a.value = valueText(it, a);
+        if(!a.desc) a.desc = it.t + "不合格：" + a.value;
+        openIssue(area, it, a);
+        return;
+      }
+      if(j === "ok"){ a.r = "ok"; a.value = valueText(it, a); delete a.desc; delete a.photos; }
+      else delete a.r;
+      D.ans[k] = a; saveDraft(); renderAudit();
+    };
+    if(vIn) vIn.onchange = onMeas;
+    if(sIn) sIn.onchange = onMeas;
+    const ed = card.querySelector("[data-edit]");
+    if(ed) ed.onclick = function(){ openIssue(area, it, Object.assign({}, D.ans[k])); };
+  });
+}
+
+/* 缺失登記對話框 */
+function openIssue(area, it, a){
+  const dlg = $("dIssue");
+  a.repeat = isRepeat(it.k);
+  $("diTitle").innerHTML = (it.red ? '<span class="chip red">🔴 紅線</span> ' : "") + esc(it.t);
+  $("diSub").innerHTML = esc(area.name) + (a.value ? "・" + esc(a.value) : "") + (a.repeat ? ' <span class="chip rep">🔁 重複缺失・扣分加倍</span>' : "");
+  $("diDesc").value = a.desc || "";
+  $("diOwner").value = a.owner || "店長";
+  $("diDue").value = a.due || (it.red ? ymd() : addDays(DUE_DAYS));
+  const photos = (a.photos || []).slice();
+  const ed = photoEditor($("diPhotos"), photos, 3);
+  $("diCancel").onclick = function(){ dlg.close(); renderAudit(); };
+  $("diSave").onclick = function(){
+    if(ed.busy()) return toast("照片還在上傳", true);
+    const desc = $("diDesc").value.trim();
+    if(!desc) return toast("請寫缺失描述", true);
+    if(!photos.length) return toast("請至少拍一張照片", true);
+    a.r = "bad"; a.desc = desc; a.photos = photos; a.owner = $("diOwner").value.trim(); a.due = $("diDue").value;
+    D.ans[it.k] = a; saveDraft(); dlg.close(); renderAudit();
+  };
+  dlg.showModal();
+}
+
+function renderSummary(sc){
+  const bads = allItems().filter(function(x){ const a = D.ans[x.it.k]; return a && a.r === "bad"; });
+  const missing = bads.filter(function(x){ const a = D.ans[x.it.k]; return !a.desc || !(a.photos || []).length; });
+  const unchecked = sc.totalItems - sc.done;
+  $("aBody").innerHTML = '<div class="card sumbox"><div style="font-size:13px;color:var(--ink-3);font-weight:700">' + esc(storeName(D.store)) + '</div>' +
+    '<div class="big">' + (sc.score == null ? "—" : sc.score) + '<small> 分</small></div>' +
+    '<div style="margin-top:6px">' + (sc.redFail ? '<span class="g R">紅線不合格</span>' : sc.grade ? '<span class="g ' + sc.grade + '">' + sc.grade + ' 級</span>' : "") + '</div>' +
+    '<div style="font-size:12.5px;color:var(--ink-2);margin-top:10px">合格 ' + sc.ok + '・待改善 ' + sc.bad + '・不適用 ' + sc.na + (sc.rechecked ? '・複查仍未改善 ' + sc.notFixed : "") + '</div>' +
+    (sc.redFail ? '<div class="veto">🔴 有紅線項目不合格：不論分數，本次巡店判定不合格，紅線缺失須當天改善。</div>' : "") +
+    (unchecked ? '<div class="veto" style="background:#fffbeb;border-color:#fde68a;color:#92400e">還有 ' + unchecked + ' 項沒檢查（不列入計分）。</div>' : "") +
+    (missing.length ? '<div class="veto">有 ' + missing.length + ' 項待改善還沒補照片或描述，無法送出。</div>' : "") + '</div>' +
+    '<div class="card"><div class="field"><label>督導姓名 <span class="req">*</span></label><input id="smReviewer" value="' + esc(D.reviewer) + '" placeholder="你的名字"></div>' +
+    '<div class="field"><label>巡店日期</label><input id="smDate" type="date" value="' + esc(D.date) + '"></div>' +
+    '<div class="field"><label>總評（離店前與店長溝通的重點）</label><textarea id="smNotes" placeholder="整體觀察、做得好的地方、下次重點…">' + esc(D.notes) + '</textarea></div></div>' +
+    '<div class="card"><div style="font-weight:800;margin-bottom:8px">本次待改善（' + bads.length + '）</div>' +
+    (bads.length ? bads.map(function(x){ const a = D.ans[x.it.k];
+      return '<div class="li">' + (x.it.red ? '<span class="chip red">紅線</span>' : "") + (a.repeat ? '<span class="chip rep">重複</span>' : "") + '<span style="flex:1"><b>' + esc(x.it.t) + '</b><br><span style="color:var(--ink-2);font-size:12px">' + esc(x.area.name) + "・" + esc(a.desc || "（未填）") + '</span></span></div>'; }).join("") : '<div class="empty" style="padding:10px">全部合格 👍</div>') + '</div>';
+  $("smReviewer").oninput = function(){ D.reviewer = this.value; saveDraft(); };
+  $("smDate").onchange = function(){ D.date = this.value; saveDraft(); renderAudit(); };
+  $("smNotes").oninput = function(){ D.notes = this.value; saveDraft(); };
+}
+
+async function submitAudit(){
+  const sc = computeScore();
+  if(!D.reviewer.trim()) return toast("請填督導姓名", true);
+  const bads = allItems().filter(function(x){ const a = D.ans[x.it.k]; return a && a.r === "bad"; });
+  if(bads.some(function(x){ const a = D.ans[x.it.k]; return !a.desc || !(a.photos || []).length; })) return toast("有待改善項目還沒補照片或描述", true);
+  if(sc.score == null) return toast("還沒有檢查任何項目", true);
+  const unchecked = sc.totalItems - sc.done;
+  if(unchecked && !confirm("還有 " + unchecked + " 項沒檢查，確定送出？")) return;
+  const btn = $("barNext"); btn.disabled = true; btn.textContent = "送出中…";
+
+  const measures = [];
+  allItems().forEach(function(x){ const a = D.ans[x.it.k]; if(a && a.value && (x.it.type)) measures.push({ item:x.it.t, value:a.value, ok:a.r === "ok" }); });
+  const answers = {};
+  allItems().forEach(function(x){ const a = D.ans[x.it.k]; if(a && a.r) answers[x.it.k] = a.r; });
+  const audit = {
+    store:D.store, date:D.date, reviewer:D.reviewer.trim(), notes:D.notes.trim(), score:sc.score, grade:sc.redFail ? "紅線" : sc.grade, redFail:sc.redFail,
+    checked:sc.checked, okCount:sc.ok, badCount:sc.bad, naCount:sc.na, recheckCount:sc.rechecked, notFixedCount:sc.notFixed,
+    measures:measures, answers:answers, quiz:D.quiz.map(function(i){ return QUIZ[i]; }), startedAt:D.startedAt,
+  };
+  const issues = bads.map(function(x){ const a = D.ans[x.it.k];
+    return { area:x.area.name, itemKey:x.it.k, item:x.it.t, red:!!x.it.red, repeat:!!a.repeat, desc:a.desc, value:a.value || "", photos:a.photos, owner:a.owner || "", due:a.due || "" }; });
+  const recheck = D.recheckIds.filter(function(id){ return D.recheck[id]; }).map(function(id){ return { id:id, result:D.recheck[id] }; });
+
+  const r = await api("submitAudit", { audit:audit, issues:issues, recheck:recheck });
+  btn.disabled = false;
+  if(!r.ok){ btn.textContent = "送出巡店"; return toast("送出失敗：" + r.error, true); }
+  lsSet("cd_audit_reviewer", D.reviewer.trim());
+  localStorage.removeItem("cd_audit_draft"); D = null;
+  toast("✅ 巡店已送出，" + issues.length + " 項待改善已派給門市");
+  S.tab = "audits";
+  await reload();
+}
+
+/* 負責人選單：從員工主檔抓當月在職名單 */
+async function loadRoster(store){
+  const dl = $("ownerList");
+  dl.innerHTML = '<option value="店長">';
+  const s = STORES.find(function(x){ return x.id === store; });
+  let url = EMP_URL_DEFAULT; try { url = localStorage.getItem("cd_emp_sync_url") || url; } catch(e){}
+  if(!s || !url) return;
+  try{
+    const r = await fetch(url, { method:"POST", body:JSON.stringify({ action:"getActiveRoster", args:[s.pw, store] }) }).then(function(x){ return x.json(); });
+    if(r && r.ok) dl.innerHTML = '<option value="店長">' + r.roster.map(function(e){ return '<option value="' + esc(e.name) + '">'; }).join("");
+  }catch(e){}
+}
+
+/* ================= 啟動 ================= */
+$("loginBtn").onclick = function(){ const pw = $("pw").value.trim(); if(!pw) return; S.pw = pw; login(pw); };
+$("pw").addEventListener("keydown", function(e){ if(e.key === "Enter") $("loginBtn").click(); });
+(function(){
+  let pw = ""; try { pw = sessionStorage.getItem("cd_audit_pw") || ""; } catch(e){}
+  if(pw){ S.pw = pw; login(pw); }
+})();
+</script>
+</body>
+</html>
