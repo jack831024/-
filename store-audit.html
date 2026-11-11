@@ -325,7 +325,7 @@ const AREAS = [
   ]},
   { key:"staff", name:"人員與服務", icon:"🙋", items:[
     { k:"staff1", t:"外場有穿制服、帽子、短指甲" },
-    { k:"staff3", t:"介紹術語", quiz:true },
+    { k:"staff3", t:"跟客人介紹要講什麼", quiz:true },
     { k:"staff7", t:"上海鮮要講什麼", quiz:true },
     { k:"staff4", t:"主動加湯、巡桌、收空盤" },
     { k:"staff5", t:"員工清楚當月活動內容" },
@@ -343,10 +343,8 @@ const QUIZ = [
   "加湯的流程，以及要對客人說的話？",
   "客人反應湯太鹹，怎麼處理？",
   "肉品正確的解凍方式？",
-  "冷藏、冷凍的標準溫度是幾度？",
-  "遇到客訴，第一步要做什麼？",
   "本月活動內容和價格？",
-  "過敏客人點餐要注意什麼？",
+  "客訴第一件事是做什麼？",
   "打烊時瓦斯、電源的關閉順序？",
 ];
 
@@ -591,7 +589,7 @@ function renderSup(){
   if(S.tab === "audits"){
     const list = S.audits.filter(fs);
     host.innerHTML = list.length ? list.map(function(a){
-      return '<div class="card ar" data-audit="' + esc(a.auditId) + '"><span class="d">' + esc(a.date) + '</span><span class="s">' + esc(storeShort(a.store)) + '店・' + esc(a.reviewer || "") + '<br><span style="font-size:12px;color:var(--ink-3);font-weight:600">待改善 ' + (a.badCount || 0) + ' 項</span></span>' + gradeHtml(a) + '<span class="sc2">' + a.score + '</span></div>';
+      return '<div class="card ar" data-audit="' + esc(a.auditId) + '"><span class="d">' + esc(a.date) + '</span><span class="s">' + esc(storeShort(a.store)) + '店' + (a.reviewer ? '・' + esc(a.reviewer) : "") + '<br><span style="font-size:12px;color:var(--ink-3);font-weight:600">待改善 ' + (a.badCount || 0) + ' 項</span></span>' + gradeHtml(a) + '<span class="sc2">' + a.score + '</span></div>';
     }).join("") : '<div class="empty">還沒有巡店紀錄</div>';
     host.querySelectorAll("[data-audit]").forEach(function(el){ el.onclick = function(){ openAuditDetail(el.dataset.audit); }; });
     return;
@@ -640,7 +638,7 @@ function renderStore(){
   const host = $("storeList");
   if(S.stab === "audits"){
     host.innerHTML = S.audits.length ? S.audits.map(function(a){
-      return '<div class="card ar" data-audit="' + esc(a.auditId) + '"><span class="d">' + esc(a.date) + '</span><span class="s">督導 ' + esc(a.reviewer || "") + '</span>' + gradeHtml(a) + '<span class="sc2">' + a.score + '</span></div>';
+      return '<div class="card ar" data-audit="' + esc(a.auditId) + '"><span class="d">' + esc(a.date) + '</span><span class="s">督導巡店' + (a.reviewer ? '・' + esc(a.reviewer) : "") + '</span>' + gradeHtml(a) + '<span class="sc2">' + a.score + '</span></div>';
     }).join("") : '<div class="empty">還沒有巡店紀錄</div>';
     host.querySelectorAll("[data-audit]").forEach(function(el){ el.onclick = function(){ openAuditDetail(el.dataset.audit); }; });
     return;
@@ -716,7 +714,7 @@ function openAuditDetail(id){
   const a = S.audits.find(function(x){ return x.auditId === id; });
   if(!a) return;
   const iss = S.issues.filter(function(i){ return i.auditId === id; });
-  let h = '<h3>' + esc(storeName(a.store)) + '・' + esc(a.date) + '</h3><div class="sub">督導 ' + esc(a.reviewer || "") + '</div>' +
+  let h = '<h3>' + esc(storeName(a.store)) + '・' + esc(a.date) + '</h3><div class="sub">督導巡店' + (a.reviewer ? '・' + esc(a.reviewer) : "") + '</div>' +
     '<div class="sumbox" style="padding:8px 0"><div class="big">' + a.score + '<small> 分</small></div><div style="margin-top:6px">' + gradeHtml(a) + '</div></div>' +
     '<dl class="kv"><dt>檢查項目</dt><dd>' + (a.checked || 0) + ' 項（合格 ' + (a.okCount || 0) + '、待改善 ' + (a.badCount || 0) + '）</dd>' +
     (a.recheckCount ? '<dt>上次複查</dt><dd>' + a.recheckCount + ' 項，仍未改善 ' + (a.notFixedCount || 0) + ' 項</dd>' : "") + '</dl>';
@@ -989,20 +987,17 @@ function renderSummary(sc){
     (sc.redFail ? '<div class="veto">🔴 有紅線項目不合格：不論分數，本次巡店判定不合格，紅線缺失須當天改善。</div>' : "") +
     (unchecked ? '<div class="veto" style="background:#fffbeb;border-color:#fde68a;color:#92400e">還有 ' + unchecked + ' 項沒檢查（不列入計分）。</div>' : "") +
     (missing.length ? '<div class="veto">有 ' + missing.length + ' 項待改善還沒補照片或描述，無法送出。</div>' : "") + '</div>' +
-    '<div class="card"><div class="field"><label>督導姓名 <span class="req">*</span></label><input id="smReviewer" value="' + esc(D.reviewer) + '" placeholder="你的名字"></div>' +
-    '<div class="field"><label>巡店日期</label><input id="smDate" type="date" value="' + esc(D.date) + '"></div>' +
+    '<div class="card"><div class="field"><label>巡店日期</label><input id="smDate" type="date" value="' + esc(D.date) + '"></div>' +
     '<div class="field"><label>總評（離店前與店長溝通的重點）</label><textarea id="smNotes" placeholder="整體觀察、做得好的地方、下次重點…">' + esc(D.notes) + '</textarea></div></div>' +
     '<div class="card"><div style="font-weight:800;margin-bottom:8px">本次待改善（' + bads.length + '）</div>' +
     (bads.length ? bads.map(function(x){ const a = D.ans[x.it.k];
       return '<div class="li">' + (x.it.red ? '<span class="chip red">紅線</span>' : "") + (a.repeat ? '<span class="chip rep">重複</span>' : "") + '<span style="flex:1"><b>' + esc(x.it.t) + '</b><br><span style="color:var(--ink-2);font-size:12px">' + esc(x.area.name) + "・" + esc(a.desc || "（未填）") + '</span></span></div>'; }).join("") : '<div class="empty" style="padding:10px">全部合格 👍</div>') + '</div>';
-  $("smReviewer").oninput = function(){ D.reviewer = this.value; saveDraft(); };
   $("smDate").onchange = function(){ D.date = this.value; saveDraft(); renderAudit(); };
   $("smNotes").oninput = function(){ D.notes = this.value; saveDraft(); };
 }
 
 async function submitAudit(){
   const sc = computeScore();
-  if(!D.reviewer.trim()) return toast("請填督導姓名", true);
   const bads = allItems().filter(function(x){ const a = D.ans[x.it.k]; return a && a.r === "bad"; });
   if(bads.some(function(x){ const a = D.ans[x.it.k]; return !a.desc || !(a.photos || []).length; })) return toast("有待改善項目還沒補照片或描述", true);
   if(sc.score == null) return toast("還沒有檢查任何項目", true);
@@ -1015,7 +1010,7 @@ async function submitAudit(){
   const answers = {};
   allItems().forEach(function(x){ const a = D.ans[x.it.k]; if(a && a.r) answers[x.it.k] = a.r; });
   const audit = {
-    store:D.store, date:D.date, reviewer:D.reviewer.trim(), notes:D.notes.trim(), score:sc.score, grade:sc.redFail ? "紅線" : sc.grade, redFail:sc.redFail,
+    store:D.store, date:D.date, reviewer:"", notes:D.notes.trim(), score:sc.score, grade:sc.redFail ? "紅線" : sc.grade, redFail:sc.redFail,
     checked:sc.checked, okCount:sc.ok, badCount:sc.bad, naCount:sc.na, recheckCount:sc.rechecked, notFixedCount:sc.notFixed,
     measures:measures, answers:answers, quiz:D.quiz.map(function(i){ return QUIZ[i]; }), startedAt:D.startedAt,
   };
@@ -1026,7 +1021,6 @@ async function submitAudit(){
   const r = await api("submitAudit", { audit:audit, issues:issues, recheck:recheck });
   btn.disabled = false;
   if(!r.ok){ btn.textContent = "送出巡店"; return toast("送出失敗：" + r.error, true); }
-  lsSet("cd_audit_reviewer", D.reviewer.trim());
   localStorage.removeItem("cd_audit_draft"); D = null;
   toast("✅ 巡店已送出，" + issues.length + " 項待改善已派給門市");
   S.tab = "audits";
