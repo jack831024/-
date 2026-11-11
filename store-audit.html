@@ -107,7 +107,7 @@ table.trend td:first-child,table.trend th:first-child{text-align:left}
 .it .tt{font-size:14.5px;font-weight:600;line-height:1.45;margin-bottom:4px}
 .it .tt .chip{margin-right:4px;vertical-align:1px}
 .it .hint{font-size:12px;color:var(--ink-3);margin-bottom:8px;line-height:1.45}
-.seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
 .seg button{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:10px 4px;font-size:13.5px;font-weight:800;color:var(--ink-2)}
 .seg button.ok.on{background:var(--ok);border-color:var(--ok);color:#fff}
 .seg button.bad.on{background:var(--bad);border-color:var(--bad);color:#fff}
@@ -290,11 +290,8 @@ const DUE_DAYS = 3;       // 一般缺失預設改善期限（天）；紅線＝
    red: 紅線（一票否決） */
 const AREAS = [
   { key:"front", name:"門口與候位", icon:"🚪", items:[
-    { k:"front1", t:"招牌燈、門口玻璃、地墊乾淨無破損", hint:"玻璃無手印、地墊無積水" },
-    { k:"front2", t:"營業時間、公告標示正確" },
-    { k:"front3", t:"當月活動海報與菜單一致（無過期活動、價格正確）" },
-    { k:"front4", t:"外送平台營業中、品項無異常停售", hint:"打開外送平台後台確認" },
-    { k:"front5", t:"候位動線順暢、候位座椅乾淨" },
+    { k:"front1", t:"門口玻璃、地墊乾淨，候位座椅乾淨" },
+    { k:"front2", t:"菜單資訊正確、門口公告（開會／休息）正確、菜單本乾淨" },
   ]},
   { key:"dining", name:"內用座位區", icon:"🍲", items:[
     { k:"din1", t:"桌面、桌邊、椅面乾淨無油漬殘渣" },
@@ -333,7 +330,7 @@ const AREAS = [
   { key:"back", name:"洗滌與後場", icon:"🧽", items:[
     { k:"back1", t:"無蟲鼠跡證（蟑螂、鼠糞、果蠅）", red:true },
     { k:"back2", t:"洗淨餐具無油膩、無殘渣" },
-    { k:"back3", t:"洗碗機沖洗水溫", type:"measure", unit:"°C", min:80, hint:"化學消毒式機型請按不適用" },
+    { k:"back3", t:"洗碗機沖洗水溫", type:"measure", unit:"°C", min:80, hint:"化學消毒式機型免測，留空即可（不計分）" },
     { k:"back4", t:"清潔劑等化學品與食材分開存放", red:true },
     { k:"back5", t:"截油槽定期清理、排水順暢" },
     { k:"back6", t:"垃圾分類、廚餘加蓋、無滿溢" },
@@ -737,7 +734,7 @@ function openAuditDetail(id){
   const iss = S.issues.filter(function(i){ return i.auditId === id; });
   let h = '<h3>' + esc(storeName(a.store)) + '・' + esc(a.date) + '</h3><div class="sub">督導 ' + esc(a.reviewer || "") + '</div>' +
     '<div class="sumbox" style="padding:8px 0"><div class="big">' + a.score + '<small> 分</small></div><div style="margin-top:6px">' + gradeHtml(a) + '</div></div>' +
-    '<dl class="kv"><dt>檢查項目</dt><dd>' + (a.checked || 0) + ' 項（合格 ' + (a.okCount || 0) + '、待改善 ' + (a.badCount || 0) + '、不適用 ' + (a.naCount || 0) + '）</dd>' +
+    '<dl class="kv"><dt>檢查項目</dt><dd>' + (a.checked || 0) + ' 項（合格 ' + (a.okCount || 0) + '、待改善 ' + (a.badCount || 0) + '）</dd>' +
     (a.recheckCount ? '<dt>上次複查</dt><dd>' + a.recheckCount + ' 項，仍未改善 ' + (a.notFixedCount || 0) + ' 項</dd>' : "") + '</dl>';
   if(a.measures && a.measures.length){
     h += '<div class="sec">實測數值</div>' + a.measures.map(function(m){ return '<div class="li"><span style="flex:1">' + esc(m.item) + '</span><b style="color:' + (m.ok ? "var(--ok)" : "var(--bad)") + '">' + esc(m.value) + '</b></div>'; }).join("");
@@ -920,10 +917,9 @@ function renderArea(area){
         h += '<div class="meas">' +
           (it.type === "compare" ? '<label>標準</label><input type="number" inputmode="decimal" step="any" data-std value="' + esc(a.std == null ? "" : a.std) + '"' + (a.r === "na" ? " disabled" : "") + '><span class="u">' + it.unit + '</span>' : "") +
           '<label>實測</label><input type="number" inputmode="decimal" step="any" data-val value="' + esc(a.val == null ? "" : a.val) + '"' + (a.r === "na" ? " disabled" : "") + '><span class="u">' + it.unit + '</span>' +
-          (it.type === "measure" ? '<span class="std">' + measureStd(it) + '</span>' : "") + res +
-          '<button class="nab' + (a.r === "na" ? " on" : "") + '" data-na type="button">不適用</button></div>';
+          (it.type === "measure" ? '<span class="std">' + measureStd(it) + '</span>' : "") + res + '</div>';
       } else {
-        h += '<div class="seg"><button class="ok' + (a.r === "ok" ? " on" : "") + '" data-r="ok">合格</button><button class="bad' + (a.r === "bad" ? " on" : "") + '" data-r="bad">待改善</button><button class="na' + (a.r === "na" ? " on" : "") + '" data-r="na">不適用</button></div>';
+        h += '<div class="seg"><button class="ok' + (a.r === "ok" ? " on" : "") + '" data-r="ok">合格</button><button class="bad' + (a.r === "bad" ? " on" : "") + '" data-r="bad">待改善</button></div>';
       }
       if(a.r === "bad"){
         h += '<div class="isum"><div class="ph">' + (a.photos || []).slice(0, 3).map(function(p){ return '<img src="' + esc(photoUrl(p)) + '">'; }).join("") + '</div>' +
@@ -1005,7 +1001,7 @@ function renderSummary(sc){
   $("aBody").innerHTML = '<div class="card sumbox"><div style="font-size:13px;color:var(--ink-3);font-weight:700">' + esc(storeName(D.store)) + '</div>' +
     '<div class="big">' + (sc.score == null ? "—" : sc.score) + '<small> 分</small></div>' +
     '<div style="margin-top:6px">' + (sc.redFail ? '<span class="g R">紅線不合格</span>' : sc.grade ? '<span class="g ' + sc.grade + '">' + sc.grade + ' 級</span>' : "") + '</div>' +
-    '<div style="font-size:12.5px;color:var(--ink-2);margin-top:10px">合格 ' + sc.ok + '・待改善 ' + sc.bad + '・不適用 ' + sc.na + (sc.rechecked ? '・複查仍未改善 ' + sc.notFixed : "") + '</div>' +
+    '<div style="font-size:12.5px;color:var(--ink-2);margin-top:10px">合格 ' + sc.ok + '・待改善 ' + sc.bad + (sc.rechecked ? '・複查仍未改善 ' + sc.notFixed : "") + '</div>' +
     (sc.redFail ? '<div class="veto">🔴 有紅線項目不合格：不論分數，本次巡店判定不合格，紅線缺失須當天改善。</div>' : "") +
     (unchecked ? '<div class="veto" style="background:#fffbeb;border-color:#fde68a;color:#92400e">還有 ' + unchecked + ' 項沒檢查（不列入計分）。</div>' : "") +
     (missing.length ? '<div class="veto">有 ' + missing.length + ' 項待改善還沒補照片或描述，無法送出。</div>' : "") + '</div>' +
