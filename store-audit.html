@@ -247,7 +247,7 @@ dialog::backdrop{background:rgba(15,23,42,.5)}
   <div class="sub" id="diSub"></div>
   <div class="field"><label>缺失描述 <span class="req">*</span></label>
     <textarea id="diDesc" placeholder="例：冷藏庫第二層生肉放在熟食上方；地墊積水"></textarea></div>
-  <div class="field"><label>照片（1～3 張） <span class="req">*</span></label>
+  <div class="field"><label>照片（選填，最多 3 張）</label>
     <div class="photos" id="diPhotos"></div></div>
   <div class="field"><label>負責人</label>
     <input id="diOwner" list="ownerList" placeholder="店長"></div>
@@ -934,7 +934,7 @@ function renderArea(area){
       if(a.r === "bad"){
         h += '<div class="isum"><div class="ph">' + (a.photos || []).slice(0, 3).map(function(p){ return '<img src="' + esc(photoUrl(p)) + '">'; }).join("") + '</div>' +
           '<div class="tx">' + (rep ? '<span class="warn">🔁 ' + REPEAT_DAYS + ' 天內重複缺失</span><br>' : "") +
-          (a.desc ? esc(a.desc) : '<span class="warn">⚠ 尚未填寫缺失描述與照片</span>') +
+          (a.desc ? esc(a.desc) : '<span class="warn">⚠ 尚未填寫缺失描述</span>') +
           '<br><span style="color:var(--ink-3)">' + esc(a.owner || "") + (a.due ? "・期限 " + shortDate(a.due) : "") + '</span></div>' +
           '<button class="btn ghost sm" data-edit type="button">編輯</button></div>';
       }
@@ -997,7 +997,6 @@ function openIssue(area, it, a){
     if(ed.busy()) return toast("照片還在上傳", true);
     const desc = $("diDesc").value.trim();
     if(!desc) return toast("請寫缺失描述", true);
-    if(!photos.length) return toast("請至少拍一張照片", true);
     a.r = "bad"; a.desc = desc; a.photos = photos; a.owner = $("diOwner").value.trim(); a.due = $("diDue").value;
     D.ans[it.k] = a; saveDraft(); dlg.close(); renderAudit();
   };
@@ -1006,7 +1005,7 @@ function openIssue(area, it, a){
 
 function renderSummary(sc){
   const bads = allItems().filter(function(x){ const a = D.ans[x.it.k]; return a && a.r === "bad"; });
-  const missing = bads.filter(function(x){ const a = D.ans[x.it.k]; return !a.desc || !(a.photos || []).length; });
+  const missing = bads.filter(function(x){ const a = D.ans[x.it.k]; return !a.desc; });
   const unchecked = sc.totalItems - sc.done;
   $("aBody").innerHTML = '<div class="card sumbox"><div style="font-size:13px;color:var(--ink-3);font-weight:700">' + esc(storeName(D.store)) + '</div>' +
     '<div class="big">' + (sc.score == null ? "—" : sc.score) + '<small> 分</small></div>' +
@@ -1014,7 +1013,7 @@ function renderSummary(sc){
     '<div style="font-size:12.5px;color:var(--ink-2);margin-top:10px">合格 ' + sc.ok + '・待改善 ' + sc.bad + (sc.rechecked ? '・複查仍未改善 ' + sc.notFixed : "") + '</div>' +
     (sc.redFail ? '<div class="veto">🔴 有紅線項目不合格：不論分數，本次巡店判定不合格，紅線缺失須當天改善。</div>' : "") +
     (unchecked ? '<div class="veto" style="background:#fffbeb;border-color:#fde68a;color:#92400e">還有 ' + unchecked + ' 項沒檢查（不列入計分）。</div>' : "") +
-    (missing.length ? '<div class="veto">有 ' + missing.length + ' 項待改善還沒補照片或描述，無法送出。</div>' : "") + '</div>' +
+    (missing.length ? '<div class="veto">有 ' + missing.length + ' 項待改善還沒填缺失描述，無法送出。</div>' : "") + '</div>' +
     '<div class="card"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="width:26px;height:26px;border-radius:8px;background:#ea4335;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center">G</span><b style="flex:1;font-size:15px">Google 評論扣分</b><span class="chip" style="background:#f1f5f9;color:var(--ink-2)">選填</span></div>' +
     '<div style="font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-bottom:10px">登記本次新發現的 Google 差評則數（每則 −1）。</div>' +
     '<div style="display:flex;align-items:center;gap:14px"><button class="btn ghost" id="gMinus" type="button" style="width:46px;font-size:20px;padding:8px 0">−</button><b id="gCount" style="font-size:26px;min-width:32px;text-align:center">' + (D.google || 0) + '</b><button class="btn ghost" id="gPlus" type="button" style="width:46px;font-size:20px;padding:8px 0">＋</button><span style="font-size:13px;color:var(--ink-3);font-weight:600">則差評</span></div></div>' +
@@ -1032,7 +1031,7 @@ function renderSummary(sc){
 async function submitAudit(){
   const sc = computeScore();
   const bads = allItems().filter(function(x){ const a = D.ans[x.it.k]; return a && a.r === "bad"; });
-  if(bads.some(function(x){ const a = D.ans[x.it.k]; return !a.desc || !(a.photos || []).length; })) return toast("有待改善項目還沒補照片或描述", true);
+  if(bads.some(function(x){ const a = D.ans[x.it.k]; return !a.desc; })) return toast("有待改善項目還沒填缺失描述", true);
   if(sc.score == null) return toast("還沒有檢查任何項目", true);
   const unchecked = sc.totalItems - sc.done;
   if(unchecked && !confirm("還有 " + unchecked + " 項沒檢查，確定送出？")) return;
