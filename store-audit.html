@@ -741,7 +741,8 @@ function openAuditDetail(id){
   let h = '<h3>' + esc(storeName(a.store)) + '・' + esc(a.date) + '</h3><div class="sub">督導巡店' + (a.reviewer ? '・' + esc(a.reviewer) : "") + '</div>' +
     '<div class="sumbox" style="padding:8px 0"><div class="big">' + a.score + '<small> 分</small></div><div style="margin-top:6px">' + gradeHtml(a) + '</div></div>' +
     '<dl class="kv"><dt>檢查項目</dt><dd>' + (a.checked || 0) + ' 項（合格 ' + (a.okCount || 0) + '、待改善 ' + (a.badCount || 0) + '）</dd>' +
-    (a.recheckCount ? '<dt>上次複查</dt><dd>' + a.recheckCount + ' 項，仍未改善 ' + (a.notFixedCount || 0) + ' 項</dd>' : "") + '</dl>';
+    (a.recheckCount ? '<dt>上次複查</dt><dd>' + a.recheckCount + ' 項，仍未改善 ' + (a.notFixedCount || 0) + ' 項</dd>' : "") +
+    (a.google ? '<dt>Google 差評</dt><dd>' + a.google + ' 則（−' + a.google + '）</dd>' : "") + '</dl>';
   if(a.measures && a.measures.length){
     h += '<div class="sec">實測數值</div>' + a.measures.map(function(m){ return '<div class="li"><span style="flex:1">' + esc(m.item) + '</span><b style="color:' + (m.ok ? "var(--ok)" : "var(--bad)") + '">' + esc(m.value) + '</b></div>'; }).join("");
   }
@@ -810,10 +811,12 @@ function computeScore(){
     rechecked++; total++;
     if(r === "notfixed"){ notFixed++; lost += 1; }
   });
+  const google = D.google || 0;   // Google 差評每則 −1
+  lost += google;
   const score = total ? Math.max(0, 100 - lost) : null;
   const grade = score == null ? "" : score >= 90 ? "A" : score >= 80 ? "B" : "C";
   const totalItems = allItems().length + D.recheckIds.length;
-  return { score:score, lost:lost, grade:grade, redFail:redFail, ok:ok, bad:bad, na:na, checked:checked, notFixed:notFixed, rechecked:rechecked,
+  return { score:score, lost:lost, google:google, grade:grade, redFail:redFail, ok:ok, bad:bad, na:na, checked:checked, notFixed:notFixed, rechecked:rechecked,
            done:checked + rechecked, totalItems:totalItems };
 }
 
@@ -1012,12 +1015,17 @@ function renderSummary(sc){
     (sc.redFail ? '<div class="veto">🔴 有紅線項目不合格：不論分數，本次巡店判定不合格，紅線缺失須當天改善。</div>' : "") +
     (unchecked ? '<div class="veto" style="background:#fffbeb;border-color:#fde68a;color:#92400e">還有 ' + unchecked + ' 項沒檢查（不列入計分）。</div>' : "") +
     (missing.length ? '<div class="veto">有 ' + missing.length + ' 項待改善還沒補照片或描述，無法送出。</div>' : "") + '</div>' +
+    '<div class="card"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="width:26px;height:26px;border-radius:8px;background:#ea4335;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center">G</span><b style="flex:1;font-size:15px">Google 評論扣分</b><span class="chip" style="background:#f1f5f9;color:var(--ink-2)">選填</span></div>' +
+    '<div style="font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-bottom:10px">登記本次新發現的 Google 差評則數（每則 −1）。</div>' +
+    '<div style="display:flex;align-items:center;gap:14px"><button class="btn ghost" id="gMinus" type="button" style="width:46px;font-size:20px;padding:8px 0">−</button><b id="gCount" style="font-size:26px;min-width:32px;text-align:center">' + (D.google || 0) + '</b><button class="btn ghost" id="gPlus" type="button" style="width:46px;font-size:20px;padding:8px 0">＋</button><span style="font-size:13px;color:var(--ink-3);font-weight:600">則差評</span></div></div>' +
     '<div class="card"><div class="field"><label>巡店日期</label><input id="smDate" type="date" value="' + esc(D.date) + '"></div>' +
     '<div class="field"><label>總評（離店前與店長溝通的重點）</label><textarea id="smNotes" placeholder="整體觀察、做得好的地方、下次重點…">' + esc(D.notes) + '</textarea></div></div>' +
     '<div class="card"><div style="font-weight:800;margin-bottom:8px">本次待改善（' + bads.length + '）</div>' +
     (bads.length ? bads.map(function(x){ const a = D.ans[x.it.k];
       return '<div class="li">' + (x.it.red ? '<span class="chip red">紅線</span>' : "") + (a.repeat ? '<span class="chip rep">重複</span>' : "") + '<span style="flex:1"><b>' + esc(x.it.t) + '</b><br><span style="color:var(--ink-2);font-size:12px">' + esc(x.area.name) + "・" + esc(a.desc || "（未填）") + '</span></span></div>'; }).join("") : '<div class="empty" style="padding:10px">全部合格 👍</div>') + '</div>';
   $("smDate").onchange = function(){ D.date = this.value; saveDraft(); renderAudit(); };
+  $("gPlus").onclick = function(){ D.google = (D.google || 0) + 1; saveDraft(); renderAudit(); };
+  $("gMinus").onclick = function(){ D.google = Math.max(0, (D.google || 0) - 1); saveDraft(); renderAudit(); };
   $("smNotes").oninput = function(){ D.notes = this.value; saveDraft(); };
 }
 
@@ -1036,7 +1044,7 @@ async function submitAudit(){
   allItems().forEach(function(x){ const a = D.ans[x.it.k]; if(a && a.r) answers[x.it.k] = a.r; });
   const audit = {
     store:D.store, date:D.date, reviewer:"", notes:D.notes.trim(), score:sc.score, grade:sc.redFail ? "紅線" : sc.grade, redFail:sc.redFail,
-    checked:sc.checked, okCount:sc.ok, badCount:sc.bad, naCount:sc.na, recheckCount:sc.rechecked, notFixedCount:sc.notFixed,
+    checked:sc.checked, okCount:sc.ok, badCount:sc.bad, naCount:sc.na, recheckCount:sc.rechecked, notFixedCount:sc.notFixed, google:sc.google,
     measures:measures, answers:answers, quiz:D.quiz.map(function(i){ return QUIZ[i]; }), startedAt:D.startedAt,
   };
   const issues = bads.map(function(x){ const a = D.ans[x.it.k];
