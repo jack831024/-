@@ -260,8 +260,8 @@ function submitFix_(who, b) {
   const issue = rowToIssue_(iSh.getRange(row, 1, 1, ISSUE_HEADERS.length).getValues()[0]);
   if (who.role === 'store' && issue.store !== who.store) return { ok:false, error:'不是你的門市' };
   if (issue.status === 'closed') return { ok:false, error:'這筆已結案' };
-  if (!(b.photos || []).length) return { ok:false, error:'請至少附一張改善後照片' };
-  setCells_(iSh, row, { '狀態':'待審核', '改善說明':b.note || '', '改善照片':JSON.stringify(b.photos), '回報時間':new Date().toISOString() });
+  if (!(b.photos || []).length && !String(b.note || '').trim()) return { ok:false, error:'請拍照或寫改善說明（至少一項）' };
+  setCells_(iSh, row, { '狀態':'待審核', '改善說明':b.note || '', '改善照片':JSON.stringify(b.photos || []), '回報時間':new Date().toISOString() });
   return { ok:true };
 }
 
