@@ -148,11 +148,11 @@ function getData_(who) {
   }
   const issues = readIssues_(iSh).map(function(x){ return x.obj; });
 
-  const mine = function(o){ return who.role === 'supervisor' || o.store === who.store; };
+  // 督導、店長都能看到四店的巡店紀錄與缺失（店長只差在不能巡店、只能回傳自己店的改善）
   return {
     ok: true, role: who.role, store: who.store || '',
-    audits: audits.filter(mine).reverse(),
-    issues: issues.filter(mine).reverse(),
+    audits: audits.reverse(),
+    issues: issues.reverse(),
   };
 }
 

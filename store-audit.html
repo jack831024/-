@@ -58,7 +58,7 @@ input,select,textarea{font-family:inherit}
 .sc .meta{font-size:11.5px;color:var(--ink-2);line-height:1.6}
 .sc .meta b{color:var(--bad)}
 .sc .btn{margin-top:auto;padding:8px;font-size:13px}
-@media(max-width:520px){.stores{grid-template-columns:1fr}.sc{flex-direction:row;flex-wrap:wrap;align-items:center}.sc .meta{flex:1 1 100%}.sc .btn{margin-top:0;margin-left:auto}}
+@media(max-width:720px){.stores{grid-template-columns:1fr 1fr;gap:8px}.sc{padding:10px}.sc .sc-score{font-size:22px}}
 
 .tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
@@ -212,7 +212,9 @@ dialog::backdrop{background:rgba(15,23,42,.5)}
       <button class="ib" onclick="logout()" title="登出">⎋</button>
     </div>
     <div id="demoBanner2"></div>
+    <div class="stores" id="storeCards2"></div>
     <div class="tabs" id="storeTabs"></div>
+    <div class="filters" id="storeFilter2"></div>
     <div id="storeList"></div>
   </div>
 
@@ -417,8 +419,7 @@ function mockApi(b){
   switch(b.action){
     case "login": return { ok:true, role:who.role, store:who.store || "" };
     case "getData": {
-      const mine = function(o){ return who.role === "supervisor" || o.store === who.store; };
-      return { ok:true, role:who.role, store:who.store || "", audits:db.audits.filter(mine).slice().reverse(), issues:db.issues.filter(mine).slice().reverse() };
+      return { ok:true, role:who.role, store:who.store || "", audits:db.audits.slice().reverse(), issues:db.issues.slice().reverse() };
     }
     case "uploadPhoto": return { ok:true, photo:{ id:"local-" + Date.now(), url:b.dataUrl } };
     case "submitAudit": {
@@ -557,7 +558,7 @@ function issueCard(i){
   const img = i.photos && i.photos[0] ? '<img src="' + esc(photoUrl(i.photos[0])) + '">' : '<div class="noimg">📝</div>';
   const st = { open:"待改善", review:"待審核", closed:"已結案" }[i.status];
   return '<div class="card ic' + (over ? " over" : "") + '" data-issue="' + esc(i.id) + '">' + img +
-    '<div class="bd"><div class="t1">' + (S.role === "supervisor" ? "【" + esc(storeShort(i.store)) + "】" : "") + esc(i.item) + '</div>' +
+    '<div class="bd"><div class="t1">' + (S.role === "supervisor" || i.store !== S.store ? "【" + esc(storeShort(i.store)) + "】" : "") + esc(i.item) + '</div>' +
     '<div class="t2">' + esc(i.area) + "・" + esc(i.desc) + '</div>' +
     '<div class="t3"><span class="chip ' + i.status + '">' + st + '</span>' +
       (over ? '<span class="chip over">逾期</span>' : "") +
@@ -583,17 +584,7 @@ function renderSup(){
     $("goDraft").onclick = function(){ D = draft; enterAudit(); };
     $("dropDraft").onclick = function(){ if(confirm("確定捨棄這次未完成的巡店？")){ localStorage.removeItem("cd_audit_draft"); renderSup(); } };
   }
-  $("storeCards").innerHTML = STORES.map(function(s){
-    const last = S.audits.find(function(a){ return a.store === s.id; });
-    const iss = S.issues.filter(function(i){ return i.store === s.id; });
-    const open = iss.filter(function(i){ return i.status !== "closed"; }).length;
-    const over = iss.filter(isOver).length;
-    const rev = iss.filter(function(i){ return i.status === "review"; }).length;
-    return '<div class="card sc"><div class="nm">' + esc(s.short) + '店 ' + gradeHtml(last) + '</div>' +
-      '<div class="sc-score">' + (last ? last.score : "—") + '<small> 分</small></div>' +
-      '<div class="meta">' + (last ? "上次 " + shortDate(last.date) : "尚未巡店") + '<br>未結案 ' + open + (over ? '・<b>逾期 ' + over + '</b>' : "") + (rev ? "・待審 " + rev : "") + '</div>' +
-      '<button class="btn" data-start="' + s.id + '">開始巡店</button></div>';
-  }).join("");
+  $("storeCards").innerHTML = storeCardsHtml(true);
   $("storeCards").querySelectorAll("[data-start]").forEach(function(b){ b.onclick = function(){ startAudit(b.dataset.start); }; });
 
   const n = {
@@ -652,25 +643,57 @@ function trendHtml(){
 }
 
 /* ================= 店長首頁 ================= */
+/* 四店卡片：依最近一次巡店分數排名（督導多一顆「開始巡店」，店長看自己店有外框） */
+function storeCardsHtml(canStart){
+  const rows = STORES.map(function(s){
+    const last = S.audits.find(function(a){ return a.store === s.id; });
+    const iss = S.issues.filter(function(i){ return i.store === s.id; });
+    return { s:s, last:last, open:iss.filter(function(i){ return i.status !== "closed"; }).length,
+             over:iss.filter(isOver).length, rev:iss.filter(function(i){ return i.status === "review"; }).length };
+  });
+  const ranked = rows.filter(function(r){ return r.last; }).sort(function(a, b){ return b.last.score - a.last.score; });
+  return rows.map(function(r){
+    const rank = ranked.indexOf(r);
+    const me = !canStart && r.s.id === S.store;
+    return '<div class="card sc"' + (me ? ' style="border:2px solid var(--brand)"' : "") + '><div class="nm">' + esc(r.s.short) + '店' + (me ? "（我）" : "") + ' ' + gradeHtml(r.last) + '</div>' +
+      '<div class="sc-score">' + (r.last ? r.last.score : "—") + '<small> 分' + (rank >= 0 ? "・第 " + (rank + 1) + " 名" : "") + '</small></div>' +
+      '<div class="meta">' + (r.last ? "上次 " + shortDate(r.last.date) : "尚未巡店") + '<br>未結案 ' + r.open + (r.over ? '・<b>逾期 ' + r.over + '</b>' : "") + (r.rev ? "・待審 " + r.rev : "") + '</div>' +
+      (canStart ? '<button class="btn" data-start="' + r.s.id + '">開始巡店</button>' : "") + '</div>';
+  }).join("");
+}
+
 function renderStore(){
   $("storeTitle").textContent = storeShort(S.store) + "店・缺失改善";
-  const mine = S.issues;
-  const n = { open: mine.filter(function(i){ return i.status === "open"; }).length, review: mine.filter(function(i){ return i.status === "review"; }).length };
-  const tabs = [["open","需要改善",n.open],["review","等督導審核",n.review],["closed","已結案",null],["audits","巡店分數",null]];
+  $("storeCards2").innerHTML = storeCardsHtml(false);
+  const mine = S.issues.filter(function(i){ return i.store === S.store; });
+  const n = { open: mine.filter(function(i){ return i.status === "open"; }).length, review: mine.filter(function(i){ return i.status === "review"; }).length,
+              all: S.issues.filter(function(i){ return i.status !== "closed"; }).length };
+  const tabs = [["open","我要改善",n.open],["review","等督導審核",n.review],["all","各店缺失",n.all],["closed","已結案",null],["audits","巡店紀錄",null],["trend","月趨勢",null]];
   $("storeTabs").innerHTML = tabs.map(function(t){ return '<button class="tab' + (S.stab === t[0] ? " on" : "") + '" data-t="' + t[0] + '">' + t[1] + (t[2] != null ? '<span class="n">' + t[2] + '</span>' : "") + '</button>'; }).join("");
   $("storeTabs").querySelectorAll("[data-t]").forEach(function(b){ b.onclick = function(){ S.stab = b.dataset.t; renderStore(); }; });
+  // 看四店的分頁才有門市篩選
+  const showFilter = ["all","closed","audits"].indexOf(S.stab) >= 0;
+  $("storeFilter2").innerHTML = showFilter ? [["all","全部"]].concat(STORES.map(function(s){ return [s.id, s.short]; })).map(function(f){
+    return '<button class="tab' + (S.filter === f[0] ? " on" : "") + '" data-f="' + f[0] + '">' + f[1] + '</button>'; }).join("") : "";
+  $("storeFilter2").querySelectorAll("[data-f]").forEach(function(b){ b.onclick = function(){ S.filter = b.dataset.f; renderStore(); }; });
+  const fs = function(o){ return S.filter === "all" || o.store === S.filter; };
   const host = $("storeList");
+  if(S.stab === "trend"){ host.innerHTML = trendHtml(); return; }
   if(S.stab === "audits"){
-    host.innerHTML = S.audits.length ? S.audits.map(function(a){
-      return '<div class="card ar" data-audit="' + esc(a.auditId) + '"><span class="d">' + esc(a.date) + '</span><span class="s">督導巡店' + (a.reviewer ? '・' + esc(a.reviewer) : "") + '</span>' + gradeHtml(a) + '<span class="sc2">' + a.score + '</span></div>';
+    const list = S.audits.filter(fs);
+    host.innerHTML = list.length ? list.map(function(a){
+      return '<div class="card ar" data-audit="' + esc(a.auditId) + '"><span class="d">' + esc(a.date) + '</span><span class="s">' + esc(storeShort(a.store)) + '店<br><span style="font-size:12px;color:var(--ink-3);font-weight:600">待改善 ' + (a.badCount || 0) + ' 項</span></span>' + gradeHtml(a) + '<span class="sc2">' + a.score + '</span></div>';
     }).join("") : '<div class="empty">還沒有巡店紀錄</div>';
     host.querySelectorAll("[data-audit]").forEach(function(el){ el.onclick = function(){ openAuditDetail(el.dataset.audit); }; });
     return;
   }
-  let list = mine.filter(function(i){ return i.status === S.stab; });
-  list.sort(function(a, b){ return (b.red - a.red) || String(a.due).localeCompare(String(b.due)); });
-  host.innerHTML = (S.stab === "open" && list.length ? '<div class="demo" style="background:#fff7ed;border-color:#fed7aa">點進每一項，拍「改善後」的照片回傳，督導核可後才算結案。</div>' : "") +
-    (list.length ? list.map(issueCard).join("") : '<div class="empty">' + ({ open:"全部改善完成 👍", review:"沒有等待審核的項目", closed:"還沒有結案紀錄" })[S.stab] + '</div>');
+  let list;
+  if(S.stab === "all") list = S.issues.filter(function(i){ return i.status !== "closed" && fs(i); });
+  else if(S.stab === "closed") list = S.issues.filter(function(i){ return i.status === "closed" && fs(i); }).slice(0, 50);
+  else list = mine.filter(function(i){ return i.status === S.stab; });
+  if(S.stab !== "closed") list.sort(function(a, b){ return (b.red - a.red) || String(a.due).localeCompare(String(b.due)); });
+  host.innerHTML = (S.stab === "open" && list.length ? '<div class="demo" style="background:#fff7ed;border-color:#fed7aa">點進每一項，回傳改善照片或說明，督導核可後才算結案。</div>' : "") +
+    (list.length ? list.map(issueCard).join("") : '<div class="empty">' + ({ open:"全部改善完成 👍", review:"沒有等待審核的項目", all:"四店都沒有未結案缺失 👍", closed:"還沒有結案紀錄" })[S.stab] + '</div>');
   bindIssueCards(host);
 }
 
@@ -692,7 +715,8 @@ function openDetail(id){
   if(i.reviewNote) h += '<div class="sec">督導說明</div><div class="notebox">' + esc(i.reviewNote) + '</div>';
 
   let mode = "";
-  if(i.status === "open" && (S.role === "store" || S.role === "supervisor")){
+  // 店長只能回傳自己店的改善；其他店的缺失只能看
+  if(i.status === "open" && (S.role === "supervisor" || i.store === S.store)){
     mode = "fix";
     h += '<div class="sec">回傳改善</div><div class="field"><label>改善後照片（選填）</label><div class="photos" id="fxPhotos"></div></div>' +
       '<div class="field"><label>改善說明</label><textarea id="fxNote" placeholder="例：已重新整理冷藏庫，熟食移到上層並加蓋"></textarea></div>' +
