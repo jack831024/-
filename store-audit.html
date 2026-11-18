@@ -571,11 +571,22 @@ function issueCard(i){
 function bindIssueCards(host){
   host.querySelectorAll("[data-issue]").forEach(function(el){ el.onclick = function(){ openDetail(el.dataset.issue); }; });
 }
-function gradeHtml(a){
-  if(!a) return "";
-  const cls = a.redFail ? "R" : a.grade;
-  return '<span class="g ' + cls + '">' + (a.redFail ? "紅線" : a.grade + " 級") + '</span>';
+/* ===== 月綜合分數：同一店同一月所有巡店的扣分加總，100 − 總扣分 ===== */
+function gradeOf(score){ return score >= 95 ? "A" : score >= 80 ? "B" : "C"; }   // A ≥95、B 80–94、C <80
+function gradeBadge(g){ return g ? '<span class="g ' + g + '">' + g + ' 級</span>' : ""; }
+function auditLost(a){ return a.lost != null ? Number(a.lost) : Math.max(0, 100 - Number(a.score || 0)); }
+function thisYm(){ return ymd().slice(0, 7); }
+function monthStat(store, ym, extraLost){
+  const xs = S.audits.filter(function(a){ return a.store === store && String(a.date).slice(0, 7) === ym; });
+  const lost = xs.reduce(function(s, a){ return s + auditLost(a); }, 0) + (extraLost || 0);
+  const score = Math.max(0, 100 - lost);
+  return { count:xs.length, lost:lost, score:score, grade:gradeOf(score) };
 }
+function lostChip(a){
+  const l = auditLost(a);
+  return '<span class="sc2" style="color:' + (l ? "var(--bad)" : "var(--ok)") + '">' + (l ? "−" + l : "0") + '</span>';
+}
+function mgrText(v){ return v === "ok" ? "合格" : v === "bad" ? "待改善" : ""; }
 
 function renderSup(){
   const draft = lsGet("cd_audit_draft", null);
@@ -604,7 +615,7 @@ function renderSup(){
   if(S.tab === "audits"){
     const list = S.audits.filter(fs);
     host.innerHTML = list.length ? list.map(function(a){
-      return '<div class="card ar" data-audit="' + esc(a.auditId) + '"><span class="d">' + esc(a.date) + '</span><span class="s">' + esc(storeShort(a.store)) + '店' + (a.reviewer ? '・' + esc(a.reviewer) : "") + '<br><span style="font-size:12px;color:var(--ink-3);font-weight:600">待改善 ' + (a.badCount || 0) + ' 項</span></span>' + gradeHtml(a) + '<span class="sc2">' + a.score + '</span></div>';
+      return '<div class="card ar" data-audit="' + esc(a.auditId) + '"><span class="d">' + esc(a.date) + '</span><span class="s">' + esc(storeShort(a.store)) + '店' + (a.reviewer ? '・' + esc(a.reviewer) : "") + '<br><span style="font-size:12px;color:var(--ink-3);font-weight:600">待改善 ' + (a.badCount || 0) + ' 項・本次扣分</span></span>' + lostChip(a) + '</div>';
     }).join("") : '<div class="empty">還沒有巡店紀錄</div>';
     host.querySelectorAll("[data-audit]").forEach(function(el){ el.onclick = function(){ openAuditDetail(el.dataset.audit); }; });
     return;
@@ -624,18 +635,16 @@ function trendHtml(){
   const d = new Date(); d.setDate(1);
   for(let i = 0; i < 6; i++){ months.unshift(d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0")); d.setMonth(d.getMonth() - 1); }
   const cell = function(sid, m){
-    const xs = S.audits.filter(function(a){ return a.store === sid && String(a.date).slice(0,7) === m; });
-    if(!xs.length) return '<td style="color:var(--ink-3)">—</td>';
-    const avg = Math.round(xs.reduce(function(s, a){ return s + Number(a.score || 0); }, 0) / xs.length);
-    const red = xs.some(function(a){ return a.redFail; });
-    return '<td><b style="color:' + (red ? "var(--bad)" : avg >= 90 ? "var(--ok)" : avg >= 80 ? "var(--warn)" : "var(--bad)") + '">' + avg + '</b>' + (red ? "🔴" : "") + '<br><span style="font-size:10.5px;color:var(--ink-3)">' + xs.length + ' 次</span></td>';
+    const st = monthStat(sid, m);
+    if(!st.count) return '<td style="color:var(--ink-3)">—</td>';
+    return '<td><b style="color:' + ({ A:"var(--ok)", B:"var(--warn)", C:"var(--bad)" })[st.grade] + '">' + st.score + '</b> ' + st.grade + '<br><span style="font-size:10.5px;color:var(--ink-3)">' + st.count + ' 次</span></td>';
   };
   // 最常出問題的項目（近 90 天）
   const since = addDays(-90);
   const cnt = {};
   S.issues.forEach(function(i){ if(String(i.createdAt).slice(0,10) >= since){ const k = i.item; cnt[k] = (cnt[k] || 0) + 1; } });
   const top = Object.keys(cnt).sort(function(a, b){ return cnt[b] - cnt[a]; }).slice(0, 8);
-  return '<div class="card"><div style="font-weight:800;margin-bottom:8px">各店月平均分數</div><div style="overflow-x:auto"><table class="trend"><tr><th>門市</th>' +
+  return '<div class="card"><div style="font-weight:800;margin-bottom:2px">各店月綜合分數</div><div style="font-size:12px;color:var(--ink-3);margin-bottom:8px">100 − 當月所有巡店扣分總和｜A ≥95、B 80–94、C &lt;80</div><div style="overflow-x:auto"><table class="trend"><tr><th>門市</th>' +
     months.map(function(m){ return "<th>" + Number(m.slice(5)) + "月</th>"; }).join("") + "</tr>" +
     STORES.map(function(s){ return "<tr><td><b>" + s.short + "</b></td>" + months.map(function(m){ return cell(s.id, m); }).join("") + "</tr>"; }).join("") +
     '</table></div></div><div class="card"><div style="font-weight:800;margin-bottom:8px">近 90 天最常出問題的項目</div>' +
@@ -643,21 +652,22 @@ function trendHtml(){
 }
 
 /* ================= 店長首頁 ================= */
-/* 四店卡片：依最近一次巡店分數排名（督導多一顆「開始巡店」，店長看自己店有外框） */
+/* 四店卡片：本月綜合分數與排名（督導多一顆「開始巡店」，店長看自己店有外框） */
 function storeCardsHtml(canStart){
+  const ym = thisYm();
   const rows = STORES.map(function(s){
     const last = S.audits.find(function(a){ return a.store === s.id; });
     const iss = S.issues.filter(function(i){ return i.store === s.id; });
-    return { s:s, last:last, open:iss.filter(function(i){ return i.status !== "closed"; }).length,
+    return { s:s, last:last, m:monthStat(s.id, ym), open:iss.filter(function(i){ return i.status !== "closed"; }).length,
              over:iss.filter(isOver).length, rev:iss.filter(function(i){ return i.status === "review"; }).length };
   });
-  const ranked = rows.filter(function(r){ return r.last; }).sort(function(a, b){ return b.last.score - a.last.score; });
+  const ranked = rows.filter(function(r){ return r.m.count; }).sort(function(a, b){ return b.m.score - a.m.score; });
   return rows.map(function(r){
     const rank = ranked.indexOf(r);
     const me = !canStart && r.s.id === S.store;
-    return '<div class="card sc"' + (me ? ' style="border:2px solid var(--brand)"' : "") + '><div class="nm">' + esc(r.s.short) + '店' + (me ? "（我）" : "") + ' ' + gradeHtml(r.last) + '</div>' +
-      '<div class="sc-score">' + (r.last ? r.last.score : "—") + '<small> 分' + (rank >= 0 ? "・第 " + (rank + 1) + " 名" : "") + '</small></div>' +
-      '<div class="meta">' + (r.last ? "上次 " + shortDate(r.last.date) : "尚未巡店") + '<br>未結案 ' + r.open + (r.over ? '・<b>逾期 ' + r.over + '</b>' : "") + (r.rev ? "・待審 " + r.rev : "") + '</div>' +
+    return '<div class="card sc"' + (me ? ' style="border:2px solid var(--brand)"' : "") + '><div class="nm">' + esc(r.s.short) + '店' + (me ? "（我）" : "") + ' ' + (r.m.count ? gradeBadge(r.m.grade) : "") + '</div>' +
+      '<div class="sc-score">' + (r.m.count ? r.m.score : "—") + '<small> 分' + (rank >= 0 ? "・第 " + (rank + 1) + " 名" : "") + '</small></div>' +
+      '<div class="meta">' + (r.m.count ? "本月巡 " + r.m.count + " 次・扣 " + r.m.lost + " 分" : "本月尚未巡店") + '<br>未結案 ' + r.open + (r.over ? '・<b>逾期 ' + r.over + '</b>' : "") + (r.rev ? "・待審 " + r.rev : "") + '</div>' +
       (canStart ? '<button class="btn" data-start="' + r.s.id + '">開始巡店</button>' : "") + '</div>';
   }).join("");
 }
@@ -682,7 +692,7 @@ function renderStore(){
   if(S.stab === "audits"){
     const list = S.audits.filter(fs);
     host.innerHTML = list.length ? list.map(function(a){
-      return '<div class="card ar" data-audit="' + esc(a.auditId) + '"><span class="d">' + esc(a.date) + '</span><span class="s">' + esc(storeShort(a.store)) + '店<br><span style="font-size:12px;color:var(--ink-3);font-weight:600">待改善 ' + (a.badCount || 0) + ' 項</span></span>' + gradeHtml(a) + '<span class="sc2">' + a.score + '</span></div>';
+      return '<div class="card ar" data-audit="' + esc(a.auditId) + '"><span class="d">' + esc(a.date) + '</span><span class="s">' + esc(storeShort(a.store)) + '店<br><span style="font-size:12px;color:var(--ink-3);font-weight:600">待改善 ' + (a.badCount || 0) + ' 項・本次扣分</span></span>' + lostChip(a) + '</div>';
     }).join("") : '<div class="empty">還沒有巡店紀錄</div>';
     host.querySelectorAll("[data-audit]").forEach(function(el){ el.onclick = function(){ openAuditDetail(el.dataset.audit); }; });
     return;
@@ -763,10 +773,14 @@ function openAuditDetail(id){
   if(!a) return;
   const iss = S.issues.filter(function(i){ return i.auditId === id; });
   let h = '<h3>' + esc(storeName(a.store)) + '・' + esc(a.date) + '</h3><div class="sub">督導巡店' + (a.reviewer ? '・' + esc(a.reviewer) : "") + '</div>' +
-    '<div class="sumbox" style="padding:8px 0"><div class="big">' + a.score + '<small> 分</small></div><div style="margin-top:6px">' + gradeHtml(a) + '</div></div>' +
+    (function(){ const m = monthStat(a.store, String(a.date).slice(0, 7));
+      return '<div class="sumbox" style="padding:8px 0"><div style="font-size:12.5px;color:var(--ink-3);font-weight:700">本次扣分</div><div class="big" style="color:' + (auditLost(a) ? "var(--bad)" : "var(--ok)") + '">' + (auditLost(a) ? "−" + auditLost(a) : "0") + '</div>' +
+        '<div style="margin-top:6px;font-size:13px;color:var(--ink-2)">' + Number(String(a.date).slice(5, 7)) + ' 月綜合 <b>' + m.score + '</b> 分 ' + gradeBadge(m.grade) + '</div></div>'; })() +
     '<dl class="kv"><dt>檢查項目</dt><dd>' + (a.checked || 0) + ' 項（合格 ' + (a.okCount || 0) + '、待改善 ' + (a.badCount || 0) + '）</dd>' +
     (a.recheckCount ? '<dt>上次複查</dt><dd>' + a.recheckCount + ' 項，仍未改善 ' + (a.notFixedCount || 0) + ' 項</dd>' : "") +
-    (a.google ? '<dt>Google 差評</dt><dd>' + a.google + ' 則（−' + a.google + '）</dd>' : "") + '</dl>';
+    (a.google ? '<dt>Google 差評</dt><dd>' + a.google + ' 則（−' + a.google + '）</dd>' : "") +
+    (a.mgr && a.mgr.active ? '<dt>店長積極</dt><dd>' + mgrText(a.mgr.active) + (a.mgr.activeReason ? '：' + esc(a.mgr.activeReason) : "") + '</dd>' : "") +
+    (a.mgr && a.mgr.deputy ? '<dt>副店培訓</dt><dd>' + mgrText(a.mgr.deputy) + '</dd>' : "") + '</dl>';
   if(a.measures && a.measures.length){
     h += '<div class="sec">實測數值</div>' + a.measures.map(function(m){ return '<div class="li"><span style="flex:1">' + esc(m.item) + '</span><b style="color:' + (m.ok ? "var(--ok)" : "var(--bad)") + '">' + esc(m.value) + '</b></div>'; }).join("");
   }
@@ -790,7 +804,7 @@ function startAudit(store){
   const pool = QUIZ.map(function(_, i){ return i; }).sort(function(){ return Math.random() - .5; }).slice(0, 3);
   const pending = S.issues.filter(function(i){ return i.store === store && i.status !== "closed"; });
   D = { store:store, date:ymd(), reviewer:lsGet("cd_audit_reviewer", ""), quiz:pool, ans:{}, recheck:{},
-        recheckIds:pending.map(function(i){ return i.id; }), notes:"", area:pending.length ? "recheck" : AREAS[0].key, startedAt:new Date().toISOString() };
+        recheckIds:pending.map(function(i){ return i.id; }), notes:"", mgr:{}, area:pending.length ? "recheck" : AREAS[0].key, startedAt:new Date().toISOString() };
   saveDraft();
   enterAudit();
 }
@@ -818,6 +832,12 @@ function isRepeat(key){
   return S.issues.some(function(i){ return i.store === D.store && i.itemKey === key && String(i.createdAt).slice(0,10) >= since; });
 }
 
+/* 本店本月是否已有巡店填過這一題店長評估；有的話回傳那筆巡店 */
+function mgrFilled(field){
+  const ym = String(D.date).slice(0, 7);
+  return S.audits.find(function(a){ return a.store === D.store && String(a.date).slice(0, 7) === ym && a.mgr && a.mgr[field]; }) || null;
+}
+
 function computeScore(){
   let total = 0, lost = 0, redFail = false, ok = 0, bad = 0, na = 0, checked = 0;
   allItems().forEach(function(x){
@@ -837,10 +857,15 @@ function computeScore(){
   });
   const google = D.google || 0;   // Google 差評每則 −1
   lost += google;
-  const score = total ? Math.max(0, 100 - lost) : null;
-  const grade = score == null ? "" : score >= 90 ? "A" : score >= 80 ? "B" : "C";
+  // 店長評估（每月填一次；本月已填過就不再算）
+  const mg = D.mgr || {};
+  if(mg.active === "bad" && !mgrFilled("active")) lost += 1;
+  if(mg.deputy === "bad" && !mgrFilled("deputy")) lost += 1;
+  const score = total ? Math.max(0, 100 - lost) : null;          // 這一次的分數
+  const month = monthStat(D.store, String(D.date).slice(0, 7), lost); // 含這一次的當月綜合
+  const grade = month.grade;
   const totalItems = allItems().length + D.recheckIds.length;
-  return { score:score, lost:lost, google:google, grade:grade, redFail:redFail, ok:ok, bad:bad, na:na, checked:checked, notFixed:notFixed, rechecked:rechecked,
+  return { score:score, lost:lost, monthScore:month.score, monthCount:month.count + 1, google:google, grade:grade, redFail:redFail, ok:ok, bad:bad, na:na, checked:checked, notFixed:notFixed, rechecked:rechecked,
            done:checked + rechecked, totalItems:totalItems };
 }
 
@@ -877,9 +902,9 @@ function renderAudit(){
   $("aTabs").querySelectorAll("[data-a]").forEach(function(b){ b.onclick = function(){ goArea(b.dataset.a); }; });
   const on = $("aTabs").querySelector(".on"); if(on) on.scrollIntoView({ block:"nearest", inline:"center" });
 
-  $("barScore").textContent = sc.score == null ? "—" : sc.score;
-  $("barLbl").textContent = sc.lost ? "已扣 " + sc.lost + " 分" : "目前分數";
-  $("barGrade").innerHTML = sc.redFail ? '<span class="g R">紅線</span>' : sc.grade ? '<span class="g ' + sc.grade + '">' + sc.grade + ' 級</span>' : "";
+  $("barScore").textContent = sc.monthScore;
+  $("barLbl").textContent = "本月綜合・本次扣 " + sc.lost;
+  $("barGrade").innerHTML = gradeBadge(sc.grade);
   const idx = areas.findIndex(function(a){ return a.key === D.area; });
   $("barPrev").style.display = idx > 0 ? "" : "none";
   $("barPrev").onclick = function(){ goArea(areas[idx - 1].key); };
@@ -1031,16 +1056,33 @@ function renderSummary(sc){
   const bads = allItems().filter(function(x){ const a = D.ans[x.it.k]; return a && a.r === "bad"; });
   const missing = bads.filter(function(x){ const a = D.ans[x.it.k]; return !a.desc; });
   const unchecked = sc.totalItems - sc.done;
-  $("aBody").innerHTML = '<div class="card sumbox"><div style="font-size:13px;color:var(--ink-3);font-weight:700">' + esc(storeName(D.store)) + '</div>' +
-    '<div class="big">' + (sc.score == null ? "—" : sc.score) + '<small> 分</small></div>' +
-    '<div style="margin-top:6px">' + (sc.redFail ? '<span class="g R">紅線不合格</span>' : sc.grade ? '<span class="g ' + sc.grade + '">' + sc.grade + ' 級</span>' : "") + '</div>' +
-    '<div style="font-size:12.5px;color:var(--ink-2);margin-top:10px">合格 ' + sc.ok + '・待改善 ' + sc.bad + (sc.rechecked ? '・複查仍未改善 ' + sc.notFixed : "") + '</div>' +
+  const mg = D.mgr || (D.mgr = {});
+  const mgrCard = function(field, title, hint){
+    const prev = mgrFilled(field);
+    let h = '<div class="card"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><b style="flex:1;font-size:15px">' + title + '</b><span class="chip" style="background:#f1f5f9;color:var(--ink-2)">選填・每月一次</span></div>';
+    if(prev){
+      return h + '<div style="font-size:13px;color:var(--ink-2);line-height:1.5">本月已於 ' + shortDate(prev.date) + ' 填過：<b>' + mgrText(prev.mgr[field]) + '</b>' +
+        (field === "active" && prev.mgr.activeReason ? '（' + esc(prev.mgr.activeReason) + '）' : "") + '</div></div>';
+    }
+    h += '<div style="font-size:12.5px;color:var(--ink-2);margin-bottom:6px">' + hint + '</div>' +
+      '<div class="seg"><button class="ok' + (mg[field] === "ok" ? " on" : "") + '" data-mg="' + field + '" data-v="ok">合格</button><button class="bad' + (mg[field] === "bad" ? " on" : "") + '" data-mg="' + field + '" data-v="bad">待改善</button></div>';
+    if(field === "active" && mg.active === "bad")
+      h += '<div class="field" style="margin:10px 0 0"><label>待改善原因 <span class="req">*</span></label><textarea id="mgReason" placeholder="例：缺失遲遲不改、對督導建議消極">' + esc(mg.activeReason || "") + '</textarea></div>';
+    return h + '</div>';
+  };
+  $("aBody").innerHTML = '<div class="card sumbox"><div style="font-size:13px;color:var(--ink-3);font-weight:700">' + esc(storeName(D.store)) + '・' + Number(String(D.date).slice(5, 7)) + ' 月綜合分數</div>' +
+    '<div class="big">' + sc.monthScore + '<small> 分</small></div>' +
+    '<div style="margin-top:6px">' + gradeBadge(sc.grade) + '</div>' +
+    '<div style="font-size:12.5px;color:var(--ink-2);margin-top:10px">本次扣 <b style="color:' + (sc.lost ? "var(--bad)" : "var(--ok)") + '">' + sc.lost + '</b> 分（本月第 ' + sc.monthCount + ' 次巡店）<br>合格 ' + sc.ok + '・待改善 ' + sc.bad + (sc.rechecked ? '・複查仍未改善 ' + sc.notFixed : "") + '</div>' +
+    '<div style="font-size:11.5px;color:var(--ink-3);margin-top:6px">A ≥95、B 80–94、C &lt;80（100 − 當月所有巡店扣分）</div>' +
     (sc.redFail ? '<div class="veto">🔴 有紅線項目不合格：不論分數，本次巡店判定不合格，紅線缺失須當天改善。</div>' : "") +
     (unchecked ? '<div class="veto" style="background:#fffbeb;border-color:#fde68a;color:#92400e">還有 ' + unchecked + ' 項沒檢查（不列入計分）。</div>' : "") +
     (missing.length ? '<div class="veto">有 ' + missing.length + ' 項待改善還沒填缺失描述，無法送出。</div>' : "") + '</div>' +
     '<div class="card"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="width:26px;height:26px;border-radius:8px;background:#ea4335;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center">G</span><b style="flex:1;font-size:15px">Google 評論扣分</b><span class="chip" style="background:#f1f5f9;color:var(--ink-2)">選填</span></div>' +
     '<div style="font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-bottom:10px">登記本次新發現的 Google 差評則數（每則 −1）。</div>' +
     '<div style="display:flex;align-items:center;gap:14px"><button class="btn ghost" id="gMinus" type="button" style="width:46px;font-size:20px;padding:8px 0">−</button><b id="gCount" style="font-size:26px;min-width:32px;text-align:center">' + (D.google || 0) + '</b><button class="btn ghost" id="gPlus" type="button" style="width:46px;font-size:20px;padding:8px 0">＋</button><span style="font-size:13px;color:var(--ink-3);font-weight:600">則差評</span></div></div>' +
+    mgrCard("active", "店長是否積極", "待改善扣 1 分，需寫原因") +
+    mgrCard("deputy", "店長是否有培訓出好的副店", "待改善扣 1 分") +
     '<div class="card"><div class="field"><label>巡店日期</label><input id="smDate" type="date" value="' + esc(D.date) + '"></div>' +
     '<div class="field"><label>總評（離店前與店長溝通的重點）</label><textarea id="smNotes" placeholder="整體觀察、做得好的地方、下次重點…">' + esc(D.notes) + '</textarea></div></div>' +
     '<div class="card"><div style="font-weight:800;margin-bottom:8px">本次待改善（' + bads.length + '）</div>' +
@@ -1050,6 +1092,15 @@ function renderSummary(sc){
   $("gPlus").onclick = function(){ D.google = (D.google || 0) + 1; saveDraft(); renderAudit(); };
   $("gMinus").onclick = function(){ D.google = Math.max(0, (D.google || 0) - 1); saveDraft(); renderAudit(); };
   $("smNotes").oninput = function(){ D.notes = this.value; saveDraft(); };
+  $("aBody").querySelectorAll("[data-mg]").forEach(function(b){
+    b.onclick = function(){
+      const f = b.dataset.mg;
+      mg[f] = mg[f] === b.dataset.v ? "" : b.dataset.v;
+      saveDraft(); renderAudit();
+    };
+  });
+  const rs = $("mgReason");
+  if(rs) rs.oninput = function(){ mg.activeReason = this.value; saveDraft(); };
 }
 
 async function submitAudit(){
@@ -1057,6 +1108,13 @@ async function submitAudit(){
   const bads = allItems().filter(function(x){ const a = D.ans[x.it.k]; return a && a.r === "bad"; });
   if(bads.some(function(x){ const a = D.ans[x.it.k]; return !a.desc; })) return toast("有待改善項目還沒填缺失描述", true);
   if(sc.score == null) return toast("還沒有檢查任何項目", true);
+  const mg = D.mgr || {};
+  const mgr = {};
+  if(mg.active && !mgrFilled("active")){
+    if(mg.active === "bad" && !String(mg.activeReason || "").trim()) return toast("「店長是否積極」選待改善，請寫原因", true);
+    mgr.active = mg.active; if(mg.active === "bad") mgr.activeReason = mg.activeReason.trim();
+  }
+  if(mg.deputy && !mgrFilled("deputy")) mgr.deputy = mg.deputy;
   const unchecked = sc.totalItems - sc.done;
   if(unchecked && !confirm("還有 " + unchecked + " 項沒檢查，確定送出？")) return;
   const btn = $("barNext"); btn.disabled = true; btn.textContent = "送出中…";
@@ -1066,7 +1124,7 @@ async function submitAudit(){
   const answers = {};
   allItems().forEach(function(x){ const a = D.ans[x.it.k]; if(a && a.r) answers[x.it.k] = a.r; });
   const audit = {
-    store:D.store, date:D.date, reviewer:"", notes:D.notes.trim(), score:sc.score, grade:sc.redFail ? "紅線" : sc.grade, redFail:sc.redFail,
+    store:D.store, date:D.date, reviewer:"", notes:D.notes.trim(), score:sc.score, lost:sc.lost, grade:sc.grade, monthScore:sc.monthScore, redFail:sc.redFail, mgr:mgr,
     checked:sc.checked, okCount:sc.ok, badCount:sc.bad, naCount:sc.na, recheckCount:sc.rechecked, notFixedCount:sc.notFixed, google:sc.google,
     measures:measures, answers:answers, quiz:D.quiz.map(function(i){ return QUIZ[i]; }), startedAt:D.startedAt,
   };
