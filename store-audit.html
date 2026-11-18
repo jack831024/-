@@ -859,8 +859,8 @@ function computeScore(){
   lost += google;
   // 店長評估（每月填一次；本月已填過就不再算）
   const mg = D.mgr || {};
-  if(mg.active === "bad" && !mgrFilled("active")) lost += 1;
-  if(mg.deputy === "bad" && !mgrFilled("deputy")) lost += 1;
+  if(mg.active === "bad" && !mgrFilled("active")) lost += 5;
+  if(mg.deputy === "bad" && !mgrFilled("deputy")) lost += 5;
   const score = total ? Math.max(0, 100 - lost) : null;          // 這一次的分數
   const month = monthStat(D.store, String(D.date).slice(0, 7), lost); // 含這一次的當月綜合
   const grade = month.grade;
@@ -1081,8 +1081,8 @@ function renderSummary(sc){
     '<div class="card"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="width:26px;height:26px;border-radius:8px;background:#ea4335;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center">G</span><b style="flex:1;font-size:15px">Google 評論扣分</b><span class="chip" style="background:#f1f5f9;color:var(--ink-2)">選填</span></div>' +
     '<div style="font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-bottom:10px">登記本次新發現的 Google 差評則數（每則 −1）。</div>' +
     '<div style="display:flex;align-items:center;gap:14px"><button class="btn ghost" id="gMinus" type="button" style="width:46px;font-size:20px;padding:8px 0">−</button><b id="gCount" style="font-size:26px;min-width:32px;text-align:center">' + (D.google || 0) + '</b><button class="btn ghost" id="gPlus" type="button" style="width:46px;font-size:20px;padding:8px 0">＋</button><span style="font-size:13px;color:var(--ink-3);font-weight:600">則差評</span></div></div>' +
-    mgrCard("active", "店長是否積極", "待改善扣 1 分，需寫原因") +
-    mgrCard("deputy", "店長是否有培訓出好的副店", "待改善扣 1 分") +
+    mgrCard("active", "店長是否積極", "待改善扣 5 分，需寫原因") +
+    mgrCard("deputy", "店長是否有培訓出好的副店", "待改善扣 5 分") +
     '<div class="card"><div class="field"><label>巡店日期</label><input id="smDate" type="date" value="' + esc(D.date) + '"></div>' +
     '<div class="field"><label>總評（離店前與店長溝通的重點）</label><textarea id="smNotes" placeholder="整體觀察、做得好的地方、下次重點…">' + esc(D.notes) + '</textarea></div></div>' +
     '<div class="card"><div style="font-weight:800;margin-bottom:8px">本次待改善（' + bads.length + '）</div>' +
