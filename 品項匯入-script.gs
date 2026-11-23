@@ -1,7 +1,7 @@
 /** ItemIngest.gs - per-item sales ingest -> tab Eats365_品項
  *  放在 Line Bot GAS 專案。解析日報「總銷售額 (以類別分類)」分頁，
  *  拆出 主餐/湯頭/肉品/加點 寫入 每日小結試算表的 Eats365_品項 分頁。
- *  每日觸發器：ingestItemsDaily（01:00-02:00）。
+ *  每日觸發器：ingestItemsDaily（01:00-02:00）。2026-11-23 起改為回看 5 天自動補漏（見下方 fillMissingItems_）。
  *  依賴 Eat365日報.gs 的 CFG / convertXlsToSheet_ / findSheet_ / reportEndDate_ / reportWindowMin_ / storeFromSubject_ 與 TZ。
  */
 var ITEM_TAB = 'Eats365_品項';
@@ -135,9 +135,109 @@ function backfillItems_(fromStr, toStr, days) {
   return { files: n, errors: errs };
 }
 
+/* ===== 2026-11-23 品項補漏機制 =====
+ * 舊版 ingestItemsDaily 只處理「昨天」，一次逾時那天就永久缺資料。
+ * 新版：以 Eats365_主表 為準，找出最近 ITEM_LOOKBACK_DAYS 天「有營業、但品項分頁沒有」的 (日期, 店)，
+ *       只轉換那幾份報表；超過 ITEM_TIME_LIMIT_MS 就先停（下次執行自動接著補），每次都寫執行記錄。
+ */
+var ITEM_LOOKBACK_DAYS = 5;          // 每天回頭檢查幾天
+var ITEM_TIME_LIMIT_MS = 270000;     // 4.5 分鐘就先停，避開 6 分鐘強制中斷
+
+// 找出「主表有營業、品項分頁沒有」的 (日期, 店)
+function itemMissing_(master, fromStr, toStr) {
+  var have = {};
+  var it = itemEnsureTab_(master);
+  var iv = it.getLastRow() > 1 ? it.getRange(2, 1, it.getLastRow() - 1, 2).getValues() : [];
+  for (var i = 0; i < iv.length; i++) have[itemDateStr_(iv[i][0]) + '|' + iv[i][1]] = true;
+  var mt = master.getSheetByName(CFG.MASTER_TAB);
+  var mv = (mt && mt.getLastRow() > 1) ? mt.getRange(2, 1, mt.getLastRow() - 1, 2).getValues() : [];
+  var miss = [], seen = {};
+  for (var j = 0; j < mv.length; j++) {
+    var d = itemDateStr_(mv[j][0]), s = String(mv[j][1] || '');
+    if (!d || !s || d < fromStr || d > toStr || s.indexOf('十城') > -1) continue;
+    var k = d + '|' + s;
+    if (have[k] || seen[k]) continue;
+    seen[k] = true;
+    miss.push({ d: d, s: s });
+  }
+  return miss;
+}
+
+// 到 Gmail 找某天某店的日結報表附件（同一個日期範圍只搜一次）
+function itemFindAtt_(d, s, cache) {
+  function shift(n) {
+    var x = new Date(d + 'T12:00:00+08:00');
+    x.setDate(x.getDate() + n);
+    return Utilities.formatDate(x, TZ, 'yyyy/MM/dd');
+  }
+  var q = 'reports.eats365pos.com has:attachment after:' + shift(-1) + ' before:' + shift(3);
+  if (!cache[q]) {
+    var list = [];
+    GmailApp.search(q, 0, 50).forEach(function (th) {
+      th.getMessages().forEach(function (msg) {
+        var subj = msg.getSubject() || '';
+        msg.getAttachments().forEach(function (a) {
+          if (/\.xls$/i.test(a.getName()) || /DailyClosing/i.test(a.getName())) list.push({ subj: subj, att: a });
+        });
+      });
+    });
+    cache[q] = list;
+  }
+  var arr = cache[q];
+  for (var i = 0; i < arr.length; i++) {
+    var o = arr[i];
+    var win = reportWindowMin_(o.att.getName());
+    if (win !== null && win < 30) continue;
+    if (reportEndDate_(o.att.getName()) !== d) continue;
+    if ((storeFromSubject_(o.subj) || '') !== s) continue;
+    return o;
+  }
+  return null;
+}
+
+// 補齊 fromStr~toStr 之間缺的品項；回傳 left 不為空 = 時間到先停、還有沒補完的
+function fillMissingItems_(fromStr, toStr) {
+  var t0 = Date.now();
+  var master = SpreadsheetApp.openById(CFG.MASTER_SS_ID);
+  var tab = itemEnsureTab_(master);
+  var miss = itemMissing_(master, fromStr, toStr);
+  var cache = {}, done = [], notFound = [], errs = [], left = [];
+  for (var i = 0; i < miss.length; i++) {
+    var m = miss[i], key = m.d + ' ' + m.s;
+    if (Date.now() - t0 > ITEM_TIME_LIMIT_MS) { left.push(key); continue; }
+    var o = itemFindAtt_(m.d, m.s, cache);
+    if (!o) { notFound.push(key); continue; }
+    var tmp = null, t1 = Date.now();
+    try {
+      tmp = convertXlsToSheet_(o.att.copyBlob(), 'tmp_items_' + Date.now());
+      var rows = parseItems_(SpreadsheetApp.openById(tmp));
+      if (rows && rows.length) {
+        itemReplaceRows_(tab, m.d, m.s, rows);
+        done.push(key + ' (' + Math.round((Date.now() - t1) / 1000) + 's)');
+      } else {
+        errs.push(key + ': no items parsed');
+      }
+    } catch (err) {
+      errs.push(key + ': ' + err);
+    } finally {
+      if (tmp) { try { DriveApp.getFileById(tmp).setTrashed(true); } catch (_) {} }
+    }
+  }
+  var res = { range: fromStr + '~' + toStr, missing: miss.length, done: done, notFound: notFound,
+              errors: errs, left: left, seconds: Math.round((Date.now() - t0) / 1000) };
+  console.log('fillMissingItems ' + JSON.stringify(res));
+  return res;
+}
+
 function ingestItemsDaily() {
-  var t = new Date(); var y = new Date(t.getTime() - 86400000);
-  backfillItems_(Utilities.formatDate(y, TZ, 'yyyy-MM-dd'), Utilities.formatDate(t, TZ, 'yyyy-MM-dd'), 3);
+  var t = new Date();
+  var from = new Date(t.getTime() - ITEM_LOOKBACK_DAYS * 86400000);
+  fillMissingItems_(Utilities.formatDate(from, TZ, 'yyyy-MM-dd'), Utilities.formatDate(t, TZ, 'yyyy-MM-dd'));
+}
+
+// 手動執行：補 2026-07-01 起所有缺的品項。一次最多跑 4.5 分鐘；記錄裡 left 不是空的就再執行一次。
+function backfillMissingItemsAll() {
+  return fillMissingItems_('2026-07-01', Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd'));
 }
 
 function installItemsTrigger_() {
