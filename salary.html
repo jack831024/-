@@ -1250,16 +1250,36 @@ function onS1Change(id, v){
 }
 
 // 2. 全勤
+// 🚫 暫時隱藏病假欄位（指定 store + 月份）— 需要還原時直接改這裡
+function shouldHideSickColumn(){
+  return STORE === 'chudian-zhonghe' && getSelectedYM() === '2026-10';
+}
 function renderS2(){
   var tb = document.getElementById('tbody-s2');
   var kpi = !!CFG.kpiMode;
+  var hideSick = shouldHideSickColumn();
+  // 動態重建 thead（因為是否顯示病假欄會變）
+  if(!kpi){
+    var thead = document.getElementById('s2-thead');
+    if(thead){
+      var ths = ['<th>員工</th>'];
+      if(!hideSick) ths.push('<th style="width:80px">病假(天)</th>');
+      ths.push('<th style="width:80px">事假(天)</th>');
+      ths.push('<th style="width:80px">遲到(天)</th>');
+      ths.push('<th style="width:80px">合計</th>');
+      ths.push('<th style="width:90px">獎金</th>');
+      thead.innerHTML = '<tr>'+ths.join('')+'</tr>';
+    }
+  }
   var rows = EMPLOYEES.map(function(e){
     var o = STATE.s2[e.id];
     var sick = o.sick|0, personal = o.personal|0, late = o.late|0;
-    var total = sick + personal + late;
+    // 若隱藏病假，計算時也不計入
+    var effectiveSick = hideSick ? 0 : sick;
+    var total = effectiveSick + personal + late;
     if(kpi){
       var reviews = STATE.s3[e.id] | 0;
-      var amt = kpiBonus(sick + personal, late, reviews);
+      var amt = kpiBonus(effectiveSick + personal, late, reviews);
       return '<tr>'
         + '<td class="c-name">'+e.name+'</td>'
         + '<td><input type="number" min="0" step="1" value="'+sick+'" onchange="onS2Change(\''+e.id+'\',\'sick\',this.value)"></td>'
@@ -1271,14 +1291,15 @@ function renderS2(){
         + '</tr>';
     }
     var amt2 = s2Bonus(total);
-    return '<tr>'
-      + '<td class="c-name">'+e.name+'</td>'
-      + '<td><input type="number" min="0" step="1" value="'+sick+'" onchange="onS2Change(\''+e.id+'\',\'sick\',this.value)"></td>'
-      + '<td><input type="number" min="0" step="1" value="'+personal+'" onchange="onS2Change(\''+e.id+'\',\'personal\',this.value)"></td>'
-      + '<td><input type="number" min="0" step="1" value="'+late+'" onchange="onS2Change(\''+e.id+'\',\'late\',this.value)"></td>'
-      + '<td class="c-num">'+total+' 天</td>'
-      + '<td class="c-num '+amtClass(amt2)+'">'+fmt(amt2)+'</td>'
-      + '</tr>';
+    var cells = ['<td class="c-name">'+e.name+'</td>'];
+    if(!hideSick){
+      cells.push('<td><input type="number" min="0" step="1" value="'+sick+'" onchange="onS2Change(\''+e.id+'\',\'sick\',this.value)"></td>');
+    }
+    cells.push('<td><input type="number" min="0" step="1" value="'+personal+'" onchange="onS2Change(\''+e.id+'\',\'personal\',this.value)"></td>');
+    cells.push('<td><input type="number" min="0" step="1" value="'+late+'" onchange="onS2Change(\''+e.id+'\',\'late\',this.value)"></td>');
+    cells.push('<td class="c-num">'+total+' 天</td>');
+    cells.push('<td class="c-num '+amtClass(amt2)+'">'+fmt(amt2)+'</td>');
+    return '<tr>'+cells.join('')+'</tr>';
   });
   tb.innerHTML = rows.join('');
 }
@@ -1557,11 +1578,13 @@ function calcEmp(e){
   // 各獎金
   var b_s1 = sup ? s1SupDeduct(STATE.s1[id]|0) : s1RegBonus(STATE.s1[id]|0);
   var b_s2, b_s3;
+  // 若「暫時隱藏病假欄」條件成立 → 病假不計入全勤計算
+  var _sickForBonus = shouldHideSickColumn() ? 0 : (STATE.s2[id].sick|0);
   if(CFG.kpiMode){
-    b_s2 = kpiBonus((STATE.s2[id].sick|0)+(STATE.s2[id].personal|0), STATE.s2[id].late|0, STATE.s3[id]|0);
+    b_s2 = kpiBonus(_sickForBonus + (STATE.s2[id].personal|0), STATE.s2[id].late|0, STATE.s3[id]|0);
     b_s3 = 0; // KPI 模式：Google 評論已併入 b_s2
   } else {
-    b_s2 = s2Bonus((STATE.s2[id].sick|0)+(STATE.s2[id].personal|0)+(STATE.s2[id].late|0));
+    b_s2 = s2Bonus(_sickForBonus + (STATE.s2[id].personal|0) + (STATE.s2[id].late|0));
     b_s3 = s3Bonus(STATE.s3[id]|0);
   }
   var b_s4 = s4Bonus(STATE.s4[id]|0);
