@@ -1522,13 +1522,17 @@ function calcEmp(e){
   //  病假       = 基數 / 30 / 2 × 天（半薪）
   var otBase = monthPay;
   var perDay = otBase / 30;
-  // 雙薪特例：中和/永春 的「副店長 + 正職」用固定 45000 為基數
-  // 但個別員工可在 STORE_CONFIG 標記 dwUseMonthly:true 來改回月薪基數
+  // 雙薪基數規則（中和/永春 副店+正職+新人正職）：
+  //   - 中和：45000 為底線，月薪 > 45000 就改用月薪（取較高者）
+  //   - 永春：固定 45000
+  //   - 個別員工可在 STORE_CONFIG 標記 dwUseMonthly:true 來改回月薪基數
   var dwBase = otBase;
-  if((STORE === 'chudian-zhonghe' || STORE === 'chudian-yongchun')
-     && role !== 'head'
-     && !e.dwUseMonthly){
-    dwBase = 45000;
+  if(role !== 'head' && !e.dwUseMonthly){
+    if(STORE === 'chudian-zhonghe'){
+      dwBase = Math.max(45000, monthPay);
+    } else if(STORE === 'chudian-yongchun'){
+      dwBase = 45000;
+    }
   }
   var doubleWage = dtDays * dwBase / 30;
   var otPay = otHours * otBase / 30 / 8 * 1.34;
